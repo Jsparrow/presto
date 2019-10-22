@@ -120,7 +120,7 @@ public class BenchmarkPageProcessor
 
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkPageProcessor.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkPageProcessor.class.getSimpleName()).append(".*").toString())
                 .build();
 
         new Runner(options).run();
@@ -141,47 +141,6 @@ public class BenchmarkPageProcessor
             DOUBLE.writeDouble(pageBuilder.getBlockBuilder(QUANTITY), lineItem.getQuantity());
         }
         return pageBuilder.build();
-    }
-
-    private static final class Tpch1FilterAndProject
-    {
-        public static int process(Page page, int start, int end, PageBuilder pageBuilder)
-        {
-            Block discountBlock = page.getBlock(DISCOUNT);
-            int position = start;
-            for (; position < end; position++) {
-                // where shipdate >= '1994-01-01'
-                //    and shipdate < '1995-01-01'
-                //    and discount >= 0.05
-                //    and discount <= 0.07
-                //    and quantity < 24;
-                if (filter(position, discountBlock, page.getBlock(SHIP_DATE), page.getBlock(QUANTITY))) {
-                    project(position, pageBuilder, page.getBlock(EXTENDED_PRICE), discountBlock);
-                }
-            }
-
-            return position;
-        }
-
-        private static void project(int position, PageBuilder pageBuilder, Block extendedPriceBlock, Block discountBlock)
-        {
-            pageBuilder.declarePosition();
-            if (discountBlock.isNull(position) || extendedPriceBlock.isNull(position)) {
-                pageBuilder.getBlockBuilder(0).appendNull();
-            }
-            else {
-                DOUBLE.writeDouble(pageBuilder.getBlockBuilder(0), DOUBLE.getDouble(extendedPriceBlock, position) * DOUBLE.getDouble(discountBlock, position));
-            }
-        }
-
-        private static boolean filter(int position, Block discountBlock, Block shipDateBlock, Block quantityBlock)
-        {
-            return !shipDateBlock.isNull(position) && VARCHAR.getSlice(shipDateBlock, position).compareTo(MIN_SHIP_DATE) >= 0 &&
-                    !shipDateBlock.isNull(position) && VARCHAR.getSlice(shipDateBlock, position).compareTo(MAX_SHIP_DATE) < 0 &&
-                    !discountBlock.isNull(position) && DOUBLE.getDouble(discountBlock, position) >= 0.05 &&
-                    !discountBlock.isNull(position) && DOUBLE.getDouble(discountBlock, position) <= 0.07 &&
-                    !quantityBlock.isNull(position) && DOUBLE.getDouble(quantityBlock, position) < 24;
-        }
     }
 
     // where shipdate >= '1994-01-01'
@@ -230,7 +189,7 @@ public class BenchmarkPageProcessor
                                                 constant(24.0, DOUBLE))))));
     }
 
-    private static final RowExpression createProjectExpression(FunctionManager functionManager)
+	private static final RowExpression createProjectExpression(FunctionManager functionManager)
     {
         return call(
                 MULTIPLY.name(),
@@ -238,5 +197,46 @@ public class BenchmarkPageProcessor
                 DOUBLE,
                 field(EXTENDED_PRICE, DOUBLE),
                 field(DISCOUNT, DOUBLE));
+    }
+
+	private static final class Tpch1FilterAndProject
+    {
+        public static int process(Page page, int start, int end, PageBuilder pageBuilder)
+        {
+            Block discountBlock = page.getBlock(DISCOUNT);
+            int position = start;
+            for (; position < end; position++) {
+                // where shipdate >= '1994-01-01'
+                //    and shipdate < '1995-01-01'
+                //    and discount >= 0.05
+                //    and discount <= 0.07
+                //    and quantity < 24;
+                if (filter(position, discountBlock, page.getBlock(SHIP_DATE), page.getBlock(QUANTITY))) {
+                    project(position, pageBuilder, page.getBlock(EXTENDED_PRICE), discountBlock);
+                }
+            }
+
+            return position;
+        }
+
+        private static void project(int position, PageBuilder pageBuilder, Block extendedPriceBlock, Block discountBlock)
+        {
+            pageBuilder.declarePosition();
+            if (discountBlock.isNull(position) || extendedPriceBlock.isNull(position)) {
+                pageBuilder.getBlockBuilder(0).appendNull();
+            }
+            else {
+                DOUBLE.writeDouble(pageBuilder.getBlockBuilder(0), DOUBLE.getDouble(extendedPriceBlock, position) * DOUBLE.getDouble(discountBlock, position));
+            }
+        }
+
+        private static boolean filter(int position, Block discountBlock, Block shipDateBlock, Block quantityBlock)
+        {
+            return !shipDateBlock.isNull(position) && VARCHAR.getSlice(shipDateBlock, position).compareTo(MIN_SHIP_DATE) >= 0 &&
+                    !shipDateBlock.isNull(position) && VARCHAR.getSlice(shipDateBlock, position).compareTo(MAX_SHIP_DATE) < 0 &&
+                    !discountBlock.isNull(position) && DOUBLE.getDouble(discountBlock, position) >= 0.05 &&
+                    !discountBlock.isNull(position) && DOUBLE.getDouble(discountBlock, position) <= 0.07 &&
+                    !quantityBlock.isNull(position) && DOUBLE.getDouble(quantityBlock, position) < 24;
+        }
     }
 }

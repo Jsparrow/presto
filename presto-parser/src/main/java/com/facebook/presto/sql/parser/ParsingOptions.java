@@ -20,18 +20,10 @@ import static java.util.Objects.requireNonNull;
 public class ParsingOptions
 {
     private static final Consumer<ParsingWarning> NOOP_WARNING_CONSUMER = ignored -> {};
+	private final DecimalLiteralTreatment decimalLiteralTreatment;
+	private final Consumer<ParsingWarning> warningConsumer;
 
-    public enum DecimalLiteralTreatment
-    {
-        AS_DOUBLE,
-        AS_DECIMAL,
-        REJECT
-    }
-
-    private final DecimalLiteralTreatment decimalLiteralTreatment;
-    private final Consumer<ParsingWarning> warningConsumer;
-
-    /**
+	/**
      * @deprecated Use (@link #builder())
      */
     @Deprecated
@@ -40,7 +32,7 @@ public class ParsingOptions
         this(DecimalLiteralTreatment.REJECT);
     }
 
-    /**
+	/**
      * @deprecated Use (@link #builder())
      */
     @Deprecated
@@ -49,25 +41,32 @@ public class ParsingOptions
         this(decimalLiteralTreatment, NOOP_WARNING_CONSUMER);
     }
 
-    private ParsingOptions(DecimalLiteralTreatment decimalLiteralTreatment, Consumer<ParsingWarning> warningConsumer)
+	private ParsingOptions(DecimalLiteralTreatment decimalLiteralTreatment, Consumer<ParsingWarning> warningConsumer)
     {
         this.decimalLiteralTreatment = requireNonNull(decimalLiteralTreatment, "decimalLiteralTreatment is null");
         this.warningConsumer = requireNonNull(warningConsumer, "warningConsumer is null");
     }
 
-    public DecimalLiteralTreatment getDecimalLiteralTreatment()
+	public DecimalLiteralTreatment getDecimalLiteralTreatment()
     {
         return decimalLiteralTreatment;
     }
 
-    public Consumer<ParsingWarning> getWarningConsumer()
+	public Consumer<ParsingWarning> getWarningConsumer()
     {
         return warningConsumer;
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
+    }
+
+	public enum DecimalLiteralTreatment
+    {
+        AS_DOUBLE,
+        AS_DECIMAL,
+        REJECT
     }
 
     public static class Builder

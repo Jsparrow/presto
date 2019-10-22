@@ -573,7 +573,229 @@ public class TestCostCalculator
         return optimizer.optimize(node, session, typeProvider, new PlanVariableAllocator(typeProvider.allVariables()), new PlanNodeIdAllocator(), WarningCollector.NOOP);
     }
 
-    private static class TestingCostProvider
+    private CostAssertionBuilder assertCost(
+            CostCalculator costCalculator,
+            PlanNode node,
+            Map<String, PlanCostEstimate> costs,
+            Map<String, PlanNodeStatsEstimate> stats,
+            Map<String, Type> types)
+    {
+        Function<PlanNode, PlanNodeStatsEstimate> statsProvider = planNode -> stats.get(planNode.getId().toString());
+        PlanCostEstimate cost = calculateCost(
+                costCalculator,
+                node,
+                sourceCostProvider(costCalculator, costs, statsProvider, types),
+                statsProvider,
+                types);
+        return new CostAssertionBuilder(cost);
+    }
+
+	private Function<PlanNode, PlanCostEstimate> sourceCostProvider(
+            CostCalculator costCalculator,
+            Map<String, PlanCostEstimate> costs,
+            Function<PlanNode, PlanNodeStatsEstimate> statsProvider,
+            Map<String, Type> types)
+    {
+        return node -> {
+            PlanCostEstimate providedCost = costs.get(node.getId().toString());
+            if (providedCost != null) {
+                return providedCost;
+            }
+            return calculateCost(
+                    costCalculator,
+                    node,
+                    sourceCostProvider(costCalculator, costs, statsProvider, types),
+                    statsProvider,
+                    types);
+        };
+    }
+
+	private void assertCostHasUnknownComponentsForUnknownStats(PlanNode node, Map<String, Type> types)
+    {
+        new CostAssertionBuilder(calculateCost(
+                costCalculatorUsingExchanges,
+                node,
+                planNode -> PlanCostEstimate.unknown(),
+                planNode -> PlanNodeStatsEstimate.unknown(),
+                types))
+                .hasUnknownComponents();
+        new CostAssertionBuilder(calculateCost(
+                costCalculatorWithEstimatedExchanges,
+                node,
+                planNode -> PlanCostEstimate.unknown(),
+                planNode -> PlanNodeStatsEstimate.unknown(),
+                types))
+                .hasUnknownComponents();
+    }
+
+	private void assertFragmentedEqualsUnfragmented(PlanNode node, Map<String, PlanNodeStatsEstimate> stats, Map<String, Type> types)
+    {
+        StatsCalculator statsCalculator = statsCalculator(stats);
+        PlanCostEstimate costWithExchanges = calculateCost(node, costCalculatorUsingExchanges, statsCalculator, types);
+        PlanCostEstimate costWithFragments = calculateCostFragmentedPlan(node, statsCalculator, types);
+        assertEquals(costWithExchanges, costWithFragments);
+    }
+
+	private StatsCalculator statsCalculator(Map<String, PlanNodeStatsEstimate> stats)
+    {
+        return (node, sourceStats, lookup, session, types) ->
+                requireNonNull(stats.get(node.getId().toString()), "no stats for node");
+    }
+
+	private PlanCostEstimate calculateCost(
+            CostCalculator costCalculator,
+            PlanNode node,
+            Function<PlanNode, PlanCostEstimate> costs,
+            Function<PlanNode, PlanNodeStatsEstimate> stats,
+            Map<String, Type> types)
+    {
+        return costCalculator.calculateCost(
+                node,
+                planNode -> requireNonNull(stats.apply(planNode), "no stats for node"),
+                source -> requireNonNull(costs.apply(source), format("no cost for source: %s", source.getId())),
+                session,
+                TypeProvider.copyOf(types));
+    }
+
+	private PlanCostEstimate calculateCost(PlanNode node, CostCalculator costCalculator, StatsCalculator statsCalculator, Map<String, Type> types)
+    {
+        TypeProvider typeProvider = TypeProvider.copyOf(types);
+        StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, typeProvider);
+        CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.empty(), session, typeProvider);
+        return costProvider.getCost(node);
+    }
+
+	private PlanCostEstimate calculateCostFragmentedPlan(PlanNode node, StatsCalculator statsCalculator, Map<String, Type> types)
+    {
+        TypeProvider typeProvider = TypeProvider.copyOf(types);
+        StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, typeProvider);
+        CostProvider costProvider = new CachingCostProvider(costCalculatorUsingExchanges, statsProvider, Optional.empty(), session, typeProvider);
+        node = translateExpression(node, statsCalculator, typeProvider);
+        SubPlan subPlan = fragment(new Plan(node, typeProvider, StatsAndCosts.create(node, statsProvider, costProvider)));
+        return subPlan.getFragment().getStatsAndCosts().getCosts().getOrDefault(node.getId(), PlanCostEstimate.unknown());
+    }
+
+	private static PlanNodeStatsEstimate statsEstimate(PlanNode node, double outputSizeInBytes)
+    {
+        return statsEstimate(node.getOutputVariables(), outputSizeInBytes);
+    }
+
+	private static PlanNodeStatsEstimate statsEstimate(Collection<VariableReferenceExpression> variables, double outputSizeInBytes)
+    {
+        checkArgument(variables.size() > 0, "No variables");
+        checkArgument(ImmutableSet.copyOf(variables).size() == variables.size(), "Duplicate variables");
+
+        double rowCount = outputSizeInBytes / variables.size() / AVERAGE_ROW_SIZE;
+
+        PlanNodeStatsEstimate.Builder builder = PlanNodeStatsEstimate.builder()
+                .setOutputRowCount(rowCount);
+        variables.forEach(variable -> builder.addVariableStatistics(variable,
+				VariableStatsEstimate.builder().setNullsFraction(0).setAverageRowSize(AVERAGE_ROW_SIZE).build()));
+        return builder.build();
+    }
+
+	private TableScanNode tableScan(String id, String... symbols)
+    {
+        List<VariableReferenceExpression> variables = Arrays.stream(symbols)
+                .map(symbol -> new VariableReferenceExpression(symbol, BIGINT))
+                .collect(toImmutableList());
+        return tableScan(id, variables);
+    }
+
+	private TableScanNode tableScan(String id, List<VariableReferenceExpression> variables)
+    {
+        ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> assignments = ImmutableMap.builder();
+
+        variables.forEach(variable -> assignments.put(variable, new TpchColumnHandle("orderkey", BIGINT)));
+
+        TpchTableHandle tableHandle = new TpchTableHandle("orders", 1.0);
+        return new TableScanNode(
+                new PlanNodeId(id),
+                new TableHandle(
+                        new ConnectorId("tpch"),
+                        tableHandle,
+                        TpchTransactionHandle.INSTANCE,
+                        Optional.of(new TpchTableLayoutHandle(tableHandle, TupleDomain.all()))),
+                variables,
+                assignments.build(),
+                TupleDomain.all(),
+                TupleDomain.all());
+    }
+
+	private PlanNode project(String id, PlanNode source, VariableReferenceExpression variable, Expression expression)
+    {
+        return new ProjectNode(
+                new PlanNodeId(id),
+                source,
+                assignment(variable, expression));
+    }
+
+	private AggregationNode aggregation(String id, PlanNode source)
+    {
+        AggregationNode.Aggregation aggregation = count(metadata.getFunctionManager());
+
+        return new AggregationNode(
+                new PlanNodeId(id),
+                source,
+                ImmutableMap.of(new VariableReferenceExpression("count", BIGINT), aggregation),
+                singleGroupingSet(source.getOutputVariables()),
+                ImmutableList.of(),
+                AggregationNode.Step.FINAL,
+                Optional.empty(),
+                Optional.empty());
+    }
+
+	/**
+     * EquiJoinClause is created from symbols in form of:
+     * symbol[0] = symbol[1] AND symbol[2] = symbol[3] AND ...
+     */
+    private JoinNode join(String planNodeId, PlanNode left, PlanNode right, JoinNode.DistributionType distributionType, String... symbols)
+    {
+        checkArgument(symbols.length % 2 == 0);
+        ImmutableList.Builder<JoinNode.EquiJoinClause> criteria = ImmutableList.builder();
+
+        for (int i = 0; i < symbols.length; i += 2) {
+            criteria.add(new JoinNode.EquiJoinClause(new VariableReferenceExpression(symbols[i], BIGINT), new VariableReferenceExpression(symbols[i + 1], BIGINT)));
+        }
+
+        return new JoinNode(
+                new PlanNodeId(planNodeId),
+                JoinNode.Type.INNER,
+                left,
+                right,
+                criteria.build(),
+                ImmutableList.<VariableReferenceExpression>builder()
+                        .addAll(left.getOutputVariables())
+                        .addAll(right.getOutputVariables())
+                        .build(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(distributionType));
+    }
+
+	private SubPlan fragment(Plan plan)
+    {
+        return inTransaction(session -> planFragmenter.createSubPlans(session, plan, false, new PlanNodeIdAllocator(), WarningCollector.NOOP));
+    }
+
+	private <T> T inTransaction(Function<Session, T> transactionSessionConsumer)
+    {
+        return transaction(transactionManager, new AllowAllAccessControl())
+                .singleStatement()
+                .execute(session, session -> {
+                    // metadata.getCatalogHandle() registers the catalog for the transaction
+                    session.getCatalog().ifPresent(catalog -> metadata.getCatalogHandle(session, catalog));
+                    return transactionSessionConsumer.apply(session);
+                });
+    }
+
+	private static PlanCostEstimate cpuCost(double cpuCost)
+    {
+        return new PlanCostEstimate(cpuCost, 0, 0, 0);
+    }
+
+	private static class TestingCostProvider
             implements CostProvider
     {
         private final Map<String, PlanCostEstimate> costs;
@@ -599,108 +821,6 @@ public class TestCostCalculator
             }
             return costCalculator.calculateCost(node, statsProvider, this, session, types);
         }
-    }
-
-    private CostAssertionBuilder assertCost(
-            CostCalculator costCalculator,
-            PlanNode node,
-            Map<String, PlanCostEstimate> costs,
-            Map<String, PlanNodeStatsEstimate> stats,
-            Map<String, Type> types)
-    {
-        Function<PlanNode, PlanNodeStatsEstimate> statsProvider = planNode -> stats.get(planNode.getId().toString());
-        PlanCostEstimate cost = calculateCost(
-                costCalculator,
-                node,
-                sourceCostProvider(costCalculator, costs, statsProvider, types),
-                statsProvider,
-                types);
-        return new CostAssertionBuilder(cost);
-    }
-
-    private Function<PlanNode, PlanCostEstimate> sourceCostProvider(
-            CostCalculator costCalculator,
-            Map<String, PlanCostEstimate> costs,
-            Function<PlanNode, PlanNodeStatsEstimate> statsProvider,
-            Map<String, Type> types)
-    {
-        return node -> {
-            PlanCostEstimate providedCost = costs.get(node.getId().toString());
-            if (providedCost != null) {
-                return providedCost;
-            }
-            return calculateCost(
-                    costCalculator,
-                    node,
-                    sourceCostProvider(costCalculator, costs, statsProvider, types),
-                    statsProvider,
-                    types);
-        };
-    }
-
-    private void assertCostHasUnknownComponentsForUnknownStats(PlanNode node, Map<String, Type> types)
-    {
-        new CostAssertionBuilder(calculateCost(
-                costCalculatorUsingExchanges,
-                node,
-                planNode -> PlanCostEstimate.unknown(),
-                planNode -> PlanNodeStatsEstimate.unknown(),
-                types))
-                .hasUnknownComponents();
-        new CostAssertionBuilder(calculateCost(
-                costCalculatorWithEstimatedExchanges,
-                node,
-                planNode -> PlanCostEstimate.unknown(),
-                planNode -> PlanNodeStatsEstimate.unknown(),
-                types))
-                .hasUnknownComponents();
-    }
-
-    private void assertFragmentedEqualsUnfragmented(PlanNode node, Map<String, PlanNodeStatsEstimate> stats, Map<String, Type> types)
-    {
-        StatsCalculator statsCalculator = statsCalculator(stats);
-        PlanCostEstimate costWithExchanges = calculateCost(node, costCalculatorUsingExchanges, statsCalculator, types);
-        PlanCostEstimate costWithFragments = calculateCostFragmentedPlan(node, statsCalculator, types);
-        assertEquals(costWithExchanges, costWithFragments);
-    }
-
-    private StatsCalculator statsCalculator(Map<String, PlanNodeStatsEstimate> stats)
-    {
-        return (node, sourceStats, lookup, session, types) ->
-                requireNonNull(stats.get(node.getId().toString()), "no stats for node");
-    }
-
-    private PlanCostEstimate calculateCost(
-            CostCalculator costCalculator,
-            PlanNode node,
-            Function<PlanNode, PlanCostEstimate> costs,
-            Function<PlanNode, PlanNodeStatsEstimate> stats,
-            Map<String, Type> types)
-    {
-        return costCalculator.calculateCost(
-                node,
-                planNode -> requireNonNull(stats.apply(planNode), "no stats for node"),
-                source -> requireNonNull(costs.apply(source), format("no cost for source: %s", source.getId())),
-                session,
-                TypeProvider.copyOf(types));
-    }
-
-    private PlanCostEstimate calculateCost(PlanNode node, CostCalculator costCalculator, StatsCalculator statsCalculator, Map<String, Type> types)
-    {
-        TypeProvider typeProvider = TypeProvider.copyOf(types);
-        StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, typeProvider);
-        CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.empty(), session, typeProvider);
-        return costProvider.getCost(node);
-    }
-
-    private PlanCostEstimate calculateCostFragmentedPlan(PlanNode node, StatsCalculator statsCalculator, Map<String, Type> types)
-    {
-        TypeProvider typeProvider = TypeProvider.copyOf(types);
-        StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, typeProvider);
-        CostProvider costProvider = new CachingCostProvider(costCalculatorUsingExchanges, statsProvider, Optional.empty(), session, typeProvider);
-        node = translateExpression(node, statsCalculator, typeProvider);
-        SubPlan subPlan = fragment(new Plan(node, typeProvider, StatsAndCosts.create(node, statsProvider, costProvider)));
-        return subPlan.getFragment().getStatsAndCosts().getCosts().getOrDefault(node.getId(), PlanCostEstimate.unknown());
     }
 
     private static class CostAssertionBuilder
@@ -741,133 +861,5 @@ public class TestCostCalculator
             assertTrue(actual.hasUnknownComponents());
             return this;
         }
-    }
-
-    private static PlanNodeStatsEstimate statsEstimate(PlanNode node, double outputSizeInBytes)
-    {
-        return statsEstimate(node.getOutputVariables(), outputSizeInBytes);
-    }
-
-    private static PlanNodeStatsEstimate statsEstimate(Collection<VariableReferenceExpression> variables, double outputSizeInBytes)
-    {
-        checkArgument(variables.size() > 0, "No variables");
-        checkArgument(ImmutableSet.copyOf(variables).size() == variables.size(), "Duplicate variables");
-
-        double rowCount = outputSizeInBytes / variables.size() / AVERAGE_ROW_SIZE;
-
-        PlanNodeStatsEstimate.Builder builder = PlanNodeStatsEstimate.builder()
-                .setOutputRowCount(rowCount);
-        for (VariableReferenceExpression variable : variables) {
-            builder.addVariableStatistics(
-                    variable,
-                    VariableStatsEstimate.builder()
-                            .setNullsFraction(0)
-                            .setAverageRowSize(AVERAGE_ROW_SIZE)
-                            .build());
-        }
-        return builder.build();
-    }
-
-    private TableScanNode tableScan(String id, String... symbols)
-    {
-        List<VariableReferenceExpression> variables = Arrays.stream(symbols)
-                .map(symbol -> new VariableReferenceExpression(symbol, BIGINT))
-                .collect(toImmutableList());
-        return tableScan(id, variables);
-    }
-
-    private TableScanNode tableScan(String id, List<VariableReferenceExpression> variables)
-    {
-        ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> assignments = ImmutableMap.builder();
-
-        for (VariableReferenceExpression variable : variables) {
-            assignments.put(variable, new TpchColumnHandle("orderkey", BIGINT));
-        }
-
-        TpchTableHandle tableHandle = new TpchTableHandle("orders", 1.0);
-        return new TableScanNode(
-                new PlanNodeId(id),
-                new TableHandle(
-                        new ConnectorId("tpch"),
-                        tableHandle,
-                        TpchTransactionHandle.INSTANCE,
-                        Optional.of(new TpchTableLayoutHandle(tableHandle, TupleDomain.all()))),
-                variables,
-                assignments.build(),
-                TupleDomain.all(),
-                TupleDomain.all());
-    }
-
-    private PlanNode project(String id, PlanNode source, VariableReferenceExpression variable, Expression expression)
-    {
-        return new ProjectNode(
-                new PlanNodeId(id),
-                source,
-                assignment(variable, expression));
-    }
-
-    private AggregationNode aggregation(String id, PlanNode source)
-    {
-        AggregationNode.Aggregation aggregation = count(metadata.getFunctionManager());
-
-        return new AggregationNode(
-                new PlanNodeId(id),
-                source,
-                ImmutableMap.of(new VariableReferenceExpression("count", BIGINT), aggregation),
-                singleGroupingSet(source.getOutputVariables()),
-                ImmutableList.of(),
-                AggregationNode.Step.FINAL,
-                Optional.empty(),
-                Optional.empty());
-    }
-
-    /**
-     * EquiJoinClause is created from symbols in form of:
-     * symbol[0] = symbol[1] AND symbol[2] = symbol[3] AND ...
-     */
-    private JoinNode join(String planNodeId, PlanNode left, PlanNode right, JoinNode.DistributionType distributionType, String... symbols)
-    {
-        checkArgument(symbols.length % 2 == 0);
-        ImmutableList.Builder<JoinNode.EquiJoinClause> criteria = ImmutableList.builder();
-
-        for (int i = 0; i < symbols.length; i += 2) {
-            criteria.add(new JoinNode.EquiJoinClause(new VariableReferenceExpression(symbols[i], BIGINT), new VariableReferenceExpression(symbols[i + 1], BIGINT)));
-        }
-
-        return new JoinNode(
-                new PlanNodeId(planNodeId),
-                JoinNode.Type.INNER,
-                left,
-                right,
-                criteria.build(),
-                ImmutableList.<VariableReferenceExpression>builder()
-                        .addAll(left.getOutputVariables())
-                        .addAll(right.getOutputVariables())
-                        .build(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.empty(),
-                Optional.of(distributionType));
-    }
-
-    private SubPlan fragment(Plan plan)
-    {
-        return inTransaction(session -> planFragmenter.createSubPlans(session, plan, false, new PlanNodeIdAllocator(), WarningCollector.NOOP));
-    }
-
-    private <T> T inTransaction(Function<Session, T> transactionSessionConsumer)
-    {
-        return transaction(transactionManager, new AllowAllAccessControl())
-                .singleStatement()
-                .execute(session, session -> {
-                    // metadata.getCatalogHandle() registers the catalog for the transaction
-                    session.getCatalog().ifPresent(catalog -> metadata.getCatalogHandle(session, catalog));
-                    return transactionSessionConsumer.apply(session);
-                });
-    }
-
-    private static PlanCostEstimate cpuCost(double cpuCost)
-    {
-        return new PlanCostEstimate(cpuCost, 0, 0, 0);
     }
 }

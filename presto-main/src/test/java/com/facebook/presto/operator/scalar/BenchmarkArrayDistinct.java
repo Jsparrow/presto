@@ -92,7 +92,42 @@ public class BenchmarkArrayDistinct
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayDistinct().arrayDistinct(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkArrayDistinct.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@ScalarFunction
+    @SqlType("array(varchar)")
+    public static Block oldArrayDistinct(@SqlType("array(varchar)") Block array)
+    {
+        if (array.getPositionCount() == 0) {
+            return array;
+        }
+
+        TypedSet typedSet = new TypedSet(VARCHAR, array.getPositionCount(), "old_array_distinct");
+        BlockBuilder distinctElementBlockBuilder = VARCHAR.createBlockBuilder(null, array.getPositionCount());
+        for (int i = 0; i < array.getPositionCount(); i++) {
+            if (!typedSet.contains(array, i)) {
+                typedSet.add(array, i);
+                VARCHAR.appendTo(array, i, distinctElementBlockBuilder);
+            }
+        }
+
+        return distinctElementBlockBuilder.build();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -154,40 +189,5 @@ public class BenchmarkArrayDistinct
         {
             return page;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayDistinct().arrayDistinct(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkArrayDistinct.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
-    }
-
-    @ScalarFunction
-    @SqlType("array(varchar)")
-    public static Block oldArrayDistinct(@SqlType("array(varchar)") Block array)
-    {
-        if (array.getPositionCount() == 0) {
-            return array;
-        }
-
-        TypedSet typedSet = new TypedSet(VARCHAR, array.getPositionCount(), "old_array_distinct");
-        BlockBuilder distinctElementBlockBuilder = VARCHAR.createBlockBuilder(null, array.getPositionCount());
-        for (int i = 0; i < array.getPositionCount(); i++) {
-            if (!typedSet.contains(array, i)) {
-                typedSet.add(array, i);
-                VARCHAR.appendTo(array, i, distinctElementBlockBuilder);
-            }
-        }
-
-        return distinctElementBlockBuilder.build();
     }
 }

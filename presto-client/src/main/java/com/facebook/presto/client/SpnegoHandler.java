@@ -257,7 +257,7 @@ public class SpnegoHandler
             else {
                 fullHostName = address.getCanonicalHostName();
             }
-            if (fullHostName.equalsIgnoreCase("localhost")) {
+            if ("localhost".equalsIgnoreCase(fullHostName)) {
                 throw new ClientException("Fully qualified name of localhost should not resolve to 'localhost'. System configuration error?");
             }
             return fullHostName;
@@ -265,12 +265,6 @@ public class SpnegoHandler
         catch (UnknownHostException e) {
             throw new ClientException("Failed to resolve host: " + hostName, e);
         }
-    }
-
-    private interface GssSupplier<T>
-    {
-        T get()
-                throws GSSException;
     }
 
     private static <T> T doAs(Subject subject, GssSupplier<T> action)
@@ -287,7 +281,7 @@ public class SpnegoHandler
         }
     }
 
-    private static Oid createOid(String value)
+	private static Oid createOid(String value)
     {
         try {
             return new Oid(value);
@@ -295,6 +289,12 @@ public class SpnegoHandler
         catch (GSSException e) {
             throw new AssertionError(e);
         }
+    }
+
+	private interface GssSupplier<T>
+    {
+        T get()
+                throws GSSException;
     }
 
     private static class Session

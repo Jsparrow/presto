@@ -27,7 +27,9 @@ import static com.facebook.presto.memory.context.AggregatedMemoryContext.newSimp
 
 public class TestingOperatorContext
 {
-    public static OperatorContext create(ScheduledExecutorService scheduledExecutor)
+    private TestingOperatorContext() {}
+
+	public static OperatorContext create(ScheduledExecutorService scheduledExecutor)
     {
         Executor executor = MoreExecutors.directExecutor();
 
@@ -62,6 +64,4 @@ public class TestingOperatorContext
 
         return operatorContext;
     }
-
-    private TestingOperatorContext() {}
 }

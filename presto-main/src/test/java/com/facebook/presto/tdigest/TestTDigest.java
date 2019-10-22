@@ -65,8 +65,8 @@ public class TestTDigest
             list.add(i);
         }
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -75,7 +75,7 @@ public class TestTDigest
     {
         TDigest tDigest1 = createTDigest(STANDARD_COMPRESSION_FACTOR);
         TDigest tDigest2 = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
 
         for (int i = 0; i < NUMBER_OF_ENTRIES / 2; i++) {
             tDigest1.add(i);
@@ -87,8 +87,8 @@ public class TestTDigest
         tDigest1.merge(tDigest2);
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest1);
+        for (double aQuantile : quantile) {
+            assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest1);
         }
     }
 
@@ -97,7 +97,7 @@ public class TestTDigest
     {
         TDigest tDigest1 = createTDigest(STANDARD_COMPRESSION_FACTOR);
         TDigest tDigest2 = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
 
         for (int i = 0; i < NUMBER_OF_ENTRIES / 2; i++) {
             tDigest1.add(i);
@@ -109,8 +109,8 @@ public class TestTDigest
         tDigest2.merge(tDigest1);
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest2);
+        for (double aQuantile : quantile) {
+            assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest2);
         }
     }
 
@@ -118,7 +118,7 @@ public class TestTDigest
     public void testAddElementsRandomized()
     {
         TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        List<Double> list = new ArrayList<Double>();
+        List<Double> list = new ArrayList<>();
 
         for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
             double value = Math.random() * NUMBER_OF_ENTRIES;
@@ -128,8 +128,8 @@ public class TestTDigest
 
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -137,7 +137,7 @@ public class TestTDigest
     public void testNormalDistributionLowVariance()
     {
         TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        List<Double> list = new ArrayList<Double>();
+        List<Double> list = new ArrayList<>();
         NormalDistribution normal = new NormalDistribution(1000, 1);
 
         for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
@@ -148,8 +148,8 @@ public class TestTDigest
 
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -157,7 +157,7 @@ public class TestTDigest
     public void testNormalDistributionHighVariance()
     {
         TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        List<Double> list = new ArrayList<Double>();
+        List<Double> list = new ArrayList<>();
         NormalDistribution normal = new NormalDistribution(0, 1);
 
         for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
@@ -168,8 +168,8 @@ public class TestTDigest
 
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -193,8 +193,8 @@ public class TestTDigest
         tDigest1.merge(tDigest2);
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest1);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest1);
         }
     }
 
@@ -218,8 +218,8 @@ public class TestTDigest
 
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -243,8 +243,8 @@ public class TestTDigest
 
         sort(list);
 
-        for (int i = 0; i < quantile.length; i++) {
-            assertContinuousWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+        for (double aQuantile : quantile) {
+            assertContinuousWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
         }
     }
 
@@ -266,8 +266,8 @@ public class TestTDigest
 
             Collections.sort(list);
 
-            for (int i = 0; i < quantile.length; i++) {
-                assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+            for (double aQuantile : quantile) {
+                assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
             }
         }
     }
@@ -279,7 +279,7 @@ public class TestTDigest
         for (int k = 1; k < trials; k++) {
             TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR);
             GeometricDistribution geometric = new GeometricDistribution(k * 0.1);
-            List<Integer> list = new ArrayList<Integer>();
+            List<Integer> list = new ArrayList<>();
 
             for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
                 int sample = geometric.sample();
@@ -289,8 +289,8 @@ public class TestTDigest
 
             Collections.sort(list);
 
-            for (int i = 0; i < quantile.length; i++) {
-                assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+            for (double aQuantile : quantile) {
+                assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
             }
         }
     }
@@ -302,7 +302,7 @@ public class TestTDigest
         for (int k = 1; k < trials; k++) {
             TDigest tDigest = createTDigest(STANDARD_COMPRESSION_FACTOR);
             PoissonDistribution poisson = new PoissonDistribution(k * 0.1);
-            List<Integer> list = new ArrayList<Integer>();
+            List<Integer> list = new ArrayList<>();
 
             for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
                 int sample = poisson.sample();
@@ -312,8 +312,8 @@ public class TestTDigest
 
             Collections.sort(list);
 
-            for (int i = 0; i < quantile.length; i++) {
-                assertDiscreteWithinBound(quantile[i], STANDARD_ERROR, list, tDigest);
+            for (double aQuantile : quantile) {
+                assertDiscreteWithinBound(aQuantile, STANDARD_ERROR, list, tDigest);
             }
         }
     }

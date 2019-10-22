@@ -147,7 +147,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<Database> getDatabase(String databaseName)
         {
-            if (databaseName.equals("database")) {
+            if ("database".equals(databaseName)) {
                 return Optional.of(DATABASE);
             }
 
@@ -163,7 +163,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<Table> getTable(String databaseName, String tableName)
         {
-            if (databaseName.equals("database") && tableName.equals("table")) {
+            if ("database".equals(databaseName) && "table".equals(tableName)) {
                 return Optional.of(TABLE);
             }
 
@@ -183,7 +183,7 @@ public class TestRecordingHiveMetastore
         @Override
         public PartitionStatistics getTableStatistics(String databaseName, String tableName)
         {
-            if (databaseName.equals("database") && tableName.equals("table")) {
+            if ("database".equals(databaseName) && "table".equals(tableName)) {
                 return PARTITION_STATISTICS;
             }
 
@@ -193,7 +193,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Map<String, PartitionStatistics> getPartitionStatistics(String databaseName, String tableName, Set<String> partitionNames)
         {
-            if (databaseName.equals("database") && tableName.equals("table") && partitionNames.contains("value")) {
+            if ("database".equals(databaseName) && "table".equals(tableName) && partitionNames.contains("value")) {
                 return ImmutableMap.of("value", PARTITION_STATISTICS);
             }
 
@@ -203,7 +203,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<List<String>> getAllTables(String databaseName)
         {
-            if (databaseName.equals("database")) {
+            if ("database".equals(databaseName)) {
                 return Optional.of(ImmutableList.of("table"));
             }
 
@@ -225,7 +225,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<Partition> getPartition(String databaseName, String tableName, List<String> partitionValues)
         {
-            if (databaseName.equals("database") && tableName.equals("table") && partitionValues.equals(ImmutableList.of("value"))) {
+            if ("database".equals(databaseName) && "table".equals(tableName) && partitionValues.equals(ImmutableList.of("value"))) {
                 return Optional.of(PARTITION);
             }
 
@@ -235,7 +235,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<List<String>> getPartitionNames(String databaseName, String tableName)
         {
-            if (databaseName.equals("database") && tableName.equals("table")) {
+            if ("database".equals(databaseName) && "table".equals(tableName)) {
                 return Optional.of(ImmutableList.of("value"));
             }
 
@@ -245,7 +245,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Optional<List<String>> getPartitionNamesByParts(String databaseName, String tableName, List<String> parts)
         {
-            if (databaseName.equals("database") && tableName.equals("table") && parts.equals(ImmutableList.of("value"))) {
+            if ("database".equals(databaseName) && "table".equals(tableName) && parts.equals(ImmutableList.of("value"))) {
                 return Optional.of(ImmutableList.of("value"));
             }
 
@@ -255,7 +255,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Map<String, Optional<Partition>> getPartitionsByNames(String databaseName, String tableName, List<String> partitionNames)
         {
-            if (databaseName.equals("database") && tableName.equals("table") && partitionNames.contains("value")) {
+            if ("database".equals(databaseName) && "table".equals(tableName) && partitionNames.contains("value")) {
                 return ImmutableMap.of("value", Optional.of(PARTITION));
             }
 
@@ -265,7 +265,7 @@ public class TestRecordingHiveMetastore
         @Override
         public Set<HivePrivilegeInfo> listTablePrivileges(String database, String table, PrestoPrincipal prestoPrincipal)
         {
-            if (database.equals("database") && table.equals("table") && prestoPrincipal.getType() == USER && prestoPrincipal.getName().equals("user")) {
+            if ("database".equals(database) && "table".equals(table) && prestoPrincipal.getType() == USER && "user".equals(prestoPrincipal.getName())) {
                 return ImmutableSet.of(PRIVILEGE_INFO);
             }
 

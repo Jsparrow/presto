@@ -203,7 +203,7 @@ public class JoinStatsRule
         // for other (auxiliary) clauses.
         Queue<EquiJoinClause> remainingClauses = new LinkedList<>(clauses);
         EquiJoinClause drivingClause = remainingClauses.poll();
-        for (int i = 0; i < clauses.size(); i++) {
+        for (JoinNode.EquiJoinClause clause : clauses) {
             PlanNodeStatsEstimate estimate = filterByEquiJoinClauses(stats, drivingClause, remainingClauses, session, types);
             if (result.isOutputRowCountUnknown() || (!estimate.isOutputRowCountUnknown() && estimate.getOutputRowCount() < result.getOutputRowCount())) {
                 result = estimate;
@@ -321,7 +321,7 @@ public class JoinStatsRule
                 .map(drivingClause -> calculateJoinComplementStats(leftStats, rightStats, drivingClause, criteria.size() - 1 + numberOfFilterClauses))
                 .filter(estimate -> !estimate.isOutputRowCountUnknown())
                 .max(comparingDouble(PlanNodeStatsEstimate::getOutputRowCount))
-                .map(estimate -> normalizer.normalize(estimate))
+                .map(normalizer::normalize)
                 .orElse(PlanNodeStatsEstimate.unknown());
     }
 
@@ -393,7 +393,7 @@ public class JoinStatsRule
         PlanNodeStatsEstimate.Builder outputStats = PlanNodeStatsEstimate.buildFrom(innerJoinStats);
         outputStats.setOutputRowCount(outputRowCount);
 
-        for (VariableReferenceExpression variable : joinComplementStats.getVariablesWithKnownStatistics()) {
+        joinComplementStats.getVariablesWithKnownStatistics().forEach(variable -> {
             VariableStatsEstimate leftSymbolStats = sourceStats.getVariableStatistics(variable);
             VariableStatsEstimate innerJoinSymbolStats = innerJoinStats.getVariableStatistics(variable);
             VariableStatsEstimate joinComplementSymbolStats = joinComplementStats.getVariableStatistics(variable);
@@ -407,14 +407,14 @@ public class JoinStatsRule
                     .setDistinctValuesCount(leftSymbolStats.getDistinctValuesCount())
                     .setNullsFraction(newNullsFraction)
                     .build());
-        }
+        });
 
         // add nulls to columns that don't exist in right stats
-        for (VariableReferenceExpression variable : difference(innerJoinStats.getVariablesWithKnownStatistics(), joinComplementStats.getVariablesWithKnownStatistics())) {
+		difference(innerJoinStats.getVariablesWithKnownStatistics(), joinComplementStats.getVariablesWithKnownStatistics()).forEach(variable -> {
             VariableStatsEstimate innerJoinSymbolStats = innerJoinStats.getVariableStatistics(variable);
             double newNullsFraction = (innerJoinSymbolStats.getNullsFraction() * innerJoinRowCount + joinComplementRowCount) / outputRowCount;
             outputStats.addVariableStatistics(variable, innerJoinSymbolStats.mapNullsFraction(nullsFraction -> newNullsFraction));
-        }
+        });
 
         return outputStats.build();
     }

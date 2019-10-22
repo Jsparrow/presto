@@ -27,38 +27,36 @@ public final class ExpressionTreeRewriter<C>
     private final ExpressionRewriter<C> rewriter;
     private final AstVisitor<Expression, ExpressionTreeRewriter.Context<C>> visitor;
 
-    public static <C, T extends Expression> T rewriteWith(ExpressionRewriter<C> rewriter, T node)
-    {
-        return new ExpressionTreeRewriter<>(rewriter).rewrite(node, null);
-    }
-
-    public static <C, T extends Expression> T rewriteWith(ExpressionRewriter<C> rewriter, T node, C context)
-    {
-        return new ExpressionTreeRewriter<>(rewriter).rewrite(node, context);
-    }
-
     public ExpressionTreeRewriter(ExpressionRewriter<C> rewriter)
     {
         this.rewriter = rewriter;
         this.visitor = new RewritingVisitor();
     }
 
-    private List<Expression> rewrite(List<Expression> items, Context<C> context)
+	public static <C, T extends Expression> T rewriteWith(ExpressionRewriter<C> rewriter, T node)
+    {
+        return new ExpressionTreeRewriter<>(rewriter).rewrite(node, null);
+    }
+
+	public static <C, T extends Expression> T rewriteWith(ExpressionRewriter<C> rewriter, T node, C context)
+    {
+        return new ExpressionTreeRewriter<>(rewriter).rewrite(node, context);
+    }
+
+	private List<Expression> rewrite(List<Expression> items, Context<C> context)
     {
         ImmutableList.Builder<Expression> builder = ImmutableList.builder();
-        for (Expression expression : items) {
-            builder.add(rewrite(expression, context.get()));
-        }
+        items.forEach(expression -> builder.add(rewrite(expression, context.get())));
         return builder.build();
     }
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
     public <T extends Expression> T rewrite(T node, C context)
     {
         return (T) visitor.process(node, new Context<>(context, false));
     }
 
-    /**
+	/**
      * Invoke the default rewrite logic explicitly. Specifically, it skips the invocation of the expression rewriter for the provided node.
      */
     @SuppressWarnings("unchecked")
@@ -67,7 +65,38 @@ public final class ExpressionTreeRewriter<C>
         return (T) visitor.process(node, new Context<>(context, true));
     }
 
-    private class RewritingVisitor
+	private static <T> boolean sameElements(Optional<T> a, Optional<T> b)
+    {
+        if (!a.isPresent() && !b.isPresent()) {
+            return true;
+        }
+        else if (a.isPresent() != b.isPresent()) {
+            return false;
+        }
+
+        return a.get() == b.get();
+    }
+
+	@SuppressWarnings("ObjectEquality")
+    private static <T> boolean sameElements(Iterable<? extends T> a, Iterable<? extends T> b)
+    {
+        if (Iterables.size(a) != Iterables.size(b)) {
+            return false;
+        }
+
+        Iterator<? extends T> first = a.iterator();
+        Iterator<? extends T> second = b.iterator();
+
+        while (first.hasNext() && second.hasNext()) {
+            if (first.next() != second.next()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+	private class RewritingVisitor
             extends AstVisitor<Expression, ExpressionTreeRewriter.Context<C>>
     {
         @Override
@@ -80,7 +109,7 @@ public final class ExpressionTreeRewriter<C>
                 }
             }
 
-            throw new UnsupportedOperationException("not yet implemented: " + getClass().getSimpleName() + " for " + node.getClass().getName());
+            throw new UnsupportedOperationException(new StringBuilder().append("not yet implemented: ").append(getClass().getSimpleName()).append(" for ").append(node.getClass().getName()).toString());
         }
 
         @Override
@@ -372,9 +401,7 @@ public final class ExpressionTreeRewriter<C>
             }
 
             ImmutableList.Builder<WhenClause> builder = ImmutableList.builder();
-            for (WhenClause expression : node.getWhenClauses()) {
-                builder.add(rewrite(expression, context.get()));
-            }
+            node.getWhenClauses().forEach(expression -> builder.add(rewrite(expression, context.get())));
 
             Optional<Expression> defaultValue = node.getDefaultValue()
                     .map(value -> rewrite(value, context.get()));
@@ -399,9 +426,7 @@ public final class ExpressionTreeRewriter<C>
             Expression operand = rewrite(node.getOperand(), context.get());
 
             ImmutableList.Builder<WhenClause> builder = ImmutableList.builder();
-            for (WhenClause expression : node.getWhenClauses()) {
-                builder.add(rewrite(expression, context.get()));
-            }
+            node.getWhenClauses().forEach(expression -> builder.add(rewrite(expression, context.get())));
 
             Optional<Expression> defaultValue = node.getDefaultValue()
                     .map(value -> rewrite(value, context.get()));
@@ -558,7 +583,7 @@ public final class ExpressionTreeRewriter<C>
         private List<SortItem> rewriteSortItems(List<SortItem> sortItems, Context<C> context)
         {
             ImmutableList.Builder<SortItem> rewrittenSortItems = ImmutableList.builder();
-            for (SortItem sortItem : sortItems) {
+            sortItems.forEach(sortItem -> {
                 Expression sortKey = rewrite(sortItem.getSortKey(), context.get());
                 if (sortItem.getSortKey() != sortKey) {
                     rewrittenSortItems.add(new SortItem(sortKey, sortItem.getOrdering(), sortItem.getNullOrdering()));
@@ -566,7 +591,7 @@ public final class ExpressionTreeRewriter<C>
                 else {
                     rewrittenSortItems.add(sortItem);
                 }
-            }
+            });
             return rewrittenSortItems.build();
         }
 
@@ -905,36 +930,5 @@ public final class ExpressionTreeRewriter<C>
         {
             return defaultRewrite;
         }
-    }
-
-    private static <T> boolean sameElements(Optional<T> a, Optional<T> b)
-    {
-        if (!a.isPresent() && !b.isPresent()) {
-            return true;
-        }
-        else if (a.isPresent() != b.isPresent()) {
-            return false;
-        }
-
-        return a.get() == b.get();
-    }
-
-    @SuppressWarnings("ObjectEquality")
-    private static <T> boolean sameElements(Iterable<? extends T> a, Iterable<? extends T> b)
-    {
-        if (Iterables.size(a) != Iterables.size(b)) {
-            return false;
-        }
-
-        Iterator<? extends T> first = a.iterator();
-        Iterator<? extends T> second = b.iterator();
-
-        while (first.hasNext() && second.hasNext()) {
-            if (first.next() != second.next()) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

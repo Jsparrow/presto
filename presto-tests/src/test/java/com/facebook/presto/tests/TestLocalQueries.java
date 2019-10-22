@@ -115,7 +115,8 @@ public class TestLocalQueries
         assertQuery("SELECT 0.1", "SELECT CAST('0.1' AS DECIMAL)");
     }
 
-    @Test
+    @Override
+	@Test
     public void testIOExplain()
     {
         String query = "SELECT * FROM orders";

@@ -66,6 +66,6 @@ class OrBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return "(" + left + " || " + right + ")";
+        return new StringBuilder().append("(").append(left).append(" || ").append(right).append(")").toString();
     }
 }

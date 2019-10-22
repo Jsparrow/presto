@@ -28,17 +28,17 @@ public class SphericalGeographyType
     public static final SphericalGeographyType SPHERICAL_GEOGRAPHY = new SphericalGeographyType();
     public static final String SPHERICAL_GEOGRAPHY_TYPE_NAME = "SphericalGeography";
 
-    private SphericalGeographyType()
-    {
-        super(new TypeSignature(SPHERICAL_GEOGRAPHY_TYPE_NAME), Slice.class);
-    }
-
     protected SphericalGeographyType(TypeSignature signature)
     {
         super(signature, Slice.class);
     }
 
-    @Override
+	private SphericalGeographyType()
+    {
+        super(new TypeSignature(SPHERICAL_GEOGRAPHY_TYPE_NAME), Slice.class);
+    }
+
+	@Override
     public void appendTo(Block block, int position, BlockBuilder blockBuilder)
     {
         if (block.isNull(position)) {
@@ -50,25 +50,25 @@ public class SphericalGeographyType
         }
     }
 
-    @Override
+	@Override
     public Slice getSlice(Block block, int position)
     {
         return block.getSlice(position, 0, block.getSliceLength(position));
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value)
     {
         writeSlice(blockBuilder, value, 0, value.length());
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         blockBuilder.writeBytes(value, offset, length).closeEntry();
     }
 
-    @Override
+	@Override
     public Object getObjectValue(ConnectorSession session, Block block, int position)
     {
         if (block.isNull(position)) {

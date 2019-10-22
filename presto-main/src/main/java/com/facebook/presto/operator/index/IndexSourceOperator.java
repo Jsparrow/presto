@@ -39,7 +39,109 @@ import static java.util.Objects.requireNonNull;
 public class IndexSourceOperator
         implements SourceOperator
 {
-    public static class IndexSourceOperatorFactory
+    private final OperatorContext operatorContext;
+	private final PlanNodeId planNodeId;
+	private final ConnectorIndex index;
+	private final Function<RecordSet, RecordSet> probeKeyNormalizer;
+	private Operator source;
+
+	public IndexSourceOperator(
+            OperatorContext operatorContext,
+            PlanNodeId planNodeId,
+            ConnectorIndex index,
+            Function<RecordSet, RecordSet> probeKeyNormalizer)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+        this.index = requireNonNull(index, "index is null");
+        this.probeKeyNormalizer = requireNonNull(probeKeyNormalizer, "probeKeyNormalizer is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public PlanNodeId getSourceId()
+    {
+        return planNodeId;
+    }
+
+	@Override
+    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
+    {
+        requireNonNull(split, "split is null");
+        checkState(source == null, "Index source split already set");
+
+        IndexSplit indexSplit = (IndexSplit) split.getConnectorSplit();
+
+        // Normalize the incoming RecordSet to something that can be consumed by the index
+        RecordSet normalizedRecordSet = probeKeyNormalizer.apply(indexSplit.getKeyRecordSet());
+        ConnectorPageSource result = index.lookup(normalizedRecordSet);
+        source = new PageSourceOperator(result, operatorContext);
+
+        Object splitInfo = split.getInfo();
+        if (splitInfo != null) {
+            operatorContext.setInfoSupplier(() -> new SplitOperatorInfo(splitInfo));
+        }
+
+        return Optional::empty;
+    }
+
+	@Override
+    public void noMoreSplits()
+    {
+        if (source == null) {
+            source = new FinishedOperator(operatorContext);
+        }
+    }
+
+	@Override
+    public void finish()
+    {
+        noMoreSplits();
+        source.finish();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return (source != null) && source.isFinished();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (source == null) {
+            return null;
+        }
+        return source.getOutput();
+    }
+
+	@Override
+    public void close()
+            throws Exception
+    {
+        if (source != null) {
+            source.close();
+        }
+    }
+
+	public static class IndexSourceOperatorFactory
             implements SourceOperatorFactory
     {
         private final int operatorId;
@@ -82,109 +184,6 @@ public class IndexSourceOperator
         public void noMoreOperators()
         {
             closed = true;
-        }
-    }
-
-    private final OperatorContext operatorContext;
-    private final PlanNodeId planNodeId;
-    private final ConnectorIndex index;
-    private final Function<RecordSet, RecordSet> probeKeyNormalizer;
-
-    private Operator source;
-
-    public IndexSourceOperator(
-            OperatorContext operatorContext,
-            PlanNodeId planNodeId,
-            ConnectorIndex index,
-            Function<RecordSet, RecordSet> probeKeyNormalizer)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
-        this.index = requireNonNull(index, "index is null");
-        this.probeKeyNormalizer = requireNonNull(probeKeyNormalizer, "probeKeyNormalizer is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public PlanNodeId getSourceId()
-    {
-        return planNodeId;
-    }
-
-    @Override
-    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
-    {
-        requireNonNull(split, "split is null");
-        checkState(source == null, "Index source split already set");
-
-        IndexSplit indexSplit = (IndexSplit) split.getConnectorSplit();
-
-        // Normalize the incoming RecordSet to something that can be consumed by the index
-        RecordSet normalizedRecordSet = probeKeyNormalizer.apply(indexSplit.getKeyRecordSet());
-        ConnectorPageSource result = index.lookup(normalizedRecordSet);
-        source = new PageSourceOperator(result, operatorContext);
-
-        Object splitInfo = split.getInfo();
-        if (splitInfo != null) {
-            operatorContext.setInfoSupplier(() -> new SplitOperatorInfo(splitInfo));
-        }
-
-        return Optional::empty;
-    }
-
-    @Override
-    public void noMoreSplits()
-    {
-        if (source == null) {
-            source = new FinishedOperator(operatorContext);
-        }
-    }
-
-    @Override
-    public void finish()
-    {
-        noMoreSplits();
-        source.finish();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return (source != null) && source.isFinished();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (source == null) {
-            return null;
-        }
-        return source.getOutput();
-    }
-
-    @Override
-    public void close()
-            throws Exception
-    {
-        if (source != null) {
-            source.close();
         }
     }
 }

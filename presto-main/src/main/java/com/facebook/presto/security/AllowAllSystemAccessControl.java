@@ -37,7 +37,140 @@ public class AllowAllSystemAccessControl
 
     private static final AllowAllSystemAccessControl INSTANCE = new AllowAllSystemAccessControl();
 
-    public static class Factory
+    @Override
+    public void checkCanSetUser(Optional<Principal> principal, String userName)
+    {
+    }
+
+	@Override
+    public void checkCanSetSystemSessionProperty(Identity identity, String propertyName)
+    {
+    }
+
+	@Override
+    public void checkCanAccessCatalog(Identity identity, String catalogName)
+    {
+    }
+
+	@Override
+    public Set<String> filterCatalogs(Identity identity, Set<String> catalogs)
+    {
+        return catalogs;
+    }
+
+	@Override
+    public void checkCanCreateSchema(Identity identity, CatalogSchemaName schema)
+    {
+    }
+
+	@Override
+    public void checkCanDropSchema(Identity identity, CatalogSchemaName schema)
+    {
+    }
+
+	@Override
+    public void checkCanRenameSchema(Identity identity, CatalogSchemaName schema, String newSchemaName)
+    {
+    }
+
+	@Override
+    public void checkCanShowSchemas(Identity identity, String catalogName)
+    {
+    }
+
+	@Override
+    public Set<String> filterSchemas(Identity identity, String catalogName, Set<String> schemaNames)
+    {
+        return schemaNames;
+    }
+
+	@Override
+    public void checkCanCreateTable(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanDropTable(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanRenameTable(Identity identity, CatalogSchemaTableName table, CatalogSchemaTableName newTable)
+    {
+    }
+
+	@Override
+    public void checkCanShowTablesMetadata(Identity identity, CatalogSchemaName schema)
+    {
+    }
+
+	@Override
+    public Set<SchemaTableName> filterTables(Identity identity, String catalogName, Set<SchemaTableName> tableNames)
+    {
+        return tableNames;
+    }
+
+	@Override
+    public void checkCanAddColumn(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanDropColumn(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanRenameColumn(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
+    {
+    }
+
+	@Override
+    public void checkCanInsertIntoTable(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanDeleteFromTable(Identity identity, CatalogSchemaTableName table)
+    {
+    }
+
+	@Override
+    public void checkCanCreateView(Identity identity, CatalogSchemaTableName view)
+    {
+    }
+
+	@Override
+    public void checkCanDropView(Identity identity, CatalogSchemaTableName view)
+    {
+    }
+
+	@Override
+    public void checkCanCreateViewWithSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
+    {
+    }
+
+	@Override
+    public void checkCanSetCatalogSessionProperty(Identity identity, String catalogName, String propertyName)
+    {
+    }
+
+	@Override
+    public void checkCanGrantTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal grantee, boolean withGrantOption)
+    {
+    }
+
+	@Override
+    public void checkCanRevokeTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal revokee, boolean grantOptionFor)
+    {
+    }
+
+	public static class Factory
             implements SystemAccessControlFactory
     {
         @Override
@@ -53,138 +186,5 @@ public class AllowAllSystemAccessControl
             checkArgument(config.isEmpty(), "This access controller does not support any configuration properties");
             return INSTANCE;
         }
-    }
-
-    @Override
-    public void checkCanSetUser(Optional<Principal> principal, String userName)
-    {
-    }
-
-    @Override
-    public void checkCanSetSystemSessionProperty(Identity identity, String propertyName)
-    {
-    }
-
-    @Override
-    public void checkCanAccessCatalog(Identity identity, String catalogName)
-    {
-    }
-
-    @Override
-    public Set<String> filterCatalogs(Identity identity, Set<String> catalogs)
-    {
-        return catalogs;
-    }
-
-    @Override
-    public void checkCanCreateSchema(Identity identity, CatalogSchemaName schema)
-    {
-    }
-
-    @Override
-    public void checkCanDropSchema(Identity identity, CatalogSchemaName schema)
-    {
-    }
-
-    @Override
-    public void checkCanRenameSchema(Identity identity, CatalogSchemaName schema, String newSchemaName)
-    {
-    }
-
-    @Override
-    public void checkCanShowSchemas(Identity identity, String catalogName)
-    {
-    }
-
-    @Override
-    public Set<String> filterSchemas(Identity identity, String catalogName, Set<String> schemaNames)
-    {
-        return schemaNames;
-    }
-
-    @Override
-    public void checkCanCreateTable(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanDropTable(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanRenameTable(Identity identity, CatalogSchemaTableName table, CatalogSchemaTableName newTable)
-    {
-    }
-
-    @Override
-    public void checkCanShowTablesMetadata(Identity identity, CatalogSchemaName schema)
-    {
-    }
-
-    @Override
-    public Set<SchemaTableName> filterTables(Identity identity, String catalogName, Set<SchemaTableName> tableNames)
-    {
-        return tableNames;
-    }
-
-    @Override
-    public void checkCanAddColumn(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanDropColumn(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanRenameColumn(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
-    {
-    }
-
-    @Override
-    public void checkCanInsertIntoTable(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanDeleteFromTable(Identity identity, CatalogSchemaTableName table)
-    {
-    }
-
-    @Override
-    public void checkCanCreateView(Identity identity, CatalogSchemaTableName view)
-    {
-    }
-
-    @Override
-    public void checkCanDropView(Identity identity, CatalogSchemaTableName view)
-    {
-    }
-
-    @Override
-    public void checkCanCreateViewWithSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
-    {
-    }
-
-    @Override
-    public void checkCanSetCatalogSessionProperty(Identity identity, String catalogName, String propertyName)
-    {
-    }
-
-    @Override
-    public void checkCanGrantTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal grantee, boolean withGrantOption)
-    {
-    }
-
-    @Override
-    public void checkCanRevokeTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal revokee, boolean grantOptionFor)
-    {
     }
 }

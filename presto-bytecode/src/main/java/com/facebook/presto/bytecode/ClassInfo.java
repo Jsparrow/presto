@@ -118,9 +118,7 @@ public class ClassInfo
             return ImmutableList.of();
         }
         ImmutableList.Builder<ClassInfo> builder = ImmutableList.builder();
-        for (ParameterizedType anInterface : interfaces) {
-            builder.add(loader.loadClassInfo(anInterface));
-        }
+        interfaces.forEach(anInterface -> builder.add(loader.loadClassInfo(anInterface)));
         return builder.build();
     }
 

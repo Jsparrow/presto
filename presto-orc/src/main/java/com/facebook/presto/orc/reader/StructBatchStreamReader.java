@@ -89,9 +89,7 @@ public class StructBatchStreamReader
                 // and use this as the skip size for the field readers
                 readOffset = presentStream.countBitsSet(readOffset);
             }
-            for (BatchStreamReader structField : structFields.values()) {
-                structField.prepareNextRead(readOffset);
-            }
+            structFields.values().forEach(structField -> structField.prepareNextRead(readOffset));
         }
 
         boolean[] nullVector = null;

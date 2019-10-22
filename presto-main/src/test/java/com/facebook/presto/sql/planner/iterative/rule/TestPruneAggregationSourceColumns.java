@@ -66,7 +66,7 @@ public class TestPruneAggregationSourceColumns
     public void testAllInputsReferenced()
     {
         tester().assertThat(new PruneAggregationSourceColumns())
-                .on(p -> buildAggregation(p, variable -> !variable.getName().equals("unused")))
+                .on(p -> buildAggregation(p, variable -> !"unused".equals(variable.getName())))
                 .doesNotFire();
     }
 

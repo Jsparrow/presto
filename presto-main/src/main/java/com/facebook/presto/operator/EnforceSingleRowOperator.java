@@ -27,7 +27,74 @@ import static java.util.Objects.requireNonNull;
 public class EnforceSingleRowOperator
         implements Operator
 {
-    public static class EnforceSingleRowOperatorFactory
+    private static final Page SINGLE_NULL_VALUE_PAGE = new Page(1, new ByteArrayBlock(1, Optional.of(new boolean[] {true}), new byte[1]));
+
+	private final OperatorContext operatorContext;
+
+	private boolean finishing;
+
+	private Page page;
+
+	public EnforceSingleRowOperator(OperatorContext operatorContext)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        if (!finishing && page == null) {
+            this.page = SINGLE_NULL_VALUE_PAGE;
+        }
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && page == null;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finishing;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(needsInput(), "Operator did not expect any more data");
+        if (page.getPositionCount() == 0) {
+            return;
+        }
+        if (this.page != null || page.getPositionCount() > 1) {
+            throw new PrestoException(SUBQUERY_MULTIPLE_ROWS, "Scalar sub-query has returned multiple rows");
+        }
+        this.page = page;
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!finishing) {
+            return null;
+        }
+        checkState(page != null, "Operator is already done");
+
+        Page pageToReturn = page;
+        page = null;
+        return pageToReturn;
+    }
+
+	public static class EnforceSingleRowOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -59,70 +126,5 @@ public class EnforceSingleRowOperator
         {
             return new EnforceSingleRowOperatorFactory(operatorId, planNodeId);
         }
-    }
-
-    private static final Page SINGLE_NULL_VALUE_PAGE = new Page(1, new ByteArrayBlock(1, Optional.of(new boolean[] {true}), new byte[1]));
-
-    private final OperatorContext operatorContext;
-    private boolean finishing;
-    private Page page;
-
-    public EnforceSingleRowOperator(OperatorContext operatorContext)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        if (!finishing && page == null) {
-            this.page = SINGLE_NULL_VALUE_PAGE;
-        }
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && page == null;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finishing;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(needsInput(), "Operator did not expect any more data");
-        if (page.getPositionCount() == 0) {
-            return;
-        }
-        if (this.page != null || page.getPositionCount() > 1) {
-            throw new PrestoException(SUBQUERY_MULTIPLE_ROWS, "Scalar sub-query has returned multiple rows");
-        }
-        this.page = page;
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!finishing) {
-            return null;
-        }
-        checkState(page != null, "Operator is already done");
-
-        Page pageToReturn = page;
-        page = null;
-        return pageToReturn;
     }
 }

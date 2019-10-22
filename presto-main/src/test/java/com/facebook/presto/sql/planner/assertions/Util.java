@@ -85,7 +85,7 @@ final class Util
                 return false;
             }
             SortOrder sortOrder = getOnlyElement(Maps.filterKeys(orderingScheme.getOrderingsMap(), variable -> variable.getName().equals(symbol.getName())).values().iterator());
-            if (!ordering.getSortOrder().equals(sortOrder)) {
+            if (ordering.getSortOrder() != sortOrder) {
                 return false;
             }
         }

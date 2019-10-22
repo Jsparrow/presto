@@ -47,16 +47,10 @@ public class TestDwrfMetadataReader
                 false));
 
         // having only sum should work for current version
-        for (boolean isRowGroup : ImmutableList.of(true, false)) {
-            assertEquals(
-                    DwrfMetadataReader.toStringStatistics(
-                            HiveWriterVersion.ORC_HIVE_8732,
-                            DwrfProto.StringStatistics.newBuilder()
-                                    .setSum(45)
-                                    .build(),
-                            isRowGroup),
-                    new StringStatistics(null, null, 45));
-        }
+		ImmutableList.of(true, false).forEach(isRowGroup -> assertEquals(
+				DwrfMetadataReader.toStringStatistics(HiveWriterVersion.ORC_HIVE_8732,
+						DwrfProto.StringStatistics.newBuilder().setSum(45).build(), isRowGroup),
+				new StringStatistics(null, null, 45)));
         // and the ORIGINAL version row group stats (but not rolled up stats)
         assertEquals(
                 DwrfMetadataReader.toStringStatistics(
@@ -97,16 +91,14 @@ public class TestDwrfMetadataReader
                         true),
                 new StringStatistics(Slices.utf8Slice("ant"), Slices.utf8Slice("cat"), 79));
 
-        for (Slice prefix : ALL_UTF8_SEQUENCES) {
-            for (int testCodePoint : TEST_CODE_POINTS) {
-                Slice codePoint = codePointToUtf8(testCodePoint);
-                for (Slice suffix : ALL_UTF8_SEQUENCES) {
-                    Slice testValue = concatSlice(prefix, codePoint, suffix);
-                    testStringStatisticsTruncation(testValue, HiveWriterVersion.ORIGINAL);
-                    testStringStatisticsTruncation(testValue, HiveWriterVersion.ORC_HIVE_8732);
-                }
-            }
-        }
+        ALL_UTF8_SEQUENCES.forEach(prefix -> TEST_CODE_POINTS.stream().mapToInt(Integer::valueOf).forEach(testCodePoint -> {
+			Slice codePoint = codePointToUtf8(testCodePoint);
+			ALL_UTF8_SEQUENCES.forEach(suffix -> {
+				Slice testValue = concatSlice(prefix, codePoint, suffix);
+				testStringStatisticsTruncation(testValue, HiveWriterVersion.ORIGINAL);
+				testStringStatisticsTruncation(testValue, HiveWriterVersion.ORC_HIVE_8732);
+			});
+		}));
     }
 
     private static void testStringStatisticsTruncation(Slice testValue, HiveWriterVersion version)

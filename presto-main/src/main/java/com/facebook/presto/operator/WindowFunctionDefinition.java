@@ -31,16 +31,6 @@ public class WindowFunctionDefinition
     private final FrameInfo frameInfo;
     private final List<Integer> argumentChannels;
 
-    public static WindowFunctionDefinition window(WindowFunctionSupplier functionSupplier, Type type, FrameInfo frameInfo, List<Integer> inputs)
-    {
-        return new WindowFunctionDefinition(functionSupplier, type, frameInfo, inputs);
-    }
-
-    public static WindowFunctionDefinition window(WindowFunctionSupplier functionSupplier, Type type, FrameInfo frameInfo, Integer... inputs)
-    {
-        return window(functionSupplier, type, frameInfo, Arrays.asList(inputs));
-    }
-
     WindowFunctionDefinition(WindowFunctionSupplier functionSupplier, Type type, FrameInfo frameInfo, List<Integer> argumentChannels)
     {
         requireNonNull(functionSupplier, "functionSupplier is null");
@@ -54,17 +44,27 @@ public class WindowFunctionDefinition
         this.argumentChannels = ImmutableList.copyOf(argumentChannels);
     }
 
-    public FrameInfo getFrameInfo()
+	public static WindowFunctionDefinition window(WindowFunctionSupplier functionSupplier, Type type, FrameInfo frameInfo, List<Integer> inputs)
+    {
+        return new WindowFunctionDefinition(functionSupplier, type, frameInfo, inputs);
+    }
+
+	public static WindowFunctionDefinition window(WindowFunctionSupplier functionSupplier, Type type, FrameInfo frameInfo, Integer... inputs)
+    {
+        return window(functionSupplier, type, frameInfo, Arrays.asList(inputs));
+    }
+
+	public FrameInfo getFrameInfo()
     {
         return frameInfo;
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public WindowFunction createWindowFunction()
+	public WindowFunction createWindowFunction()
     {
         return functionSupplier.createWindowFunction(argumentChannels);
     }

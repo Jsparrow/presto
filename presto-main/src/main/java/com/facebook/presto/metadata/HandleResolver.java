@@ -43,10 +43,13 @@ import static com.facebook.presto.operator.ExchangeOperator.REMOTE_CONNECTOR_ID;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HandleResolver
 {
-    private final ConcurrentMap<String, MaterializedHandleResolver> handleResolvers = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(HandleResolver.class);
+	private final ConcurrentMap<String, MaterializedHandleResolver> handleResolvers = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, MaterializedFunctionHandleResolver> functionHandleResolvers = new ConcurrentHashMap<>();
 
     @Inject
@@ -200,6 +203,7 @@ public class HandleResolver
                 }
             }
             catch (UnsupportedOperationException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
         }
         throw new IllegalArgumentException("No connector for handle: " + handle);
@@ -214,6 +218,7 @@ public class HandleResolver
                 }
             }
             catch (UnsupportedOperationException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
         }
         throw new IllegalArgumentException("No function namespace for handle: " + handle);

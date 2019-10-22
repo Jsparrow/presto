@@ -56,7 +56,65 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @BenchmarkMode(Mode.AverageTime)
 public class BenchmarkBlockFlattener
 {
-    private static class ThrowawayArrayAllocator
+    @Benchmark
+    public long benchmarkWithFlatten(FlattenContext context)
+    {
+        long sum = 0;
+        for (int i = 0; i < context.numberOfIterations; i++) {
+            try (BlockLease lease = context.flattener.flatten(context.block)) {
+                Block block = lease.get();
+
+                for (int j = 0; j < context.blockSize; j++) {
+                    sum += block.getInt(j);
+                }
+            }
+        }
+        return sum;
+    }
+
+	@Benchmark
+    public long benchmarkWithoutFlatten(BaseContext context)
+    {
+        int sum = 0;
+        Block block = context.block;
+
+        for (int i = 0; i < context.numberOfIterations; i++) {
+            for (int j = 0; j < context.blockSize; j++) {
+                sum += block.getInt(j);
+            }
+        }
+
+        return sum;
+    }
+
+	@Test
+    public void testBenchmarkWithFlatten()
+    {
+        FlattenContext context = new FlattenContext();
+        context.setUp();
+        benchmarkWithFlatten(context);
+    }
+
+	@Test
+    public void testBenchmarkWithoutFlatten()
+    {
+        BaseContext context = new BaseContext();
+        context.setUp();
+        benchmarkWithoutFlatten(context);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkBlockFlattener.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	private static class ThrowawayArrayAllocator
             implements ArrayAllocator
     {
         @Override
@@ -126,7 +184,8 @@ public class BenchmarkBlockFlattener
         @Param({"false", "true"})
         private boolean reuseArrays;
 
-        @Setup
+        @Override
+		@Setup
         public void setUp()
         {
             super.setUp();
@@ -138,63 +197,5 @@ public class BenchmarkBlockFlattener
                 flattener = new BlockFlattener(new ThrowawayArrayAllocator());
             }
         }
-    }
-
-    @Benchmark
-    public long benchmarkWithFlatten(FlattenContext context)
-    {
-        long sum = 0;
-        for (int i = 0; i < context.numberOfIterations; i++) {
-            try (BlockLease lease = context.flattener.flatten(context.block)) {
-                Block block = lease.get();
-
-                for (int j = 0; j < context.blockSize; j++) {
-                    sum += block.getInt(j);
-                }
-            }
-        }
-        return sum;
-    }
-
-    @Benchmark
-    public long benchmarkWithoutFlatten(BaseContext context)
-    {
-        int sum = 0;
-        Block block = context.block;
-
-        for (int i = 0; i < context.numberOfIterations; i++) {
-            for (int j = 0; j < context.blockSize; j++) {
-                sum += block.getInt(j);
-            }
-        }
-
-        return sum;
-    }
-
-    @Test
-    public void testBenchmarkWithFlatten()
-    {
-        FlattenContext context = new FlattenContext();
-        context.setUp();
-        benchmarkWithFlatten(context);
-    }
-
-    @Test
-    public void testBenchmarkWithoutFlatten()
-    {
-        BaseContext context = new BaseContext();
-        context.setUp();
-        benchmarkWithoutFlatten(context);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkBlockFlattener.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

@@ -44,11 +44,7 @@ public class TestCanonicalize
     public void testJoin()
     {
         assertPlan(
-                "SELECT *\n" +
-                        "FROM (\n" +
-                        "    SELECT EXTRACT(DAY FROM DATE '2017-01-01')\n" +
-                        ") t\n" +
-                        "CROSS JOIN (VALUES 1)",
+                new StringBuilder().append("SELECT *\n").append("FROM (\n").append("    SELECT EXTRACT(DAY FROM DATE '2017-01-01')\n").append(") t\n").append("CROSS JOIN (VALUES 1)").toString(),
                 anyTree(
                         join(INNER, ImmutableList.of(), Optional.empty(),
                                 project(
@@ -66,9 +62,7 @@ public class TestCanonicalize
                 ImmutableMap.of("A", SortOrder.ASC_NULLS_LAST));
 
         assertPlan(
-                "WITH x as (SELECT a, a as b FROM (VALUES 1) t(a))" +
-                        "SELECT *, row_number() OVER(ORDER BY a ASC, b DESC)" +
-                        "FROM x",
+                new StringBuilder().append("WITH x as (SELECT a, a as b FROM (VALUES 1) t(a))").append("SELECT *, row_number() OVER(ORDER BY a ASC, b DESC)").append("FROM x").toString(),
                 anyTree(
                         window(windowMatcherBuilder -> windowMatcherBuilder
                                         .specification(specification)

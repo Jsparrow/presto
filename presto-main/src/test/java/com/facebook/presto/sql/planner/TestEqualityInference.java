@@ -341,7 +341,7 @@ public class TestEqualityInference
                 new SimpleCaseExpression(nameReference("b"), ImmutableList.of(new WhenClause(number(1), new NullLiteral())), Optional.empty()),
                 new SubscriptExpression(new ArrayConstructor(ImmutableList.of(new NullLiteral())), nameReference("b")));
 
-        for (Expression candidate : candidates) {
+        candidates.forEach(candidate -> {
             EqualityInference.Builder builder = new EqualityInference.Builder();
             builder.extractInferenceCandidates(equals(nameReference("b"), nameReference("x")));
             builder.extractInferenceCandidates(equals(nameReference("a"), candidate));
@@ -350,7 +350,7 @@ public class TestEqualityInference
             List<Expression> equalities = inference.generateEqualitiesPartitionedBy(matchesVariables("b"), types("a", "b", "x")).getScopeStraddlingEqualities();
             assertEquals(equalities.size(), 1);
             assertTrue(equalities.get(0).equals(equals(nameReference("x"), nameReference("b"))) || equalities.get(0).equals(equals(nameReference("b"), nameReference("x"))));
-        }
+        });
     }
 
     private static Predicate<Expression> matchesVariableScope(final Predicate<VariableReferenceExpression> variableScope, TypeProvider types)

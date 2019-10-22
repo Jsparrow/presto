@@ -126,19 +126,6 @@ public class RowExpressionInterpreter
 
     private final Visitor visitor;
 
-    public static Object evaluateConstantRowExpression(RowExpression expression, Metadata metadata, ConnectorSession session)
-    {
-        // evaluate the expression
-        Object result = new RowExpressionInterpreter(expression, metadata, session, EVALUATED).evaluate();
-        verify(!(result instanceof RowExpression), "RowExpression interpreter returned an unresolved expression");
-        return result;
-    }
-
-    public static RowExpressionInterpreter rowExpressionInterpreter(RowExpression expression, Metadata metadata, ConnectorSession session)
-    {
-        return new RowExpressionInterpreter(expression, metadata, session, EVALUATED);
-    }
-
     public RowExpressionInterpreter(RowExpression expression, Metadata metadata, ConnectorSession session, Level optimizationLevel)
     {
         this.expression = requireNonNull(expression, "expression is null");
@@ -153,24 +140,37 @@ public class RowExpressionInterpreter
         this.visitor = new Visitor();
     }
 
-    public Type getType()
+	public static Object evaluateConstantRowExpression(RowExpression expression, Metadata metadata, ConnectorSession session)
+    {
+        // evaluate the expression
+        Object result = new RowExpressionInterpreter(expression, metadata, session, EVALUATED).evaluate();
+        verify(!(result instanceof RowExpression), "RowExpression interpreter returned an unresolved expression");
+        return result;
+    }
+
+	public static RowExpressionInterpreter rowExpressionInterpreter(RowExpression expression, Metadata metadata, ConnectorSession session)
+    {
+        return new RowExpressionInterpreter(expression, metadata, session, EVALUATED);
+    }
+
+	public Type getType()
     {
         return expression.getType();
     }
 
-    public Object evaluate()
+	public Object evaluate()
     {
         checkState(optimizationLevel.ordinal() >= EVALUATED.ordinal(), "evaluate() not allowed for optimizer");
         return expression.accept(visitor, null);
     }
 
-    public Object optimize()
+	public Object optimize()
     {
         checkState(optimizationLevel.ordinal() < EVALUATED.ordinal(), "optimize() not allowed for interpreter");
         return optimize(null);
     }
 
-    /**
+	/**
      * For test only; convenient to replace symbol with constants. Production code should not replace any symbols; use the interface above
      */
     @VisibleForTesting
@@ -180,7 +180,7 @@ public class RowExpressionInterpreter
         return expression.accept(visitor, inputs);
     }
 
-    private class Visitor
+	private class Visitor
             implements RowExpressionVisitor<Object, Object>
     {
         @Override
@@ -578,7 +578,7 @@ public class RowExpressionInterpreter
                     List<RowExpression> whenClauses;
                     Object elseValue;
                     RowExpression last = node.getArguments().get(node.getArguments().size() - 1);
-                    if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm().equals(WHEN)) {
+                    if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm() == WHEN) {
                         whenClauses = node.getArguments().subList(1, node.getArguments().size());
                         elseValue = null;
                     }
@@ -713,22 +713,14 @@ public class RowExpressionInterpreter
         private SpecialCallResult tryHandleArrayConstructor(CallExpression callExpression, List<Object> argumentValues)
         {
             checkArgument(resolution.isArrayConstructor(callExpression.getFunctionHandle()));
-            boolean allConstants = true;
-            for (Object values : argumentValues) {
-                if (values instanceof RowExpression) {
-                    allConstants = false;
-                    break;
-                }
-            }
-            if (allConstants) {
-                Type elementType = ((ArrayType) callExpression.getType()).getElementType();
-                BlockBuilder arrayBlockBuilder = elementType.createBlockBuilder(null, argumentValues.size());
-                for (Object value : argumentValues) {
-                    writeNativeValue(elementType, arrayBlockBuilder, value);
-                }
-                return changed(arrayBlockBuilder.build());
-            }
-            return notChanged();
+            boolean allConstants = argumentValues.stream().noneMatch(values -> values instanceof RowExpression);
+            if (!allConstants) {
+				return notChanged();
+			}
+			Type elementType = ((ArrayType) callExpression.getType()).getElementType();
+			BlockBuilder arrayBlockBuilder = elementType.createBlockBuilder(null, argumentValues.size());
+			argumentValues.forEach(value -> writeNativeValue(elementType, arrayBlockBuilder, value));
+			return changed(arrayBlockBuilder.build());
         }
 
         private SpecialCallResult tryHandleCast(CallExpression callExpression, List<Object> argumentValues)
@@ -752,7 +744,7 @@ public class RowExpressionInterpreter
                 if (callExpression.getArguments().get(0) instanceof CallExpression) {
                     // Optimization for CAST(JSON_PARSE(...) AS ARRAY/MAP/ROW), solves https://github.com/prestodb/presto/issues/12829
                     CallExpression innerCall = (CallExpression) callExpression.getArguments().get(0);
-                    if (functionManager.getFunctionMetadata(innerCall.getFunctionHandle()).getName().getSuffix().equals("json_parse")) {
+                    if ("json_parse".equals(functionManager.getFunctionMetadata(innerCall.getFunctionHandle()).getName().getSuffix())) {
                         checkArgument(innerCall.getType().equals(JSON));
                         checkArgument(innerCall.getArguments().size() == 1);
                         TypeSignature returnType = functionManager.getFunctionMetadata(callExpression.getFunctionHandle()).getReturnType();
@@ -853,28 +845,28 @@ public class RowExpressionInterpreter
             }
 
             // if pattern is a constant without % or _ replace with a comparison
-            if (nonCompiledPattern instanceof Slice && (escape == null || escape instanceof Slice) && !isLikePattern((Slice) nonCompiledPattern, (Slice) escape)) {
-                Slice unescapedPattern = unescapeLiteralLikePattern((Slice) nonCompiledPattern, (Slice) escape);
-                Type valueType = argumentTypes.get(0);
-                Type patternType = createVarcharType(unescapedPattern.length());
-                TypeManager typeManager = metadata.getTypeManager();
-                Optional<Type> commonSuperType = typeManager.getCommonSuperType(valueType, patternType);
-                checkArgument(commonSuperType.isPresent(), "Missing super type when optimizing %s", callExpression);
-                RowExpression valueExpression = LiteralEncoder.toRowExpression(value, valueType);
-                RowExpression patternExpression = LiteralEncoder.toRowExpression(unescapedPattern, patternType);
-                Type superType = commonSuperType.get();
-                if (!valueType.equals(superType)) {
-                    FunctionHandle cast = metadata.getFunctionManager().lookupCast(CAST, valueType.getTypeSignature(), superType.getTypeSignature());
-                    valueExpression = call(CAST.name(), cast, superType, valueExpression);
-                }
-                if (!patternType.equals(superType)) {
-                    FunctionHandle cast = metadata.getFunctionManager().lookupCast(CAST, patternType.getTypeSignature(), superType.getTypeSignature());
-                    patternExpression = call(CAST.name(), cast, superType, patternExpression);
-                }
-                FunctionHandle equal = metadata.getFunctionManager().resolveOperator(EQUAL, fromTypes(superType, superType));
-                return changed(call(EQUAL.name(), equal, BOOLEAN, valueExpression, patternExpression).accept(this, context));
-            }
-            return notChanged();
+			if (!(nonCompiledPattern instanceof Slice && (escape == null || escape instanceof Slice) && !isLikePattern((Slice) nonCompiledPattern, (Slice) escape))) {
+				return notChanged();
+			}
+			Slice unescapedPattern = unescapeLiteralLikePattern((Slice) nonCompiledPattern, (Slice) escape);
+			Type valueType = argumentTypes.get(0);
+			Type patternType = createVarcharType(unescapedPattern.length());
+			TypeManager typeManager = metadata.getTypeManager();
+			Optional<Type> commonSuperType = typeManager.getCommonSuperType(valueType, patternType);
+			checkArgument(commonSuperType.isPresent(), "Missing super type when optimizing %s", callExpression);
+			RowExpression valueExpression = LiteralEncoder.toRowExpression(value, valueType);
+			RowExpression patternExpression = LiteralEncoder.toRowExpression(unescapedPattern, patternType);
+			Type superType = commonSuperType.get();
+			if (!valueType.equals(superType)) {
+			    FunctionHandle cast = metadata.getFunctionManager().lookupCast(CAST, valueType.getTypeSignature(), superType.getTypeSignature());
+			    valueExpression = call(CAST.name(), cast, superType, valueExpression);
+			}
+			if (!patternType.equals(superType)) {
+			    FunctionHandle cast = metadata.getFunctionManager().lookupCast(CAST, patternType.getTypeSignature(), superType.getTypeSignature());
+			    patternExpression = call(CAST.name(), cast, superType, patternExpression);
+			}
+			FunctionHandle equal = metadata.getFunctionManager().resolveOperator(EQUAL, fromTypes(superType, superType));
+			return changed(call(EQUAL.name(), equal, BOOLEAN, valueExpression, patternExpression).accept(this, context));
         }
     }
 

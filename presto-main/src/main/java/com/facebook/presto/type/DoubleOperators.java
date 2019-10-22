@@ -321,7 +321,14 @@ public final class DoubleOperators
         return DoubleMath.roundToLong(value, FLOOR);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.DOUBLE) double value)
+    {
+        return XxHash64.hash(Double.doubleToLongBits(value));
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class DoubleDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -363,12 +370,5 @@ public final class DoubleOperators
             }
             return notEqual(left, right);
         }
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.DOUBLE) double value)
-    {
-        return XxHash64.hash(Double.doubleToLongBits(value));
     }
 }

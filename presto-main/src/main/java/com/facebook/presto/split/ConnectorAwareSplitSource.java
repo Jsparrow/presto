@@ -64,9 +64,7 @@ public class ConnectorAwareSplitSource
         ListenableFuture<ConnectorSplitBatch> nextBatch = toListenableFuture(source.getNextBatch(partitionHandle, maxSize));
         return Futures.transform(nextBatch, splitBatch -> {
             ImmutableList.Builder<Split> result = ImmutableList.builder();
-            for (ConnectorSplit connectorSplit : splitBatch.getSplits()) {
-                result.add(new Split(connectorId, transactionHandle, connectorSplit, lifespan));
-            }
+            splitBatch.getSplits().forEach(connectorSplit -> result.add(new Split(connectorId, transactionHandle, connectorSplit, lifespan)));
             return new SplitBatch(result.build(), splitBatch.isNoMoreSplits());
         }, directExecutor());
     }
@@ -92,6 +90,6 @@ public class ConnectorAwareSplitSource
     @Override
     public String toString()
     {
-        return connectorId + ":" + source;
+        return new StringBuilder().append(connectorId).append(":").append(source).toString();
     }
 }

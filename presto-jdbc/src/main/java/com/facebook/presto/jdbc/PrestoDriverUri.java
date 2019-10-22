@@ -155,7 +155,7 @@ final class PrestoDriverUri
 
             // TODO: fix Tempto to allow empty passwords
             String password = PASSWORD.getValue(properties).orElse("");
-            if (!password.isEmpty() && !password.equals("***empty***")) {
+            if (!password.isEmpty() && !"***empty***".equals(password)) {
                 if (!useSecureConnection) {
                     throw new SQLException("Authentication using username/password requires SSL to be enabled");
                 }
@@ -256,7 +256,7 @@ final class PrestoDriverUri
             throws SQLException
     {
         String path = uri.getPath();
-        if (isNullOrEmpty(uri.getPath()) || path.equals("/")) {
+        if (isNullOrEmpty(uri.getPath()) || "/".equals(path)) {
             return;
         }
 
@@ -281,12 +281,13 @@ final class PrestoDriverUri
         }
         catalog = parts.get(0);
 
-        if (parts.size() > 1) {
-            if (parts.get(1).isEmpty()) {
-                throw new SQLException("Schema name is empty: " + uri);
-            }
-            schema = parts.get(1);
-        }
+        if (parts.size() <= 1) {
+			return;
+		}
+		if (parts.get(1).isEmpty()) {
+		    throw new SQLException("Schema name is empty: " + uri);
+		}
+		schema = parts.get(1);
     }
 
     private static Properties mergeConnectionProperties(URI uri, Properties driverProperties)
@@ -311,9 +312,7 @@ final class PrestoDriverUri
 
     private static void setProperties(Properties properties, Map<String, String> values)
     {
-        for (Entry<String, String> entry : values.entrySet()) {
-            properties.setProperty(entry.getKey(), entry.getValue());
-        }
+        values.entrySet().forEach(entry -> properties.setProperty(entry.getKey(), entry.getValue()));
     }
 
     private static void validateConnectionProperties(Properties connectionProperties)

@@ -22,9 +22,7 @@ public class SimplePlanVisitor<C>
     @Override
     public Void visitPlan(PlanNode node, C context)
     {
-        for (PlanNode source : node.getSources()) {
-            source.accept(this, context);
-        }
+        node.getSources().forEach(source -> source.accept(this, context));
         return null;
     }
 }

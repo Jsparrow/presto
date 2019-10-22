@@ -20,6 +20,8 @@ import com.teradata.tpcds.Table;
 import static com.facebook.presto.tpcds.TpcdsMetadata.schemaNameToScaleFactor;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a tool used to record statistics for TPCDS tables.
@@ -30,9 +32,18 @@ import static java.util.Objects.requireNonNull;
  */
 public class TpcdsStatisticsRecorder
 {
-    private static final ImmutableList<String> SUPPORTED_SCHEMAS = ImmutableList.of("tiny", "sf1");
+    private static final Logger logger = LoggerFactory.getLogger(TpcdsStatisticsRecorder.class);
+	private static final ImmutableList<String> SUPPORTED_SCHEMAS = ImmutableList.of("tiny", "sf1");
+	private final TableStatisticsRecorder tableStatisticsRecorder;
+	private final TableStatisticsDataRepository tableStatisticsDataRepository;
 
-    public static void main(String[] args)
+	private TpcdsStatisticsRecorder(TableStatisticsRecorder tableStatisticsRecorder, TableStatisticsDataRepository tableStatisticsDataRepository)
+    {
+        this.tableStatisticsRecorder = requireNonNull(tableStatisticsRecorder, "tableStatisticsRecorder is null");
+        this.tableStatisticsDataRepository = requireNonNull(tableStatisticsDataRepository, "tableStatisticsDataRepository is null");
+    }
+
+	public static void main(String[] args)
     {
         TpcdsStatisticsRecorder tool = new TpcdsStatisticsRecorder(new TableStatisticsRecorder(), new TableStatisticsDataRepository());
 
@@ -40,28 +51,19 @@ public class TpcdsStatisticsRecorder
                 .forEach(table -> tool.computeAndOutputStatsFor(schemaName, table)));
     }
 
-    private final TableStatisticsRecorder tableStatisticsRecorder;
-    private final TableStatisticsDataRepository tableStatisticsDataRepository;
-
-    private TpcdsStatisticsRecorder(TableStatisticsRecorder tableStatisticsRecorder, TableStatisticsDataRepository tableStatisticsDataRepository)
-    {
-        this.tableStatisticsRecorder = requireNonNull(tableStatisticsRecorder, "tableStatisticsRecorder is null");
-        this.tableStatisticsDataRepository = requireNonNull(tableStatisticsDataRepository, "tableStatisticsDataRepository is null");
-    }
-
-    private void computeAndOutputStatsFor(String schemaName, Table table)
+	private void computeAndOutputStatsFor(String schemaName, Table table)
     {
         requireNonNull(table, "table is null");
         requireNonNull(schemaName, "schemaName is null");
 
         double scaleFactor = schemaNameToScaleFactor(schemaName);
 
-        System.out.print(format("Recording stats for %s.%s ...", schemaName, table.getName()));
+        logger.info(format("Recording stats for %s.%s ...", schemaName, table.getName()));
 
         long start = System.nanoTime();
         TableStatisticsData statisticsData = tableStatisticsRecorder.recordStatistics(table, scaleFactor);
         long duration = (System.nanoTime() - start) / 1_000_000;
-        System.out.println(format("\tfinished in %s ms", duration));
+        logger.info(format("\tfinished in %s ms", duration));
 
         tableStatisticsDataRepository.save(schemaName, table, statisticsData);
     }

@@ -161,10 +161,11 @@ public class ParquetTester
         ArrayList<TypeInfo> typeInfos = TypeInfoUtils.getTypeInfosFromTypeString(objectInspector.getTypeName());
         MessageType schema = SingleLevelArraySchemaConverter.convert(TEST_COLUMN, typeInfos);
         testSingleLevelArrayRoundTrip(objectInspector, writeValues, readValues, type, Optional.of(schema));
-        if (objectInspector.getTypeName().contains("map<")) {
-            schema = SingleLevelArrayMapKeyValuesSchemaConverter.convert(TEST_COLUMN, typeInfos);
-            testSingleLevelArrayRoundTrip(objectInspector, writeValues, readValues, type, Optional.of(schema));
-        }
+        if (!objectInspector.getTypeName().contains("map<")) {
+			return;
+		}
+		schema = SingleLevelArrayMapKeyValuesSchemaConverter.convert(TEST_COLUMN, typeInfos);
+		testSingleLevelArrayRoundTrip(objectInspector, writeValues, readValues, type, Optional.of(schema));
     }
 
     public void testRoundTrip(ObjectInspector objectInspector, Iterable<?> writeValues, Iterable<?> readValues, Type type)
@@ -177,17 +178,17 @@ public class ParquetTester
         // all nulls
         assertRoundTrip(singletonList(objectInspector), new Iterable<?>[] {transform(writeValues, constant(null))},
                 new Iterable<?>[] {transform(writeValues, constant(null))}, TEST_COLUMN, singletonList(type), Optional.empty());
-        if (objectInspector.getTypeName().contains("map<")) {
-            ArrayList<TypeInfo> typeInfos = TypeInfoUtils.getTypeInfosFromTypeString(objectInspector.getTypeName());
-            MessageType schema = MapKeyValuesSchemaConverter.convert(TEST_COLUMN, typeInfos);
-            // just the values
-            testRoundTripType(singletonList(objectInspector), new Iterable<?>[] {writeValues}, new Iterable<?>[] {
-                    readValues}, TEST_COLUMN, singletonList(type), Optional.of(schema), false);
-
-            // all nulls
-            assertRoundTrip(singletonList(objectInspector), new Iterable<?>[] {transform(writeValues, constant(null))},
-                    new Iterable<?>[] {transform(writeValues, constant(null))}, TEST_COLUMN, singletonList(type), Optional.of(schema));
-        }
+        if (!objectInspector.getTypeName().contains("map<")) {
+			return;
+		}
+		ArrayList<TypeInfo> typeInfos = TypeInfoUtils.getTypeInfosFromTypeString(objectInspector.getTypeName());
+		MessageType schema = MapKeyValuesSchemaConverter.convert(TEST_COLUMN, typeInfos);
+		// just the values
+		testRoundTripType(singletonList(objectInspector), new Iterable<?>[] {writeValues}, new Iterable<?>[] {
+		        readValues}, TEST_COLUMN, singletonList(type), Optional.of(schema), false);
+		// all nulls
+		assertRoundTrip(singletonList(objectInspector), new Iterable<?>[] {transform(writeValues, constant(null))},
+		        new Iterable<?>[] {transform(writeValues, constant(null))}, TEST_COLUMN, singletonList(type), Optional.of(schema));
     }
 
     public void testRoundTrip(ObjectInspector objectInspector, Iterable<?> writeValues, Iterable<?> readValues, Type type, Optional<MessageType> parquetSchema)
@@ -558,7 +559,68 @@ public class ParquetTester
         return orderTableProperties;
     }
 
-    static class TempFile
+    private Iterator<?>[] getIterators(Iterable<?>[] values)
+    {
+        return stream(values).map(Iterable::iterator).toArray(size -> new Iterator<?>[size]);
+    }
+
+	private Iterable<?>[] transformToNulls(Iterable<?>[] values)
+    {
+        return stream(values)
+                .map(v -> transform(v, constant(null)))
+                .toArray(size -> new Iterable<?>[size]);
+    }
+
+	private static Iterable<?>[] reverse(Iterable<?>[] iterables)
+    {
+        return stream(iterables)
+                .map(ImmutableList::copyOf)
+                .map(Lists::reverse)
+                .toArray(size -> new Iterable<?>[size]);
+    }
+
+	static Iterable<?>[] insertNullEvery(int n, Iterable<?>[] iterables)
+    {
+        return stream(iterables)
+                .map(itr -> insertNullEvery(n, itr))
+                .toArray(size -> new Iterable<?>[size]);
+    }
+
+	static <T> Iterable<T> insertNullEvery(int n, Iterable<T> iterable)
+    {
+        return () -> new AbstractIterator<T>()
+        {
+            private final Iterator<T> delegate = iterable.iterator();
+            private int position;
+
+            @Override
+            protected T computeNext()
+            {
+                position++;
+                if (position > n) {
+                    position = 0;
+                    return null;
+                }
+
+                if (!delegate.hasNext()) {
+                    return endOfData();
+                }
+
+                return delegate.next();
+            }
+        };
+    }
+
+	private static Object decodeObject(Type type, Block block, int position)
+    {
+        if (block.isNull(position)) {
+            return null;
+        }
+
+        return type.getObjectValue(SESSION, block, position);
+    }
+
+	static class TempFile
             implements Closeable
     {
         private final File file;
@@ -584,66 +646,5 @@ public class ParquetTester
         {
             file.delete();
         }
-    }
-
-    private Iterator<?>[] getIterators(Iterable<?>[] values)
-    {
-        return stream(values).map(Iterable::iterator).toArray(size -> new Iterator<?>[size]);
-    }
-
-    private Iterable<?>[] transformToNulls(Iterable<?>[] values)
-    {
-        return stream(values)
-                .map(v -> transform(v, constant(null)))
-                .toArray(size -> new Iterable<?>[size]);
-    }
-
-    private static Iterable<?>[] reverse(Iterable<?>[] iterables)
-    {
-        return stream(iterables)
-                .map(ImmutableList::copyOf)
-                .map(Lists::reverse)
-                .toArray(size -> new Iterable<?>[size]);
-    }
-
-    static Iterable<?>[] insertNullEvery(int n, Iterable<?>[] iterables)
-    {
-        return stream(iterables)
-                .map(itr -> insertNullEvery(n, itr))
-                .toArray(size -> new Iterable<?>[size]);
-    }
-
-    static <T> Iterable<T> insertNullEvery(int n, Iterable<T> iterable)
-    {
-        return () -> new AbstractIterator<T>()
-        {
-            private final Iterator<T> delegate = iterable.iterator();
-            private int position;
-
-            @Override
-            protected T computeNext()
-            {
-                position++;
-                if (position > n) {
-                    position = 0;
-                    return null;
-                }
-
-                if (!delegate.hasNext()) {
-                    return endOfData();
-                }
-
-                return delegate.next();
-            }
-        };
-    }
-
-    private static Object decodeObject(Type type, Block block, int position)
-    {
-        if (block.isNull(position)) {
-            return null;
-        }
-
-        return type.getObjectValue(SESSION, block, position);
     }
 }

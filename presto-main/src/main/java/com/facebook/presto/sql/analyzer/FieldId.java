@@ -21,7 +21,18 @@ import static java.util.Objects.requireNonNull;
 
 public final class FieldId
 {
-    public static FieldId from(ResolvedField field)
+    private final RelationId relationId;
+	private final int fieldIndex;
+
+	public FieldId(RelationId relationId, int fieldIndex)
+    {
+        this.relationId = requireNonNull(relationId, "relationId is null");
+
+        checkArgument(fieldIndex >= 0, "fieldIndex must be non-negative, got: %s", fieldIndex);
+        this.fieldIndex = fieldIndex;
+    }
+
+	public static FieldId from(ResolvedField field)
     {
         requireNonNull(field, "field is null");
 
@@ -30,23 +41,12 @@ public final class FieldId
         return new FieldId(sourceScope.getRelationId(), relationType.indexOf(field.getField()));
     }
 
-    private final RelationId relationId;
-    private final int fieldIndex;
-
-    public FieldId(RelationId relationId, int fieldIndex)
-    {
-        this.relationId = requireNonNull(relationId, "relationId is null");
-
-        checkArgument(fieldIndex >= 0, "fieldIndex must be non-negative, got: %s", fieldIndex);
-        this.fieldIndex = fieldIndex;
-    }
-
-    public RelationId getRelationId()
+	public RelationId getRelationId()
     {
         return relationId;
     }
 
-    /**
+	/**
      * Returns {@link RelationType#indexOf(Field) field index} of the field in the containing relation.
      */
     public int getFieldIndex()
@@ -54,7 +54,7 @@ public final class FieldId
         return fieldIndex;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -68,13 +68,13 @@ public final class FieldId
                 Objects.equals(relationId, fieldId.relationId);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(relationId, fieldIndex);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

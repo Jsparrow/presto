@@ -220,11 +220,7 @@ public class InformationSchemaMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> builder = ImmutableMap.builder();
-        for (Entry<SchemaTableName, ConnectorTableMetadata> entry : TABLES.entrySet()) {
-            if (prefix.matches(entry.getKey())) {
-                builder.put(entry.getKey(), entry.getValue().getColumns());
-            }
-        }
+        TABLES.entrySet().stream().filter(entry -> prefix.matches(entry.getKey())).forEach(entry -> builder.put(entry.getKey(), entry.getValue().getColumns()));
         return builder.build();
     }
 

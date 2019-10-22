@@ -147,10 +147,11 @@ public class OperatorContext
     void recordAddInput(OperationTimer operationTimer, Page page)
     {
         operationTimer.recordOperationComplete(addInputTiming);
-        if (page != null) {
-            inputDataSize.update(page.getSizeInBytes());
-            inputPositions.update(page.getPositionCount());
-        }
+        if (page == null) {
+			return;
+		}
+		inputDataSize.update(page.getSizeInBytes());
+		inputPositions.update(page.getPositionCount());
     }
 
     /**
@@ -187,10 +188,11 @@ public class OperatorContext
     void recordGetOutput(OperationTimer operationTimer, Page page)
     {
         operationTimer.recordOperationComplete(getOutputTiming);
-        if (page != null) {
-            outputDataSize.update(page.getSizeInBytes());
-            outputPositions.update(page.getPositionCount());
-        }
+        if (page == null) {
+			return;
+		}
+		outputDataSize.update(page.getSizeInBytes());
+		outputPositions.update(page.getPositionCount());
     }
 
     public void recordOutput(long sizeInBytes, long positions)
@@ -288,23 +290,23 @@ public class OperatorContext
 
     private static void updateMemoryFuture(ListenableFuture<?> memoryPoolFuture, AtomicReference<SettableFuture<?>> targetFutureReference)
     {
-        if (!memoryPoolFuture.isDone()) {
-            SettableFuture<?> currentMemoryFuture = targetFutureReference.get();
-            while (currentMemoryFuture.isDone()) {
-                SettableFuture<?> settableFuture = SettableFuture.create();
-                // We can't replace one that's not done, because the task may be blocked on that future
-                if (targetFutureReference.compareAndSet(currentMemoryFuture, settableFuture)) {
-                    currentMemoryFuture = settableFuture;
-                }
-                else {
-                    currentMemoryFuture = targetFutureReference.get();
-                }
-            }
-
-            SettableFuture<?> finalMemoryFuture = currentMemoryFuture;
-            // Create a new future, so that this operator can un-block before the pool does, if it's moved to a new pool
-            memoryPoolFuture.addListener(() -> finalMemoryFuture.set(null), directExecutor());
-        }
+        if (memoryPoolFuture.isDone()) {
+			return;
+		}
+		SettableFuture<?> currentMemoryFuture = targetFutureReference.get();
+		while (currentMemoryFuture.isDone()) {
+		    SettableFuture<?> settableFuture = SettableFuture.create();
+		    // We can't replace one that's not done, because the task may be blocked on that future
+		    if (targetFutureReference.compareAndSet(currentMemoryFuture, settableFuture)) {
+		        currentMemoryFuture = settableFuture;
+		    }
+		    else {
+		        currentMemoryFuture = targetFutureReference.get();
+		    }
+		}
+		SettableFuture<?> finalMemoryFuture = currentMemoryFuture;
+		// Create a new future, so that this operator can un-block before the pool does, if it's moved to a new pool
+		memoryPoolFuture.addListener(() -> finalMemoryFuture.set(null), directExecutor());
     }
 
     public void destroy()
@@ -497,7 +499,13 @@ public class OperatorContext
         return max(0, end - start);
     }
 
-    private class BlockedMonitor
+    @VisibleForTesting
+    public MemoryTrackingContext getOperatorMemoryContext()
+    {
+        return operatorMemoryContext;
+    }
+
+	private class BlockedMonitor
             implements Runnable
     {
         private final long start = System.nanoTime();
@@ -609,12 +617,11 @@ public class OperatorContext
         @Override
         public boolean trySetBytes(long bytes)
         {
-            if (delegate.trySetBytes(bytes)) {
-                allocationListener.run();
-                return true;
-            }
-
-            return false;
+            if (!delegate.trySetBytes(bytes)) {
+				return false;
+			}
+			allocationListener.run();
+			return true;
         }
 
         @Override
@@ -670,11 +677,5 @@ public class OperatorContext
             delegate.close();
             allocationListener.run();
         }
-    }
-
-    @VisibleForTesting
-    public MemoryTrackingContext getOperatorMemoryContext()
-    {
-        return operatorMemoryContext;
     }
 }

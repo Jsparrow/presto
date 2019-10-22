@@ -270,16 +270,6 @@ public class TestHashJoinOperator
         assertEquals(output.getPositionCount(), entries);
     }
 
-    private enum WhenSpill
-    {
-        DURING_BUILD, AFTER_BUILD, DURING_USAGE, NEVER
-    }
-
-    private enum WhenSpillFails
-    {
-        SPILL_BUILD, SPILL_JOIN, UNSPILL_BUILD, UNSPILL_JOIN
-    }
-
     @DataProvider
     public Object[][] joinWithSpillValues()
     {
@@ -289,7 +279,7 @@ public class TestHashJoinOperator
                 .toArray(Object[][]::new);
     }
 
-    @DataProvider
+	@DataProvider
     public Object[][] joinWithFailingSpillValues()
     {
         List<List<Object>> dictionaryProcessingValues = ImmutableList.of(ImmutableList.of(true), ImmutableList.of(false));
@@ -301,10 +291,10 @@ public class TestHashJoinOperator
                 .toArray(Object[][]::new);
     }
 
-    private static List<List<Object>> joinWithSpillParameters(boolean allowNoSpill)
+	private static List<List<Object>> joinWithSpillParameters(boolean allowNoSpill)
     {
         List<List<Object>> result = new ArrayList<>();
-        for (boolean probeHashEnabled : ImmutableList.of(false, true)) {
+        ImmutableList.of(false, true).forEach(probeHashEnabled -> {
             for (WhenSpill whenSpill : WhenSpill.values()) {
                 // spill all
                 if (allowNoSpill || whenSpill != WhenSpill.NEVER) {
@@ -319,18 +309,18 @@ public class TestHashJoinOperator
 
             result.add(ImmutableList.of(probeHashEnabled, concat(asList(WhenSpill.DURING_BUILD, WhenSpill.AFTER_BUILD), nCopies(PARTITION_COUNT - 2, WhenSpill.NEVER))));
             result.add(ImmutableList.of(probeHashEnabled, concat(asList(WhenSpill.DURING_BUILD, WhenSpill.DURING_USAGE), nCopies(PARTITION_COUNT - 2, WhenSpill.NEVER))));
-        }
+        });
         return result;
     }
 
-    @Test(dataProvider = "joinWithSpillValues")
+	@Test(dataProvider = "joinWithSpillValues")
     public void testInnerJoinWithSpill(boolean probeHashEnabled, List<WhenSpill> whenSpill, boolean isDictionaryProcessingJoinEnabled)
             throws Exception
     {
         innerJoinWithSpill(probeHashEnabled, whenSpill, SINGLE_STREAM_SPILLER_FACTORY, PARTITIONING_SPILLER_FACTORY);
     }
 
-    @Test(dataProvider = "joinWithFailingSpillValues")
+	@Test(dataProvider = "joinWithFailingSpillValues")
     public void testInnerJoinWithFailingSpill(boolean probeHashEnabled, List<WhenSpill> whenSpill, WhenSpillFails whenSpillFails, boolean isDictionaryProcessingJoinEnabled)
             throws Throwable
     {
@@ -368,7 +358,7 @@ public class TestHashJoinOperator
         }
     }
 
-    private void innerJoinWithSpill(boolean probeHashEnabled, List<WhenSpill> whenSpill, SingleStreamSpillerFactory buildSpillerFactory, PartitioningSpillerFactory joinSpillerFactory)
+	private void innerJoinWithSpill(boolean probeHashEnabled, List<WhenSpill> whenSpill, SingleStreamSpillerFactory buildSpillerFactory, PartitioningSpillerFactory joinSpillerFactory)
             throws Exception
     {
         TaskStateMachine taskStateMachine = new TaskStateMachine(new TaskId("query", 0, 0, 0), executor);
@@ -436,9 +426,7 @@ public class TestHashJoinOperator
                 }
             }
 
-            for (Driver buildDriver : buildDrivers) {
-                runDriverInThread(executor, buildDriver);
-            }
+            buildDrivers.forEach(buildDriver -> runDriverInThread(executor, buildDriver));
 
             ValuesOperatorFactory valuesOperatorFactory = new ValuesOperatorFactory(17, new PlanNodeId("values"), probePages.build());
 
@@ -486,7 +474,7 @@ public class TestHashJoinOperator
         }
     }
 
-    private static void processRow(final Driver joinDriver, final TaskStateMachine taskStateMachine)
+	private static void processRow(final Driver joinDriver, final TaskStateMachine taskStateMachine)
     {
         joinDriver.getDriverContext().getYieldSignal().setWithDelay(TimeUnit.SECONDS.toNanos(1), joinDriver.getDriverContext().getYieldExecutor());
         joinDriver.process();
@@ -494,22 +482,23 @@ public class TestHashJoinOperator
         checkErrors(taskStateMachine);
     }
 
-    private static void checkErrors(TaskStateMachine taskStateMachine)
+	private static void checkErrors(TaskStateMachine taskStateMachine)
     {
-        if (taskStateMachine.getFailureCauses().size() > 0) {
-            Throwable exception = requireNonNull(taskStateMachine.getFailureCauses().peek());
-            throw new RuntimeException(exception.getMessage(), exception);
-        }
+        if (taskStateMachine.getFailureCauses().size() <= 0) {
+			return;
+		}
+		Throwable exception = requireNonNull(taskStateMachine.getFailureCauses().peek());
+		throw new RuntimeException(exception.getMessage(), exception);
     }
 
-    private static void revokeMemory(HashBuilderOperator operator)
+	private static void revokeMemory(HashBuilderOperator operator)
     {
         getFutureValue(operator.startMemoryRevoke());
         operator.finishMemoryRevoke();
         checkState(operator.getState() == HashBuilderOperator.State.SPILLING_INPUT || operator.getState() == HashBuilderOperator.State.INPUT_SPILLED);
     }
 
-    private static void triggerMemoryRevokingAndWait(HashBuilderOperator operator, TaskStateMachine taskStateMachine)
+	private static void triggerMemoryRevokingAndWait(HashBuilderOperator operator, TaskStateMachine taskStateMachine)
             throws Exception
     {
         // When there is background thread running Driver, we must delegate memory revoking to that thread
@@ -522,7 +511,7 @@ public class TestHashJoinOperator
         checkState(operator.getState() == HashBuilderOperator.State.SPILLING_INPUT || operator.getState() == HashBuilderOperator.State.INPUT_SPILLED);
     }
 
-    private static List<Page> getPages(PageBuffer pageBuffer)
+	private static List<Page> getPages(PageBuffer pageBuffer)
     {
         List<Page> result = new ArrayList<>();
 
@@ -534,7 +523,7 @@ public class TestHashJoinOperator
         return result;
     }
 
-    private static MaterializedResult getProperColumns(Operator joinOperator, List<Type> types, RowPagesBuilder probePages, List<Page> actualPages)
+	private static MaterializedResult getProperColumns(Operator joinOperator, List<Type> types, RowPagesBuilder probePages, List<Page> actualPages)
     {
         if (probePages.getHashChannel().isPresent()) {
             List<Integer> hashChannels = ImmutableList.of(probePages.getHashChannel().get());
@@ -544,7 +533,7 @@ public class TestHashJoinOperator
         return OperatorAssertion.toMaterializedResult(joinOperator.getOperatorContext().getSession(), types, actualPages);
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testInnerJoinWithNullProbe(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -584,7 +573,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testInnerJoinWithNullBuild(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -624,7 +613,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testInnerJoinWithNullOnBothSides(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -665,7 +654,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testProbeOuterJoin(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -711,7 +700,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testProbeOuterJoinWithFilterFunction(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -760,7 +749,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullProbe(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -802,13 +791,13 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullProbeAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
 
         InternalJoinFilterFunction filterFunction = new TestInternalJoinFilterFunction((
-                (leftPosition, leftPage, rightPosition, rightPage) -> VARCHAR.getSlice(rightPage.getBlock(0), rightPosition).toStringAscii().equals("a")));
+                (leftPosition, leftPage, rightPosition, rightPage) -> "a".equals(VARCHAR.getSlice(rightPage.getBlock(0), rightPosition).toStringAscii())));
 
         // build factory
         List<Type> buildTypes = ImmutableList.of(VARCHAR);
@@ -847,7 +836,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullBuild(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -888,7 +877,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullBuildAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -933,7 +922,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullOnBothSides(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -975,7 +964,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testOuterJoinWithNullOnBothSidesAndFilterFunction(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1021,7 +1010,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(expectedExceptions = ExceededMemoryLimitException.class, expectedExceptionsMessageRegExp = "Query exceeded per-node user memory limit of.*", dataProvider = "testMemoryLimitProvider")
+	@Test(expectedExceptions = ExceededMemoryLimitException.class, expectedExceptionsMessageRegExp = "Query exceeded per-node user memory limit of.*", dataProvider = "testMemoryLimitProvider")
     public void testMemoryLimit(boolean parallelBuild, boolean buildHashEnabled)
     {
         TaskContext taskContext = TestingTaskContext.createTaskContext(executor, scheduledExecutor, TEST_SESSION, new DataSize(100, BYTE));
@@ -1033,7 +1022,7 @@ public class TestHashJoinOperator
         buildLookupSource(buildSideSetup);
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testInnerJoinWithEmptyLookupSource(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1069,7 +1058,7 @@ public class TestHashJoinOperator
         assertNull(outputPage);
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testLookupOuterJoinWithEmptyLookupSource(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1105,7 +1094,7 @@ public class TestHashJoinOperator
         assertNull(outputPage);
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testProbeOuterJoinWithEmptyLookupSource(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1150,7 +1139,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testFullOuterJoinWithEmptyLookupSource(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1195,7 +1184,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @Test(dataProvider = "hashJoinTestValues")
+	@Test(dataProvider = "hashJoinTestValues")
     public void testInnerJoinWithNonEmptyLookupSourceAndEmptyProbe(boolean parallelBuild, boolean probeHashEnabled, boolean buildHashEnabled)
     {
         TaskContext taskContext = createTaskContext();
@@ -1234,7 +1223,7 @@ public class TestHashJoinOperator
         assertOperatorEquals(joinOperatorFactory, taskContext.addPipelineContext(0, true, true, false).addDriverContext(), probeInput, expected, true, getHashChannels(probePages, buildPages));
     }
 
-    @DataProvider
+	@DataProvider
     public static Object[][] testMemoryLimitProvider()
     {
         return new Object[][] {
@@ -1244,24 +1233,20 @@ public class TestHashJoinOperator
                 {false, false}};
     }
 
-    private TaskContext createTaskContext()
+	private TaskContext createTaskContext()
     {
         return TestingTaskContext.createTaskContext(executor, scheduledExecutor, TEST_SESSION);
     }
 
-    private static List<Integer> getHashChannels(RowPagesBuilder probe, RowPagesBuilder build)
+	private static List<Integer> getHashChannels(RowPagesBuilder probe, RowPagesBuilder build)
     {
         ImmutableList.Builder<Integer> hashChannels = ImmutableList.builder();
-        if (probe.getHashChannel().isPresent()) {
-            hashChannels.add(probe.getHashChannel().get());
-        }
-        if (build.getHashChannel().isPresent()) {
-            hashChannels.add(probe.getTypes().size() + build.getHashChannel().get());
-        }
+        probe.getHashChannel().ifPresent(hashChannels::add);
+        build.getHashChannel().ifPresent(value -> hashChannels.add(probe.getTypes().size() + value));
         return hashChannels.build();
     }
 
-    private OperatorFactory probeOuterJoinOperatorFactory(JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager, RowPagesBuilder probePages)
+	private OperatorFactory probeOuterJoinOperatorFactory(JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager, RowPagesBuilder probePages)
     {
         return LOOKUP_JOIN_OPERATORS.probeOuterJoin(
                 0,
@@ -1275,7 +1260,7 @@ public class TestHashJoinOperator
                 PARTITIONING_SPILLER_FACTORY);
     }
 
-    private OperatorFactory innerJoinOperatorFactory(JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager, RowPagesBuilder probePages, PartitioningSpillerFactory partitioningSpillerFactory)
+	private OperatorFactory innerJoinOperatorFactory(JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager, RowPagesBuilder probePages, PartitioningSpillerFactory partitioningSpillerFactory)
     {
         return LOOKUP_JOIN_OPERATORS.innerJoin(
                 0,
@@ -1289,7 +1274,7 @@ public class TestHashJoinOperator
                 partitioningSpillerFactory);
     }
 
-    private BuildSideSetup setupBuildSide(
+	private BuildSideSetup setupBuildSide(
             boolean parallelBuild,
             TaskContext taskContext,
             List<Integer> hashChannels,
@@ -1361,7 +1346,7 @@ public class TestHashJoinOperator
         return new BuildSideSetup(lookupSourceFactoryManager, buildOperatorFactory, sourceOperatorFactory, partitionCount);
     }
 
-    private void instantiateBuildDrivers(BuildSideSetup buildSideSetup, TaskContext taskContext)
+	private void instantiateBuildDrivers(BuildSideSetup buildSideSetup, TaskContext taskContext)
     {
         PipelineContext buildPipeline = taskContext.addPipelineContext(1, true, true, false);
         List<Driver> buildDrivers = new ArrayList<>();
@@ -1380,7 +1365,7 @@ public class TestHashJoinOperator
         buildSideSetup.setDriversAndOperators(buildDrivers, buildOperators);
     }
 
-    private void buildLookupSource(BuildSideSetup buildSideSetup)
+	private void buildLookupSource(BuildSideSetup buildSideSetup)
     {
         requireNonNull(buildSideSetup, "buildSideSetup is null");
 
@@ -1389,18 +1374,14 @@ public class TestHashJoinOperator
         List<Driver> buildDrivers = buildSideSetup.getBuildDrivers();
 
         while (!lookupSourceProvider.isDone()) {
-            for (Driver buildDriver : buildDrivers) {
-                buildDriver.process();
-            }
+            buildDrivers.forEach(Driver::process);
         }
         getFutureValue(lookupSourceProvider).close();
 
-        for (Driver buildDriver : buildDrivers) {
-            runDriverInThread(executor, buildDriver);
-        }
+        buildDrivers.forEach(buildDriver -> runDriverInThread(executor, buildDriver));
     }
 
-    /**
+	/**
      * Runs Driver in another thread until it is finished
      */
     private static void runDriverInThread(ExecutorService executor, Driver driver)
@@ -1419,36 +1400,42 @@ public class TestHashJoinOperator
         });
     }
 
-    private static OptionalInt getHashChannelAsInt(RowPagesBuilder probePages)
+	private static OptionalInt getHashChannelAsInt(RowPagesBuilder probePages)
     {
         return probePages.getHashChannel()
                 .map(OptionalInt::of).orElse(OptionalInt.empty());
     }
 
-    private static List<Integer> rangeList(int endExclusive)
+	private static List<Integer> rangeList(int endExclusive)
     {
         return IntStream.range(0, endExclusive)
                 .boxed()
                 .collect(toImmutableList());
     }
 
-    private static <T> List<List<T>> product(List<List<T>> left, List<List<T>> right)
+	private static <T> List<List<T>> product(List<List<T>> left, List<List<T>> right)
     {
         List<List<T>> result = new ArrayList<>();
-        for (List<T> l : left) {
-            for (List<T> r : right) {
-                result.add(concat(l, r));
-            }
-        }
+        left.forEach(l -> right.forEach(r -> result.add(concat(l, r))));
         return result;
     }
 
-    private static <T> List<T> concat(List<T> initialElements, List<T> moreElements)
+	private static <T> List<T> concat(List<T> initialElements, List<T> moreElements)
     {
         return ImmutableList.copyOf(Iterables.concat(initialElements, moreElements));
     }
 
-    private static class BuildSideSetup
+	private enum WhenSpill
+    {
+        DURING_BUILD, AFTER_BUILD, DURING_USAGE, NEVER
+    }
+
+	private enum WhenSpillFails
+    {
+        SPILL_BUILD, SPILL_JOIN, UNSPILL_BUILD, UNSPILL_JOIN
+    }
+
+	private static class BuildSideSetup
     {
         private final JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager;
         private final HashBuilderOperatorFactory buildOperatorFactory;
@@ -1508,22 +1495,22 @@ public class TestHashJoinOperator
     private static class TestInternalJoinFilterFunction
             implements InternalJoinFilterFunction
     {
-        public interface Lambda
-        {
-            boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage);
-        }
-
         private final Lambda lambda;
 
-        private TestInternalJoinFilterFunction(Lambda lambda)
+		private TestInternalJoinFilterFunction(Lambda lambda)
         {
             this.lambda = lambda;
         }
 
-        @Override
+		@Override
         public boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage)
         {
             return lambda.filter(leftPosition, leftPage, rightPosition, rightPage);
+        }
+
+		public interface Lambda
+        {
+            boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage);
         }
     }
 

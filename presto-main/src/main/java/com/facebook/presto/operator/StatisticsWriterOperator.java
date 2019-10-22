@@ -36,6 +36,117 @@ public class StatisticsWriterOperator
         implements Operator
 {
     public static final List<Type> TYPES = ImmutableList.of(BIGINT);
+	private final OperatorContext operatorContext;
+	private final StatisticsWriter statisticsWriter;
+	private final StatisticAggregationsDescriptor<Integer> descriptor;
+	private final boolean rowCountEnabled;
+	private State state = State.RUNNING;
+	private final ImmutableList.Builder<ComputedStatistics> computedStatisticsBuilder = ImmutableList.builder();
+
+	public StatisticsWriterOperator(OperatorContext operatorContext, StatisticsWriter statisticsWriter, StatisticAggregationsDescriptor<Integer> descriptor, boolean rowCountEnabled)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.statisticsWriter = requireNonNull(statisticsWriter, "statisticsWriter is null");
+        this.descriptor = requireNonNull(descriptor, "descriptor is null");
+        this.rowCountEnabled = rowCountEnabled;
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return state == State.RUNNING;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(state == State.RUNNING, "Operator is %s", state);
+
+        for (int position = 0; position < page.getPositionCount(); position++) {
+            computedStatisticsBuilder.add(getComputedStatistics(page, position));
+        }
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (state != State.FINISHING) {
+            return null;
+        }
+        state = State.FINISHED;
+
+        Collection<ComputedStatistics> computedStatistics = computedStatisticsBuilder.build();
+        statisticsWriter.writeStatistics(computedStatistics);
+
+        // output page will only be constructed once,
+        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
+        PageBuilder page = new PageBuilder(1, TYPES);
+        page.declarePosition();
+        BlockBuilder rowsBuilder = page.getBlockBuilder(0);
+        if (rowCountEnabled) {
+            BIGINT.writeLong(rowsBuilder, getRowCount(computedStatistics));
+        }
+        else {
+            rowsBuilder.appendNull();
+        }
+
+        return page.build();
+    }
+
+	@Override
+    public void finish()
+    {
+        if (state == State.RUNNING) {
+            state = State.FINISHING;
+        }
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return state == State.FINISHED;
+    }
+
+	private ComputedStatistics getComputedStatistics(Page page, int position)
+    {
+        ImmutableList.Builder<String> groupingColumns = ImmutableList.builder();
+        ImmutableList.Builder<Block> groupingValues = ImmutableList.builder();
+        descriptor.getGrouping().forEach((column, channel) -> {
+            groupingColumns.add(column);
+            groupingValues.add(page.getBlock(channel).getSingleValueBlock(position));
+        });
+
+        ComputedStatistics.Builder statistics = ComputedStatistics.builder(groupingColumns.build(), groupingValues.build());
+
+        descriptor.getTableStatistics().forEach((type, channel) ->
+                statistics.addTableStatistic(type, page.getBlock(channel).getSingleValueBlock(position)));
+
+        descriptor.getColumnStatistics().forEach((metadata, channel) -> statistics.addColumnStatistic(metadata, page.getBlock(channel).getSingleValueBlock(position)));
+
+        return statistics.build();
+    }
+
+	private static long getRowCount(Collection<ComputedStatistics> computedStatistics)
+    {
+        return computedStatistics.stream()
+                .map(statistics -> statistics.getTableStatistics().get(ROW_COUNT))
+                .filter(Objects::nonNull)
+                .mapToLong(block -> BIGINT.getLong(block, 0))
+                .reduce((first, second) -> first + second)
+                .orElse(0L);
+    }
+
+	private enum State
+    {
+        RUNNING, FINISHING, FINISHED
+    }
 
     public static class StatisticsWriterOperatorFactory
             implements OperatorFactory
@@ -75,119 +186,6 @@ public class StatisticsWriterOperator
         {
             return new StatisticsWriterOperatorFactory(operatorId, planNodeId, statisticsWriter, rowCountEnabled, descriptor);
         }
-    }
-
-    private enum State
-    {
-        RUNNING, FINISHING, FINISHED
-    }
-
-    private final OperatorContext operatorContext;
-    private final StatisticsWriter statisticsWriter;
-    private final StatisticAggregationsDescriptor<Integer> descriptor;
-    private final boolean rowCountEnabled;
-
-    private State state = State.RUNNING;
-    private final ImmutableList.Builder<ComputedStatistics> computedStatisticsBuilder = ImmutableList.builder();
-
-    public StatisticsWriterOperator(OperatorContext operatorContext, StatisticsWriter statisticsWriter, StatisticAggregationsDescriptor<Integer> descriptor, boolean rowCountEnabled)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.statisticsWriter = requireNonNull(statisticsWriter, "statisticsWriter is null");
-        this.descriptor = requireNonNull(descriptor, "descriptor is null");
-        this.rowCountEnabled = rowCountEnabled;
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return state == State.RUNNING;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(state == State.RUNNING, "Operator is %s", state);
-
-        for (int position = 0; position < page.getPositionCount(); position++) {
-            computedStatisticsBuilder.add(getComputedStatistics(page, position));
-        }
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (state != State.FINISHING) {
-            return null;
-        }
-        state = State.FINISHED;
-
-        Collection<ComputedStatistics> computedStatistics = computedStatisticsBuilder.build();
-        statisticsWriter.writeStatistics(computedStatistics);
-
-        // output page will only be constructed once,
-        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
-        PageBuilder page = new PageBuilder(1, TYPES);
-        page.declarePosition();
-        BlockBuilder rowsBuilder = page.getBlockBuilder(0);
-        if (rowCountEnabled) {
-            BIGINT.writeLong(rowsBuilder, getRowCount(computedStatistics));
-        }
-        else {
-            rowsBuilder.appendNull();
-        }
-
-        return page.build();
-    }
-
-    @Override
-    public void finish()
-    {
-        if (state == State.RUNNING) {
-            state = State.FINISHING;
-        }
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return state == State.FINISHED;
-    }
-
-    private ComputedStatistics getComputedStatistics(Page page, int position)
-    {
-        ImmutableList.Builder<String> groupingColumns = ImmutableList.builder();
-        ImmutableList.Builder<Block> groupingValues = ImmutableList.builder();
-        descriptor.getGrouping().forEach((column, channel) -> {
-            groupingColumns.add(column);
-            groupingValues.add(page.getBlock(channel).getSingleValueBlock(position));
-        });
-
-        ComputedStatistics.Builder statistics = ComputedStatistics.builder(groupingColumns.build(), groupingValues.build());
-
-        descriptor.getTableStatistics().forEach((type, channel) ->
-                statistics.addTableStatistic(type, page.getBlock(channel).getSingleValueBlock(position)));
-
-        descriptor.getColumnStatistics().forEach((metadata, channel) -> statistics.addColumnStatistic(metadata, page.getBlock(channel).getSingleValueBlock(position)));
-
-        return statistics.build();
-    }
-
-    private static long getRowCount(Collection<ComputedStatistics> computedStatistics)
-    {
-        return computedStatistics.stream()
-                .map(statistics -> statistics.getTableStatistics().get(ROW_COUNT))
-                .filter(Objects::nonNull)
-                .mapToLong(block -> BIGINT.getLong(block, 0))
-                .reduce((first, second) -> first + second)
-                .orElse(0L);
     }
 
     public interface StatisticsWriter

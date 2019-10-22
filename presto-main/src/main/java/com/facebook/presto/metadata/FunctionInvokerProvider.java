@@ -89,15 +89,14 @@ public class FunctionInvokerProvider
         if (definitionReturnsNullable && invocationConvention.get().getReturnConvention() != InvocationReturnConvention.NULLABLE_RETURN) {
             return false;
         }
-        if (!definitionReturnsNullable) {
-            // For each of the arguments, the invocation convention is required to be FAIL_ON_NULL
-            // when the  corresponding definition convention has RETURN_NULL_ON_NULL convention.
-            // As a result, when `definitionReturnsNullable` is false, the function
-            // can never return a null value. Therefore, the if below is sufficient.
-            if (invocationConvention.get().getReturnConvention() != InvocationReturnConvention.FAIL_ON_NULL) {
-                return false;
-            }
-        }
+        boolean condition = !definitionReturnsNullable && invocationConvention.get().getReturnConvention() != InvocationReturnConvention.FAIL_ON_NULL;
+		// For each of the arguments, the invocation convention is required to be FAIL_ON_NULL
+		// when the  corresponding definition convention has RETURN_NULL_ON_NULL convention.
+		// As a result, when `definitionReturnsNullable` is false, the function
+		// can never return a null value. Therefore, the if below is sufficient.
+		if (condition) {
+		    return false;
+		}
         if (definitionHasSession != invocationConvention.get().hasSession()) {
             return false;
         }

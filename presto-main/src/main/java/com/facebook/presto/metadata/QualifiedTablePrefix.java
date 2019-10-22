@@ -138,6 +138,6 @@ public class QualifiedTablePrefix
     @Override
     public String toString()
     {
-        return catalogName + '.' + schemaName.orElse("*") + '.' + tableName.orElse("*");
+        return new StringBuilder().append(catalogName).append('.').append(schemaName.orElse("*")).append('.').append(tableName.orElse("*")).toString();
     }
 }

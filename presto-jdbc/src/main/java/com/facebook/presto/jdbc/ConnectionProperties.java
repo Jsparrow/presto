@@ -106,7 +106,12 @@ final class ConnectionProperties
         return DEFAULTS;
     }
 
-    private static class User
+    private static Predicate<Properties> isKerberosEnabled()
+    {
+        return checkedPredicate(properties -> KERBEROS_REMOTE_SERVICE_NAME.getValue(properties).isPresent());
+    }
+
+	private static class User
             extends AbstractConnectionProperty<String>
     {
         public User()
@@ -221,11 +226,6 @@ final class ConnectionProperties
         {
             super("KerberosRemoteServiceName", NOT_REQUIRED, ALLOWED, STRING_CONVERTER);
         }
-    }
-
-    private static Predicate<Properties> isKerberosEnabled()
-    {
-        return checkedPredicate(properties -> KERBEROS_REMOTE_SERVICE_NAME.getValue(properties).isPresent());
     }
 
     private static class KerberosPrincipal

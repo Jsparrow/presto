@@ -481,8 +481,7 @@ public abstract class AbstractTestHiveFileFormats
     {
         List<HiveColumnHandle> columns = new ArrayList<>();
         int nextHiveColumnIndex = 0;
-        for (int i = 0; i < testColumns.size(); i++) {
-            TestColumn testColumn = testColumns.get(i);
+        for (TestColumn testColumn : testColumns) {
             int columnIndex = testColumn.isPartitionKey() ? -1 : nextHiveColumnIndex++;
 
             HiveType hiveType = HiveType.valueOf(testColumn.getObjectInspector().getTypeName());
@@ -684,19 +683,19 @@ public abstract class AbstractTestHiveFileFormats
                     fieldFromCursor = new BigDecimal((BigInteger) fieldFromCursor, decimalType.getScale());
                     assertEquals(fieldFromCursor, testColumn.getExpectedValue(), String.format("Wrong value for column %s", testColumn.getName()));
                 }
-                else if (testColumn.getObjectInspector().getTypeName().equals("float")) {
+                else if ("float".equals(testColumn.getObjectInspector().getTypeName())) {
                     assertEquals((float) fieldFromCursor, (float) testColumn.getExpectedValue(), (float) EPSILON);
                 }
-                else if (testColumn.getObjectInspector().getTypeName().equals("double")) {
+                else if ("double".equals(testColumn.getObjectInspector().getTypeName())) {
                     assertEquals((double) fieldFromCursor, (double) testColumn.getExpectedValue(), EPSILON);
                 }
-                else if (testColumn.getObjectInspector().getTypeName().equals("tinyint")) {
+                else if ("tinyint".equals(testColumn.getObjectInspector().getTypeName())) {
                     assertEquals(((Number) fieldFromCursor).byteValue(), testColumn.getExpectedValue());
                 }
-                else if (testColumn.getObjectInspector().getTypeName().equals("smallint")) {
+                else if ("smallint".equals(testColumn.getObjectInspector().getTypeName())) {
                     assertEquals(((Number) fieldFromCursor).shortValue(), testColumn.getExpectedValue());
                 }
-                else if (testColumn.getObjectInspector().getTypeName().equals("int")) {
+                else if ("int".equals(testColumn.getObjectInspector().getTypeName())) {
                     assertEquals(((Number) fieldFromCursor).intValue(), testColumn.getExpectedValue());
                 }
                 else if (testColumn.getObjectInspector().getCategory() == Category.PRIMITIVE) {
@@ -733,22 +732,22 @@ public abstract class AbstractTestHiveFileFormats
                     if (actualValue == null || expectedValue == null) {
                         assertEquals(actualValue, expectedValue, "Wrong value for column " + testColumn.getName());
                     }
-                    else if (testColumn.getObjectInspector().getTypeName().equals("float")) {
+                    else if ("float".equals(testColumn.getObjectInspector().getTypeName())) {
                         assertEquals((float) actualValue, (float) expectedValue, EPSILON, "Wrong value for column " + testColumn.getName());
                     }
-                    else if (testColumn.getObjectInspector().getTypeName().equals("double")) {
+                    else if ("double".equals(testColumn.getObjectInspector().getTypeName())) {
                         assertEquals((double) actualValue, (double) expectedValue, EPSILON, "Wrong value for column " + testColumn.getName());
                     }
-                    else if (testColumn.getObjectInspector().getTypeName().equals("date")) {
+                    else if ("date".equals(testColumn.getObjectInspector().getTypeName())) {
                         SqlDate expectedDate = new SqlDate(((Long) expectedValue).intValue());
                         assertEquals(actualValue, expectedDate, "Wrong value for column " + testColumn.getName());
                     }
-                    else if (testColumn.getObjectInspector().getTypeName().equals("int") ||
-                            testColumn.getObjectInspector().getTypeName().equals("smallint") ||
-                            testColumn.getObjectInspector().getTypeName().equals("tinyint")) {
+                    else if ("int".equals(testColumn.getObjectInspector().getTypeName()) ||
+                            "smallint".equals(testColumn.getObjectInspector().getTypeName()) ||
+                            "tinyint".equals(testColumn.getObjectInspector().getTypeName())) {
                         assertEquals(actualValue, expectedValue);
                     }
-                    else if (testColumn.getObjectInspector().getTypeName().equals("timestamp")) {
+                    else if ("timestamp".equals(testColumn.getObjectInspector().getTypeName())) {
                         SqlTimestamp expectedTimestamp = sqlTimestampOf((Long) expectedValue, SESSION);
                         assertEquals(actualValue, expectedTimestamp, "Wrong value for column " + testColumn.getName());
                     }

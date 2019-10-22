@@ -82,8 +82,6 @@ public final class PrestoThriftId
         if (value.length * 2 <= MAX_DISPLAY_CHARACTERS) {
             return BaseEncoding.base16().encode(value);
         }
-        return BaseEncoding.base16().encode(value, 0, PREFIX_SUFFIX_BYTES)
-                + FILLER
-                + BaseEncoding.base16().encode(value, value.length - PREFIX_SUFFIX_BYTES, PREFIX_SUFFIX_BYTES);
+        return new StringBuilder().append(BaseEncoding.base16().encode(value, 0, PREFIX_SUFFIX_BYTES)).append(FILLER).append(BaseEncoding.base16().encode(value, value.length - PREFIX_SUFFIX_BYTES, PREFIX_SUFFIX_BYTES)).toString();
     }
 }

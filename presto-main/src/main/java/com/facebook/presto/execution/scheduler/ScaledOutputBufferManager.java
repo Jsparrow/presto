@@ -53,9 +53,7 @@ public class ScaledOutputBufferManager
 
             OutputBuffers originalOutputBuffers = outputBuffers;
 
-            for (OutputBufferId newBuffer : newBuffers) {
-                outputBuffers = outputBuffers.withBuffer(newBuffer, newBuffer.getId());
-            }
+            newBuffers.forEach(newBuffer -> outputBuffers = outputBuffers.withBuffer(newBuffer, newBuffer.getId()));
 
             if (noMoreBuffers) {
                 outputBuffers = outputBuffers.withNoMoreBufferIds();

@@ -74,9 +74,7 @@ public class RuleTester
                 .setSchema("tiny")
                 .setSystemProperty("task_concurrency", "1"); // these tests don't handle exchanges from local parallel
 
-        for (Map.Entry<String, String> entry : sessionProperties.entrySet()) {
-            sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue());
-        }
+        sessionProperties.entrySet().forEach(entry -> sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue()));
 
         session = sessionBuilder.build();
 

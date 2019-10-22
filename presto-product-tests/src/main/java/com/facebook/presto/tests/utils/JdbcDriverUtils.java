@@ -21,13 +21,16 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import org.apache.commons.lang3.StringUtils;
 
 public class JdbcDriverUtils
 {
     private static final Logger LOGGER = Logger.get(JdbcDriverUtils.class);
     private static final String IS_NUMERIC_REGEX = "-?\\d*[\\.\\d]*";
 
-    public static void setRole(Connection connection, String role)
+    private JdbcDriverUtils() {}
+
+	public static void setRole(Connection connection, String role)
             throws SQLException
     {
         try (Statement statement = connection.createStatement()) {
@@ -35,19 +38,19 @@ public class JdbcDriverUtils
         }
     }
 
-    public static String getSessionProperty(Connection connection, String key)
+	public static String getSessionProperty(Connection connection, String key)
             throws SQLException
     {
         return getSessionProperty(connection, key, "Value");
     }
 
-    public static String getSessionPropertyDefault(Connection connection, String key)
+	public static String getSessionPropertyDefault(Connection connection, String key)
             throws SQLException
     {
         return getSessionProperty(connection, key, "Default");
     }
 
-    private static String getSessionProperty(Connection connection, String key, String valueType)
+	private static String getSessionProperty(Connection connection, String key, String valueType)
             throws SQLException
     {
         try (Statement statement = connection.createStatement()) {
@@ -61,7 +64,7 @@ public class JdbcDriverUtils
         return null;
     }
 
-    public static void setSessionProperty(Connection connection, String key, String value)
+	public static void setSessionProperty(Connection connection, String key, String value)
             throws SQLException
     {
         if (usingPrestoJdbcDriver(connection)) {
@@ -71,7 +74,7 @@ public class JdbcDriverUtils
         else if (usingTeradataJdbcDriver(connection)) {
             try (Statement statement = connection.createStatement()) {
                 if (shouldValueBeQuoted(value)) {
-                    value = "'" + value + "'";
+                    value = new StringBuilder().append("'").append(value).append("'").toString();
                 }
                 statement.execute(String.format("set session %s=%s", key, value));
             }
@@ -81,9 +84,9 @@ public class JdbcDriverUtils
         }
     }
 
-    private static boolean shouldValueBeQuoted(String value)
+	private static boolean shouldValueBeQuoted(String value)
     {
-        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
+        if (StringUtils.equalsIgnoreCase(value, "true") || StringUtils.equalsIgnoreCase(value, "false")) {
             return false;
         }
 
@@ -102,7 +105,7 @@ public class JdbcDriverUtils
         return true;
     }
 
-    public static void resetSessionProperty(Connection connection, String key)
+	public static void resetSessionProperty(Connection connection, String key)
             throws SQLException
     {
         if (usingPrestoJdbcDriver(connection)) {
@@ -118,25 +121,23 @@ public class JdbcDriverUtils
         }
     }
 
-    public static boolean usingPrestoJdbcDriver(Connection connection)
+	public static boolean usingPrestoJdbcDriver(Connection connection)
     {
-        return getClassNameForJdbcDriver(connection).equals("com.facebook.presto.jdbc.PrestoConnection");
+        return "com.facebook.presto.jdbc.PrestoConnection".equals(getClassNameForJdbcDriver(connection));
     }
 
-    public static boolean usingTeradataJdbcDriver(Connection connection)
+	public static boolean usingTeradataJdbcDriver(Connection connection)
     {
-        return getClassNameForJdbcDriver(connection).startsWith("com.teradata.presto.");
+        return StringUtils.startsWith(getClassNameForJdbcDriver(connection), "com.teradata.presto.");
     }
 
-    public static boolean usingTeradataJdbc4Driver(Connection connection)
+	public static boolean usingTeradataJdbc4Driver(Connection connection)
     {
-        return getClassNameForJdbcDriver(connection).startsWith("com.teradata.presto.jdbc.jdbc4.");
+        return StringUtils.startsWith(getClassNameForJdbcDriver(connection), "com.teradata.presto.jdbc.jdbc4.");
     }
 
-    private static String getClassNameForJdbcDriver(Connection connection)
+	private static String getClassNameForJdbcDriver(Connection connection)
     {
         return connection.getClass().getCanonicalName();
     }
-
-    private JdbcDriverUtils() {}
 }

@@ -51,7 +51,59 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @Measurement(iterations = 10)
 public class BenchmarkGeometryAggregations
 {
-    @State(Thread)
+    @Benchmark
+    public MaterializedResult benchmarkArrayUnion(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT geometry_union(array_agg(p.geom)) FROM us_states p");
+    }
+
+	@Benchmark
+    public MaterializedResult benchmarkUnion(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT geometry_union_agg(p.geom) FROM us_states p");
+    }
+
+	@Benchmark
+    public MaterializedResult benchmarkConvexHull(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT convex_hull_agg(p.geom) FROM us_states p");
+    }
+
+	@Test
+    public void verify()
+            throws IOException
+    {
+        Context context = new Context();
+        try {
+            context.setUp();
+
+            BenchmarkGeometryAggregations benchmark = new BenchmarkGeometryAggregations();
+            benchmark.benchmarkUnion(context);
+            benchmark.benchmarkArrayUnion(context);
+            benchmark.benchmarkConvexHull(context);
+        }
+        finally {
+            context.queryRunner.close();
+        }
+    }
+
+	public static void main(String[] args)
+            throws Exception
+    {
+        new BenchmarkGeometryAggregations().verify();
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGeometryAggregations.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class Context
     {
         private LocalQueryRunner queryRunner;
@@ -89,57 +141,5 @@ public class BenchmarkGeometryAggregations
             queryRunner.close();
             queryRunner = null;
         }
-    }
-
-    @Benchmark
-    public MaterializedResult benchmarkArrayUnion(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT geometry_union(array_agg(p.geom)) FROM us_states p");
-    }
-
-    @Benchmark
-    public MaterializedResult benchmarkUnion(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT geometry_union_agg(p.geom) FROM us_states p");
-    }
-
-    @Benchmark
-    public MaterializedResult benchmarkConvexHull(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT convex_hull_agg(p.geom) FROM us_states p");
-    }
-
-    @Test
-    public void verify()
-            throws IOException
-    {
-        Context context = new Context();
-        try {
-            context.setUp();
-
-            BenchmarkGeometryAggregations benchmark = new BenchmarkGeometryAggregations();
-            benchmark.benchmarkUnion(context);
-            benchmark.benchmarkArrayUnion(context);
-            benchmark.benchmarkConvexHull(context);
-        }
-        finally {
-            context.queryRunner.close();
-        }
-    }
-
-    public static void main(String[] args)
-            throws Exception
-    {
-        new BenchmarkGeometryAggregations().verify();
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGeometryAggregations.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

@@ -44,10 +44,10 @@ public class TestRFC2822JsonFieldDecoder
     @Test
     public void testDecodeNulls()
     {
-        for (Type type : asList(DATE, TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE)) {
+        asList(DATE, TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE).forEach(type -> {
             tester.assertDecodedAsNull("null", type);
             tester.assertMissingDecodedAsNull(type);
-        }
+        });
     }
 
     @Test

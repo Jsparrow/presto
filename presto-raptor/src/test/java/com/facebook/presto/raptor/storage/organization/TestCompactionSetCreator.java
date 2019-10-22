@@ -72,9 +72,7 @@ public class TestCompactionSetCreator
         Set<OrganizationSet> compactionSets = compactionSetCreator.createCompactionSets(tableInfo, inputShards);
 
         Set<UUID> actual = new HashSet<>();
-        for (OrganizationSet set : compactionSets) {
-            actual.addAll(set.getShards());
-        }
+        compactionSets.forEach(set -> actual.addAll(set.getShards()));
         assertTrue(extractIndexes(inputShards, 0, 1, 2).containsAll(actual));
     }
 
@@ -90,9 +88,7 @@ public class TestCompactionSetCreator
         Set<OrganizationSet> compactionSets = compactionSetCreator.createCompactionSets(tableInfo, inputShards);
 
         Set<UUID> actual = new HashSet<>();
-        for (OrganizationSet set : compactionSets) {
-            actual.addAll(set.getShards());
-        }
+        compactionSets.forEach(set -> actual.addAll(set.getShards()));
 
         assertTrue(extractIndexes(inputShards, 0, 2, 3).containsAll(actual));
     }

@@ -216,8 +216,8 @@ public class TransformQuantifiedComparisonApplyToLateralJoin
                 VariableReferenceExpression countAllValue,
                 VariableReferenceExpression countNonNullValue)
         {
-            BooleanLiteral emptySetResult = quantifiedComparison.getQuantifier().equals(ALL) ? TRUE_LITERAL : FALSE_LITERAL;
-            Function<List<Expression>, Expression> quantifier = quantifiedComparison.getQuantifier().equals(ALL) ?
+            BooleanLiteral emptySetResult = quantifiedComparison.getQuantifier() == ALL ? TRUE_LITERAL : FALSE_LITERAL;
+            Function<List<Expression>, Expression> quantifier = quantifiedComparison.getQuantifier() == ALL ?
                     ExpressionUtils::combineConjuncts : ExpressionUtils::combineDisjuncts;
             Expression comparisonWithExtremeValue = getBoundComparisons(quantifiedComparison, minValue, maxValue);
 

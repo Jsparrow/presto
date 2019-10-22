@@ -56,11 +56,11 @@ public final class CachedInstanceBinder
 
     public void generateInitializations(Variable thisVariable, BytecodeBlock block)
     {
-        for (Map.Entry<FieldDefinition, MethodHandle> entry : initializers.entrySet()) {
+        initializers.entrySet().forEach(entry -> {
             Binding binding = callSiteBinder.bind(entry.getValue());
             block.append(thisVariable)
                     .append(invoke(binding, "instanceFieldConstructor"))
                     .putField(entry.getKey());
-        }
+        });
     }
 }

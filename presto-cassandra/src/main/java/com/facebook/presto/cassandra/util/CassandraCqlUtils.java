@@ -29,13 +29,11 @@ import java.util.List;
 import java.util.Set;
 
 import static java.util.Locale.ENGLISH;
+import java.util.Collections;
+import org.apache.commons.lang3.StringUtils;
 
 public final class CassandraCqlUtils
 {
-    private CassandraCqlUtils()
-    {
-    }
-
     private static final String[] KEYWORDS = {"ADD", "ALL", "ALLOW", "ALTER", "AND", "APPLY",
             "ASC", "ASCII", "AUTHORIZE", "BATCH", "BEGIN", "BIGINT", "BLOB", "BOOLEAN", "BY",
             "CLUSTERING", "COLUMNFAMILY", "COMPACT", "COUNT", "COUNTER", "CREATE", "DECIMAL",
@@ -47,62 +45,66 @@ public final class CassandraCqlUtils
             "TRUNCATE", "TTL", "TYPE", "UNLOGGED", "UPDATE", "USE", "USER", "USERS", "USING",
             "UUID", "VALUES", "VARCHAR", "VARINT", "WHERE", "WITH", "WRITETIME"};
 
-    private static final Set<String> keywords = new HashSet<>(Arrays.asList(KEYWORDS));
+	private static final Set<String> keywords = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(KEYWORDS)));
 
-    public static final String EMPTY_COLUMN_NAME = "__empty__";
+	public static final String EMPTY_COLUMN_NAME = "__empty__";
 
-    public static String validSchemaName(String identifier)
+	private CassandraCqlUtils()
+    {
+    }
+
+	public static String validSchemaName(String identifier)
     {
         return validIdentifier(identifier);
     }
 
-    public static String validTableName(String identifier)
+	public static String validTableName(String identifier)
     {
         return validIdentifier(identifier);
     }
 
-    public static String validColumnName(String identifier)
+	public static String validColumnName(String identifier)
     {
-        if (identifier.isEmpty() || identifier.equals(EMPTY_COLUMN_NAME)) {
+        if (StringUtils.isEmpty(identifier) || identifier.equals(EMPTY_COLUMN_NAME)) {
             return "\"\"";
         }
 
         return validIdentifier(identifier);
     }
 
-    private static String validIdentifier(String identifier)
+	private static String validIdentifier(String identifier)
     {
-        if (!identifier.equals(identifier.toLowerCase(ENGLISH))) {
+        if (!identifier.equals(StringUtils.lowerCase(identifier, ENGLISH))) {
             return quoteIdentifier(identifier);
         }
 
-        if (keywords.contains(identifier.toUpperCase(ENGLISH))) {
+        if (keywords.contains(StringUtils.upperCase(identifier, ENGLISH))) {
             return quoteIdentifier(identifier);
         }
         return identifier;
     }
 
-    private static String quoteIdentifier(String identifier)
+	private static String quoteIdentifier(String identifier)
     {
-        return '"' + identifier + '"';
+        return new StringBuilder().append('"').append(identifier).append('"').toString();
     }
 
-    public static String quoteStringLiteral(String string)
+	public static String quoteStringLiteral(String string)
     {
-        return "'" + string.replace("'", "''") + "'";
+        return new StringBuilder().append("'").append(string.replace("'", "''")).append("'").toString();
     }
 
-    public static String quoteStringLiteralForJson(String string)
+	public static String quoteStringLiteralForJson(String string)
     {
-        return '"' + new String(JsonStringEncoder.getInstance().quoteAsUTF8(string)) + '"';
+        return new StringBuilder().append('"').append(new String(JsonStringEncoder.getInstance().quoteAsUTF8(string))).append('"').toString();
     }
 
-    public static void appendSelectColumns(StringBuilder stringBuilder, List<? extends ColumnHandle> columns)
+	public static void appendSelectColumns(StringBuilder stringBuilder, List<? extends ColumnHandle> columns)
     {
         appendSelectColumns(stringBuilder, columns, true);
     }
 
-    private static void appendSelectColumns(StringBuilder stringBuilder, List<? extends ColumnHandle> columns, boolean first)
+	private static void appendSelectColumns(StringBuilder stringBuilder, List<? extends ColumnHandle> columns, boolean first)
     {
         for (ColumnHandle column : columns) {
             if (first) {
@@ -115,15 +117,15 @@ public final class CassandraCqlUtils
         }
     }
 
-    public static String cqlNameToSqlName(String name)
+	public static String cqlNameToSqlName(String name)
     {
-        if (name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return EMPTY_COLUMN_NAME;
         }
         return name;
     }
 
-    public static String sqlNameToCqlName(String name)
+	public static String sqlNameToCqlName(String name)
     {
         if (name.equals(EMPTY_COLUMN_NAME)) {
             return "";
@@ -131,40 +133,38 @@ public final class CassandraCqlUtils
         return name;
     }
 
-    public static Selection select(List<CassandraColumnHandle> columns)
+	public static Selection select(List<CassandraColumnHandle> columns)
     {
         Selection selection = QueryBuilder.select();
-        for (CassandraColumnHandle column : columns) {
-            selection.column(validColumnName(column.getName()));
-        }
+        columns.forEach(column -> selection.column(validColumnName(column.getName())));
         return selection;
     }
 
-    public static Select selectFrom(CassandraTableHandle tableHandle, List<CassandraColumnHandle> columns)
+	public static Select selectFrom(CassandraTableHandle tableHandle, List<CassandraColumnHandle> columns)
     {
         return from(select(columns), tableHandle);
     }
 
-    public static Select from(Selection selection, CassandraTableHandle tableHandle)
+	public static Select from(Selection selection, CassandraTableHandle tableHandle)
     {
         String schema = validSchemaName(tableHandle.getSchemaName());
         String table = validTableName(tableHandle.getTableName());
         return selection.from(schema, table);
     }
 
-    public static Select selectDistinctFrom(CassandraTableHandle tableHandle, List<CassandraColumnHandle> columns)
+	public static Select selectDistinctFrom(CassandraTableHandle tableHandle, List<CassandraColumnHandle> columns)
     {
         return from(select(columns).distinct(), tableHandle);
     }
 
-    public static Select selectCountAllFrom(CassandraTableHandle tableHandle)
+	public static Select selectCountAllFrom(CassandraTableHandle tableHandle)
     {
         String schema = validSchemaName(tableHandle.getSchemaName());
         String table = validTableName(tableHandle.getTableName());
         return QueryBuilder.select().countAll().from(schema, table);
     }
 
-    public static String cqlValue(String value, CassandraType cassandraType)
+	public static String cqlValue(String value, CassandraType cassandraType)
     {
         switch (cassandraType) {
             case ASCII:
@@ -173,13 +173,13 @@ public final class CassandraCqlUtils
                 return quoteStringLiteral(value);
             case INET:
                 // remove '/' in the string. e.g. /127.0.0.1
-                return quoteStringLiteral(value.substring(1));
+                return quoteStringLiteral(StringUtils.substring(value, 1));
             default:
                 return value;
         }
     }
 
-    public static String toCQLCompatibleString(Object value)
+	public static String toCQLCompatibleString(Object value)
     {
         if (value instanceof Slice) {
             return ((Slice) value).toStringUtf8();

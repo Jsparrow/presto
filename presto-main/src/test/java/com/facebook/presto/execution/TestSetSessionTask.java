@@ -71,8 +71,9 @@ public class TestSetSessionTask
     private final TransactionManager transactionManager;
     private final AccessControl accessControl;
     private final MetadataManager metadata;
+	private final ExecutorService executor = newCachedThreadPool(daemonThreadsNamed("stage-executor-%s"));
 
-    public TestSetSessionTask()
+	public TestSetSessionTask()
     {
         CatalogManager catalogManager = new CatalogManager();
         transactionManager = createTestTransactionManager(catalogManager);
@@ -110,7 +111,7 @@ public class TestSetSessionTask
                         Integer.class,
                         null,
                         false,
-                        value -> validatePositive(value),
+                        TestSetSessionTask::validatePositive,
                         value -> value));
 
         metadata.getSessionPropertyManager().addConnectorSessionProperties(bogusTestingCatalog.getConnectorId(), sessionProperties);
@@ -118,7 +119,7 @@ public class TestSetSessionTask
         catalogManager.registerCatalog(bogusTestingCatalog);
     }
 
-    private static int validatePositive(Object value)
+	private static int validatePositive(Object value)
     {
         int intValue = ((Number) value).intValue();
         if (intValue < 0) {
@@ -127,15 +128,13 @@ public class TestSetSessionTask
         return intValue;
     }
 
-    private final ExecutorService executor = newCachedThreadPool(daemonThreadsNamed("stage-executor-%s"));
-
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
     {
         executor.shutdownNow();
     }
 
-    @Test
+	@Test
     public void testSetSession()
     {
         testSetSession(new StringLiteral("baz"), "baz");
@@ -144,7 +143,7 @@ public class TestSetSessionTask
                 new StringLiteral("ana"))), "banana");
     }
 
-    @Test
+	@Test
     public void testSetSessionWithValidation()
     {
         testSetSessionWithValidation(new LongLiteral("0"), "0");
@@ -159,7 +158,7 @@ public class TestSetSessionTask
         }
     }
 
-    @Test
+	@Test
     public void testSetSessionWithParameters()
     {
         List<Expression> expressionList = new ArrayList<>();
@@ -168,17 +167,17 @@ public class TestSetSessionTask
         testSetSessionWithParameters("bar", new FunctionCall(QualifiedName.of("concat"), expressionList), "banana", ImmutableList.of(new StringLiteral("ana")));
     }
 
-    private void testSetSession(Expression expression, String expectedValue)
+	private void testSetSession(Expression expression, String expectedValue)
     {
         testSetSessionWithParameters("bar", expression, expectedValue, emptyList());
     }
 
-    private void testSetSessionWithValidation(Expression expression, String expectedValue)
+	private void testSetSessionWithValidation(Expression expression, String expectedValue)
     {
         testSetSessionWithParameters("positive_property", expression, expectedValue, emptyList());
     }
 
-    private void testSetSessionWithParameters(String property, Expression expression, String expectedValue, List<Expression> parameters)
+	private void testSetSessionWithParameters(String property, Expression expression, String expectedValue, List<Expression> parameters)
     {
         QualifiedName qualifiedPropName = QualifiedName.of(CATALOG_NAME, property);
         QueryStateMachine stateMachine = QueryStateMachine.begin(

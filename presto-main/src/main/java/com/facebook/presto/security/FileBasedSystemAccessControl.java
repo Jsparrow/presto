@@ -64,70 +64,6 @@ public class FileBasedSystemAccessControl
         this.principalUserMatchRules = principalUserMatchRules;
     }
 
-    public static class Factory
-            implements SystemAccessControlFactory
-    {
-        @Override
-        public String getName()
-        {
-            return NAME;
-        }
-
-        @Override
-        public SystemAccessControl create(Map<String, String> config)
-        {
-            requireNonNull(config, "config is null");
-
-            String configFileName = config.get(SECURITY_CONFIG_FILE);
-            checkState(configFileName != null, "Security configuration must contain the '%s' property", SECURITY_CONFIG_FILE);
-
-            if (config.containsKey(SECURITY_REFRESH_PERIOD)) {
-                Duration refreshPeriod;
-                try {
-                    refreshPeriod = Duration.valueOf(config.get(SECURITY_REFRESH_PERIOD));
-                }
-                catch (IllegalArgumentException e) {
-                    throw invalidRefreshPeriodException(config, configFileName);
-                }
-                if (refreshPeriod.toMillis() == 0) {
-                    throw invalidRefreshPeriodException(config, configFileName);
-                }
-                return ForwardingSystemAccessControl.of(memoizeWithExpiration(
-                        () -> {
-                            log.info("Refreshing system access control from %s", configFileName);
-                            return create(configFileName);
-                        },
-                        refreshPeriod.toMillis(),
-                        MILLISECONDS));
-            }
-            return create(configFileName);
-        }
-
-        private PrestoException invalidRefreshPeriodException(Map<String, String> config, String configFileName)
-        {
-            return new PrestoException(
-                    CONFIGURATION_INVALID,
-                    format("Invalid duration value '%s' for property '%s' in '%s'", config.get(SECURITY_REFRESH_PERIOD), SECURITY_REFRESH_PERIOD, configFileName));
-        }
-
-        private SystemAccessControl create(String configFileName)
-        {
-            FileBasedSystemAccessControlRules rules = parseJson(Paths.get(configFileName), FileBasedSystemAccessControlRules.class);
-
-            ImmutableList.Builder<CatalogAccessControlRule> catalogRulesBuilder = ImmutableList.builder();
-            catalogRulesBuilder.addAll(rules.getCatalogRules());
-
-            // Hack to allow Presto Admin to access the "system" catalog for retrieving server status.
-            // todo Change userRegex from ".*" to one particular user that Presto Admin will be restricted to run as
-            catalogRulesBuilder.add(new CatalogAccessControlRule(
-                    true,
-                    Optional.of(Pattern.compile(".*")),
-                    Optional.of(Pattern.compile("system"))));
-
-            return new FileBasedSystemAccessControl(catalogRulesBuilder.build(), rules.getPrincipalUserMatchRules());
-        }
-    }
-
     @Override
     public void checkCanSetUser(Optional<Principal> principal, String userName)
     {
@@ -157,12 +93,12 @@ public class FileBasedSystemAccessControl
         denySetUser(principal, userName);
     }
 
-    @Override
+	@Override
     public void checkCanSetSystemSessionProperty(Identity identity, String propertyName)
     {
     }
 
-    @Override
+	@Override
     public void checkCanAccessCatalog(Identity identity, String catalogName)
     {
         if (!canAccessCatalog(identity, catalogName)) {
@@ -170,19 +106,15 @@ public class FileBasedSystemAccessControl
         }
     }
 
-    @Override
+	@Override
     public Set<String> filterCatalogs(Identity identity, Set<String> catalogs)
     {
         ImmutableSet.Builder<String> filteredCatalogs = ImmutableSet.builder();
-        for (String catalog : catalogs) {
-            if (canAccessCatalog(identity, catalog)) {
-                filteredCatalogs.add(catalog);
-            }
-        }
+        catalogs.stream().filter(catalog -> canAccessCatalog(identity, catalog)).forEach(filteredCatalogs::add);
         return filteredCatalogs.build();
     }
 
-    private boolean canAccessCatalog(Identity identity, String catalogName)
+	private boolean canAccessCatalog(Identity identity, String catalogName)
     {
         for (CatalogAccessControlRule rule : catalogRules) {
             Optional<Boolean> allowed = rule.match(identity.getUser(), catalogName);
@@ -193,27 +125,27 @@ public class FileBasedSystemAccessControl
         return false;
     }
 
-    @Override
+	@Override
     public void checkCanCreateSchema(Identity identity, CatalogSchemaName schema)
     {
     }
 
-    @Override
+	@Override
     public void checkCanDropSchema(Identity identity, CatalogSchemaName schema)
     {
     }
 
-    @Override
+	@Override
     public void checkCanRenameSchema(Identity identity, CatalogSchemaName schema, String newSchemaName)
     {
     }
 
-    @Override
+	@Override
     public void checkCanShowSchemas(Identity identity, String catalogName)
     {
     }
 
-    @Override
+	@Override
     public Set<String> filterSchemas(Identity identity, String catalogName, Set<String> schemaNames)
     {
         if (!canAccessCatalog(identity, catalogName)) {
@@ -223,27 +155,27 @@ public class FileBasedSystemAccessControl
         return schemaNames;
     }
 
-    @Override
+	@Override
     public void checkCanCreateTable(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanDropTable(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanRenameTable(Identity identity, CatalogSchemaTableName table, CatalogSchemaTableName newTable)
     {
     }
 
-    @Override
+	@Override
     public void checkCanShowTablesMetadata(Identity identity, CatalogSchemaName schema)
     {
     }
 
-    @Override
+	@Override
     public Set<SchemaTableName> filterTables(Identity identity, String catalogName, Set<SchemaTableName> tableNames)
     {
         if (!canAccessCatalog(identity, catalogName)) {
@@ -253,63 +185,127 @@ public class FileBasedSystemAccessControl
         return tableNames;
     }
 
-    @Override
+	@Override
     public void checkCanAddColumn(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanDropColumn(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanRenameColumn(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
     {
     }
 
-    @Override
+	@Override
     public void checkCanInsertIntoTable(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanDeleteFromTable(Identity identity, CatalogSchemaTableName table)
     {
     }
 
-    @Override
+	@Override
     public void checkCanCreateView(Identity identity, CatalogSchemaTableName view)
     {
     }
 
-    @Override
+	@Override
     public void checkCanDropView(Identity identity, CatalogSchemaTableName view)
     {
     }
 
-    @Override
+	@Override
     public void checkCanCreateViewWithSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
     {
     }
 
-    @Override
+	@Override
     public void checkCanSetCatalogSessionProperty(Identity identity, String catalogName, String propertyName)
     {
     }
 
-    @Override
+	@Override
     public void checkCanGrantTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal grantee, boolean withGrantOption)
     {
     }
 
-    @Override
+	@Override
     public void checkCanRevokeTablePrivilege(Identity identity, Privilege privilege, CatalogSchemaTableName table, PrestoPrincipal revokee, boolean grantOptionFor)
     {
+    }
+
+	public static class Factory
+            implements SystemAccessControlFactory
+    {
+        @Override
+        public String getName()
+        {
+            return NAME;
+        }
+
+        @Override
+        public SystemAccessControl create(Map<String, String> config)
+        {
+            requireNonNull(config, "config is null");
+
+            String configFileName = config.get(SECURITY_CONFIG_FILE);
+            checkState(configFileName != null, "Security configuration must contain the '%s' property", SECURITY_CONFIG_FILE);
+
+            if (!config.containsKey(SECURITY_REFRESH_PERIOD)) {
+				return create(configFileName);
+			}
+			Duration refreshPeriod;
+			try {
+			    refreshPeriod = Duration.valueOf(config.get(SECURITY_REFRESH_PERIOD));
+			}
+			catch (IllegalArgumentException e) {
+			    throw invalidRefreshPeriodException(config, configFileName);
+			}
+			if (refreshPeriod.toMillis() == 0) {
+			    throw invalidRefreshPeriodException(config, configFileName);
+			}
+			return ForwardingSystemAccessControl.of(memoizeWithExpiration(
+			        () -> {
+			            log.info("Refreshing system access control from %s", configFileName);
+			            return create(configFileName);
+			        },
+			        refreshPeriod.toMillis(),
+			        MILLISECONDS));
+        }
+
+        private PrestoException invalidRefreshPeriodException(Map<String, String> config, String configFileName)
+        {
+            return new PrestoException(
+                    CONFIGURATION_INVALID,
+                    format("Invalid duration value '%s' for property '%s' in '%s'", config.get(SECURITY_REFRESH_PERIOD), SECURITY_REFRESH_PERIOD, configFileName));
+        }
+
+        private SystemAccessControl create(String configFileName)
+        {
+            FileBasedSystemAccessControlRules rules = parseJson(Paths.get(configFileName), FileBasedSystemAccessControlRules.class);
+
+            ImmutableList.Builder<CatalogAccessControlRule> catalogRulesBuilder = ImmutableList.builder();
+            catalogRulesBuilder.addAll(rules.getCatalogRules());
+
+            // Hack to allow Presto Admin to access the "system" catalog for retrieving server status.
+            // todo Change userRegex from ".*" to one particular user that Presto Admin will be restricted to run as
+            catalogRulesBuilder.add(new CatalogAccessControlRule(
+                    true,
+                    Optional.of(Pattern.compile(".*")),
+                    Optional.of(Pattern.compile("system"))));
+
+            return new FileBasedSystemAccessControl(catalogRulesBuilder.build(), rules.getPrincipalUserMatchRules());
+        }
     }
 }

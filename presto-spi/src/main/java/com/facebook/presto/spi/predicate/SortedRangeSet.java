@@ -274,9 +274,7 @@ public final class SortedRangeSet
     {
         Builder builder = new Builder(type);
         builder.addAll(this.getOrderedRanges());
-        for (ValueSet valueSet : valueSets) {
-            builder.addAll(checkCompatibility(valueSet).getOrderedRanges());
-        }
+        valueSets.forEach(valueSet -> builder.addAll(checkCompatibility(valueSet).getOrderedRanges()));
         return builder.build();
     }
 
@@ -355,9 +353,9 @@ public final class SortedRangeSet
     @Override
     public String toString(ConnectorSession session)
     {
-        return "[" + lowIndexedRanges.values().stream()
+        return new StringBuilder().append("[").append(lowIndexedRanges.values().stream()
                 .map(range -> range.toString(session))
-                .collect(Collectors.joining(", ")) + "]";
+                .collect(Collectors.joining(", "))).append("]").toString();
     }
 
     static class Builder
@@ -395,7 +393,7 @@ public final class SortedRangeSet
 
         SortedRangeSet build()
         {
-            Collections.sort(ranges, Comparator.comparing(Range::getLow));
+            ranges.sort(Comparator.comparing(Range::getLow));
 
             NavigableMap<Marker, Range> result = new TreeMap<>();
 

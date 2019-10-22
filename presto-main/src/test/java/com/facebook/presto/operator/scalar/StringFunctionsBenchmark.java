@@ -135,7 +135,18 @@ public class StringFunctionsBenchmark
         return lower(data.getSlice());
     }
 
-    @State(Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(StringFunctionsBenchmark.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class BenchmarkData
     {
         private static final int[] ASCII_CODE_POINTS;
@@ -252,16 +263,5 @@ public class StringFunctionsBenchmark
         {
             return bothWhitespace;
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + StringFunctionsBenchmark.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

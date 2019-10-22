@@ -37,7 +37,7 @@ public class TestSmallintOperators
     {
         assertFunction("SMALLINT'37'", SMALLINT, (short) 37);
         assertFunction("SMALLINT'17'", SMALLINT, (short) 17);
-        assertInvalidFunction("SMALLINT'" + ((long) Short.MAX_VALUE + 1L) + "'", INVALID_LITERAL);
+        assertInvalidFunction(new StringBuilder().append("SMALLINT'").append((long) Short.MAX_VALUE + 1L).append("'").toString(), INVALID_LITERAL);
     }
 
     @Test
@@ -52,7 +52,7 @@ public class TestSmallintOperators
     {
         assertFunction("SMALLINT'-37'", SMALLINT, (short) -37);
         assertFunction("SMALLINT'-17'", SMALLINT, (short) -17);
-        assertInvalidFunction("SMALLINT'-" + Short.MIN_VALUE + "'", INVALID_LITERAL);
+        assertInvalidFunction(new StringBuilder().append("SMALLINT'-").append(Short.MIN_VALUE).append("'").toString(), INVALID_LITERAL);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class TestSmallintOperators
     {
         assertFunction("-(SMALLINT'37')", SMALLINT, (short) -37);
         assertFunction("-(SMALLINT'17')", SMALLINT, (short) -17);
-        assertFunction("-(SMALLINT'" + Short.MAX_VALUE + "')", SMALLINT, (short) (Short.MIN_VALUE + 1));
+        assertFunction(new StringBuilder().append("-(SMALLINT'").append(Short.MAX_VALUE).append("')").toString(), SMALLINT, (short) (Short.MIN_VALUE + 1));
         assertNumericOverflow(format("-(SMALLINT'%s')", Short.MIN_VALUE), "smallint negation overflow: -32768");
     }
 

@@ -21,12 +21,12 @@ import com.facebook.presto.type.TypeRegistry;
 
 public class TestingEnvironment
 {
-    private TestingEnvironment() {}
-
     public static final TypeManager TYPE_MANAGER = new TypeRegistry();
 
-    static {
+	static {
         // wire TYPE_MANAGER with function manager
         new FunctionManager(TYPE_MANAGER, new BlockEncodingManager(TYPE_MANAGER), new FeaturesConfig());
     }
+
+	private TestingEnvironment() {}
 }

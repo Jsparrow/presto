@@ -42,20 +42,20 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class RedisQueryRunner
 {
-    private RedisQueryRunner()
+    private static final Logger log = Logger.get("TestQueries");
+	private static final String TPCH_SCHEMA = "tpch";
+
+	private RedisQueryRunner()
     {
     }
 
-    private static final Logger log = Logger.get("TestQueries");
-    private static final String TPCH_SCHEMA = "tpch";
-
-    public static DistributedQueryRunner createRedisQueryRunner(EmbeddedRedis embeddedRedis, String dataFormat, TpchTable<?>... tables)
+	public static DistributedQueryRunner createRedisQueryRunner(EmbeddedRedis embeddedRedis, String dataFormat, TpchTable<?>... tables)
             throws Exception
     {
         return createRedisQueryRunner(embeddedRedis, dataFormat, ImmutableList.copyOf(tables));
     }
 
-    public static DistributedQueryRunner createRedisQueryRunner(EmbeddedRedis embeddedRedis, String dataFormat, Iterable<TpchTable<?>> tables)
+	public static DistributedQueryRunner createRedisQueryRunner(EmbeddedRedis embeddedRedis, String dataFormat, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -88,7 +88,7 @@ public final class RedisQueryRunner
         }
     }
 
-    private static void loadTpchTable(EmbeddedRedis embeddedRedis, TestingPrestoClient prestoClient, TpchTable<?> table, String dataFormat)
+	private static void loadTpchTable(EmbeddedRedis embeddedRedis, TestingPrestoClient prestoClient, TpchTable<?> table, String dataFormat)
     {
         long start = System.nanoTime();
         log.info("Running import for %s", table.getTableName());
@@ -101,12 +101,12 @@ public final class RedisQueryRunner
         log.info("Imported %s in %s", table.getTableName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
-    private static String redisTableName(TpchTable<?> table)
+	private static String redisTableName(TpchTable<?> table)
     {
-        return TPCH_SCHEMA + ":" + table.getTableName().toLowerCase(ENGLISH);
+        return new StringBuilder().append(TPCH_SCHEMA).append(":").append(table.getTableName().toLowerCase(ENGLISH)).toString();
     }
 
-    private static Map<SchemaTableName, RedisTableDescription> createTpchTableDescriptions(Metadata metadata, Iterable<TpchTable<?>> tables, String dataFormat)
+	private static Map<SchemaTableName, RedisTableDescription> createTpchTableDescriptions(Metadata metadata, Iterable<TpchTable<?>> tables, String dataFormat)
             throws Exception
     {
         JsonCodec<RedisTableDescription> tableDescriptionJsonCodec = new CodecSupplier<>(RedisTableDescription.class, metadata).get();
@@ -121,7 +121,7 @@ public final class RedisQueryRunner
         return tableDescriptions.build();
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder()
                 .setCatalog("redis")

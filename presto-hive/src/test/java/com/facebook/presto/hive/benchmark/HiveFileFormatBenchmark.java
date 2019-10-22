@@ -78,6 +78,8 @@ import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static java.lang.String.format;
 import static java.nio.file.Files.createTempDirectory;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -87,7 +89,9 @@ import static java.util.stream.Collectors.toList;
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 public class HiveFileFormatBenchmark
 {
-    private static final long MIN_DATA_SIZE = new DataSize(50, MEGABYTE).toBytes();
+    private static final Logger logger = LoggerFactory.getLogger(HiveFileFormatBenchmark.class);
+
+	private static final long MIN_DATA_SIZE = new DataSize(50, MEGABYTE).toBytes();
 
     static {
         HadoopNative.requireHadoopNative();
@@ -168,21 +172,12 @@ public class HiveFileFormatBenchmark
         deleteRecursively(targetDir.toPath(), ALLOW_INSECURE);
     }
 
-    @SuppressWarnings("PublicField")
-    @AuxCounters
-    @State(Scope.Thread)
-    public static class CompressionCounter
-    {
-        public long inputSize;
-        public long outputSize;
-    }
-
     @Benchmark
     public List<Page> read(CompressionCounter counter)
             throws IOException
     {
         if (!fileFormat.supports(data)) {
-            throw new RuntimeException(fileFormat + " does not support data set " + dataSet);
+            throw new RuntimeException(new StringBuilder().append(fileFormat).append(" does not support data set ").append(dataSet).toString());
         }
         List<Page> pages = new ArrayList<>(100);
         try (ConnectorPageSource pageSource = fileFormat.createFileFormatReader(
@@ -203,7 +198,7 @@ public class HiveFileFormatBenchmark
         return pages;
     }
 
-    @Benchmark
+	@Benchmark
     public File write(CompressionCounter counter)
             throws IOException
     {
@@ -214,7 +209,7 @@ public class HiveFileFormatBenchmark
         return targetFile;
     }
 
-    private void writeData(File targetFile)
+	private void writeData(File targetFile)
             throws IOException
     {
         List<Page> inputPages = data.getPages();
@@ -230,7 +225,140 @@ public class HiveFileFormatBenchmark
         }
     }
 
-    public enum DataSet
+	@SafeVarargs
+    private static <E extends TpchEntity> TestData createTpchDataSet(FileFormat format, TpchTable<E> tpchTable, TpchColumn<E>... columns)
+    {
+        return createTpchDataSet(format, tpchTable, ImmutableList.copyOf(columns));
+    }
+
+	private static <E extends TpchEntity> TestData createTpchDataSet(FileFormat format, TpchTable<E> tpchTable, List<TpchColumn<E>> columns)
+    {
+        List<String> columnNames = columns.stream().map(TpchColumn::getColumnName).collect(toList());
+        List<Type> columnTypes = columns.stream().map(HiveFileFormatBenchmark::getColumnType)
+                .map(type -> format.supportsDate() || !DATE.equals(type) ? type : createUnboundedVarcharType())
+                .collect(toList());
+
+        PageBuilder pageBuilder = new PageBuilder(columnTypes);
+        ImmutableList.Builder<Page> pages = ImmutableList.builder();
+        long dataSize = 0;
+        for (E row : tpchTable.createGenerator(10, 1, 1)) {
+            pageBuilder.declarePosition();
+            for (int i = 0; i < columns.size(); i++) {
+                TpchColumn<E> column = columns.get(i);
+                BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(i);
+                switch (column.getType().getBase()) {
+                    case IDENTIFIER:
+                        BIGINT.writeLong(blockBuilder, column.getIdentifier(row));
+                        break;
+                    case INTEGER:
+                        INTEGER.writeLong(blockBuilder, column.getInteger(row));
+                        break;
+                    case DATE:
+                        if (format.supportsDate()) {
+                            DATE.writeLong(blockBuilder, column.getDate(row));
+                        }
+                        else {
+                            createUnboundedVarcharType().writeString(blockBuilder, column.getString(row));
+                        }
+                        break;
+                    case DOUBLE:
+                        DOUBLE.writeDouble(blockBuilder, column.getDouble(row));
+                        break;
+                    case VARCHAR:
+                        createUnboundedVarcharType().writeSlice(blockBuilder, Slices.utf8Slice(column.getString(row)));
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unsupported type " + column.getType());
+                }
+            }
+            if (pageBuilder.isFull()) {
+                Page page = pageBuilder.build();
+                pages.add(page);
+                pageBuilder.reset();
+                dataSize += page.getSizeInBytes();
+
+                if (dataSize >= MIN_DATA_SIZE) {
+                    break;
+                }
+            }
+        }
+        return new TestData(columnNames, columnTypes, pages.build());
+    }
+
+	private static Type getColumnType(TpchColumn<?> input)
+    {
+        switch (input.getType().getBase()) {
+            case IDENTIFIER:
+                return BIGINT;
+            case INTEGER:
+                return INTEGER;
+            case DATE:
+                return DATE;
+            case DOUBLE:
+                return DOUBLE;
+            case VARCHAR:
+                return createUnboundedVarcharType();
+        }
+        throw new IllegalArgumentException("Unsupported type " + input.getType());
+    }
+
+	public static void main(String[] args)
+            throws Exception
+    {
+        Options opt = new OptionsBuilder()
+                .include(new StringBuilder().append(".*\\.").append(HiveFileFormatBenchmark.class.getSimpleName()).append(".*").toString())
+                .jvmArgsAppend("-Xmx4g", "-Xms4g", "-XX:+UseG1GC")
+                .build();
+
+        Collection<RunResult> results = new Runner(opt).run();
+
+        results.forEach(result -> {
+            Statistics inputSizeStats = result.getSecondaryResults().get("inputSize").getStatistics();
+            Statistics outputSizeStats = result.getSecondaryResults().get("outputSize").getStatistics();
+            double compressionRatio = 1.0 * inputSizeStats.getSum() / outputSizeStats.getSum();
+            String compression = result.getParams().getParam("compression");
+            String fileFormat = result.getParams().getParam("fileFormat");
+            String dataSet = result.getParams().getParam("dataSet");
+            logger.info("  %-10s  %-30s  %-10s  %-25s  %2.2f  %10s ± %11s (%5.2f%%) (N = %d, \u03B1 = 99.9%%)\n", result.getPrimaryResult().getLabel(), dataSet, compression, fileFormat, compressionRatio, toHumanReadableSpeed((long) inputSizeStats.getMean()), toHumanReadableSpeed((long) inputSizeStats.getMeanErrorAt(0.999)), inputSizeStats.getMeanErrorAt(0.999) * 100 / inputSizeStats.getMean(), inputSizeStats.getN());
+        });
+        System.out.println();
+    }
+
+	private static String toHumanReadableSpeed(long bytesPerSecond)
+    {
+        String humanReadableSpeed;
+        if (bytesPerSecond < 1024 * 10L) {
+            humanReadableSpeed = format("%dB/s", bytesPerSecond);
+        }
+        else if (bytesPerSecond < 1024 * 1024 * 10L) {
+            humanReadableSpeed = format("%.1fkB/s", bytesPerSecond / 1024.0f);
+        }
+        else if (bytesPerSecond < 1024 * 1024 * 1024 * 10L) {
+            humanReadableSpeed = format("%.1fMB/s", bytesPerSecond / (1024.0f * 1024.0f));
+        }
+        else {
+            humanReadableSpeed = format("%.1fGB/s", bytesPerSecond / (1024.0f * 1024.0f * 1024.0f));
+        }
+        return humanReadableSpeed;
+    }
+
+	private static int nextRandomBetween(Random random, int min, int max)
+    {
+        return min + random.nextInt(max - min);
+    }
+
+	@SuppressWarnings("SameParameterValue")
+    private static File createTempDir(String prefix)
+    {
+        try {
+            return createTempDirectory(prefix).toFile();
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+	public enum DataSet
     {
         LINEITEM {
             @Override
@@ -460,64 +588,13 @@ public class HiveFileFormatBenchmark
         public abstract TestData createTestData(FileFormat format);
     }
 
-    @SafeVarargs
-    private static <E extends TpchEntity> TestData createTpchDataSet(FileFormat format, TpchTable<E> tpchTable, TpchColumn<E>... columns)
+	@SuppressWarnings("PublicField")
+    @AuxCounters
+    @State(Scope.Thread)
+    public static class CompressionCounter
     {
-        return createTpchDataSet(format, tpchTable, ImmutableList.copyOf(columns));
-    }
-
-    private static <E extends TpchEntity> TestData createTpchDataSet(FileFormat format, TpchTable<E> tpchTable, List<TpchColumn<E>> columns)
-    {
-        List<String> columnNames = columns.stream().map(TpchColumn::getColumnName).collect(toList());
-        List<Type> columnTypes = columns.stream().map(HiveFileFormatBenchmark::getColumnType)
-                .map(type -> format.supportsDate() || !DATE.equals(type) ? type : createUnboundedVarcharType())
-                .collect(toList());
-
-        PageBuilder pageBuilder = new PageBuilder(columnTypes);
-        ImmutableList.Builder<Page> pages = ImmutableList.builder();
-        long dataSize = 0;
-        for (E row : tpchTable.createGenerator(10, 1, 1)) {
-            pageBuilder.declarePosition();
-            for (int i = 0; i < columns.size(); i++) {
-                TpchColumn<E> column = columns.get(i);
-                BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(i);
-                switch (column.getType().getBase()) {
-                    case IDENTIFIER:
-                        BIGINT.writeLong(blockBuilder, column.getIdentifier(row));
-                        break;
-                    case INTEGER:
-                        INTEGER.writeLong(blockBuilder, column.getInteger(row));
-                        break;
-                    case DATE:
-                        if (format.supportsDate()) {
-                            DATE.writeLong(blockBuilder, column.getDate(row));
-                        }
-                        else {
-                            createUnboundedVarcharType().writeString(blockBuilder, column.getString(row));
-                        }
-                        break;
-                    case DOUBLE:
-                        DOUBLE.writeDouble(blockBuilder, column.getDouble(row));
-                        break;
-                    case VARCHAR:
-                        createUnboundedVarcharType().writeSlice(blockBuilder, Slices.utf8Slice(column.getString(row)));
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unsupported type " + column.getType());
-                }
-            }
-            if (pageBuilder.isFull()) {
-                Page page = pageBuilder.build();
-                pages.add(page);
-                pageBuilder.reset();
-                dataSize += page.getSizeInBytes();
-
-                if (dataSize >= MIN_DATA_SIZE) {
-                    break;
-                }
-            }
-        }
-        return new TestData(columnNames, columnTypes, pages.build());
+        public long inputSize;
+        public long outputSize;
     }
 
     static class TestData
@@ -555,88 +632,6 @@ public class HiveFileFormatBenchmark
         public int getSize()
         {
             return size;
-        }
-    }
-
-    private static Type getColumnType(TpchColumn<?> input)
-    {
-        switch (input.getType().getBase()) {
-            case IDENTIFIER:
-                return BIGINT;
-            case INTEGER:
-                return INTEGER;
-            case DATE:
-                return DATE;
-            case DOUBLE:
-                return DOUBLE;
-            case VARCHAR:
-                return createUnboundedVarcharType();
-        }
-        throw new IllegalArgumentException("Unsupported type " + input.getType());
-    }
-
-    public static void main(String[] args)
-            throws Exception
-    {
-        Options opt = new OptionsBuilder()
-                .include(".*\\." + HiveFileFormatBenchmark.class.getSimpleName() + ".*")
-                .jvmArgsAppend("-Xmx4g", "-Xms4g", "-XX:+UseG1GC")
-                .build();
-
-        Collection<RunResult> results = new Runner(opt).run();
-
-        for (RunResult result : results) {
-            Statistics inputSizeStats = result.getSecondaryResults().get("inputSize").getStatistics();
-            Statistics outputSizeStats = result.getSecondaryResults().get("outputSize").getStatistics();
-            double compressionRatio = 1.0 * inputSizeStats.getSum() / outputSizeStats.getSum();
-            String compression = result.getParams().getParam("compression");
-            String fileFormat = result.getParams().getParam("fileFormat");
-            String dataSet = result.getParams().getParam("dataSet");
-            System.out.printf("  %-10s  %-30s  %-10s  %-25s  %2.2f  %10s ± %11s (%5.2f%%) (N = %d, \u03B1 = 99.9%%)\n",
-                    result.getPrimaryResult().getLabel(),
-                    dataSet,
-                    compression,
-                    fileFormat,
-                    compressionRatio,
-                    toHumanReadableSpeed((long) inputSizeStats.getMean()),
-                    toHumanReadableSpeed((long) inputSizeStats.getMeanErrorAt(0.999)),
-                    inputSizeStats.getMeanErrorAt(0.999) * 100 / inputSizeStats.getMean(),
-                    inputSizeStats.getN());
-        }
-        System.out.println();
-    }
-
-    private static String toHumanReadableSpeed(long bytesPerSecond)
-    {
-        String humanReadableSpeed;
-        if (bytesPerSecond < 1024 * 10L) {
-            humanReadableSpeed = format("%dB/s", bytesPerSecond);
-        }
-        else if (bytesPerSecond < 1024 * 1024 * 10L) {
-            humanReadableSpeed = format("%.1fkB/s", bytesPerSecond / 1024.0f);
-        }
-        else if (bytesPerSecond < 1024 * 1024 * 1024 * 10L) {
-            humanReadableSpeed = format("%.1fMB/s", bytesPerSecond / (1024.0f * 1024.0f));
-        }
-        else {
-            humanReadableSpeed = format("%.1fGB/s", bytesPerSecond / (1024.0f * 1024.0f * 1024.0f));
-        }
-        return humanReadableSpeed;
-    }
-
-    private static int nextRandomBetween(Random random, int min, int max)
-    {
-        return min + random.nextInt(max - min);
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private static File createTempDir(String prefix)
-    {
-        try {
-            return createTempDirectory(prefix).toFile();
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 }

@@ -65,21 +65,8 @@ public class VerifierTestUtil
     {
         TestingMySqlServer mySqlServer = new TestingMySqlServer("testuser", "testpass", ImmutableList.of(XDB), MY_SQL_OPTIONS);
         try (Handle handle = getHandle(mySqlServer)) {
-            handle.execute("CREATE TABLE verifier_queries (\n" +
-                    "  id int(11) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,\n" +
-                    "  suite varchar(256) NOT NULL,\n" +
-                    "  name varchar(256) DEFAULT NULL,\n" +
-                    "  control_catalog varchar(256) NOT NULL,\n" +
-                    "  control_schema varchar(256) NOT NULL,\n" +
-                    "  control_query text NOT NULL,\n" +
-                    "  test_catalog varchar(256) NOT NULL,\n" +
-                    "  test_schema varchar(256) NOT NULL,\n" +
-                    "  test_query text NOT NULL,\n" +
-                    "  control_username varchar(256) NOT NULL DEFAULT 'verifier-test',\n" +
-                    "  control_password varchar(256) DEFAULT NULL,\n" +
-                    "  test_username varchar(256) NOT NULL DEFAULT 'verifier-test',\n" +
-                    "  test_password varchar(256) DEFAULT NULL,\n" +
-                    "  session_properties_json varchar(2048) DEFAULT NULL)");
+            handle.execute(new StringBuilder().append("CREATE TABLE verifier_queries (\n").append("  id int(11) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,\n").append("  suite varchar(256) NOT NULL,\n").append("  name varchar(256) DEFAULT NULL,\n").append("  control_catalog varchar(256) NOT NULL,\n").append("  control_schema varchar(256) NOT NULL,\n").append("  control_query text NOT NULL,\n").append("  test_catalog varchar(256) NOT NULL,\n")
+					.append("  test_schema varchar(256) NOT NULL,\n").append("  test_query text NOT NULL,\n").append("  control_username varchar(256) NOT NULL DEFAULT 'verifier-test',\n").append("  control_password varchar(256) DEFAULT NULL,\n").append("  test_username varchar(256) NOT NULL DEFAULT 'verifier-test',\n").append("  test_password varchar(256) DEFAULT NULL,\n").append("  session_properties_json varchar(2048) DEFAULT NULL)").toString());
         }
         return mySqlServer;
     }
@@ -92,19 +79,8 @@ public class VerifierTestUtil
     public static void insertSourceQuery(Handle handle, String suite, String name, String query)
     {
         handle.execute(
-                "INSERT INTO verifier_queries(\n" +
-                        "    suite, name, control_catalog, control_schema, control_query, test_catalog, test_schema, test_query, control_username, test_username)\n" +
-                        "SELECT\n" +
-                        "    ?,\n" +
-                        "    ?,\n" +
-                        "    'verifier',\n" +
-                        "    'default',\n" +
-                        "    ?,\n" +
-                        "    'verifier',\n" +
-                        "    'default',\n" +
-                        "    ?,\n" +
-                        "    'verifier_test',\n" +
-                        "    'verifier_test'",
+                new StringBuilder().append("INSERT INTO verifier_queries(\n").append("    suite, name, control_catalog, control_schema, control_query, test_catalog, test_schema, test_query, control_username, test_username)\n").append("SELECT\n").append("    ?,\n").append("    ?,\n").append("    'verifier',\n").append("    'default',\n")
+						.append("    ?,\n").append("    'verifier',\n").append("    'default',\n").append("    ?,\n").append("    'verifier_test',\n").append("    'verifier_test'").toString(),
                 suite,
                 name,
                 query,

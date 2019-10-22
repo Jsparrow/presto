@@ -53,10 +53,13 @@ import static java.nio.file.Files.createTempDirectory;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestGenericPartitioningSpiller
 {
-    private static final int FIRST_PARTITION_START = -10;
+    private static final Logger logger = LoggerFactory.getLogger(TestGenericPartitioningSpiller.class);
+	private static final int FIRST_PARTITION_START = -10;
     private static final int SECOND_PARTITION_START = 0;
     private static final int THIRD_PARTITION_START = 10;
     private static final int FOURTH_PARTITION_START = 20;
@@ -88,7 +91,7 @@ public class TestGenericPartitioningSpiller
             throws Exception
     {
         try (Closer closer = Closer.create()) {
-            closer.register(() -> scheduledExecutor.shutdownNow());
+            closer.register(scheduledExecutor::shutdownNow);
             closer.register(() -> deleteRecursively(tempDirectory, ALLOW_INSECURE));
         }
     }
@@ -172,6 +175,7 @@ public class TestGenericPartitioningSpiller
             fail("Iterator.hasNext() should fail since underlying resources are closed");
         }
         catch (UncheckedIOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
             // expected
         }
     }

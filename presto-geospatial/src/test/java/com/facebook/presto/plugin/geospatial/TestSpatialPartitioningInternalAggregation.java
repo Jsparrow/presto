@@ -158,20 +158,18 @@ public class TestSpatialPartitioningInternalAggregation
     private Block makeGeometryBlock(List<OGCGeometry> geometries)
     {
         BlockBuilder builder = GEOMETRY.createBlockBuilder(null, geometries.size());
-        for (OGCGeometry geometry : geometries) {
-            GEOMETRY.writeSlice(builder, serialize(geometry));
-        }
+        geometries.forEach(geometry -> GEOMETRY.writeSlice(builder, serialize(geometry)));
         return builder.build();
     }
 
     private String getSpatialPartitioning(Rectangle extent, List<OGCGeometry> geometries, int partitionCount)
     {
         ImmutableList.Builder<Rectangle> rectangles = ImmutableList.builder();
-        for (OGCGeometry geometry : geometries) {
+        geometries.forEach(geometry -> {
             Envelope envelope = new Envelope();
             geometry.getEsriGeometry().queryEnvelope(envelope);
             rectangles.add(new Rectangle(envelope.getXMin(), envelope.getYMin(), envelope.getXMax(), envelope.getYMax()));
-        }
+        });
 
         return KdbTreeUtils.toJson(buildKdbTree(roundToInt(geometries.size() * 1.0 / partitionCount, CEILING), extent, rectangles.build()));
     }

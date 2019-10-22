@@ -19,10 +19,14 @@ import static com.google.common.base.Throwables.propagateIfPossible;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestAutoCloseableCloser
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestAutoCloseableCloser.class);
+
+	@Test
     public void testEmpty()
             throws Exception
     {
@@ -80,6 +84,7 @@ public class TestAutoCloseableCloser
             closer.close();
         }
         catch (Throwable ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         for (TestAutoCloseable closeable : closeables) {
             assertTrue(closeable.isClosed());
@@ -117,11 +122,12 @@ public class TestAutoCloseableCloser
                 throws Exception
         {
             closed = true;
-            if (failure != null) {
-                propagateIfPossible(failure, Exception.class);
-                // not possible
-                throw new AssertionError(failure);
-            }
+            if (failure == null) {
+				return;
+			}
+			propagateIfPossible(failure, Exception.class);
+			// not possible
+			throw new AssertionError(failure);
         }
     }
 }

@@ -125,7 +125,7 @@ public class StructSelectiveStreamReader
             }
         }
 
-        Optional<List<Type>> nestedTypes = outputType.map(type -> type.getTypeParameters());
+        Optional<List<Type>> nestedTypes = outputType.map(Type::getTypeParameters);
         List<StreamDescriptor> nestedStreams = streamDescriptor.getNestedStreams();
 
         Optional<Map<String, List<Subfield>>> requiredFields = getRequiredFields(requiredSubfields);
@@ -625,14 +625,13 @@ public class StructSelectiveStreamReader
         }
 
         Map<String, List<Subfield>> fields = new HashMap<>();
-        for (Subfield subfield : requiredSubfields) {
-            List<Subfield.PathElement> path = subfield.getPath();
-            String name = ((Subfield.NestedField) path.get(0)).getName();
-            fields.computeIfAbsent(name, k -> new ArrayList<>());
-            if (path.size() > 1) {
+        requiredSubfields.stream().map(Subfield::getPath).forEach(path -> {
+			String name = ((Subfield.NestedField) path.get(0)).getName();
+			fields.computeIfAbsent(name, k -> new ArrayList<>());
+			if (path.size() > 1) {
                 fields.get(name).add(new Subfield("c", path.subList(1, path.size())));
             }
-        }
+		});
 
         return Optional.of(ImmutableMap.copyOf(fields));
     }

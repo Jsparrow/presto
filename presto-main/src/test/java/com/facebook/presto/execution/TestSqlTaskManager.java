@@ -225,9 +225,7 @@ public class TestSqlTaskManager
             Thread.sleep(100);
             sqlTaskManager.removeOldTasks();
 
-            for (TaskInfo info : sqlTaskManager.getAllTaskInfo()) {
-                assertNotEquals(info.getTaskStatus().getTaskId(), taskId);
-            }
+            sqlTaskManager.getAllTaskInfo().forEach(info -> assertNotEquals(info.getTaskStatus().getTaskId(), taskId));
         }
     }
 
@@ -312,13 +310,13 @@ public class TestSqlTaskManager
         @Override
         public URI createTaskLocation(InternalNode node, TaskId taskId)
         {
-            return URI.create("http://fake.invalid/task/" + node.getNodeIdentifier() + "/" + taskId);
+            return URI.create(new StringBuilder().append("http://fake.invalid/task/").append(node.getNodeIdentifier()).append("/").append(taskId).toString());
         }
 
         @Override
         public URI createMemoryInfoLocation(InternalNode node)
         {
-            return URI.create("http://fake.invalid/" + node.getNodeIdentifier() + "/memory");
+            return URI.create(new StringBuilder().append("http://fake.invalid/").append(node.getNodeIdentifier()).append("/memory").toString());
         }
     }
 }

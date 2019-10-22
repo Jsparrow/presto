@@ -70,13 +70,6 @@ public class InCodeGenerator
         this.functionManager = requireNonNull(functionManager, "functionManager is null");
     }
 
-    enum SwitchGenerationCase
-    {
-        DIRECT_SWITCH,
-        HASH_SWITCH,
-        SET_CONTAINS
-    }
-
     @VisibleForTesting
     static SwitchGenerationCase checkSwitchGenerationCase(Type type, List<RowExpression> values)
     {
@@ -109,7 +102,7 @@ public class InCodeGenerator
         return SwitchGenerationCase.DIRECT_SWITCH;
     }
 
-    @Override
+	@Override
     public BytecodeNode generateExpression(BytecodeGeneratorContext generatorContext, Type returnType, List<RowExpression> arguments, Optional<Variable> outputBlockVariable)
     {
         List<RowExpression> values = arguments.subList(1, arguments.size());
@@ -177,11 +170,9 @@ public class InCodeGenerator
 
         switch (switchGenerationCase) {
             case DIRECT_SWITCH:
-                // A white-list is used to select types eligible for DIRECT_SWITCH.
-                // For these types, it's safe to not use presto HASH_CODE and EQUAL operator.
-                for (Object constantValue : constantValues) {
-                    switchBuilder.addCase(toIntExact((Long) constantValue), jump(match));
-                }
+			// A white-list is used to select types eligible for DIRECT_SWITCH.
+			// For these types, it's safe to not use presto HASH_CODE and EQUAL operator.
+			constantValues.forEach(constantValue -> switchBuilder.addCase(toIntExact((Long) constantValue), jump(match)));
                 switchBuilder.defaultCase(jump(defaultLabel));
                 switchBlock = new BytecodeBlock()
                         .comment("lookupSwitch(<stackValue>))")
@@ -193,20 +184,20 @@ public class InCodeGenerator
                         .append(switchBuilder.build());
                 break;
             case HASH_SWITCH:
-                for (Map.Entry<Integer, Collection<BytecodeNode>> bucket : hashBuckets.asMap().entrySet()) {
-                    Collection<BytecodeNode> testValues = bucket.getValue();
-                    BytecodeBlock caseBlock = buildInCase(
-                            generatorContext,
-                            scope,
-                            type,
-                            match,
-                            defaultLabel,
-                            value,
-                            testValues,
-                            false,
-                            isIndeterminateFunction);
-                    switchBuilder.addCase(bucket.getKey(), caseBlock);
-                }
+			hashBuckets.asMap().entrySet().forEach(bucket -> {
+			    Collection<BytecodeNode> testValues = bucket.getValue();
+			    BytecodeBlock caseBlock = buildInCase(
+			            generatorContext,
+			            scope,
+			            type,
+			            match,
+			            defaultLabel,
+			            value,
+			            testValues,
+			            false,
+			            isIndeterminateFunction);
+			    switchBuilder.addCase(bucket.getKey(), caseBlock);
+			});
                 switchBuilder.defaultCase(jump(defaultLabel));
                 Binding hashCodeBinding = generatorContext
                         .getCallSiteBinder()
@@ -281,12 +272,12 @@ public class InCodeGenerator
         return block;
     }
 
-    public static boolean isInteger(long value)
+	public static boolean isInteger(long value)
     {
         return value == (int) value;
     }
 
-    private static BytecodeBlock buildInCase(
+	private static BytecodeBlock buildInCase(
             BytecodeGeneratorContext generatorContext,
             Scope scope,
             Type type,
@@ -369,7 +360,7 @@ public class InCodeGenerator
         return caseBlock;
     }
 
-    private static boolean isDeterminateConstant(RowExpression expression, MethodHandle isIndeterminateFunction)
+	private static boolean isDeterminateConstant(RowExpression expression, MethodHandle isIndeterminateFunction)
     {
         if (!(expression instanceof ConstantExpression)) {
             return false;
@@ -387,5 +378,12 @@ public class InCodeGenerator
             throwIfUnchecked(t);
             throw new RuntimeException(t);
         }
+    }
+
+	enum SwitchGenerationCase
+    {
+        DIRECT_SWITCH,
+        HASH_SWITCH,
+        SET_CONTAINS
     }
 }

@@ -55,10 +55,13 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class NodeScheduler
 {
-    private final NetworkLocationCache networkLocationCache;
+    private static final Logger logger = LoggerFactory.getLogger(NodeScheduler.class);
+	private final NetworkLocationCache networkLocationCache;
     private final List<CounterStat> topologicalSplitCounters;
     private final List<String> networkLocationSegmentNames;
     private final InternalNodeManager nodeManager;
@@ -141,7 +144,7 @@ public class NodeScheduler
                     .map(InternalNode::getNodeIdentifier)
                     .collect(toImmutableSet());
 
-            for (InternalNode node : nodes) {
+            nodes.forEach(node -> {
                 if (useNetworkTopology && (includeCoordinator || !coordinatorNodeIds.contains(node.getNodeIdentifier()))) {
                     NetworkLocation location = networkLocationCache.get(node.getHostAndPort());
                     for (int i = 0; i <= location.getSegments().size(); i++) {
@@ -155,9 +158,10 @@ public class NodeScheduler
                     byHost.put(host, node);
                 }
                 catch (UnknownHostException e) {
+					logger.error(e.getMessage(), e);
                     // ignore
                 }
-            }
+            });
 
             return new NodeMap(byHostAndPort.build(), byHost.build(), workersByNetworkPath.build(), coordinatorNodeIds);
         }, 5, TimeUnit.SECONDS);
@@ -216,7 +220,8 @@ public class NodeScheduler
                 address = host.toInetAddress();
             }
             catch (UnknownHostException e) {
-                // skip hosts that don't resolve
+                logger.error(e.getMessage(), e);
+				// skip hosts that don't resolve
                 continue;
             }
 
@@ -243,7 +248,8 @@ public class NodeScheduler
                     address = host.toInetAddress();
                 }
                 catch (UnknownHostException e) {
-                    // skip hosts that don't resolve
+                    logger.error(e.getMessage(), e);
+					// skip hosts that don't resolve
                     continue;
                 }
 
@@ -271,7 +277,7 @@ public class NodeScheduler
         NodeAssignmentStats assignmentStats = new NodeAssignmentStats(nodeTaskMap, nodeMap, existingTasks);
 
         Set<InternalNode> blockedNodes = new HashSet<>();
-        for (Split split : splits) {
+        splits.forEach(split -> {
             // node placement is forced by the bucket to node map
             InternalNode node = bucketNodeMap.getAssignedNode(split).get();
 
@@ -284,7 +290,7 @@ public class NodeScheduler
             else {
                 blockedNodes.add(node);
             }
-        }
+        });
 
         ListenableFuture<?> blocked = toWhenHasSplitQueueSpaceFuture(blockedNodes, existingTasks, calculateLowWatermark(maxPendingSplitsPerTask));
         return new SplitPlacementResult(blocked, ImmutableMultimap.copyOf(assignments));
@@ -301,9 +307,7 @@ public class NodeScheduler
             return immediateFuture(null);
         }
         Map<String, RemoteTask> nodeToTaskMap = new HashMap<>();
-        for (RemoteTask task : existingTasks) {
-            nodeToTaskMap.put(task.getNodeId(), task);
-        }
+        existingTasks.forEach(task -> nodeToTaskMap.put(task.getNodeId(), task));
         List<ListenableFuture<?>> blockedFutures = blockedNodes.stream()
                 .map(InternalNode::getNodeIdentifier)
                 .map(nodeToTaskMap::get)

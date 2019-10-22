@@ -44,11 +44,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestBlackHoleSmoke
 {
-    private QueryRunner queryRunner;
+    private static final Logger logger = LoggerFactory.getLogger(TestBlackHoleSmoke.class);
+	private QueryRunner queryRunner;
 
     @BeforeTest
     public void setUp()
@@ -89,7 +92,7 @@ public class TestBlackHoleSmoke
             fail("Expected exception to be thrown here!");
         }
         catch (RuntimeException ex) { // it has to RuntimeException as FailureInfo$FailureException is private
-            assertTrue(ex.getMessage().equals("line 1:1: Destination table 'blackhole.default.nation' already exists"));
+            assertTrue("line 1:1: Destination table 'blackhole.default.nation' already exists".equals(ex.getMessage()));
         }
         finally {
             assertThatQueryReturnsValue("DROP TABLE nation", true);
@@ -103,7 +106,7 @@ public class TestBlackHoleSmoke
 
         List<QualifiedObjectName> tableNames = listBlackHoleTables();
         assertTrue(tableNames.size() == 1, "Expected only one table.");
-        assertTrue(tableNames.get(0).getObjectName().equals("nation"), "Expected 'nation' table.");
+        assertTrue("nation".equals(tableNames.get(0).getObjectName()), "Expected 'nation' table.");
 
         assertThatQueryReturnsValue("INSERT INTO nation SELECT * FROM tpch.tiny.nation", 25L);
 
@@ -132,6 +135,7 @@ public class TestBlackHoleSmoke
             fail("Expected exception to be thrown here!");
         }
         catch (RuntimeException ex) {
+			logger.error(ex.getMessage(), ex);
             // expected exception
         }
     }
@@ -156,7 +160,7 @@ public class TestBlackHoleSmoke
             fail("Expected exception to be thrown here!");
         }
         catch (RuntimeException ex) {
-            assertTrue(ex.getMessage().equals("Schema schema1 not found"));
+            assertTrue("Schema schema1 not found".equals(ex.getMessage()));
         }
 
         int tablesAfterCreate = listBlackHoleTables().size();
@@ -230,20 +234,8 @@ public class TestBlackHoleSmoke
     {
         createBlackholeAllTypesTable();
         assertThatQueryReturnsValue(
-                "INSERT INTO blackhole_all_types VALUES (" +
-                        "'abc', " +
-                        "BIGINT '1', " +
-                        "INTEGER '2', " +
-                        "SMALLINT '3', " +
-                        "TINYINT '4', " +
-                        "REAL '5.1', " +
-                        "DOUBLE '5.2', " +
-                        "true, " +
-                        "DATE '2014-01-02', " +
-                        "TIMESTAMP '2014-01-02 12:12', " +
-                        "cast('bar' as varbinary), " +
-                        "DECIMAL '3.14', " +
-                        "DECIMAL '1234567890.123456789')", 1L);
+                new StringBuilder().append("INSERT INTO blackhole_all_types VALUES (").append("'abc', ").append("BIGINT '1', ").append("INTEGER '2', ").append("SMALLINT '3', ").append("TINYINT '4', ").append("REAL '5.1', ")
+						.append("DOUBLE '5.2', ").append("true, ").append("DATE '2014-01-02', ").append("TIMESTAMP '2014-01-02 12:12', ").append("cast('bar' as varbinary), ").append("DECIMAL '3.14', ").append("DECIMAL '1234567890.123456789')").toString(), 1L);
         dropBlackholeAllTypesTable();
     }
 
@@ -283,21 +275,9 @@ public class TestBlackHoleSmoke
     private void createBlackholeAllTypesTable()
     {
         assertThatQueryReturnsValue(
-                format("CREATE TABLE blackhole_all_types (" +
-                                "  _varchar VARCHAR(10)" +
-                                ", _bigint BIGINT" +
-                                ", _integer INTEGER" +
-                                ", _smallint SMALLINT" +
-                                ", _tinyint TINYINT" +
-                                ", _real REAL" +
-                                ", _double DOUBLE" +
-                                ", _boolean BOOLEAN" +
-                                ", _date DATE" +
-                                ", _timestamp TIMESTAMP" +
-                                ", _varbinary VARBINARY" +
-                                ", _decimal_short DECIMAL(3,2)" +
-                                ", _decimal_long DECIMAL(30,10)" +
-                                ") WITH ( %s = 1, %s = 1, %s = 1 ) ",
+                format(new StringBuilder().append("CREATE TABLE blackhole_all_types (").append("  _varchar VARCHAR(10)").append(", _bigint BIGINT").append(", _integer INTEGER").append(", _smallint SMALLINT").append(", _tinyint TINYINT").append(", _real REAL")
+						.append(", _double DOUBLE").append(", _boolean BOOLEAN").append(", _date DATE").append(", _timestamp TIMESTAMP").append(", _varbinary VARBINARY").append(", _decimal_short DECIMAL(3,2)").append(", _decimal_long DECIMAL(30,10)").append(") WITH ( %s = 1, %s = 1, %s = 1 ) ")
+						.toString(),
                         ROWS_PER_PAGE_PROPERTY,
                         PAGES_PER_SPLIT_PROPERTY,
                         SPLIT_COUNT_PROPERTY),

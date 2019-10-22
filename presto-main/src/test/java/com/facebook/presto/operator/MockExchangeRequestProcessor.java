@@ -51,6 +51,8 @@ import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static java.util.Collections.synchronizedList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MockExchangeRequestProcessor
         implements TestingHttpClient.Processor
@@ -82,7 +84,7 @@ public class MockExchangeRequestProcessor
     @Override
     public Response handle(Request request)
     {
-        if (request.getMethod().equalsIgnoreCase("DELETE")) {
+        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
             return new TestingResponse(HttpStatus.NO_CONTENT, ImmutableListMultimap.of(), new byte[0]);
         }
 
@@ -151,7 +153,8 @@ public class MockExchangeRequestProcessor
 
     private static class MockBuffer
     {
-        private final URI location;
+        private final Logger logger = LoggerFactory.getLogger(MockBuffer.class);
+		private final URI location;
         private final AtomicBoolean completed = new AtomicBoolean();
         private final AtomicLong token = new AtomicLong();
         private final BlockingQueue<SerializedPage> serializedPages = new LinkedBlockingQueue<>();
@@ -187,7 +190,8 @@ public class MockExchangeRequestProcessor
                 serializedPage = serializedPages.poll(10, TimeUnit.MILLISECONDS);
             }
             catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                logger.error(e.getMessage(), e);
+				Thread.currentThread().interrupt();
             }
 
             // if no page, return NO CONTENT

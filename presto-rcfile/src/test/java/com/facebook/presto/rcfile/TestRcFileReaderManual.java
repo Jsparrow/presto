@@ -137,10 +137,10 @@ public class TestRcFileReaderManual
         }
 
         ImmutableList.Builder<Integer> rowGroupOffsets = ImmutableList.builder();
-        for (List<Integer> rowGroup : rowGroups) {
+        rowGroups.forEach(rowGroup -> {
             rowGroupOffsets.add(output.size() - offset);
             writeRowGroup(output, rowGroup);
-        }
+        });
         int length = output.size() - offset;
 
         return new Segment(
@@ -209,14 +209,10 @@ public class TestRcFileReaderManual
         // key section: column lengths uncompressed size
         output.writeByte(columnLengthsLength);
         // key section: column lengths
-        for (int ignored : shortValues) {
-            output.write(2);
-        }
+		shortValues.stream().mapToInt(Integer::valueOf).forEach(ignored -> output.write(2));
 
         // value section: data
-        for (int value : shortValues) {
-            output.writeShort(Short.reverseBytes((short) value));
-        }
+		shortValues.stream().mapToInt(Integer::valueOf).forEach(value -> output.writeShort(Short.reverseBytes((short) value)));
     }
 
     private static List<Integer> readValues(Slice data, int offset, int length)

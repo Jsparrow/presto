@@ -48,11 +48,15 @@ import static com.facebook.presto.tests.AbstractTestQueries.TEST_CATALOG_PROPERT
 import static com.facebook.presto.tests.AbstractTestQueries.TEST_SYSTEM_PROPERTIES;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class StandaloneQueryRunner
         implements QueryRunner
 {
-    private final TestingPrestoServer server;
+    private static final Logger logger = LoggerFactory.getLogger(StandaloneQueryRunner.class);
+
+	private final TestingPrestoServer server;
 
     private final TestingPrestoClient prestoClient;
 
@@ -187,7 +191,8 @@ public final class StandaloneQueryRunner
                 MILLISECONDS.sleep(10);
             }
             catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                logger.error(e.getMessage(), e);
+				Thread.currentThread().interrupt();
                 break;
             }
             allNodes = server.refreshNodes();
@@ -204,7 +209,8 @@ public final class StandaloneQueryRunner
                 MILLISECONDS.sleep(10);
             }
             catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                logger.error(e.getMessage(), e);
+				Thread.currentThread().interrupt();
                 break;
             }
             activeNodesWithConnector = server.getActiveNodesWithConnector(connectorId);
@@ -212,7 +218,8 @@ public final class StandaloneQueryRunner
         while (activeNodesWithConnector.isEmpty());
     }
 
-    public void installPlugin(Plugin plugin)
+    @Override
+	public void installPlugin(Plugin plugin)
     {
         server.installPlugin(plugin);
     }
@@ -222,7 +229,8 @@ public final class StandaloneQueryRunner
         createCatalog(catalogName, connectorName, ImmutableMap.of());
     }
 
-    public void createCatalog(String catalogName, String connectorName, Map<String, String> properties)
+    @Override
+	public void createCatalog(String catalogName, String connectorName, Map<String, String> properties)
     {
         ConnectorId connectorId = server.createCatalog(catalogName, connectorName, properties);
 

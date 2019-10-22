@@ -68,7 +68,23 @@ public class BenchmarkArrayAggregation
         data.getAccumulator().addInput(data.getPage());
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayAggregation().arrayAggregation(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.BULK)
+                .include(new StringBuilder().append(".*").append(BenchmarkArrayAggregation.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -144,21 +160,5 @@ public class BenchmarkArrayAggregation
         {
             return page;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayAggregation().arrayAggregation(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.BULK)
-                .include(".*" + BenchmarkArrayAggregation.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -36,14 +36,25 @@ import static java.util.stream.Collectors.toSet;
 
 public class ExtractCommonPredicatesExpressionRewriter
 {
-    public static Expression extractCommonPredicates(Expression expression)
+    private ExtractCommonPredicatesExpressionRewriter() {}
+
+	public static Expression extractCommonPredicates(Expression expression)
     {
         return ExpressionTreeRewriter.rewriteWith(new Visitor(), expression, NodeContext.ROOT_NODE);
     }
 
-    private ExtractCommonPredicatesExpressionRewriter() {}
+	private enum NodeContext
+    {
+        ROOT_NODE,
+        NOT_ROOT_NODE;
 
-    private static class Visitor
+        boolean isRootNode()
+        {
+            return this == ROOT_NODE;
+        }
+    }
+
+	private static class Visitor
             extends ExpressionRewriter<NodeContext>
     {
         @Override
@@ -177,17 +188,6 @@ public class ExtractCommonPredicatesExpressionRewriter
             return collection.stream()
                     .filter(element -> !elementsToRemove.contains(element))
                     .collect(toImmutableList());
-        }
-    }
-
-    private enum NodeContext
-    {
-        ROOT_NODE,
-        NOT_ROOT_NODE;
-
-        boolean isRootNode()
-        {
-            return this == ROOT_NODE;
         }
     }
 }

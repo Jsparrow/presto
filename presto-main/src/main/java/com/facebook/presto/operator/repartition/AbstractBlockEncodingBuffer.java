@@ -258,12 +258,11 @@ public abstract class AbstractBlockEncodingBuffer
 
     protected int[] getPositions()
     {
-        if (positionsMapped) {
-            verify(mappedPositions != null);
-            return mappedPositions;
-        }
-
-        return positions;
+        if (!positionsMapped) {
+			return positions;
+		}
+		verify(mappedPositions != null);
+		return mappedPositions;
     }
 
     protected void appendNulls()

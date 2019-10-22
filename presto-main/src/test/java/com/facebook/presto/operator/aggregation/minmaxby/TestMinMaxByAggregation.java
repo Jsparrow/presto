@@ -60,14 +60,12 @@ public class TestMinMaxByAggregation
                 .filter(Type::isOrderable)
                 .collect(toImmutableSet());
 
-        for (Type keyType : orderableTypes) {
-            for (Type valueType : getTypes()) {
-                if (StateCompiler.getSupportedFieldTypes().contains(valueType.getJavaType())) {
-                    assertNotNull(getMinByAggregation(valueType, keyType));
-                    assertNotNull(getMaxByAggregation(valueType, keyType));
-                }
-            }
-        }
+        orderableTypes.forEach(keyType -> getTypes().stream()
+				.filter(valueType -> StateCompiler.getSupportedFieldTypes().contains(valueType.getJavaType()))
+				.forEach(valueType -> {
+					assertNotNull(getMinByAggregation(valueType, keyType));
+					assertNotNull(getMaxByAggregation(valueType, keyType));
+				}));
     }
 
     private static List<Type> getTypes()

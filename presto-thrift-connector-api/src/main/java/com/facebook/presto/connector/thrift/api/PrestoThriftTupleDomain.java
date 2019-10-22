@@ -36,9 +36,7 @@ public final class PrestoThriftTupleDomain
     public PrestoThriftTupleDomain(@Nullable Map<String, PrestoThriftDomain> domains)
     {
         if (domains != null) {
-            for (String name : domains.keySet()) {
-                checkValidName(name);
-            }
+            domains.keySet().forEach(NameValidationUtils::checkValidName);
         }
         this.domains = domains;
     }

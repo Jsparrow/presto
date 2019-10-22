@@ -106,6 +106,6 @@ public final class ThriftColumnHandle
     @Override
     public String toString()
     {
-        return columnName + ":" + columnType;
+        return new StringBuilder().append(columnName).append(":").append(columnType).toString();
     }
 }

@@ -28,7 +28,69 @@ import static java.util.Objects.requireNonNull;
 public class LocalExchangeSourceOperator
         implements Operator
 {
-    public static class LocalExchangeSourceOperatorFactory
+    private final OperatorContext operatorContext;
+	private final LocalExchangeSource source;
+
+	public LocalExchangeSourceOperator(OperatorContext operatorContext, LocalExchangeSource source)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.source = requireNonNull(source, "source is null");
+        operatorContext.setInfoSupplier(source::getBufferInfo);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        source.finish();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return source.isFinished();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return source.waitForReading();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        Page page = source.removePage();
+        if (page != null) {
+            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
+        }
+        return page;
+    }
+
+	@Override
+    public void close()
+    {
+        source.close();
+    }
+
+	public static class LocalExchangeSourceOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -70,67 +132,5 @@ public class LocalExchangeSourceOperator
         {
             return localExchangeFactory;
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalExchangeSource source;
-
-    public LocalExchangeSourceOperator(OperatorContext operatorContext, LocalExchangeSource source)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.source = requireNonNull(source, "source is null");
-        operatorContext.setInfoSupplier(source::getBufferInfo);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        source.finish();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return source.isFinished();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return source.waitForReading();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        Page page = source.removePage();
-        if (page != null) {
-            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
-        }
-        return page;
-    }
-
-    @Override
-    public void close()
-    {
-        source.close();
     }
 }

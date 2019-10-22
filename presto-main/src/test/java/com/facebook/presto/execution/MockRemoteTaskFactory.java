@@ -127,9 +127,7 @@ public class MockRemoteTaskFactory
                 Optional.empty());
 
         ImmutableMultimap.Builder<PlanNodeId, Split> initialSplits = ImmutableMultimap.builder();
-        for (Split sourceSplit : splits) {
-            initialSplits.put(sourceId, sourceSplit);
-        }
+        splits.forEach(sourceSplit -> initialSplits.put(sourceId, sourceSplit));
         return createRemoteTask(TEST_SESSION, taskId, newNode, testFragment, initialSplits.build(), OptionalInt.empty(), createInitialEmptyOutputBuffers(BROADCAST), partitionedSplitCountTracker, true);
     }
 
@@ -305,9 +303,7 @@ public class MockRemoteTaskFactory
             while (toRemove.size() < splits && iterator.hasNext()) {
                 toRemove.add(iterator.next());
             }
-            for (Map.Entry<PlanNodeId, Split> entry : toRemove) {
-                this.splits.remove(entry.getKey(), entry.getValue());
-            }
+            toRemove.forEach(entry -> this.splits.remove(entry.getKey(), entry.getValue()));
             updateSplitQueueSpace();
         }
 

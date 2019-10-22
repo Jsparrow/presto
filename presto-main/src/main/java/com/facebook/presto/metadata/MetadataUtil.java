@@ -90,12 +90,7 @@ public final class MetadataUtil
 
     public static ColumnMetadata findColumnMetadata(ConnectorTableMetadata tableMetadata, String columnName)
     {
-        for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
-            if (columnName.equals(columnMetadata.getName())) {
-                return columnMetadata;
-            }
-        }
-        return null;
+        return tableMetadata.getColumns().stream().filter(columnMetadata -> columnName.equals(columnMetadata.getName())).findFirst().orElse(null);
     }
 
     public static String createCatalogName(Session session, Node node)
@@ -199,20 +194,20 @@ public final class MetadataUtil
 
     public static class SchemaMetadataBuilder
     {
-        public static SchemaMetadataBuilder schemaMetadataBuilder()
+        private final ImmutableMap.Builder<SchemaTableName, ConnectorTableMetadata> tables = ImmutableMap.builder();
+
+		public static SchemaMetadataBuilder schemaMetadataBuilder()
         {
             return new SchemaMetadataBuilder();
         }
 
-        private final ImmutableMap.Builder<SchemaTableName, ConnectorTableMetadata> tables = ImmutableMap.builder();
-
-        public SchemaMetadataBuilder table(ConnectorTableMetadata tableMetadata)
+		public SchemaMetadataBuilder table(ConnectorTableMetadata tableMetadata)
         {
             tables.put(tableMetadata.getTable(), tableMetadata);
             return this;
         }
 
-        public ImmutableMap<SchemaTableName, ConnectorTableMetadata> build()
+		public ImmutableMap<SchemaTableName, ConnectorTableMetadata> build()
         {
             return tables.build();
         }
@@ -220,45 +215,45 @@ public final class MetadataUtil
 
     public static class TableMetadataBuilder
     {
-        public static TableMetadataBuilder tableMetadataBuilder(String schemaName, String tableName)
-        {
-            return new TableMetadataBuilder(new SchemaTableName(schemaName, tableName));
-        }
-
-        public static TableMetadataBuilder tableMetadataBuilder(SchemaTableName tableName)
-        {
-            return new TableMetadataBuilder(tableName);
-        }
-
         private final SchemaTableName tableName;
-        private final ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
-        private final ImmutableMap.Builder<String, Object> properties = ImmutableMap.builder();
-        private final Optional<String> comment;
+		private final ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
+		private final ImmutableMap.Builder<String, Object> properties = ImmutableMap.builder();
+		private final Optional<String> comment;
 
-        private TableMetadataBuilder(SchemaTableName tableName)
+		private TableMetadataBuilder(SchemaTableName tableName)
         {
             this(tableName, Optional.empty());
         }
 
-        private TableMetadataBuilder(SchemaTableName tableName, Optional<String> comment)
+		private TableMetadataBuilder(SchemaTableName tableName, Optional<String> comment)
         {
             this.tableName = tableName;
             this.comment = comment;
         }
 
-        public TableMetadataBuilder column(String columnName, Type type)
+		public static TableMetadataBuilder tableMetadataBuilder(String schemaName, String tableName)
+        {
+            return new TableMetadataBuilder(new SchemaTableName(schemaName, tableName));
+        }
+
+		public static TableMetadataBuilder tableMetadataBuilder(SchemaTableName tableName)
+        {
+            return new TableMetadataBuilder(tableName);
+        }
+
+		public TableMetadataBuilder column(String columnName, Type type)
         {
             columns.add(new ColumnMetadata(columnName, type));
             return this;
         }
 
-        public TableMetadataBuilder property(String name, Object value)
+		public TableMetadataBuilder property(String name, Object value)
         {
             properties.put(name, value);
             return this;
         }
 
-        public ConnectorTableMetadata build()
+		public ConnectorTableMetadata build()
         {
             return new ConnectorTableMetadata(tableName, columns.build(), properties.build(), comment);
         }

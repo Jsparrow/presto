@@ -55,15 +55,14 @@ public class TpchRecordSetProvider
             TupleDomain<ColumnHandle> predicate)
     {
         ImmutableList.Builder<TpchColumn<E>> builder = ImmutableList.builder();
-        for (ColumnHandle column : columns) {
-            String columnName = ((TpchColumnHandle) column).getColumnName();
-            if (columnName.equalsIgnoreCase(TpchMetadata.ROW_NUMBER_COLUMN_NAME)) {
+        columns.stream().map(column -> ((TpchColumnHandle) column).getColumnName()).forEach(columnName -> {
+			if (columnName.equalsIgnoreCase(TpchMetadata.ROW_NUMBER_COLUMN_NAME)) {
                 builder.add(new RowNumberTpchColumn<E>());
             }
             else {
                 builder.add(table.getColumn(columnName));
             }
-        }
+		});
 
         return createTpchRecordSet(table, builder.build(), scaleFactor, partNumber + 1, totalParts, predicate);
     }

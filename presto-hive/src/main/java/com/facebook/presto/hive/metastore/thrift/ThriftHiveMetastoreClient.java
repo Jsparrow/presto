@@ -344,13 +344,7 @@ public class ThriftHiveMetastoreClient
             throws TException
     {
         List<RolePrincipalGrant> grants = listRoleGrants(granteeName, granteeType);
-        RolePrincipalGrant currentGrant = null;
-        for (RolePrincipalGrant grant : grants) {
-            if (grant.getRoleName().equals(role)) {
-                currentGrant = grant;
-                break;
-            }
-        }
+        RolePrincipalGrant currentGrant = grants.stream().filter(grant -> grant.getRoleName().equals(role)).findFirst().orElse(null);
 
         if (currentGrant == null) {
             return;

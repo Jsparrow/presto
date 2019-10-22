@@ -97,8 +97,7 @@ public class SchemaTablePrefix
     @Override
     public String toString()
     {
-        return (schemaName == null ? "*" : schemaName) +
-                '.' +
-                (tableName == null ? "*" : tableName);
+        return new StringBuilder().append(schemaName == null ? "*" : schemaName).append('.').append(tableName == null ? "*" : tableName)
+				.toString();
     }
 }

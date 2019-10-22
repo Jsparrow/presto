@@ -107,11 +107,14 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.uniqueIndex;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OrcSelectivePageSourceFactory
         implements HiveSelectivePageSourceFactory
 {
-    private final TypeManager typeManager;
+    private static final Logger logger = LoggerFactory.getLogger(OrcSelectivePageSourceFactory.class);
+	private final TypeManager typeManager;
     private final StandardFunctionResolution functionResolution;
     private final RowExpressionService rowExpressionService;
     private final boolean useOrcColumnNames;
@@ -259,7 +262,7 @@ public class OrcSelectivePageSourceFactory
                     stats);
         }
         catch (Exception e) {
-            if (nullToEmpty(e.getMessage()).trim().equals("Filesystem closed") ||
+            if ("Filesystem closed".equals(nullToEmpty(e.getMessage()).trim()) ||
                     e instanceof FileNotFoundException) {
                 throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, e);
             }
@@ -334,12 +337,13 @@ public class OrcSelectivePageSourceFactory
                 orcDataSource.close();
             }
             catch (IOException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
             if (e instanceof PrestoException) {
                 throw (PrestoException) e;
             }
             String message = splitError(e, path, start, length);
-            if (e.getClass().getSimpleName().equals("BlockMissingException")) {
+            if ("BlockMissingException".equals(e.getClass().getSimpleName())) {
                 throw new PrestoException(HIVE_MISSING_DATA, message, e);
             }
             throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, message, e);
@@ -362,24 +366,20 @@ public class OrcSelectivePageSourceFactory
                 .filter(column -> outputColumns.contains(column.getHiveColumnIndex()))
                 .forEach(column -> requiredSubfields.put(column.getHiveColumnIndex(), new HashSet<>(column.getRequiredSubfields())));
 
-        for (int index : outputColumns) {
-            requiredSubfields.computeIfAbsent(index, v -> new HashSet<>());
-        }
+        outputColumns.stream().mapToInt(Integer::valueOf).forEach(index -> requiredSubfields.computeIfAbsent(index, v -> new HashSet<>()));
 
         ImmutableSet.Builder<Subfield> predicateSubfields = ImmutableSet.builder();
         remainingPredicate.accept(new RequiredSubfieldsExtractor(new SubfieldExtractor(functionResolution, rowExpressionService.getExpressionOptimizer(), session)), predicateSubfields);
 
-        for (Subfield subfield : predicateSubfields.build()) {
+        predicateSubfields.build().forEach(subfield -> {
             int index = columnIndices.get(subfield.getRootName());
             updateRequiredSubfields(requiredSubfields, index, subfield);
-        }
+        });
 
-        for (Map.Entry<Integer, Map<Subfield, TupleDomainFilter>> entry : tupleDomainFilters.entrySet()) {
+        tupleDomainFilters.entrySet().forEach(entry -> {
             int index = entry.getKey();
-            for (Subfield subfield : entry.getValue().keySet()) {
-                updateRequiredSubfields(requiredSubfields, index, subfield);
-            }
-        }
+            entry.getValue().keySet().forEach(subfield -> updateRequiredSubfields(requiredSubfields, index, subfield));
+        });
 
         return requiredSubfields.entrySet().stream().collect(toImmutableMap(Map.Entry::getKey, entry -> (List) ImmutableList.copyOf(entry.getValue())));
     }
@@ -404,7 +404,80 @@ public class OrcSelectivePageSourceFactory
         requiredSubfields.computeIfAbsent(index, v -> new HashSet<>()).add(subfield);
     }
 
-    private static final class RequiredSubfieldsExtractor
+    private static boolean isEntireColumn(Optional<Subfield> subfield)
+    {
+        return subfield.get().getPath().isEmpty();
+    }
+
+	private static Map<Integer, Map<Subfield, TupleDomainFilter>> toTupleDomainFilters(TupleDomain<Subfield> domainPredicate, Map<String, Integer> columnIndices)
+    {
+        Map<Subfield, TupleDomainFilter> filtersBySubfield = Maps.transformValues(domainPredicate.getDomains().get(), TupleDomainFilterUtils::toFilter);
+
+        Map<Integer, Map<Subfield, TupleDomainFilter>> filtersByColumn = new HashMap<>();
+        filtersBySubfield.entrySet().forEach(entry -> {
+            int columnIndex = columnIndices.get(entry.getKey().getRootName());
+            filtersByColumn.computeIfAbsent(columnIndex, k -> new HashMap<>()).put(entry.getKey(), entry.getValue());
+        });
+
+        return ImmutableMap.copyOf(filtersByColumn);
+    }
+
+	private static boolean isEntireColumn(Subfield subfield)
+    {
+        return subfield.getPath().isEmpty();
+    }
+
+	private static OrcPredicate toOrcPredicate(TupleDomain<Subfield> domainPredicate, List<HiveColumnHandle> physicalColumns, TypeManager typeManager, int domainCompactionThreshold, boolean orcBloomFiltersEnabled)
+    {
+        ImmutableList.Builder<TupleDomainOrcPredicate.ColumnReference<HiveColumnHandle>> columnReferences = ImmutableList.builder();
+        physicalColumns.stream().filter(column -> column.getColumnType() == REGULAR).forEach(column -> {
+		    Type type = typeManager.getType(column.getTypeSignature());
+		    columnReferences.add(new TupleDomainOrcPredicate.ColumnReference<>(column, column.getHiveColumnIndex(), type));
+		});
+
+        Map<String, HiveColumnHandle> columnsByName = uniqueIndex(physicalColumns, HiveColumnHandle::getName);
+        TupleDomain<HiveColumnHandle> entireColumnDomains = domainPredicate.transform(subfield -> isEntireColumn(subfield) ? columnsByName.get(subfield.getRootName()) : null);
+        return new TupleDomainOrcPredicate<>(entireColumnDomains, columnReferences.build(), orcBloomFiltersEnabled, Optional.of(domainCompactionThreshold));
+    }
+
+	/**
+     * Split filter expression into groups of conjuncts that depend on the same set of inputs,
+     * then compile each group into FilterFunction.
+     */
+    private static List<FilterFunction> toFilterFunctions(RowExpression filter, ConnectorSession session, DeterminismEvaluator determinismEvaluator, PredicateCompiler predicateCompiler)
+    {
+        if (TRUE_CONSTANT.equals(filter)) {
+            return ImmutableList.of();
+        }
+
+        List<RowExpression> conjuncts = extractConjuncts(filter);
+        if (conjuncts.size() == 1) {
+            return ImmutableList.of(new FilterFunction(session, determinismEvaluator.isDeterministic(filter), predicateCompiler.compilePredicate(filter).get()));
+        }
+
+        // Use LinkedHashMap to preserve user-specified order of conjuncts. This will be the initial order in which filters are applied.
+        Map<Set<Integer>, List<RowExpression>> inputsToConjuncts = new LinkedHashMap<>();
+        conjuncts.forEach(conjunct -> inputsToConjuncts.computeIfAbsent(extractInputs(conjunct), k -> new ArrayList<>()).add(conjunct));
+
+        return inputsToConjuncts.values().stream()
+                .map(expressions -> binaryExpression(AND, expressions))
+                .map(predicate -> new FilterFunction(session, determinismEvaluator.isDeterministic(predicate), predicateCompiler.compilePredicate(predicate).get()))
+                .collect(toImmutableList());
+    }
+
+	private static Set<Integer> extractInputs(RowExpression expression)
+    {
+        ImmutableSet.Builder<Integer> inputs = ImmutableSet.builder();
+        expression.accept(new InputReferenceBuilderVisitor(), inputs);
+        return inputs.build();
+    }
+
+	private static String splitError(Throwable t, Path path, long start, long length)
+    {
+        return format("Error opening Hive split %s (offset=%s, length=%s): %s", path, start, length, t.getMessage());
+    }
+
+	private static final class RequiredSubfieldsExtractor
             extends DefaultRowExpressionTraversalVisitor<ImmutableSet.Builder<Subfield>>
     {
         private final SubfieldExtractor subfieldExtractor;
@@ -445,78 +518,6 @@ public class OrcSelectivePageSourceFactory
         }
     }
 
-    private static boolean isEntireColumn(Optional<Subfield> subfield)
-    {
-        return subfield.get().getPath().isEmpty();
-    }
-
-    private static Map<Integer, Map<Subfield, TupleDomainFilter>> toTupleDomainFilters(TupleDomain<Subfield> domainPredicate, Map<String, Integer> columnIndices)
-    {
-        Map<Subfield, TupleDomainFilter> filtersBySubfield = Maps.transformValues(domainPredicate.getDomains().get(), TupleDomainFilterUtils::toFilter);
-
-        Map<Integer, Map<Subfield, TupleDomainFilter>> filtersByColumn = new HashMap<>();
-        for (Map.Entry<Subfield, TupleDomainFilter> entry : filtersBySubfield.entrySet()) {
-            int columnIndex = columnIndices.get(entry.getKey().getRootName());
-            filtersByColumn.computeIfAbsent(columnIndex, k -> new HashMap<>()).put(entry.getKey(), entry.getValue());
-        }
-
-        return ImmutableMap.copyOf(filtersByColumn);
-    }
-
-    private static boolean isEntireColumn(Subfield subfield)
-    {
-        return subfield.getPath().isEmpty();
-    }
-
-    private static OrcPredicate toOrcPredicate(TupleDomain<Subfield> domainPredicate, List<HiveColumnHandle> physicalColumns, TypeManager typeManager, int domainCompactionThreshold, boolean orcBloomFiltersEnabled)
-    {
-        ImmutableList.Builder<TupleDomainOrcPredicate.ColumnReference<HiveColumnHandle>> columnReferences = ImmutableList.builder();
-        for (HiveColumnHandle column : physicalColumns) {
-            if (column.getColumnType() == REGULAR) {
-                Type type = typeManager.getType(column.getTypeSignature());
-                columnReferences.add(new TupleDomainOrcPredicate.ColumnReference<>(column, column.getHiveColumnIndex(), type));
-            }
-        }
-
-        Map<String, HiveColumnHandle> columnsByName = uniqueIndex(physicalColumns, HiveColumnHandle::getName);
-        TupleDomain<HiveColumnHandle> entireColumnDomains = domainPredicate.transform(subfield -> isEntireColumn(subfield) ? columnsByName.get(subfield.getRootName()) : null);
-        return new TupleDomainOrcPredicate<>(entireColumnDomains, columnReferences.build(), orcBloomFiltersEnabled, Optional.of(domainCompactionThreshold));
-    }
-
-    /**
-     * Split filter expression into groups of conjuncts that depend on the same set of inputs,
-     * then compile each group into FilterFunction.
-     */
-    private static List<FilterFunction> toFilterFunctions(RowExpression filter, ConnectorSession session, DeterminismEvaluator determinismEvaluator, PredicateCompiler predicateCompiler)
-    {
-        if (TRUE_CONSTANT.equals(filter)) {
-            return ImmutableList.of();
-        }
-
-        List<RowExpression> conjuncts = extractConjuncts(filter);
-        if (conjuncts.size() == 1) {
-            return ImmutableList.of(new FilterFunction(session, determinismEvaluator.isDeterministic(filter), predicateCompiler.compilePredicate(filter).get()));
-        }
-
-        // Use LinkedHashMap to preserve user-specified order of conjuncts. This will be the initial order in which filters are applied.
-        Map<Set<Integer>, List<RowExpression>> inputsToConjuncts = new LinkedHashMap<>();
-        for (RowExpression conjunct : conjuncts) {
-            inputsToConjuncts.computeIfAbsent(extractInputs(conjunct), k -> new ArrayList<>()).add(conjunct);
-        }
-
-        return inputsToConjuncts.values().stream()
-                .map(expressions -> binaryExpression(AND, expressions))
-                .map(predicate -> new FilterFunction(session, determinismEvaluator.isDeterministic(predicate), predicateCompiler.compilePredicate(predicate).get()))
-                .collect(toImmutableList());
-    }
-
-    private static Set<Integer> extractInputs(RowExpression expression)
-    {
-        ImmutableSet.Builder<Integer> inputs = ImmutableSet.builder();
-        expression.accept(new InputReferenceBuilderVisitor(), inputs);
-        return inputs.build();
-    }
-
     private static class InputReferenceBuilderVisitor
             extends DefaultRowExpressionTraversalVisitor<ImmutableSet.Builder<Integer>>
     {
@@ -526,10 +527,5 @@ public class OrcSelectivePageSourceFactory
             builder.add(input.getField());
             return null;
         }
-    }
-
-    private static String splitError(Throwable t, Path path, long start, long length)
-    {
-        return format("Error opening Hive split %s (offset=%s, length=%s): %s", path, start, length, t.getMessage());
     }
 }

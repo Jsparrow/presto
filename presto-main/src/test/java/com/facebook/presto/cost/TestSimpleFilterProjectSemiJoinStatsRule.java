@@ -33,59 +33,61 @@ import static com.facebook.presto.sql.planner.plan.AssignmentUtils.identityAssig
 public class TestSimpleFilterProjectSemiJoinStatsRule
         extends BaseStatsCalculatorTest
 {
-    private VariableStatsEstimate aStats = VariableStatsEstimate.builder()
+    private static final PlanNodeId LEFT_SOURCE_ID = new PlanNodeId("left_source_values");
+
+	private static final PlanNodeId RIGHT_SOURCE_ID = new PlanNodeId("right_source_values");
+
+	private static final TestingRowExpressionTranslator TRANSLATOR = new TestingRowExpressionTranslator(MetadataManager.createTestMetadataManager());
+
+	private VariableStatsEstimate aStats = VariableStatsEstimate.builder()
             .setLowValue(0)
             .setHighValue(10)
             .setDistinctValuesCount(10)
             .setNullsFraction(0.1)
             .build();
 
-    private VariableStatsEstimate bStats = VariableStatsEstimate.builder()
+	private VariableStatsEstimate bStats = VariableStatsEstimate.builder()
             .setLowValue(0)
             .setHighValue(100)
             .setDistinctValuesCount(10)
             .setNullsFraction(0)
             .build();
 
-    private VariableStatsEstimate cStats = VariableStatsEstimate.builder()
+	private VariableStatsEstimate cStats = VariableStatsEstimate.builder()
             .setLowValue(5)
             .setHighValue(30)
             .setDistinctValuesCount(2)
             .setNullsFraction(0.5)
             .build();
 
-    private VariableStatsEstimate expectedAInC = VariableStatsEstimate.builder()
+	private VariableStatsEstimate expectedAInC = VariableStatsEstimate.builder()
             .setDistinctValuesCount(2)
             .setLowValue(0)
             .setHighValue(10)
             .setNullsFraction(0)
             .build();
 
-    private VariableStatsEstimate expectedANotInC = VariableStatsEstimate.builder()
+	private VariableStatsEstimate expectedANotInC = VariableStatsEstimate.builder()
             .setDistinctValuesCount(1.6)
             .setLowValue(0)
             .setHighValue(8)
             .setNullsFraction(0)
             .build();
 
-    private VariableStatsEstimate expectedANotInCWithExtraFilter = VariableStatsEstimate.builder()
+	private VariableStatsEstimate expectedANotInCWithExtraFilter = VariableStatsEstimate.builder()
             .setDistinctValuesCount(8)
             .setLowValue(0)
             .setHighValue(10)
             .setNullsFraction(0)
             .build();
 
-    private static final PlanNodeId LEFT_SOURCE_ID = new PlanNodeId("left_source_values");
-    private static final PlanNodeId RIGHT_SOURCE_ID = new PlanNodeId("right_source_values");
-    private static final TestingRowExpressionTranslator TRANSLATOR = new TestingRowExpressionTranslator(MetadataManager.createTestMetadataManager());
-
-    @DataProvider(name = "toRowExpression")
+	@DataProvider(name = "toRowExpression")
     public Object[][] toRowExpressionProvider()
     {
         return new Object[][] {{true}, {false}};
     }
 
-    @Test(dataProvider = "toRowExpression")
+	@Test(dataProvider = "toRowExpression")
     public void testFilterPositiveSemiJoin(boolean toRowExpression)
     {
         getStatsCalculatorAssertion(new SymbolReference("sjo"), toRowExpression)
@@ -105,7 +107,7 @@ public class TestSimpleFilterProjectSemiJoinStatsRule
                         .variableStatsUnknown("sjo"));
     }
 
-    @Test(dataProvider = "toRowExpression")
+	@Test(dataProvider = "toRowExpression")
     public void testFilterPositiveNarrowingProjectSemiJoin(boolean toRowExpression)
     {
         tester().assertStatsFor(pb -> {
@@ -147,7 +149,7 @@ public class TestSimpleFilterProjectSemiJoinStatsRule
                         .variableStatsUnknown("sjo"));
     }
 
-    @Test(dataProvider = "toRowExpression")
+	@Test(dataProvider = "toRowExpression")
     public void testFilterPositivePlusExtraConjunctSemiJoin(boolean toRowExpression)
     {
         getStatsCalculatorAssertion(expression("sjo AND a < 8"), toRowExpression)
@@ -167,7 +169,7 @@ public class TestSimpleFilterProjectSemiJoinStatsRule
                         .variableStatsUnknown("sjo"));
     }
 
-    @Test(dataProvider = "toRowExpression")
+	@Test(dataProvider = "toRowExpression")
     public void testFilterNegativeSemiJoin(boolean toRowExpression)
     {
         getStatsCalculatorAssertion(expression("NOT sjo"), toRowExpression)
@@ -187,7 +189,7 @@ public class TestSimpleFilterProjectSemiJoinStatsRule
                         .variableStatsUnknown("sjo"));
     }
 
-    private StatsCalculatorAssertion getStatsCalculatorAssertion(Expression expression, boolean toRowExpression)
+	private StatsCalculatorAssertion getStatsCalculatorAssertion(Expression expression, boolean toRowExpression)
     {
         return tester().assertStatsFor(pb -> {
             VariableReferenceExpression a = pb.variable("a", BIGINT);

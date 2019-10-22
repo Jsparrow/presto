@@ -204,7 +204,7 @@ public class InternalHiveSplitFactory
     private static boolean hasRealAddress(List<HostAddress> addresses)
     {
         // Hadoop FileSystem returns "localhost" as a default
-        return addresses.stream().anyMatch(address -> !address.getHostText().equals("localhost"));
+        return addresses.stream().anyMatch(address -> !"localhost".equals(address.getHostText()));
     }
 
     private static List<HostAddress> getHostAddresses(BlockLocation blockLocation)

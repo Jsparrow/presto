@@ -163,11 +163,12 @@ public class LdapAuthenticator
             throw new RuntimeException("Authentication error");
         }
 
-        if (!authorized) {
-            String message = format("User [%s] not a member of the authorized group", user);
-            log.debug(message);
-            throw new AccessDeniedException(message);
-        }
+        if (authorized) {
+			return;
+		}
+		String message = format("User [%s] not a member of the authorized group", user);
+		log.debug(message);
+		throw new AccessDeniedException(message);
     }
 
     private static String replaceUser(String pattern, String user)

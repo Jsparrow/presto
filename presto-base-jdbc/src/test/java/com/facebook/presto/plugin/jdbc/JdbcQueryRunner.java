@@ -32,19 +32,19 @@ import static com.facebook.presto.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 
 public final class JdbcQueryRunner
 {
-    private JdbcQueryRunner()
+    private static final String TPCH_SCHEMA = "tpch";
+
+	private JdbcQueryRunner()
     {
     }
 
-    private static final String TPCH_SCHEMA = "tpch";
-
-    public static DistributedQueryRunner createJdbcQueryRunner(TpchTable<?>... tables)
+	public static DistributedQueryRunner createJdbcQueryRunner(TpchTable<?>... tables)
             throws Exception
     {
         return createJdbcQueryRunner(ImmutableList.copyOf(tables));
     }
 
-    public static DistributedQueryRunner createJdbcQueryRunner(Iterable<TpchTable<?>> tables)
+	public static DistributedQueryRunner createJdbcQueryRunner(Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -70,7 +70,7 @@ public final class JdbcQueryRunner
         }
     }
 
-    private static void createSchema(Map<String, String> properties, String schema)
+	private static void createSchema(Map<String, String> properties, String schema)
             throws SQLException
     {
         try (Connection connection = DriverManager.getConnection(properties.get("connection-url"));
@@ -79,7 +79,7 @@ public final class JdbcQueryRunner
         }
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder()
                 .setCatalog("jdbc")

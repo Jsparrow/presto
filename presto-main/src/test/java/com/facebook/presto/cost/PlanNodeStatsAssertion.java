@@ -82,9 +82,8 @@ public class PlanNodeStatsAssertion
     {
         assertEstimateEquals(actual.getOutputRowCount(), expected.getOutputRowCount(), "outputRowCount mismatch");
 
-        for (VariableReferenceExpression variable : union(expected.getVariablesWithKnownStatistics(), actual.getVariablesWithKnownStatistics())) {
-            assertVariableStatsEqual(variable, actual.getVariableStatistics(variable), expected.getVariableStatistics(variable));
-        }
+        union(expected.getVariablesWithKnownStatistics(), actual.getVariablesWithKnownStatistics()).forEach(variable -> assertVariableStatsEqual(variable, actual.getVariableStatistics(variable),
+				expected.getVariableStatistics(variable)));
         return this;
     }
 

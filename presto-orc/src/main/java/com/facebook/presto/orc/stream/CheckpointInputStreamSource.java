@@ -25,7 +25,16 @@ import static java.util.Objects.requireNonNull;
 public class CheckpointInputStreamSource<S extends ValueInputStream<C>, C extends StreamCheckpoint>
         implements InputStreamSource<S>
 {
-    public static <S extends ValueInputStream<C>, C extends StreamCheckpoint> CheckpointInputStreamSource<S, C> createCheckpointStreamSource(S stream, StreamCheckpoint checkpoint)
+    private final S stream;
+	private final C checkpoint;
+
+	public CheckpointInputStreamSource(S stream, C checkpoint)
+    {
+        this.stream = requireNonNull(stream, "stream is null");
+        this.checkpoint = requireNonNull(checkpoint, "checkpoint is null");
+    }
+
+	public static <S extends ValueInputStream<C>, C extends StreamCheckpoint> CheckpointInputStreamSource<S, C> createCheckpointStreamSource(S stream, StreamCheckpoint checkpoint)
     {
         requireNonNull(stream, "stream is null");
         requireNonNull(checkpoint, "checkpoint is null");
@@ -34,22 +43,13 @@ public class CheckpointInputStreamSource<S extends ValueInputStream<C>, C extend
         return new CheckpointInputStreamSource<>(stream, verifiedCheckpoint);
     }
 
-    private final S stream;
-    private final C checkpoint;
-
-    public CheckpointInputStreamSource(S stream, C checkpoint)
-    {
-        this.stream = requireNonNull(stream, "stream is null");
-        this.checkpoint = requireNonNull(checkpoint, "checkpoint is null");
-    }
-
-    @Override
+	@Override
     public Class<S> getStreamType()
     {
         return (Class<S>) stream.getClass();
     }
 
-    @Nullable
+	@Nullable
     @Override
     public S openStream()
             throws IOException
@@ -58,7 +58,7 @@ public class CheckpointInputStreamSource<S extends ValueInputStream<C>, C extend
         return stream;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

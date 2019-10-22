@@ -124,7 +124,7 @@ public final class ViewDefinition
         @Override
         public String toString()
         {
-            return name + ":" + type;
+            return new StringBuilder().append(name).append(":").append(type).toString();
         }
     }
 }

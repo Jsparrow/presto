@@ -48,7 +48,7 @@ public final class ReservedIdentifiers
     @SuppressWarnings("CallToPrintStackTrace")
     public static void main(String[] args)
     {
-        if ((args.length == 2) && args[0].equals("validateDocs")) {
+        if ((args.length == 2) && "validateDocs".equals(args[0])) {
             try {
                 validateDocs(Paths.get(args[1]));
             }
@@ -58,9 +58,7 @@ public final class ReservedIdentifiers
             }
         }
         else {
-            for (String name : reservedIdentifiers()) {
-                System.out.println(name);
-            }
+            reservedIdentifiers().forEach(System.out::println);
         }
     }
 

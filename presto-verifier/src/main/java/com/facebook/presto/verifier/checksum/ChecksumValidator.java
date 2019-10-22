@@ -58,9 +58,7 @@ public class ChecksumValidator
     {
         ImmutableList.Builder<SelectItem> selectItems = ImmutableList.builder();
         selectItems.add(new SingleColumn(new FunctionCall(QualifiedName.of("count"), ImmutableList.of())));
-        for (Column column : columns) {
-            selectItems.addAll(columnValidators.get(column.getCategory()).generateChecksumColumns(column));
-        }
+        columns.forEach(column -> selectItems.addAll(columnValidators.get(column.getCategory()).generateChecksumColumns(column)));
         return simpleQuery(new Select(false, selectItems.build()), new Table(tableName));
     }
 

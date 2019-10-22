@@ -33,7 +33,15 @@ public class DriverConnectionFactory
         this(driver, config.getConnectionUrl(), basicConnectionProperties(config));
     }
 
-    public static Properties basicConnectionProperties(BaseJdbcConfig config)
+    public DriverConnectionFactory(Driver driver, String connectionUrl, Properties connectionProperties)
+    {
+        this.driver = requireNonNull(driver, "driver is null");
+        this.connectionUrl = requireNonNull(connectionUrl, "connectionUrl is null");
+        this.connectionProperties = new Properties();
+        this.connectionProperties.putAll(requireNonNull(connectionProperties, "basicConnectionProperties is null"));
+    }
+
+	public static Properties basicConnectionProperties(BaseJdbcConfig config)
     {
         Properties connectionProperties = new Properties();
         if (config.getConnectionUser() != null) {
@@ -45,15 +53,7 @@ public class DriverConnectionFactory
         return connectionProperties;
     }
 
-    public DriverConnectionFactory(Driver driver, String connectionUrl, Properties connectionProperties)
-    {
-        this.driver = requireNonNull(driver, "driver is null");
-        this.connectionUrl = requireNonNull(connectionUrl, "connectionUrl is null");
-        this.connectionProperties = new Properties();
-        this.connectionProperties.putAll(requireNonNull(connectionProperties, "basicConnectionProperties is null"));
-    }
-
-    @Override
+	@Override
     public Connection openConnection(JdbcIdentity identity)
             throws SQLException
     {

@@ -30,11 +30,6 @@ public final class ColumnStatistics
     private final Estimate dataSize;
     private final Optional<DoubleRange> range;
 
-    public static ColumnStatistics empty()
-    {
-        return EMPTY;
-    }
-
     public ColumnStatistics(
             Estimate nullsFraction,
             Estimate distinctValuesCount,
@@ -42,11 +37,10 @@ public final class ColumnStatistics
             Optional<DoubleRange> range)
     {
         this.nullsFraction = requireNonNull(nullsFraction, "nullsFraction is null");
-        if (!nullsFraction.isUnknown()) {
-            if (nullsFraction.getValue() < 0 || nullsFraction.getValue() > 1) {
-                throw new IllegalArgumentException(format("nullsFraction must be between 0 and 1: %s", nullsFraction.getValue()));
-            }
-        }
+        boolean condition = !nullsFraction.isUnknown() && (nullsFraction.getValue() < 0 || nullsFraction.getValue() > 1);
+		if (condition) {
+		    throw new IllegalArgumentException(format("nullsFraction must be between 0 and 1: %s", nullsFraction.getValue()));
+		}
         this.distinctValuesCount = requireNonNull(distinctValuesCount, "distinctValuesCount is null");
         if (!distinctValuesCount.isUnknown() && distinctValuesCount.getValue() < 0) {
             throw new IllegalArgumentException(format("distinctValuesCount must be greater than or equal to 0: %s", distinctValuesCount.getValue()));
@@ -58,31 +52,36 @@ public final class ColumnStatistics
         this.range = requireNonNull(range, "range is null");
     }
 
-    @JsonProperty
+	public static ColumnStatistics empty()
+    {
+        return EMPTY;
+    }
+
+	@JsonProperty
     public Estimate getNullsFraction()
     {
         return nullsFraction;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Estimate getDistinctValuesCount()
     {
         return distinctValuesCount;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Estimate getDataSize()
     {
         return dataSize;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<DoubleRange> getRange()
     {
         return range;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -98,29 +97,25 @@ public final class ColumnStatistics
                 Objects.equals(range, that.range);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(nullsFraction, distinctValuesCount, dataSize, range);
     }
 
-    @Override
+	@Override
     public String toString()
     {
-        return "ColumnStatistics{" +
-                "nullsFraction=" + nullsFraction +
-                ", distinctValuesCount=" + distinctValuesCount +
-                ", dataSize=" + dataSize +
-                ", range=" + range +
-                '}';
+        return new StringBuilder().append("ColumnStatistics{").append("nullsFraction=").append(nullsFraction).append(", distinctValuesCount=").append(distinctValuesCount).append(", dataSize=").append(dataSize)
+				.append(", range=").append(range).append('}').toString();
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    /**
+	/**
      * If one of the estimates below is unspecified, the default "unknown" estimate value
      * (represented by floating point NaN) may cause the resulting symbol statistics
      * to be "unknown" as well.

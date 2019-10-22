@@ -74,9 +74,7 @@ public class CatalogSystemTable
     {
         Session session = toSession(transactionHandle, connectorSession);
         Builder table = InMemoryRecordSet.builder(CATALOG_TABLE);
-        for (Map.Entry<String, ConnectorId> entry : listCatalogs(session, metadata, accessControl).entrySet()) {
-            table.addRow(entry.getKey(), entry.getValue().toString());
-        }
+        listCatalogs(session, metadata, accessControl).entrySet().forEach(entry -> table.addRow(entry.getKey(), entry.getValue().toString()));
         return table.build().cursor();
     }
 }

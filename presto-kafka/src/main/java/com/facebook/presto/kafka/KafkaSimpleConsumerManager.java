@@ -64,14 +64,14 @@ public class KafkaSimpleConsumerManager
     @PreDestroy
     public void tearDown()
     {
-        for (Map.Entry<HostAddress, SimpleConsumer> entry : consumerCache.asMap().entrySet()) {
+        consumerCache.asMap().entrySet().forEach(entry -> {
             try {
                 entry.getValue().close();
             }
             catch (Exception e) {
                 log.warn(e, "While closing consumer %s:", entry.getKey());
             }
-        }
+        });
     }
 
     public SimpleConsumer getConsumer(HostAddress host)

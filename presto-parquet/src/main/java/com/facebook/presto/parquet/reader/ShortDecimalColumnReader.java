@@ -35,10 +35,10 @@ public class ShortDecimalColumnReader
         if (definitionLevel == columnDescriptor.getMaxDefinitionLevel()) {
             long decimalValue;
             // When decimals are encoded with primitive types Parquet stores unscaled values
-            if (columnDescriptor.getPrimitiveType().getPrimitiveTypeName().equals(INT32)) {
+            if (columnDescriptor.getPrimitiveType().getPrimitiveTypeName() == INT32) {
                 decimalValue = valuesReader.readInteger();
             }
-            else if (columnDescriptor.getPrimitiveType().getPrimitiveTypeName().equals(INT64)) {
+            else if (columnDescriptor.getPrimitiveType().getPrimitiveTypeName() == INT64) {
                 decimalValue = valuesReader.readLong();
             }
             else {
@@ -55,10 +55,10 @@ public class ShortDecimalColumnReader
     protected void skipValue()
     {
         if (definitionLevel == columnDescriptor.getMaxDefinitionLevel()) {
-            if (columnDescriptor.getType().equals(INT32)) {
+            if (columnDescriptor.getType() == INT32) {
                 valuesReader.readInteger();
             }
-            else if (columnDescriptor.getType().equals(INT64)) {
+            else if (columnDescriptor.getType() == INT64) {
                 valuesReader.readLong();
             }
             else {

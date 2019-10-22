@@ -69,24 +69,24 @@ import static java.util.Objects.requireNonNull;
 public class PrestoServer
         implements Runnable
 {
-    public static void main(String[] args)
-    {
-        new PrestoServer().run();
-    }
-
     private final SqlParserOptions sqlParserOptions;
 
-    public PrestoServer()
+	public PrestoServer()
     {
         this(new SqlParserOptions());
     }
 
-    public PrestoServer(SqlParserOptions sqlParserOptions)
+	public PrestoServer(SqlParserOptions sqlParserOptions)
     {
         this.sqlParserOptions = requireNonNull(sqlParserOptions, "sqlParserOptions is null");
     }
 
-    @Override
+	public static void main(String[] args)
+    {
+        new PrestoServer().run();
+    }
+
+	@Override
     public void run()
     {
         verifyJvmRequirements();
@@ -155,12 +155,12 @@ public class PrestoServer
         }
     }
 
-    protected Iterable<? extends Module> getAdditionalModules()
+	protected Iterable<? extends Module> getAdditionalModules()
     {
         return ImmutableList.of();
     }
 
-    private static void updateConnectorIds(Announcer announcer, CatalogManager metadata, ServerConfig serverConfig, NodeSchedulerConfig schedulerConfig)
+	private static void updateConnectorIds(Announcer announcer, CatalogManager metadata, ServerConfig serverConfig, NodeSchedulerConfig schedulerConfig)
     {
         // get existing announcement
         ServiceAnnouncement announcement = getPrestoAnnouncement(announcer.getServiceAnnouncements());
@@ -177,7 +177,7 @@ public class PrestoServer
             if (serverConfig.isCoordinator() && !schedulerConfig.isIncludeCoordinator()) {
                 catalogs.stream()
                         .map(Catalog::getConnectorId)
-                        .filter(connectorId -> connectorId.getCatalogName().equals("jmx"))
+                        .filter(connectorId -> "jmx".equals(connectorId.getCatalogName()))
                         .map(Object::toString)
                         .forEach(connectorIds::add);
             }
@@ -191,11 +191,7 @@ public class PrestoServer
 
         // build announcement with updated sources
         ServiceAnnouncementBuilder builder = serviceAnnouncement(announcement.getType());
-        for (Map.Entry<String, String> entry : announcement.getProperties().entrySet()) {
-            if (!entry.getKey().equals("connectorIds")) {
-                builder.addProperty(entry.getKey(), entry.getValue());
-            }
-        }
+        announcement.getProperties().entrySet().stream().filter(entry -> !"connectorIds".equals(entry.getKey())).forEach(entry -> builder.addProperty(entry.getKey(), entry.getValue()));
         builder.addProperty("connectorIds", Joiner.on(',').join(connectorIds));
 
         // update announcement
@@ -203,10 +199,10 @@ public class PrestoServer
         announcer.addServiceAnnouncement(builder.build());
     }
 
-    private static ServiceAnnouncement getPrestoAnnouncement(Set<ServiceAnnouncement> announcements)
+	private static ServiceAnnouncement getPrestoAnnouncement(Set<ServiceAnnouncement> announcements)
     {
         for (ServiceAnnouncement announcement : announcements) {
-            if (announcement.getType().equals("presto")) {
+            if ("presto".equals(announcement.getType())) {
                 return announcement;
             }
         }

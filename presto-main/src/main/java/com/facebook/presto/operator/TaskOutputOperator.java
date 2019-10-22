@@ -33,7 +33,76 @@ import static java.util.Objects.requireNonNull;
 public class TaskOutputOperator
         implements Operator
 {
-    public static class TaskOutputFactory
+    private final OperatorContext operatorContext;
+	private final OutputBuffer outputBuffer;
+	private final Function<Page, Page> pagePreprocessor;
+	private final PagesSerde serde;
+	private boolean finished;
+
+	public TaskOutputOperator(OperatorContext operatorContext, OutputBuffer outputBuffer, Function<Page, Page> pagePreprocessor, PagesSerdeFactory serdeFactory)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.outputBuffer = requireNonNull(outputBuffer, "outputBuffer is null");
+        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
+        this.serde = requireNonNull(serdeFactory, "serdeFactory is null").createPagesSerde();
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished && isBlocked().isDone();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        ListenableFuture<?> blocked = outputBuffer.isFull();
+        return blocked.isDone() ? NOT_BLOCKED : blocked;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished && isBlocked().isDone();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        if (page.getPositionCount() == 0) {
+            return;
+        }
+
+        page = pagePreprocessor.apply(page);
+
+        List<SerializedPage> serializedPages = splitPage(page, DEFAULT_MAX_PAGE_SIZE_IN_BYTES).stream()
+                .map(serde::serialize)
+                .collect(toImmutableList());
+
+        outputBuffer.enqueue(operatorContext.getDriverContext().getLifespan(), serializedPages);
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class TaskOutputFactory
             implements OutputFactory
     {
         private final OutputBuffer outputBuffer;
@@ -85,74 +154,5 @@ public class TaskOutputOperator
         {
             return new TaskOutputOperatorFactory(operatorId, planNodeId, outputBuffer, pagePreprocessor, serdeFactory);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final OutputBuffer outputBuffer;
-    private final Function<Page, Page> pagePreprocessor;
-    private final PagesSerde serde;
-    private boolean finished;
-
-    public TaskOutputOperator(OperatorContext operatorContext, OutputBuffer outputBuffer, Function<Page, Page> pagePreprocessor, PagesSerdeFactory serdeFactory)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.outputBuffer = requireNonNull(outputBuffer, "outputBuffer is null");
-        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
-        this.serde = requireNonNull(serdeFactory, "serdeFactory is null").createPagesSerde();
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished && isBlocked().isDone();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        ListenableFuture<?> blocked = outputBuffer.isFull();
-        return blocked.isDone() ? NOT_BLOCKED : blocked;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished && isBlocked().isDone();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        if (page.getPositionCount() == 0) {
-            return;
-        }
-
-        page = pagePreprocessor.apply(page);
-
-        List<SerializedPage> serializedPages = splitPage(page, DEFAULT_MAX_PAGE_SIZE_IN_BYTES).stream()
-                .map(serde::serialize)
-                .collect(toImmutableList());
-
-        outputBuffer.enqueue(operatorContext.getDriverContext().getLifespan(), serializedPages);
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 }

@@ -82,18 +82,18 @@ public class QueryRunner
         setupBasicAuth(builder, session, user, password);
         setupTokenAuth(builder, session, accessToken);
 
-        if (kerberosRemoteServiceName.isPresent()) {
-            checkArgument(session.getServer().getScheme().equalsIgnoreCase("https"),
+        kerberosRemoteServiceName.ifPresent(value -> {
+            checkArgument("https".equalsIgnoreCase(session.getServer().getScheme()),
                     "Authentication using Kerberos requires HTTPS to be enabled");
             setupKerberos(
                     builder,
-                    kerberosRemoteServiceName.get(),
+                    value,
                     kerberosUseCanonicalHostname,
                     kerberosPrincipal,
                     kerberosConfigPath.map(File::new),
                     kerberosKeytabPath.map(File::new),
                     kerberosCredentialCachePath.map(File::new));
-        }
+        });
 
         this.httpClient = builder.build();
     }
@@ -145,11 +145,12 @@ public class QueryRunner
             Optional<String> user,
             Optional<String> password)
     {
-        if (user.isPresent() && password.isPresent()) {
-            checkArgument(session.getServer().getScheme().equalsIgnoreCase("https"),
-                    "Authentication using username/password requires HTTPS to be enabled");
-            clientBuilder.addInterceptor(basicAuth(user.get(), password.get()));
-        }
+        if (!(user.isPresent() && password.isPresent())) {
+			return;
+		}
+		checkArgument("https".equalsIgnoreCase(session.getServer().getScheme()),
+		        "Authentication using username/password requires HTTPS to be enabled");
+		clientBuilder.addInterceptor(basicAuth(user.get(), password.get()));
     }
 
     private static void setupTokenAuth(
@@ -157,10 +158,10 @@ public class QueryRunner
             ClientSession session,
             Optional<String> accessToken)
     {
-        if (accessToken.isPresent()) {
-            checkArgument(session.getServer().getScheme().equalsIgnoreCase("https"),
+        accessToken.ifPresent(value -> {
+            checkArgument("https".equalsIgnoreCase(session.getServer().getScheme()),
                     "Authentication using an access token requires HTTPS to be enabled");
-            clientBuilder.addInterceptor(tokenAuth(accessToken.get()));
-        }
+            clientBuilder.addInterceptor(tokenAuth(value));
+        });
     }
 }

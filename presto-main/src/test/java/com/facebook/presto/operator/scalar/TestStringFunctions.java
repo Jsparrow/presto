@@ -71,7 +71,7 @@ public class TestStringFunctions
 
     public static String padRight(String s, int n)
     {
-        return String.format("%1$-" + n + "s", s);
+        return String.format(new StringBuilder().append("%1$-").append(n).append("s").toString(), s);
     }
 
     @Test
@@ -119,8 +119,8 @@ public class TestStringFunctions
         assertFunction("CONCAT(CONCAT('\u4FE1\u5FF5', ',\u7231'), ',\u5E0C\u671B')", VARCHAR, "\u4FE1\u5FF5,\u7231,\u5E0C\u671B");
 
         // Test argument count limit
-        assertFunction("CONCAT(" + Joiner.on(", ").join(nCopies(254, "'1'")) + ")", VARCHAR, Joiner.on("").join(nCopies(254, "1")));
-        assertNotSupported("CONCAT(" + Joiner.on(", ").join(nCopies(255, "'1'")) + ")", "Too many arguments for string concatenation");
+        assertFunction(new StringBuilder().append("CONCAT(").append(Joiner.on(", ").join(nCopies(254, "'1'"))).append(")").toString(), VARCHAR, Joiner.on("").join(nCopies(254, "1")));
+        assertNotSupported(new StringBuilder().append("CONCAT(").append(Joiner.on(", ").join(nCopies(255, "'1'"))).append(")").toString(), "Too many arguments for string concatenation");
     }
 
     @Test
@@ -338,8 +338,8 @@ public class TestStringFunctions
 
     private void testStrPosAndPosition(String string, String substring, Long expected)
     {
-        string = (string == null) ? "NULL" : ("'" + string + "'");
-        substring = (substring == null) ? "NULL" : ("'" + substring + "'");
+        string = (string == null) ? "NULL" : (new StringBuilder().append("'").append(string).append("'").toString());
+        substring = (substring == null) ? "NULL" : (new StringBuilder().append("'").append(substring).append("'").toString());
 
         assertFunction(format("STRPOS(%s, %s)", string, substring), BIGINT, expected);
         assertFunction(format("POSITION(%s in %s)", substring, string), BIGINT, expected);
@@ -892,7 +892,7 @@ public class TestStringFunctions
         assertFunction("UPPER('Hello World')", createVarcharType(11), "HELLO WORLD");
         assertFunction("UPPER('what!!')", createVarcharType(6), "WHAT!!");
         assertFunction("UPPER('\u00D6sterreich')", createVarcharType(10), upperByCodePoint("\u00D6") + "STERREICH");
-        assertFunction("UPPER('From\uD801\uDC2DTo')", createVarcharType(7), "FROM" + upperByCodePoint("\uD801\uDC2D") + "TO");
+        assertFunction("UPPER('From\uD801\uDC2DTo')", createVarcharType(7), new StringBuilder().append("FROM").append(upperByCodePoint("\uD801\uDC2D")).append("TO").toString());
 
         assertFunction("CAST(UPPER(utf8(from_hex('CE'))) AS VARBINARY)", VARBINARY, new SqlVarbinary(new byte[] {(byte) 0xCE}));
         assertFunction("CAST(UPPER('hello' || utf8(from_hex('CE'))) AS VARBINARY)", VARBINARY, new SqlVarbinary(new byte[] {'H', 'E', 'L', 'L', 'O', (byte) 0xCE}));
@@ -906,7 +906,7 @@ public class TestStringFunctions
         assertFunction("UPPER(CAST('Hello World' AS CHAR(11)))", createCharType(11), padRight("HELLO WORLD", 11));
         assertFunction("UPPER(CAST('what!!' AS CHAR(6)))", createCharType(6), padRight("WHAT!!", 6));
         assertFunction("UPPER(CAST('\u00D6sterreich' AS CHAR(10)))", createCharType(10), padRight(upperByCodePoint("\u00D6") + "STERREICH", 10));
-        assertFunction("UPPER(CAST('From\uD801\uDC2DTo' AS CHAR(7)))", createCharType(7), padRight("FROM" + upperByCodePoint("\uD801\uDC2D") + "TO", 7));
+        assertFunction("UPPER(CAST('From\uD801\uDC2DTo' AS CHAR(7)))", createCharType(7), padRight(new StringBuilder().append("FROM").append(upperByCodePoint("\uD801\uDC2D")).append("TO").toString(), 7));
     }
 
     @Test
@@ -936,8 +936,8 @@ public class TestStringFunctions
 
         // invalid target lengths
         long maxSize = Integer.MAX_VALUE;
-        assertInvalidFunction("LPAD('abc', -1, 'foo')", "Target length must be in the range [0.." + maxSize + "]");
-        assertInvalidFunction("LPAD('abc', " + (maxSize + 1) + ", '')", "Target length must be in the range [0.." + maxSize + "]");
+        assertInvalidFunction("LPAD('abc', -1, 'foo')", new StringBuilder().append("Target length must be in the range [0..").append(maxSize).append("]").toString());
+        assertInvalidFunction(new StringBuilder().append("LPAD('abc', ").append(maxSize + 1).append(", '')").toString(), new StringBuilder().append("Target length must be in the range [0..").append(maxSize).append("]").toString());
     }
 
     @Test
@@ -967,8 +967,8 @@ public class TestStringFunctions
 
         // invalid target lengths
         long maxSize = Integer.MAX_VALUE;
-        assertInvalidFunction("RPAD('abc', -1, 'foo')", "Target length must be in the range [0.." + maxSize + "]");
-        assertInvalidFunction("RPAD('abc', " + (maxSize + 1) + ", '')", "Target length must be in the range [0.." + maxSize + "]");
+        assertInvalidFunction("RPAD('abc', -1, 'foo')", new StringBuilder().append("Target length must be in the range [0..").append(maxSize).append("]").toString());
+        assertInvalidFunction(new StringBuilder().append("RPAD('abc', ").append(maxSize + 1).append(", '')").toString(), new StringBuilder().append("Target length must be in the range [0..").append(maxSize).append("]").toString());
     }
 
     @Test

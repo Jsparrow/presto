@@ -106,11 +106,6 @@ public class JoinCompiler
             .build(CacheLoader.from(key ->
                     internalCompileHashStrategy(key.getTypes(), key.getOutputChannels(), key.getJoinChannels(), key.getSortChannel())));
 
-    public LookupSourceSupplierFactory compileLookupSourceFactory(List<? extends Type> types, List<Integer> joinChannels, Optional<Integer> sortChannel)
-    {
-        return compileLookupSourceFactory(types, joinChannels, sortChannel, Optional.empty());
-    }
-
     @Inject
     public JoinCompiler(Metadata metadata, FeaturesConfig config)
     {
@@ -118,21 +113,26 @@ public class JoinCompiler
         this.groupByUsesEqualTo = requireNonNull(config, "config is null").isGroupByUsesEqualTo();
     }
 
-    @Managed
+	public LookupSourceSupplierFactory compileLookupSourceFactory(List<? extends Type> types, List<Integer> joinChannels, Optional<Integer> sortChannel)
+    {
+        return compileLookupSourceFactory(types, joinChannels, sortChannel, Optional.empty());
+    }
+
+	@Managed
     @Nested
     public CacheStatsMBean getLookupSourceStats()
     {
         return new CacheStatsMBean(lookupSourceFactories);
     }
 
-    @Managed
+	@Managed
     @Nested
     public CacheStatsMBean getHashStrategiesStats()
     {
         return new CacheStatsMBean(hashStrategies);
     }
 
-    public LookupSourceSupplierFactory compileLookupSourceFactory(List<? extends Type> types, List<Integer> joinChannels, Optional<Integer> sortChannel, Optional<List<Integer>> outputChannels)
+	public LookupSourceSupplierFactory compileLookupSourceFactory(List<? extends Type> types, List<Integer> joinChannels, Optional<Integer> sortChannel, Optional<List<Integer>> outputChannels)
     {
         return lookupSourceFactories.getUnchecked(new CacheKey(
                 types,
@@ -141,12 +141,12 @@ public class JoinCompiler
                 sortChannel));
     }
 
-    public PagesHashStrategyFactory compilePagesHashStrategyFactory(List<Type> types, List<Integer> joinChannels)
+	public PagesHashStrategyFactory compilePagesHashStrategyFactory(List<Type> types, List<Integer> joinChannels)
     {
         return compilePagesHashStrategyFactory(types, joinChannels, Optional.empty());
     }
 
-    public PagesHashStrategyFactory compilePagesHashStrategyFactory(List<Type> types, List<Integer> joinChannels, Optional<List<Integer>> outputChannels)
+	public PagesHashStrategyFactory compilePagesHashStrategyFactory(List<Type> types, List<Integer> joinChannels, Optional<List<Integer>> outputChannels)
     {
         requireNonNull(types, "types is null");
         requireNonNull(joinChannels, "joinChannels is null");
@@ -159,14 +159,14 @@ public class JoinCompiler
                 Optional.empty())));
     }
 
-    private List<Integer> rangeList(int endExclusive)
+	private List<Integer> rangeList(int endExclusive)
     {
         return IntStream.range(0, endExclusive)
                 .boxed()
                 .collect(toImmutableList());
     }
 
-    private LookupSourceSupplierFactory internalCompileLookupSourceFactory(List<Type> types, List<Integer> outputChannels, List<Integer> joinChannels, Optional<Integer> sortChannel)
+	private LookupSourceSupplierFactory internalCompileLookupSourceFactory(List<Type> types, List<Integer> outputChannels, List<Integer> joinChannels, Optional<Integer> sortChannel)
     {
         Class<? extends PagesHashStrategy> pagesHashStrategyClass = internalCompileHashStrategy(types, outputChannels, joinChannels, sortChannel);
 
@@ -180,7 +180,7 @@ public class JoinCompiler
         return new LookupSourceSupplierFactory(joinHashSupplierClass, new PagesHashStrategyFactory(pagesHashStrategyClass));
     }
 
-    private static FieldDefinition generateInstanceSize(ClassDefinition definition)
+	private static FieldDefinition generateInstanceSize(ClassDefinition definition)
     {
         // Store instance size in static field
         FieldDefinition instanceSize = definition.declareField(a(PRIVATE, STATIC, FINAL), "INSTANCE_SIZE", long.class);
@@ -195,7 +195,7 @@ public class JoinCompiler
         return instanceSize;
     }
 
-    private Class<? extends PagesHashStrategy> internalCompileHashStrategy(List<Type> types, List<Integer> outputChannels, List<Integer> joinChannels, Optional<Integer> sortChannel)
+	private Class<? extends PagesHashStrategy> internalCompileHashStrategy(List<Type> types, List<Integer> outputChannels, List<Integer> joinChannels, Optional<Integer> sortChannel)
     {
         CallSiteBinder callSiteBinder = new CallSiteBinder();
 
@@ -241,7 +241,7 @@ public class JoinCompiler
         return defineClass(classDefinition, PagesHashStrategy.class, callSiteBinder.getBindings(), getClass().getClassLoader());
     }
 
-    private static void generateConstructor(ClassDefinition classDefinition,
+	private static void generateConstructor(ClassDefinition classDefinition,
             List<Integer> joinChannels,
             FieldDefinition sizeField,
             FieldDefinition instanceSizeField,
@@ -316,7 +316,7 @@ public class JoinCompiler
         constructor.ret();
     }
 
-    private static void generateGetChannelCountMethod(ClassDefinition classDefinition, int outputChannelCount)
+	private static void generateGetChannelCountMethod(ClassDefinition classDefinition, int outputChannelCount)
     {
         classDefinition.declareMethod(
                 a(PUBLIC),
@@ -327,7 +327,7 @@ public class JoinCompiler
                 .retInt();
     }
 
-    private static void generateGetSizeInBytesMethod(ClassDefinition classDefinition, FieldDefinition sizeField)
+	private static void generateGetSizeInBytesMethod(ClassDefinition classDefinition, FieldDefinition sizeField)
     {
         MethodDefinition getSizeInBytesMethod = classDefinition.declareMethod(a(PUBLIC), "getSizeInBytes", type(long.class));
 
@@ -337,7 +337,7 @@ public class JoinCompiler
                 .retLong();
     }
 
-    private static void generateAppendToMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> types, List<Integer> outputChannels, List<FieldDefinition> channelFields)
+	private static void generateAppendToMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> types, List<Integer> outputChannels, List<FieldDefinition> channelFields)
     {
         Parameter blockIndex = arg("blockIndex", int.class);
         Parameter blockPosition = arg("blockPosition", int.class);
@@ -373,7 +373,7 @@ public class JoinCompiler
         appendToBody.ret();
     }
 
-    private static void generateIsPositionNull(ClassDefinition classDefinition, List<FieldDefinition> joinChannelFields)
+	private static void generateIsPositionNull(ClassDefinition classDefinition, List<FieldDefinition> joinChannelFields)
     {
         Parameter blockIndex = arg("blockIndex", int.class);
         Parameter blockPosition = arg("blockPosition", int.class);
@@ -384,28 +384,26 @@ public class JoinCompiler
                 blockIndex,
                 blockPosition);
 
-        for (FieldDefinition joinChannelField : joinChannelFields) {
-            BytecodeExpression block = isPositionNullMethod
-                    .getThis()
-                    .getField(joinChannelField)
-                    .invoke("get", Object.class, blockIndex)
-                    .cast(Block.class);
-
-            IfStatement ifStatement = new IfStatement();
-            ifStatement.condition(block.invoke(
+        joinChannelFields.stream().map(joinChannelField -> isPositionNullMethod
+		        .getThis()
+		        .getField(joinChannelField)
+		        .invoke("get", Object.class, blockIndex)
+		        .cast(Block.class)).forEach(block -> {
+			IfStatement ifStatement = new IfStatement();
+			ifStatement.condition(block.invoke(
                     "isNull",
                     boolean.class,
                     blockPosition));
-            ifStatement.ifTrue(constantTrue().ret());
-            isPositionNullMethod.getBody().append(ifStatement);
-        }
+			ifStatement.ifTrue(constantTrue().ret());
+			isPositionNullMethod.getBody().append(ifStatement);
+		});
 
         isPositionNullMethod
                 .getBody()
                 .append(constantFalse().ret());
     }
 
-    private static void generateHashPositionMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> joinChannelTypes, List<FieldDefinition> joinChannelFields, FieldDefinition hashChannelField)
+	private static void generateHashPositionMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> joinChannelTypes, List<FieldDefinition> joinChannelFields, FieldDefinition hashChannelField)
     {
         Parameter blockIndex = arg("blockIndex", int.class);
         Parameter blockPosition = arg("blockPosition", int.class);
@@ -462,7 +460,7 @@ public class JoinCompiler
                 .retLong();
     }
 
-    private static void generateHashRowMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> joinChannelTypes)
+	private static void generateHashRowMethod(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, List<Type> joinChannelTypes)
     {
         Parameter position = arg("position", int.class);
         Parameter page = arg("blocks", Page.class);
@@ -492,7 +490,7 @@ public class JoinCompiler
                 .retLong();
     }
 
-    private static BytecodeNode typeHashCode(BytecodeExpression type, BytecodeExpression blockRef, BytecodeExpression blockPosition)
+	private static BytecodeNode typeHashCode(BytecodeExpression type, BytecodeExpression blockRef, BytecodeExpression blockPosition)
     {
         return new IfStatement()
                 .condition(blockRef.invoke("isNull", boolean.class, blockPosition))
@@ -500,7 +498,7 @@ public class JoinCompiler
                 .ifFalse(type.invoke("hash", long.class, blockRef, blockPosition));
     }
 
-    private static void generateRowEqualsRowMethod(
+	private static void generateRowEqualsRowMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> joinChannelTypes)
@@ -546,7 +544,7 @@ public class JoinCompiler
                 .retInt();
     }
 
-    private static void generatePositionEqualsRowMethod(
+	private static void generatePositionEqualsRowMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> joinChannelTypes,
@@ -601,7 +599,7 @@ public class JoinCompiler
                 .retInt();
     }
 
-    private static void generatePositionEqualsRowWithPageMethod(
+	private static void generatePositionEqualsRowWithPageMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> joinChannelTypes,
@@ -640,7 +638,7 @@ public class JoinCompiler
         body.append(constantTrue().ret());
     }
 
-    private void generatePositionNotDistinctFromRowWithPageMethod(
+	private void generatePositionNotDistinctFromRowWithPageMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> joinChannelTypes,
@@ -720,7 +718,7 @@ public class JoinCompiler
         body.append(constantTrue().ret());
     }
 
-    private static void generatePositionEqualsPositionMethod(
+	private static void generatePositionEqualsPositionMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> joinChannelTypes,
@@ -778,7 +776,7 @@ public class JoinCompiler
                 .retInt();
     }
 
-    private static void generateCompareSortChannelPositionsMethod(
+	private static void generateCompareSortChannelPositionsMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             List<Type> types,
@@ -827,7 +825,7 @@ public class JoinCompiler
                 .append(comparison);
     }
 
-    private static void generateIsSortChannelPositionNull(
+	private static void generateIsSortChannelPositionNull(
             ClassDefinition classDefinition,
             List<FieldDefinition> channelFields,
             Optional<Integer> sortChannel)
@@ -864,7 +862,7 @@ public class JoinCompiler
                 .append(isNull);
     }
 
-    private static BytecodeNode typeEquals(
+	private static BytecodeNode typeEquals(
             BytecodeExpression type,
             BytecodeExpression leftBlock,
             BytecodeExpression leftBlockPosition,
@@ -887,7 +885,7 @@ public class JoinCompiler
         return ifStatement;
     }
 
-    private static BytecodeNode typeEqualsIgnoreNulls(
+	private static BytecodeNode typeEqualsIgnoreNulls(
             BytecodeExpression type,
             BytecodeExpression leftBlock,
             BytecodeExpression leftBlockPosition,
@@ -897,7 +895,7 @@ public class JoinCompiler
         return type.invoke("equalTo", boolean.class, leftBlock, leftBlockPosition, rightBlock, rightBlockPosition);
     }
 
-    public static class LookupSourceSupplierFactory
+	public static class LookupSourceSupplierFactory
     {
         private final Constructor<? extends LookupSourceSupplier> constructor;
         private final PagesHashStrategyFactory pagesHashStrategyFactory;

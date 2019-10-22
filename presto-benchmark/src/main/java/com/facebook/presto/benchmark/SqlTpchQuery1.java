@@ -22,28 +22,9 @@ public class SqlTpchQuery1
 {
     public SqlTpchQuery1(LocalQueryRunner localQueryRunner)
     {
-        super(localQueryRunner, "sql_tpch_query_1", 1, 5, "" +
-                "select\n" +
-                "    returnflag,\n" +
-                "    linestatus,\n" +
-                "    sum(quantity) as sum_qty,\n" +
-                "    sum(extendedprice) as sum_base_price,\n" +
-                "    sum(extendedprice * (1 - discount)) as sum_disc_price,\n" +
-                "    sum(extendedprice * (1 - discount) * (1 + tax)) as sum_charge,\n" +
-                "    avg(quantity) as avg_qty,\n" +
-                "    avg(extendedprice) as avg_price,\n" +
-                "    avg(discount) as avg_disc,\n" +
-                "    count(*) as count_order\n" +
-                "from\n" +
-                "    lineitem\n" +
-                "where\n" +
-                "    shipdate <= DATE '1998-09-02'\n" +
-                "group by\n" +
-                "    returnflag,\n" +
-                "    linestatus\n" +
-                "order by\n" +
-                "    returnflag,\n" +
-                "    linestatus");
+        super(localQueryRunner, "sql_tpch_query_1", 1, 5, new StringBuilder().append("").append("select\n").append("    returnflag,\n").append("    linestatus,\n").append("    sum(quantity) as sum_qty,\n").append("    sum(extendedprice) as sum_base_price,\n").append("    sum(extendedprice * (1 - discount)) as sum_disc_price,\n").append("    sum(extendedprice * (1 - discount) * (1 + tax)) as sum_charge,\n")
+				.append("    avg(quantity) as avg_qty,\n").append("    avg(extendedprice) as avg_price,\n").append("    avg(discount) as avg_disc,\n").append("    count(*) as count_order\n").append("from\n").append("    lineitem\n").append("where\n").append("    shipdate <= DATE '1998-09-02'\n").append("group by\n")
+				.append("    returnflag,\n").append("    linestatus\n").append("order by\n").append("    returnflag,\n").append("    linestatus").toString());
     }
 
     public static void main(String[] args)

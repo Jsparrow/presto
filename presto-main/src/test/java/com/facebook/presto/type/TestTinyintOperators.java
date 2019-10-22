@@ -37,7 +37,7 @@ public class TestTinyintOperators
     {
         assertFunction("TINYINT'37'", TINYINT, (byte) 37);
         assertFunction("TINYINT'17'", TINYINT, (byte) 17);
-        assertInvalidFunction("TINYINT'" + ((long) Byte.MAX_VALUE + 1L) + "'", INVALID_LITERAL);
+        assertInvalidFunction(new StringBuilder().append("TINYINT'").append((long) Byte.MAX_VALUE + 1L).append("'").toString(), INVALID_LITERAL);
     }
 
     @Test
@@ -52,7 +52,7 @@ public class TestTinyintOperators
     {
         assertFunction("TINYINT'-37'", TINYINT, (byte) -37);
         assertFunction("TINYINT'-17'", TINYINT, (byte) -17);
-        assertInvalidFunction("TINYINT'-" + Byte.MIN_VALUE + "'", INVALID_LITERAL);
+        assertInvalidFunction(new StringBuilder().append("TINYINT'-").append(Byte.MIN_VALUE).append("'").toString(), INVALID_LITERAL);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class TestTinyintOperators
     {
         assertFunction("-(TINYINT'37')", TINYINT, (byte) -37);
         assertFunction("-(TINYINT'17')", TINYINT, (byte) -17);
-        assertFunction("-(TINYINT'" + Byte.MAX_VALUE + "')", TINYINT, (byte) (Byte.MIN_VALUE + 1));
+        assertFunction(new StringBuilder().append("-(TINYINT'").append(Byte.MAX_VALUE).append("')").toString(), TINYINT, (byte) (Byte.MIN_VALUE + 1));
         assertNumericOverflow(format("-(TINYINT'%s')", Byte.MIN_VALUE), "tinyint negation overflow: -128");
     }
 

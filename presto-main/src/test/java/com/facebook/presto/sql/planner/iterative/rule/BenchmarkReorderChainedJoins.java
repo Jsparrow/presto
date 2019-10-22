@@ -52,17 +52,22 @@ public class BenchmarkReorderChainedJoins
     public MaterializedResult benchmarkReorderJoins(BenchmarkInfo benchmarkInfo)
     {
         return benchmarkInfo.getQueryRunner().execute(
-                "EXPLAIN SELECT * FROM " +
-                        "nation n1 JOIN nation n2 ON n1.nationkey = n2.nationkey " +
-                        "JOIN nation n3 ON n2.comment = n3.comment " +
-                        "JOIN nation n4 ON n3.name = n4.name " +
-                        "JOIN region r1 ON n4.regionkey = r1.regionkey " +
-                        "JOIN region r2 ON r1.name = r2.name " +
-                        "JOIN region r3 ON r3.comment = r2.comment " +
-                        "JOIN region r4 ON r4.regionkey = r3.regionkey");
+                new StringBuilder().append("EXPLAIN SELECT * FROM ").append("nation n1 JOIN nation n2 ON n1.nationkey = n2.nationkey ").append("JOIN nation n3 ON n2.comment = n3.comment ").append("JOIN nation n4 ON n3.name = n4.name ").append("JOIN region r1 ON n4.regionkey = r1.regionkey ").append("JOIN region r2 ON r1.name = r2.name ").append("JOIN region r3 ON r3.comment = r2.comment ")
+						.append("JOIN region r4 ON r4.regionkey = r3.regionkey").toString());
     }
 
-    @State(Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkReorderChainedJoins.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class BenchmarkInfo
     {
         @Param({"ELIMINATE_CROSS_JOINS", "AUTOMATIC"})
@@ -93,16 +98,5 @@ public class BenchmarkReorderChainedJoins
         {
             queryRunner.close();
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkReorderChainedJoins.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

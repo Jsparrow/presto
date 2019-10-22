@@ -73,9 +73,7 @@ public class RowToJsonCast
 
         List<Type> fieldTypes = type.getTypeParameters();
         List<JsonGeneratorWriter> fieldWriters = new ArrayList<>(fieldTypes.size());
-        for (int i = 0; i < fieldTypes.size(); i++) {
-            fieldWriters.add(createJsonGeneratorWriter(fieldTypes.get(i)));
-        }
+        fieldTypes.forEach(fieldType -> fieldWriters.add(createJsonGeneratorWriter(fieldType)));
         MethodHandle methodHandle = METHOD_HANDLE.bindTo(fieldWriters);
 
         return new ScalarFunctionImplementation(

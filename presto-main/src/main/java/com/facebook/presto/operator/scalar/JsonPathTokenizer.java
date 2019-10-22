@@ -199,6 +199,6 @@ public class JsonPathTokenizer
     @Override
     public String toString()
     {
-        return path.substring(0, index) + UNICODE_CARET + path.substring(index);
+        return new StringBuilder().append(path.substring(0, index)).append(UNICODE_CARET).append(path.substring(index)).toString();
     }
 }

@@ -121,9 +121,7 @@ public class ThriftIndexedTpchService
         }
         List<PrestoThriftBlock> blocks = page.getColumnBlocks();
         List<List<String>> result = new ArrayList<>(blocks.size());
-        for (PrestoThriftBlock block : blocks) {
-            result.add(blockAsList(block, begin, end));
-        }
+        blocks.forEach(block -> result.add(blockAsList(block, begin, end)));
         return result;
     }
 
@@ -195,11 +193,11 @@ public class ThriftIndexedTpchService
     private static List<Integer> computeRemap(List<String> startSchema, List<String> endSchema)
     {
         ImmutableList.Builder<Integer> builder = ImmutableList.builder();
-        for (String columnName : endSchema) {
+        endSchema.forEach(columnName -> {
             int index = startSchema.indexOf(columnName);
             checkArgument(index != -1, "Column name in end that is not in the start: %s", columnName);
             builder.add(index);
-        }
+        });
         return builder.build();
     }
 }

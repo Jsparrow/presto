@@ -34,9 +34,7 @@ public final class BytecodeUtils
 
     public static ParameterizedType makeClassName(String baseName, Optional<String> suffix)
     {
-        String className = baseName
-                + "_" + suffix.orElseGet(() -> Instant.now().atZone(UTC).format(TIMESTAMP_FORMAT))
-                + "_" + CLASS_ID.incrementAndGet();
+        String className = new StringBuilder().append(baseName).append("_").append(suffix.orElseGet(() -> Instant.now().atZone(UTC).format(TIMESTAMP_FORMAT))).append("_").append(CLASS_ID.incrementAndGet()).toString();
         String javaClassName = toJavaIdentifierString(className);
         return ParameterizedType.typeFromJavaClassName("com.facebook.presto.$gen." + javaClassName);
     }

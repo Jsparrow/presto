@@ -65,11 +65,14 @@ import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static javax.management.ObjectName.WILDCARD;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JmxMetadata
         implements ConnectorMetadata
 {
-    public static final String JMX_SCHEMA_NAME = "current";
+    private static final Logger logger = LoggerFactory.getLogger(JmxMetadata.class);
+	public static final String JMX_SCHEMA_NAME = "current";
     public static final String HISTORY_SCHEMA_NAME = "history";
     public static final String NODE_COLUMN_NAME = "node";
     public static final String OBJECT_NAME_NAME = "object_name";
@@ -150,7 +153,8 @@ public class JmxMetadata
             return new JmxTableHandle(tableName, objectNames.stream().map(ObjectName::toString).collect(toImmutableList()), columns, true);
         }
         catch (JMException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -205,10 +209,8 @@ public class JmxMetadata
     private List<SchemaTableName> listJmxTables()
     {
         Builder<SchemaTableName> tableNames = ImmutableList.builder();
-        for (ObjectName objectName : mbeanServer.queryNames(WILDCARD, null)) {
-            // todo remove lower case when presto supports mixed case names
-            tableNames.add(new SchemaTableName(JMX_SCHEMA_NAME, objectName.getCanonicalName().toLowerCase(ENGLISH)));
-        }
+        // todo remove lower case when presto supports mixed case names
+		mbeanServer.queryNames(WILDCARD, null).forEach(objectName -> tableNames.add(new SchemaTableName(JMX_SCHEMA_NAME, objectName.getCanonicalName().toLowerCase(ENGLISH))));
         return tableNames.build();
     }
 

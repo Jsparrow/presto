@@ -19,24 +19,24 @@ import static java.util.Objects.requireNonNull;
 
 public final class NodeRef<T extends Node>
 {
-    public static <T extends Node> NodeRef<T> of(T node)
-    {
-        return new NodeRef<>(node);
-    }
-
     private final T node;
 
-    private NodeRef(T node)
+	private NodeRef(T node)
     {
         this.node = requireNonNull(node, "node is null");
     }
 
-    public T getNode()
+	public static <T extends Node> NodeRef<T> of(T node)
+    {
+        return new NodeRef<>(node);
+    }
+
+	public T getNode()
     {
         return node;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -49,13 +49,13 @@ public final class NodeRef<T extends Node>
         return node == other.node;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return identityHashCode(node);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return format(

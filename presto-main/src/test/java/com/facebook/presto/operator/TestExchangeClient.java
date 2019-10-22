@@ -64,17 +64,19 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestExchangeClient
 {
-    private ScheduledExecutorService scheduler;
-    private ExecutorService pageBufferClientCallbackExecutor;
-    private ExecutorService testingHttpClientExecutor;
+    private static final Logger logger = LoggerFactory.getLogger(TestExchangeClient.class);
+	private static final PagesSerde PAGES_SERDE = testingPagesSerde();
+	private ScheduledExecutorService scheduler;
+	private ExecutorService pageBufferClientCallbackExecutor;
+	private ExecutorService testingHttpClientExecutor;
 
-    private static final PagesSerde PAGES_SERDE = testingPagesSerde();
-
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         scheduler = newScheduledThreadPool(4, daemonThreadsNamed("test-%s"));
@@ -82,7 +84,7 @@ public class TestExchangeClient
         testingHttpClientExecutor = newCachedThreadPool(daemonThreadsNamed("test-%s"));
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
     {
         if (scheduler != null) {
@@ -95,13 +97,14 @@ public class TestExchangeClient
             pageBufferClientCallbackExecutor = null;
         }
 
-        if (testingHttpClientExecutor != null) {
-            testingHttpClientExecutor.shutdownNow();
-            testingHttpClientExecutor = null;
-        }
+        if (testingHttpClientExecutor == null) {
+			return;
+		}
+		testingHttpClientExecutor.shutdownNow();
+		testingHttpClientExecutor = null;
     }
 
-    @Test
+	@Test
     public void testHappyPath()
     {
         DataSize maxResponseSize = new DataSize(10, MEGABYTE);
@@ -146,7 +149,7 @@ public class TestExchangeClient
         assertStatus(status.getPageBufferClientStatuses().get(0), location, "closed", 3, 3, 3, "not scheduled");
     }
 
-    @Test(timeOut = 10000)
+	@Test(timeOut = 10000)
     public void testAddLocation()
             throws Exception
     {
@@ -212,7 +215,7 @@ public class TestExchangeClient
         assertStatus(statuses.get(location2), location2, "closed", 3, 3, 3, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testBufferLimit()
     {
         DataSize maxResponseSize = new DataSize(1, BYTE);
@@ -297,7 +300,7 @@ public class TestExchangeClient
         assertStatus(exchangeClient.getStatus().getPageBufferClientStatuses().get(0), location, "closed", 3, 5, 5, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testClose()
             throws Exception
     {
@@ -341,7 +344,7 @@ public class TestExchangeClient
         assertStatus(clientStatus, location, "closed", "not scheduled");
     }
 
-    @Test
+	@Test
     public void testInitialRequestLimit()
     {
         DataSize maxResponseSize = new DataSize(DEFAULT_MAX_PAGE_SIZE_IN_BYTES, BYTE);
@@ -435,7 +438,7 @@ public class TestExchangeClient
         }
     }
 
-    @Test
+	@Test
     public void testRemoveRemoteSource()
             throws Exception
     {
@@ -514,25 +517,25 @@ public class TestExchangeClient
         assertStatus(clientStatus2, location2, "closed", "not scheduled");
     }
 
-    private static Page createPage(int size)
+	private static Page createPage(int size)
     {
         return new Page(BlockAssertions.createLongSequenceBlock(0, size));
     }
 
-    private static SerializedPage getNextPage(ExchangeClient exchangeClient)
+	private static SerializedPage getNextPage(ExchangeClient exchangeClient)
     {
         ListenableFuture<SerializedPage> futurePage = Futures.transform(exchangeClient.isBlocked(), ignored -> exchangeClient.pollPage(), directExecutor());
         return tryGetFutureValue(futurePage, 100, TimeUnit.SECONDS).orElse(null);
     }
 
-    private static void assertPageEquals(SerializedPage actualPage, Page expectedPage)
+	private static void assertPageEquals(SerializedPage actualPage, Page expectedPage)
     {
         assertNotNull(actualPage);
         assertEquals(actualPage.getPositionCount(), expectedPage.getPositionCount());
         assertEquals(PAGES_SERDE.deserialize(actualPage).getChannelCount(), expectedPage.getChannelCount());
     }
 
-    private static void assertStatus(
+	private static void assertStatus(
             PageBufferClientStatus clientStatus,
             URI location,
             String status,
@@ -543,7 +546,7 @@ public class TestExchangeClient
         assertEquals(clientStatus.getHttpRequestState(), httpRequestState, "httpRequestState");
     }
 
-    private static void assertStatus(
+	private static void assertStatus(
             PageBufferClientStatus clientStatus,
             URI location,
             String status,
@@ -560,7 +563,7 @@ public class TestExchangeClient
         assertEquals(clientStatus.getHttpRequestState(), httpRequestState, "httpRequestState");
     }
 
-    private <T> void waitUntilEquals(Supplier<T> actualSupplier, T expected, Duration timeout)
+	private <T> void waitUntilEquals(Supplier<T> actualSupplier, T expected, Duration timeout)
     {
         long nanoUntil = System.nanoTime() + timeout.toMillis() * 1_000_000;
         while (System.nanoTime() - nanoUntil < 0) {
@@ -571,6 +574,7 @@ public class TestExchangeClient
                 Thread.sleep(10);
             }
             catch (InterruptedException e) {
+				logger.error(e.getMessage(), e);
                 // do nothing
             }
         }

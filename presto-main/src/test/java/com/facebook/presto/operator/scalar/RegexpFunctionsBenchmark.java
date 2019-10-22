@@ -63,7 +63,23 @@ public class RegexpFunctionsBenchmark
         return Re2JRegexpFunctions.regexpLike(data.getSource(), data.getRe2JPattern());
     }
 
-    @State(Thread)
+    private static Re2JRegexp re2JRegexp(Slice pattern)
+    {
+        return new Re2JRegexp(Integer.MAX_VALUE, 5, pattern);
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(RegexpFunctionsBenchmark.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class DotStarAroundData
     {
         @Param({".*x.*", ".*(x|y).*", "longdotstar", "phone", "literal"})
@@ -105,7 +121,7 @@ public class RegexpFunctionsBenchmark
                     ThreadLocalRandom.current().ints(97, 123).limit(sourceLength).forEach(sliceOutput::appendByte);
                     break;
                 default:
-                    throw new IllegalArgumentException("pattern: " + patternString + " not supported");
+                    throw new IllegalArgumentException(new StringBuilder().append("pattern: ").append(patternString).append(" not supported").toString());
             }
 
             joniPattern = joniRegexp(pattern);
@@ -128,21 +144,5 @@ public class RegexpFunctionsBenchmark
         {
             return re2JPattern;
         }
-    }
-
-    private static Re2JRegexp re2JRegexp(Slice pattern)
-    {
-        return new Re2JRegexp(Integer.MAX_VALUE, 5, pattern);
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + RegexpFunctionsBenchmark.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

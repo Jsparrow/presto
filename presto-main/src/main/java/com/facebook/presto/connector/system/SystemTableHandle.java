@@ -75,7 +75,7 @@ public class SystemTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + schemaName + "." + tableName;
+        return new StringBuilder().append(connectorId).append(":").append(schemaName).append(".").append(tableName).toString();
     }
 
     @Override

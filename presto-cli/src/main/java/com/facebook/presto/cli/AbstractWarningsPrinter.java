@@ -67,30 +67,33 @@ abstract class AbstractWarningsPrinter
     private void printWithSeparators(List<String> warnings)
     {
         // Print warnings separated from previous and subsequent output
-        if (!warnings.isEmpty()) {
-            printSeparator();
-            print(warnings);
-            printSeparator();
-        }
+		if (warnings.isEmpty()) {
+			return;
+		}
+		printSeparator();
+		print(warnings);
+		printSeparator();
     }
 
     private void printWithInitialSeparator(List<String> warnings)
     {
         // Separate first warnings from previous output
-        if (!hasProcessedWarnings && !warnings.isEmpty()) {
-            printSeparator();
-            hasProcessedWarnings = true;
-            print(warnings);
-        }
+		if (!(!hasProcessedWarnings && !warnings.isEmpty())) {
+			return;
+		}
+		printSeparator();
+		hasProcessedWarnings = true;
+		print(warnings);
     }
 
     private void printWithTrailingSeparator(List<String> warnings)
     {
         // Print warnings and separate from subsequent output
-        if (!warnings.isEmpty()) {
-            print(warnings);
-            printSeparator();
-        }
+		if (warnings.isEmpty()) {
+			return;
+		}
+		print(warnings);
+		printSeparator();
     }
 
     @Override

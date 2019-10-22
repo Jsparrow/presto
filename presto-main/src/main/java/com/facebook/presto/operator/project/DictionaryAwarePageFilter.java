@@ -23,11 +23,15 @@ import java.util.Optional;
 
 import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DictionaryAwarePageFilter
         implements PageFilter
 {
-    private final PageFilter filter;
+    private static final Logger logger = LoggerFactory.getLogger(DictionaryAwarePageFilter.class);
+
+	private final PageFilter filter;
 
     private Block lastInputDictionary;
     private Optional<boolean[]> lastOutputDictionary;
@@ -104,7 +108,8 @@ public class DictionaryAwarePageFilter
                 lastOutputDictionary = Optional.of(toPositionsMask(selectedDictionaryPositions, dictionary.getPositionCount()));
             }
             catch (Exception ignored) {
-                // Processing of dictionary failed, but we ignore the exception here
+                logger.error(ignored.getMessage(), ignored);
+				// Processing of dictionary failed, but we ignore the exception here
                 // and force reprocessing of the whole block using the normal code.
                 // The second pass may not fail due to filtering.
                 // todo dictionary processing should be able to tolerate failures of unused elements

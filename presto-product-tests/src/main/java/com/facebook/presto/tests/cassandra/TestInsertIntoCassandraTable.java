@@ -71,27 +71,9 @@ public class TestInsertIntoCassandraTable
 
         // TODO Following types are not supported now. We need to change null into the value after fixing it
         // blob, frozen<set<type>>, inet, list<type>, map<type,type>, set<type>, timeuuid, decimal, uuid, varint
-        query("INSERT INTO " + tableNameInDatabase +
-                "(a, b, bl, bo, d, do, f, fr, i, integer, l, m, s, t, ti, tu, u, v, vari) VALUES (" +
-                "'ascii value', " +
-                "BIGINT '99999', " +
-                "null, " +
-                "true, " +
-                "null, " +
-                "123.456789, " +
-                "REAL '123.45678', " +
-                "null, " +
-                "null, " +
-                "123, " +
-                "null, " +
-                "null, " +
-                "null, " +
-                "'text value', " +
-                "timestamp '9999-12-31 23:59:59'," +
-                "null, " +
-                "null, " +
-                "'varchar value'," +
-                "null)");
+        query(new StringBuilder().append("INSERT INTO ").append(tableNameInDatabase).append("(a, b, bl, bo, d, do, f, fr, i, integer, l, m, s, t, ti, tu, u, v, vari) VALUES (").append("'ascii value', ").append("BIGINT '99999', ").append("null, ").append("true, ").append("null, ")
+				.append("123.456789, ").append("REAL '123.45678', ").append("null, ").append("null, ").append("123, ").append("null, ").append("null, ").append("null, ").append("'text value', ")
+				.append("timestamp '9999-12-31 23:59:59',").append("null, ").append("null, ").append("'varchar value',").append("null)").toString());
 
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).containsOnly(
                 row(
@@ -116,9 +98,7 @@ public class TestInsertIntoCassandraTable
                         null));
 
         // insert null for all datatypes
-        query("INSERT INTO " + tableNameInDatabase +
-                "(a, b, bl, bo, d, do, f, fr, i, integer, l, m, s, t, ti, tu, u, v, vari) VALUES (" +
-                "'key 1', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) ");
+        query(new StringBuilder().append("INSERT INTO ").append(tableNameInDatabase).append("(a, b, bl, bo, d, do, f, fr, i, integer, l, m, s, t, ti, tu, u, v, vari) VALUES (").append("'key 1', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) ").toString());
         assertThat(query(format("SELECT * FROM %s WHERE a = 'key 1'", tableNameInDatabase))).containsOnly(
                 row("key 1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
@@ -138,11 +118,7 @@ public class TestInsertIntoCassandraTable
     {
         TableName table = mutableTablesState().get(CASSANDRA_INSERT_TABLE).getTableName();
         onCasssandra(format("DROP MATERIALIZED VIEW IF EXISTS %s.%s", KEY_SPACE, CASSANDRA_MATERIALIZED_VIEW));
-        onCasssandra(format("CREATE MATERIALIZED VIEW %s.%s AS " +
-                        "SELECT * FROM %s " +
-                        "WHERE b IS NOT NULL " +
-                        "PRIMARY KEY (a, b) " +
-                        "WITH CLUSTERING ORDER BY (integer DESC)",
+        onCasssandra(format(new StringBuilder().append("CREATE MATERIALIZED VIEW %s.%s AS ").append("SELECT * FROM %s ").append("WHERE b IS NOT NULL ").append("PRIMARY KEY (a, b) ").append("WITH CLUSTERING ORDER BY (integer DESC)").toString(),
                 KEY_SPACE,
                 CASSANDRA_MATERIALIZED_VIEW,
                 table.getNameInDatabase()));

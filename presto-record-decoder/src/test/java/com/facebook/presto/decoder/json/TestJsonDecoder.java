@@ -146,20 +146,20 @@ public class TestJsonDecoder
         singleColumnDecoder(createUnboundedVarcharType(), null);
         singleColumnDecoder(createVarcharType(100), null);
 
-        for (String dataFormat : ImmutableSet.of("iso8601", "custom-date-time", "rfc2822")) {
+        ImmutableSet.of("iso8601", "custom-date-time", "rfc2822").forEach(dataFormat -> {
             singleColumnDecoder(DATE, dataFormat);
             singleColumnDecoder(TIME, dataFormat);
             singleColumnDecoder(TIME_WITH_TIME_ZONE, dataFormat);
             singleColumnDecoder(TIMESTAMP, dataFormat);
             singleColumnDecoder(TIMESTAMP_WITH_TIME_ZONE, dataFormat);
-        }
+        });
 
-        for (String dataFormat : ImmutableSet.of("seconds-since-epoch", "milliseconds-since-epoch")) {
+        ImmutableSet.of("seconds-since-epoch", "milliseconds-since-epoch").forEach(dataFormat -> {
             singleColumnDecoder(TIME, dataFormat);
             singleColumnDecoder(TIME_WITH_TIME_ZONE, dataFormat);
             singleColumnDecoder(TIMESTAMP, dataFormat);
             singleColumnDecoder(TIMESTAMP_WITH_TIME_ZONE, dataFormat);
-        }
+        });
 
         // some unsupported types
         assertUnsupportedColumnTypeException(() -> singleColumnDecoder(REAL, null));
@@ -174,7 +174,7 @@ public class TestJsonDecoder
         assertUnsupportedColumnTypeException(() -> singleColumnDecoder(TIMESTAMP_WITH_TIME_ZONE, null));
 
         // non temporal types are not supported by temporal field decoders
-        for (String dataFormat : ImmutableSet.of("iso8601", "custom-date-time", "seconds-since-epoch", "milliseconds-since-epoch", "rfc2822")) {
+		ImmutableSet.of("iso8601", "custom-date-time", "seconds-since-epoch", "milliseconds-since-epoch", "rfc2822").forEach(dataFormat -> {
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(BIGINT, dataFormat));
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(INTEGER, dataFormat));
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(SMALLINT, dataFormat));
@@ -183,12 +183,10 @@ public class TestJsonDecoder
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(DOUBLE, dataFormat));
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(createUnboundedVarcharType(), dataFormat));
             assertUnsupportedColumnTypeException(() -> singleColumnDecoder(createVarcharType(100), dataFormat));
-        }
+        });
 
         // date are not supported by seconds-since-epoch and milliseconds-since-epoch field decoders
-        for (String dataFormat : ImmutableSet.of("seconds-since-epoch", "milliseconds-since-epoch")) {
-            assertUnsupportedColumnTypeException(() -> singleColumnDecoder(DATE, dataFormat));
-        }
+		ImmutableSet.of("seconds-since-epoch", "milliseconds-since-epoch").forEach(dataFormat -> assertUnsupportedColumnTypeException(() -> singleColumnDecoder(DATE, dataFormat)));
     }
 
     private void assertUnsupportedColumnTypeException(ThrowingCallable callable)
@@ -201,11 +199,8 @@ public class TestJsonDecoder
     @Test
     public void testDataFormatValidation()
     {
-        for (Type type : asList(TIMESTAMP, DOUBLE)) {
-            assertThatThrownBy(() -> singleColumnDecoder(type, "wrong_format"))
-                    .isInstanceOf(PrestoException.class)
-                    .hasMessage("unknown data format 'wrong_format' used for column 'some_column'");
-        }
+        asList(TIMESTAMP, DOUBLE).forEach(type -> assertThatThrownBy(() -> singleColumnDecoder(type, "wrong_format")).isInstanceOf(PrestoException.class)
+				.hasMessage("unknown data format 'wrong_format' used for column 'some_column'"));
     }
 
     private void singleColumnDecoder(Type columnType, String dataFormat)

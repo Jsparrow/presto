@@ -141,46 +141,19 @@ public class TestingPrestoServer
     private final ShutdownAction shutdownAction;
     private final boolean coordinator;
 
-    public static class TestShutdownAction
-            implements ShutdownAction
-    {
-        private final CountDownLatch shutdownCalled = new CountDownLatch(1);
-
-        @GuardedBy("this")
-        private boolean isWorkerShutdown;
-
-        @Override
-        public synchronized void onShutdown()
-        {
-            isWorkerShutdown = true;
-            shutdownCalled.countDown();
-        }
-
-        public void waitForShutdownComplete(long millis)
-                throws InterruptedException
-        {
-            shutdownCalled.await(millis, MILLISECONDS);
-        }
-
-        public synchronized boolean isWorkerShutdown()
-        {
-            return isWorkerShutdown;
-        }
-    }
-
     public TestingPrestoServer()
             throws Exception
     {
         this(ImmutableList.of());
     }
 
-    public TestingPrestoServer(List<Module> additionalModules)
+	public TestingPrestoServer(List<Module> additionalModules)
             throws Exception
     {
         this(true, ImmutableMap.of(), null, null, new SqlParserOptions(), additionalModules);
     }
 
-    public TestingPrestoServer(
+	public TestingPrestoServer(
             boolean coordinator,
             Map<String, String> properties,
             String environment,
@@ -192,7 +165,7 @@ public class TestingPrestoServer
         this(coordinator, properties, environment, discoveryUri, parserOptions, additionalModules, Optional.empty());
     }
 
-    public TestingPrestoServer(
+	public TestingPrestoServer(
             boolean coordinator,
             Map<String, String> properties,
             String environment,
@@ -330,7 +303,7 @@ public class TestingPrestoServer
         refreshNodes();
     }
 
-    @Override
+	@Override
     public void close()
             throws IOException
     {
@@ -350,169 +323,169 @@ public class TestingPrestoServer
         }
     }
 
-    public void installPlugin(Plugin plugin)
+	public void installPlugin(Plugin plugin)
     {
         pluginManager.installPlugin(plugin);
     }
 
-    public QueryManager getQueryManager()
+	public QueryManager getQueryManager()
     {
         return queryManager;
     }
 
-    public Plan getQueryPlan(QueryId queryId)
+	public Plan getQueryPlan(QueryId queryId)
     {
         return queryManager.getQueryPlan(queryId);
     }
 
-    public void addFinalQueryInfoListener(QueryId queryId, StateChangeListener<QueryInfo> stateChangeListener)
+	public void addFinalQueryInfoListener(QueryId queryId, StateChangeListener<QueryInfo> stateChangeListener)
     {
         queryManager.addFinalQueryInfoListener(queryId, stateChangeListener);
     }
 
-    public ConnectorId createCatalog(String catalogName, String connectorName)
+	public ConnectorId createCatalog(String catalogName, String connectorName)
     {
         return createCatalog(catalogName, connectorName, ImmutableMap.of());
     }
 
-    public ConnectorId createCatalog(String catalogName, String connectorName, Map<String, String> properties)
+	public ConnectorId createCatalog(String catalogName, String connectorName, Map<String, String> properties)
     {
         ConnectorId connectorId = connectorManager.createConnection(catalogName, connectorName, properties);
         updateConnectorIdAnnouncement(announcer, connectorId, nodeManager);
         return connectorId;
     }
 
-    public Path getBaseDataDir()
+	public Path getBaseDataDir()
     {
         return baseDataDir;
     }
 
-    public URI getBaseUrl()
+	public URI getBaseUrl()
     {
         return server.getBaseUrl();
     }
 
-    public URI resolve(String path)
+	public URI resolve(String path)
     {
         return server.getBaseUrl().resolve(path);
     }
 
-    public HostAndPort getAddress()
+	public HostAndPort getAddress()
     {
         return HostAndPort.fromParts(getBaseUrl().getHost(), getBaseUrl().getPort());
     }
 
-    public HostAndPort getHttpsAddress()
+	public HostAndPort getHttpsAddress()
     {
         URI httpsUri = server.getHttpServerInfo().getHttpsUri();
         return HostAndPort.fromParts(httpsUri.getHost(), httpsUri.getPort());
     }
 
-    public CatalogManager getCatalogManager()
+	public CatalogManager getCatalogManager()
     {
         return catalogManager;
     }
 
-    public TransactionManager getTransactionManager()
+	public TransactionManager getTransactionManager()
     {
         return transactionManager;
     }
 
-    public Metadata getMetadata()
+	public Metadata getMetadata()
     {
         return metadata;
     }
 
-    public StatsCalculator getStatsCalculator()
+	public StatsCalculator getStatsCalculator()
     {
         checkState(coordinator, "not a coordinator");
         return statsCalculator;
     }
 
-    public TestingAccessControlManager getAccessControl()
+	public TestingAccessControlManager getAccessControl()
     {
         return accessControl;
     }
 
-    public ProcedureTester getProcedureTester()
+	public ProcedureTester getProcedureTester()
     {
         return procedureTester;
     }
 
-    public SplitManager getSplitManager()
+	public SplitManager getSplitManager()
     {
         return splitManager;
     }
 
-    public PageSourceManager getPageSourceManager()
+	public PageSourceManager getPageSourceManager()
     {
         return pageSourceManager;
     }
 
-    public Optional<InternalResourceGroupManager> getResourceGroupManager()
+	public Optional<InternalResourceGroupManager> getResourceGroupManager()
     {
         return resourceGroupManager;
     }
 
-    public NodePartitioningManager getNodePartitioningManager()
+	public NodePartitioningManager getNodePartitioningManager()
     {
         return nodePartitioningManager;
     }
 
-    public ConnectorPlanOptimizerManager getPlanOptimizerManager()
+	public ConnectorPlanOptimizerManager getPlanOptimizerManager()
     {
         return planOptimizerManager;
     }
 
-    public LocalMemoryManager getLocalMemoryManager()
+	public LocalMemoryManager getLocalMemoryManager()
     {
         return localMemoryManager;
     }
 
-    public ClusterMemoryManager getClusterMemoryManager()
+	public ClusterMemoryManager getClusterMemoryManager()
     {
         checkState(coordinator, "not a coordinator");
         return clusterMemoryManager;
     }
 
-    public GracefulShutdownHandler getGracefulShutdownHandler()
+	public GracefulShutdownHandler getGracefulShutdownHandler()
     {
         return gracefulShutdownHandler;
     }
 
-    public TaskManager getTaskManager()
+	public TaskManager getTaskManager()
     {
         return taskManager;
     }
 
-    public ShutdownAction getShutdownAction()
+	public ShutdownAction getShutdownAction()
     {
         return shutdownAction;
     }
 
-    public boolean isCoordinator()
+	public boolean isCoordinator()
     {
         return coordinator;
     }
 
-    public final AllNodes refreshNodes()
+	public final AllNodes refreshNodes()
     {
         serviceSelectorManager.forceRefresh();
         nodeManager.refreshNodes();
         return nodeManager.getAllNodes();
     }
 
-    public Set<InternalNode> getActiveNodesWithConnector(ConnectorId connectorId)
+	public Set<InternalNode> getActiveNodesWithConnector(ConnectorId connectorId)
     {
         return nodeManager.getActiveConnectorNodes(connectorId);
     }
 
-    public <T> T getInstance(Key<T> key)
+	public <T> T getInstance(Key<T> key)
     {
         return injector.getInstance(key);
     }
 
-    private static void updateConnectorIdAnnouncement(Announcer announcer, ConnectorId connectorId, InternalNodeManager nodeManager)
+	private static void updateConnectorIdAnnouncement(Announcer announcer, ConnectorId connectorId, InternalNodeManager nodeManager)
     {
         //
         // This code was copied from PrestoServer, and is a hack that should be removed when the connectorId property is removed
@@ -536,23 +509,50 @@ public class TestingPrestoServer
         nodeManager.refreshNodes();
     }
 
-    private static ServiceAnnouncement getPrestoAnnouncement(Set<ServiceAnnouncement> announcements)
+	private static ServiceAnnouncement getPrestoAnnouncement(Set<ServiceAnnouncement> announcements)
     {
         for (ServiceAnnouncement announcement : announcements) {
-            if (announcement.getType().equals("presto")) {
+            if ("presto".equals(announcement.getType())) {
                 return announcement;
             }
         }
         throw new RuntimeException("Presto announcement not found: " + announcements);
     }
 
-    private static Path tempDirectory()
+	private static Path tempDirectory()
     {
         try {
             return createTempDirectory("PrestoTest");
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+	public static class TestShutdownAction
+            implements ShutdownAction
+    {
+        private final CountDownLatch shutdownCalled = new CountDownLatch(1);
+
+        @GuardedBy("this")
+        private boolean isWorkerShutdown;
+
+        @Override
+        public synchronized void onShutdown()
+        {
+            isWorkerShutdown = true;
+            shutdownCalled.countDown();
+        }
+
+        public void waitForShutdownComplete(long millis)
+                throws InterruptedException
+        {
+            shutdownCalled.await(millis, MILLISECONDS);
+        }
+
+        public synchronized boolean isWorkerShutdown()
+        {
+            return isWorkerShutdown;
         }
     }
 }

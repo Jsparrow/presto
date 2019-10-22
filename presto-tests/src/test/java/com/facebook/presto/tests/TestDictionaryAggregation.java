@@ -43,10 +43,7 @@ public class TestDictionaryAggregation
     public void testMixedDistinctWithFilter()
     {
         assertQuery(
-                "SELECT " +
-                        "     count(DISTINCT x) FILTER (WHERE x > 0), " +
-                        "     sum(x) " +
-                        "FROM (VALUES 0, 1, 1, 2) t(x)",
+                new StringBuilder().append("SELECT ").append("     count(DISTINCT x) FILTER (WHERE x > 0), ").append("     sum(x) ").append("FROM (VALUES 0, 1, 1, 2) t(x)").toString(),
                 "VALUES (2, 4)");
 
         assertQuery(

@@ -46,10 +46,11 @@ public class SplitConcurrencyController
         checkArgument(currentConcurrency >= 0, "currentConcurrency is negative");
 
         threadNanosSinceLastAdjustment += nanos;
-        if (threadNanosSinceLastAdjustment >= adjustmentIntervalNanos && utilization < TARGET_UTILIZATION && currentConcurrency >= targetConcurrency) {
-            threadNanosSinceLastAdjustment = 0;
-            targetConcurrency++;
-        }
+        if (!(threadNanosSinceLastAdjustment >= adjustmentIntervalNanos && utilization < TARGET_UTILIZATION && currentConcurrency >= targetConcurrency)) {
+			return;
+		}
+		threadNanosSinceLastAdjustment = 0;
+		targetConcurrency++;
     }
 
     public int getTargetConcurrency()

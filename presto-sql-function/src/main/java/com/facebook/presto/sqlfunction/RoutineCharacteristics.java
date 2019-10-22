@@ -22,28 +22,11 @@ import static java.util.Objects.requireNonNull;
 
 public class RoutineCharacteristics
 {
-    public enum Language
-    {
-        SQL;
-    }
-
-    public enum Determinism
-    {
-        DETERMINISTIC,
-        NOT_DETERMINISTIC;
-    }
-
-    public enum NullCallClause
-    {
-        RETURNS_NULL_ON_NULL_INPUT,
-        CALLED_ON_NULL_INPUT;
-    }
-
     private final Language language;
-    private final Determinism determinism;
-    private final NullCallClause nullCallClause;
+	private final Determinism determinism;
+	private final NullCallClause nullCallClause;
 
-    public RoutineCharacteristics(
+	public RoutineCharacteristics(
             Language language,
             Determinism determinism,
             NullCallClause nullCallClause)
@@ -53,22 +36,22 @@ public class RoutineCharacteristics
         this.nullCallClause = requireNonNull(nullCallClause, "nullCallClause is null");
     }
 
-    public Language getLanguage()
+	public Language getLanguage()
     {
         return language;
     }
 
-    public boolean isDeterministic()
+	public boolean isDeterministic()
     {
         return determinism == DETERMINISTIC;
     }
 
-    public boolean isCalledOnNullInput()
+	public boolean isCalledOnNullInput()
     {
         return nullCallClause == CALLED_ON_NULL_INPUT;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -83,15 +66,32 @@ public class RoutineCharacteristics
                 && nullCallClause == that.nullCallClause;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(language, determinism, nullCallClause);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return format("(%s, %s, %s)", language, determinism, nullCallClause);
+    }
+
+	public enum Language
+    {
+        SQL;
+    }
+
+	public enum Determinism
+    {
+        DETERMINISTIC,
+        NOT_DETERMINISTIC;
+    }
+
+	public enum NullCallClause
+    {
+        RETURNS_NULL_ON_NULL_INPUT,
+        CALLED_ON_NULL_INPUT;
     }
 }

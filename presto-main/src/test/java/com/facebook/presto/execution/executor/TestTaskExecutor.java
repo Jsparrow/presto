@@ -42,10 +42,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTaskExecutor
 {
-    @Test(invocationCount = 100)
+    private static final Logger logger = LoggerFactory.getLogger(TestTaskExecutor.class);
+
+	@Test(invocationCount = 100)
     public void testTasksComplete()
             throws Exception
     {
@@ -284,6 +288,7 @@ public class TestTaskExecutor
                     globalPhaser.arriveAndDeregister();
                 }
                 catch (IllegalStateException e) {
+					logger.error(e.getMessage(), e);
                     // under high concurrency sometimes the deregister call can occur after completion
                     // this is not a real problem
                 }

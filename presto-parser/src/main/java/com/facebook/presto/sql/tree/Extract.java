@@ -30,7 +30,70 @@ public class Extract
     private final Expression expression;
     private final Field field;
 
-    public enum Field
+    public Extract(Expression expression, Field field)
+    {
+        this(Optional.empty(), expression, field);
+    }
+
+	public Extract(NodeLocation location, Expression expression, Field field)
+    {
+        this(Optional.of(location), expression, field);
+    }
+
+	private Extract(Optional<NodeLocation> location, Expression expression, Field field)
+    {
+        super(location);
+        requireNonNull(expression, "expression is null");
+        requireNonNull(field, "field is null");
+
+        this.expression = expression;
+        this.field = field;
+    }
+
+	public Expression getExpression()
+    {
+        return expression;
+    }
+
+	public Field getField()
+    {
+        return field;
+    }
+
+	@Override
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitExtract(this, context);
+    }
+
+	@Override
+    public List<Node> getChildren()
+    {
+        return ImmutableList.of(expression);
+    }
+
+	@Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Extract that = (Extract) o;
+        return Objects.equals(expression, that.expression) &&
+                (field == that.field);
+    }
+
+	@Override
+    public int hashCode()
+    {
+        return Objects.hash(expression, field);
+    }
+
+	public enum Field
     {
         YEAR,
         QUARTER,
@@ -49,68 +112,5 @@ public class Extract
         SECOND,
         TIMEZONE_MINUTE,
         TIMEZONE_HOUR
-    }
-
-    public Extract(Expression expression, Field field)
-    {
-        this(Optional.empty(), expression, field);
-    }
-
-    public Extract(NodeLocation location, Expression expression, Field field)
-    {
-        this(Optional.of(location), expression, field);
-    }
-
-    private Extract(Optional<NodeLocation> location, Expression expression, Field field)
-    {
-        super(location);
-        requireNonNull(expression, "expression is null");
-        requireNonNull(field, "field is null");
-
-        this.expression = expression;
-        this.field = field;
-    }
-
-    public Expression getExpression()
-    {
-        return expression;
-    }
-
-    public Field getField()
-    {
-        return field;
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitExtract(this, context);
-    }
-
-    @Override
-    public List<Node> getChildren()
-    {
-        return ImmutableList.of(expression);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        Extract that = (Extract) o;
-        return Objects.equals(expression, that.expression) &&
-                (field == that.field);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(expression, field);
     }
 }

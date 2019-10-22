@@ -33,27 +33,19 @@ public class SecurityConfig
 
     private List<AuthenticationType> authenticationTypes = ImmutableList.of();
 
-    public enum AuthenticationType
-    {
-        CERTIFICATE,
-        KERBEROS,
-        PASSWORD,
-        JWT
-    }
-
     @NotNull
     public List<AuthenticationType> getAuthenticationTypes()
     {
         return authenticationTypes;
     }
 
-    public SecurityConfig setAuthenticationTypes(List<AuthenticationType> authenticationTypes)
+	public SecurityConfig setAuthenticationTypes(List<AuthenticationType> authenticationTypes)
     {
         this.authenticationTypes = ImmutableList.copyOf(authenticationTypes);
         return this;
     }
 
-    @Config("http-server.authentication.type")
+	@Config("http-server.authentication.type")
     @ConfigDescription("Authentication types (supported types: CERTIFICATE, KERBEROS, PASSWORD, JWT)")
     public SecurityConfig setAuthenticationTypes(String types)
     {
@@ -66,5 +58,13 @@ public class SecurityConfig
                 .map(AuthenticationType::valueOf)
                 .collect(toImmutableList());
         return this;
+    }
+
+	public enum AuthenticationType
+    {
+        CERTIFICATE,
+        KERBEROS,
+        PASSWORD,
+        JWT
     }
 }

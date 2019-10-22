@@ -59,7 +59,7 @@ public class CassandraTable
     public String getTokenExpression()
     {
         StringBuilder sb = new StringBuilder();
-        for (CassandraColumnHandle column : getPartitionKeyColumns()) {
+        getPartitionKeyColumns().forEach(column -> {
             if (sb.length() == 0) {
                 sb.append("token(");
             }
@@ -67,7 +67,7 @@ public class CassandraTable
                 sb.append(",");
             }
             sb.append(CassandraCqlUtils.validColumnName(column.getName()));
-        }
+        });
         sb.append(")");
         return sb.toString();
     }

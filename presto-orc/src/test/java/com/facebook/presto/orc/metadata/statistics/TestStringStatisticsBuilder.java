@@ -94,9 +94,7 @@ public class TestStringStatisticsBuilder
     public void testSum()
     {
         StringStatisticsBuilder stringStatisticsBuilder = new StringStatisticsBuilder(Integer.MAX_VALUE);
-        for (Slice value : ImmutableList.of(EMPTY_SLICE, LOW_BOTTOM_VALUE, LOW_TOP_VALUE)) {
-            stringStatisticsBuilder.addValue(value);
-        }
+        ImmutableList.of(EMPTY_SLICE, LOW_BOTTOM_VALUE, LOW_TOP_VALUE).forEach(stringStatisticsBuilder::addValue);
         assertStringStatistics(stringStatisticsBuilder.buildColumnStatistics(), 3, EMPTY_SLICE.length() + LOW_BOTTOM_VALUE.length() + LOW_TOP_VALUE.length());
     }
 
@@ -269,9 +267,7 @@ public class TestStringStatisticsBuilder
     {
         checkArgument(values != null && values.size() > 0);
         StringStatisticsBuilder builder = new StringStatisticsBuilder(limit);
-        for (Slice value : values) {
-            builder.addValue(value);
-        }
+        values.forEach(builder::addValue);
         assertMinMax(builder.buildColumnStatistics().getStringStatistics(), expectedMin, expectedMax);
     }
 

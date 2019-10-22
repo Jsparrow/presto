@@ -135,12 +135,12 @@ public class LocalFileMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix)) {
+        listTables(session, prefix).forEach(tableName -> {
             LocalFileTableHandle tableHandle = localFileTables.getTable(tableName);
             if (tableHandle != null) {
                 columns.put(tableName, localFileTables.getColumns(tableHandle));
             }
-        }
+        });
         return columns.build();
     }
 

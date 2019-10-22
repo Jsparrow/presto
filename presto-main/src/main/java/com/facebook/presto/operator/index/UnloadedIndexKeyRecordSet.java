@@ -71,7 +71,7 @@ public class UnloadedIndexKeyRecordSet
 
         ImmutableList.Builder<PageAndPositions> builder = ImmutableList.builder();
         GroupByHash groupByHash = createGroupByHash(session, distinctChannelTypes, normalizedDistinctChannels, Optional.empty(), 10_000, joinCompiler);
-        for (UpdateRequest request : requests) {
+        requests.forEach(request -> {
             Page page = request.getPage();
 
             Block[] distinctBlocks = new Block[distinctChannels.length];
@@ -90,24 +90,23 @@ public class UnloadedIndexKeyRecordSet
             checkArgument(groupIds.getGroupCount() <= Integer.MAX_VALUE);
             IntList positions = new IntArrayList((int) groupIds.getGroupCount());
             for (int position = 0; position < positionCount; position++) {
-                // We are reading ahead in the cursors, so we need to filter any nulls since they can not join
-                if (!containsNullValue(position, page)) {
-                    // Only include the key if it is not already in the index
-                    if (existingSnapshot.getJoinPosition(position, page) == UNLOADED_INDEX_KEY) {
-                        // Only add the position if we have not seen this tuple before (based on the distinct channels)
-                        long groupId = groupIds.getGroupId(position);
-                        if (nextDistinctId < groupId) {
-                            nextDistinctId = groupId;
-                            positions.add(position);
-                        }
-                    }
-                }
+                boolean condition = !containsNullValue(position, page) && existingSnapshot.getJoinPosition(position, page) == UNLOADED_INDEX_KEY;
+				// Only include the key if it is not already in the index
+				// We are reading ahead in the cursors, so we need to filter any nulls since they can not join
+                if (condition) {
+				    // Only add the position if we have not seen this tuple before (based on the distinct channels)
+				    long groupId = groupIds.getGroupId(position);
+				    if (nextDistinctId < groupId) {
+				        nextDistinctId = groupId;
+				        positions.add(position);
+				    }
+				}
             }
 
             if (!positions.isEmpty()) {
                 builder.add(new PageAndPositions(request, positions));
             }
-        }
+        });
 
         pageAndPositions = builder.build();
     }

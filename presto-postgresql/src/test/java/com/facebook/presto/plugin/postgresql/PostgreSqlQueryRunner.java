@@ -36,19 +36,19 @@ import static com.facebook.presto.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 
 public final class PostgreSqlQueryRunner
 {
-    private PostgreSqlQueryRunner()
+    private static final String TPCH_SCHEMA = "tpch";
+
+	private PostgreSqlQueryRunner()
     {
     }
 
-    private static final String TPCH_SCHEMA = "tpch";
-
-    public static QueryRunner createPostgreSqlQueryRunner(TestingPostgreSqlServer server, TpchTable<?>... tables)
+	public static QueryRunner createPostgreSqlQueryRunner(TestingPostgreSqlServer server, TpchTable<?>... tables)
             throws Exception
     {
         return createPostgreSqlQueryRunner(server, ImmutableMap.of(), ImmutableList.copyOf(tables));
     }
 
-    public static QueryRunner createPostgreSqlQueryRunner(TestingPostgreSqlServer server, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
+	public static QueryRunner createPostgreSqlQueryRunner(TestingPostgreSqlServer server, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -77,7 +77,7 @@ public final class PostgreSqlQueryRunner
         }
     }
 
-    private static void createSchema(String url, String schema)
+	private static void createSchema(String url, String schema)
             throws SQLException
     {
         try (Connection connection = DriverManager.getConnection(url);
@@ -86,7 +86,7 @@ public final class PostgreSqlQueryRunner
         }
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder()
                 .setCatalog("postgresql")

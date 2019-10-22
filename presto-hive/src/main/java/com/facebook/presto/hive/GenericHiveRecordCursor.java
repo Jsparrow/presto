@@ -80,11 +80,14 @@ import static java.lang.Float.floatToRawIntBits;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class GenericHiveRecordCursor<K, V extends Writable>
         implements RecordCursor
 {
-    private final Path path;
+    private static final Logger logger = LoggerFactory.getLogger(GenericHiveRecordCursor.class);
+	private final Path path;
     private final RecordReader<K, V> recordReader;
     private final K key;
     private final V value;
@@ -193,6 +196,7 @@ class GenericHiveRecordCursor<K, V extends Writable>
             completedBytes = min(totalBytes, max(completedBytes, newCompletedBytes));
         }
         catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 

@@ -58,11 +58,11 @@ public class PruneWindowColumns
                         .forEach(referencedInputs::add));
         windowNode.getHashVariable().ifPresent(referencedInputs::add);
 
-        for (WindowNode.Function windowFunction : referencedFunctions.values()) {
+        referencedFunctions.values().forEach(windowFunction -> {
             referencedInputs.addAll(WindowNodeUtil.extractWindowFunctionUniqueVariables(windowFunction, variableAllocator.getTypes()));
             windowFunction.getFrame().getStartValue().ifPresent(referencedInputs::add);
             windowFunction.getFrame().getEndValue().ifPresent(referencedInputs::add);
-        }
+        });
 
         PlanNode prunedWindowNode = new WindowNode(
                 windowNode.getId(),

@@ -89,33 +89,6 @@ public class Driver
 
     private final AtomicReference<SettableFuture<?>> driverBlockedFuture = new AtomicReference<>();
 
-    private enum State
-    {
-        ALIVE, NEED_DESTRUCTION, DESTROYED
-    }
-
-    public static Driver createDriver(DriverContext driverContext, List<Operator> operators)
-    {
-        requireNonNull(driverContext, "driverContext is null");
-        requireNonNull(operators, "operators is null");
-        Driver driver = new Driver(driverContext, operators);
-        driver.initialize();
-        return driver;
-    }
-
-    @VisibleForTesting
-    public static Driver createDriver(DriverContext driverContext, Operator firstOperator, Operator... otherOperators)
-    {
-        requireNonNull(driverContext, "driverContext is null");
-        requireNonNull(firstOperator, "firstOperator is null");
-        requireNonNull(otherOperators, "otherOperators is null");
-        ImmutableList<Operator> operators = ImmutableList.<Operator>builder()
-                .add(firstOperator)
-                .add(otherOperators)
-                .build();
-        return createDriver(driverContext, operators);
-    }
-
     private Driver(DriverContext driverContext, List<Operator> operators)
     {
         this.driverContext = requireNonNull(driverContext, "driverContext is null");
@@ -146,7 +119,29 @@ public class Driver
         driverBlockedFuture.set(future);
     }
 
-    // the memory revocation request listeners are added here in a separate initialize() method
+	public static Driver createDriver(DriverContext driverContext, List<Operator> operators)
+    {
+        requireNonNull(driverContext, "driverContext is null");
+        requireNonNull(operators, "operators is null");
+        Driver driver = new Driver(driverContext, operators);
+        driver.initialize();
+        return driver;
+    }
+
+	@VisibleForTesting
+    public static Driver createDriver(DriverContext driverContext, Operator firstOperator, Operator... otherOperators)
+    {
+        requireNonNull(driverContext, "driverContext is null");
+        requireNonNull(firstOperator, "firstOperator is null");
+        requireNonNull(otherOperators, "otherOperators is null");
+        ImmutableList<Operator> operators = ImmutableList.<Operator>builder()
+                .add(firstOperator)
+                .add(otherOperators)
+                .build();
+        return createDriver(driverContext, operators);
+    }
+
+	// the memory revocation request listeners are added here in a separate initialize() method
     // instead of the constructor to prevent leaking the "this" reference to
     // another thread, which will cause unsafe publication of this instance.
     private void initialize()
@@ -156,17 +151,17 @@ public class Driver
                 .forEach(operatorContext -> operatorContext.setMemoryRevocationRequestListener(() -> driverBlockedFuture.get().set(null)));
     }
 
-    public DriverContext getDriverContext()
+	public DriverContext getDriverContext()
     {
         return driverContext;
     }
 
-    public Optional<PlanNodeId> getSourceId()
+	public Optional<PlanNodeId> getSourceId()
     {
         return sourceOperator.map(SourceOperator::getSourceId);
     }
 
-    @Override
+	@Override
     public void close()
     {
         // mark the service for destruction
@@ -180,7 +175,7 @@ public class Driver
         tryWithLock(() -> TRUE);
     }
 
-    public boolean isFinished()
+	public boolean isFinished()
     {
         checkLockNotHeld("Can not check finished status while holding the driver lock");
 
@@ -189,7 +184,7 @@ public class Driver
         return result.orElseGet(() -> state.get() != State.ALIVE || driverContext.isDone());
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private boolean isFinishedInternal()
     {
         checkLockHeld("Lock must be held to call isFinishedInternal");
@@ -201,7 +196,7 @@ public class Driver
         return finished;
     }
 
-    public void updateSource(TaskSource sourceUpdate)
+	public void updateSource(TaskSource sourceUpdate)
     {
         checkLockNotHeld("Can not update sources while holding the driver lock");
         checkArgument(
@@ -216,7 +211,7 @@ public class Driver
         tryWithLock(() -> TRUE);
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private void processNewSources()
     {
         checkLockHeld("Lock must be held to call processNewSources");
@@ -244,12 +239,10 @@ public class Driver
 
         // add new splits
         SourceOperator sourceOperator = this.sourceOperator.orElseThrow(VerifyException::new);
-        for (ScheduledSplit newSplit : newSplits) {
-            Split split = newSplit.getSplit();
-
-            Supplier<Optional<UpdatablePageSource>> pageSource = sourceOperator.addSplit(split);
-            deleteOperator.ifPresent(deleteOperator -> deleteOperator.setPageSource(pageSource));
-        }
+        newSplits.stream().map(ScheduledSplit::getSplit).forEach(split -> {
+			Supplier<Optional<UpdatablePageSource>> pageSource = sourceOperator.addSplit(split);
+			deleteOperator.ifPresent(deleteOperator -> deleteOperator.setPageSource(pageSource));
+		});
 
         // set no more splits
         if (newSource.isNoMoreSplits()) {
@@ -259,7 +252,7 @@ public class Driver
         currentTaskSource = newSource;
     }
 
-    public ListenableFuture<?> processFor(Duration duration)
+	public ListenableFuture<?> processFor(Duration duration)
     {
         checkLockNotHeld("Can not process for a duration while holding the driver lock");
 
@@ -296,7 +289,7 @@ public class Driver
         return result.orElse(NOT_BLOCKED);
     }
 
-    public ListenableFuture<?> process()
+	public ListenableFuture<?> process()
     {
         checkLockNotHeld("Can not process while holding the driver lock");
 
@@ -313,14 +306,14 @@ public class Driver
         return result.orElse(NOT_BLOCKED);
     }
 
-    private OperationTimer createTimer()
+	private OperationTimer createTimer()
     {
         return new OperationTimer(
                 driverContext.isCpuTimerEnabled(),
                 driverContext.isCpuTimerEnabled() && driverContext.isPerOperatorCpuTimerEnabled());
     }
 
-    private ListenableFuture<?> updateDriverBlockedFuture(ListenableFuture<?> sourceBlockedFuture)
+	private ListenableFuture<?> updateDriverBlockedFuture(ListenableFuture<?> sourceBlockedFuture)
     {
         // driverBlockedFuture will be completed as soon as the sourceBlockedFuture is completed
         // or any of the operators gets a memory revocation request
@@ -343,7 +336,7 @@ public class Driver
         return newDriverBlockedFuture;
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private ListenableFuture<?> processInternal(OperationTimer operationTimer)
     {
         checkLockHeld("Lock must be held to call processInternal");
@@ -423,13 +416,13 @@ public class Driver
             if (!movedPage) {
                 List<Operator> blockedOperators = new ArrayList<>();
                 List<ListenableFuture<?>> blockedFutures = new ArrayList<>();
-                for (Operator operator : activeOperators) {
+                activeOperators.forEach(operator -> {
                     Optional<ListenableFuture<?>> blocked = getBlockedFuture(operator);
-                    if (blocked.isPresent()) {
+                    blocked.ifPresent(value -> {
                         blockedOperators.add(operator);
-                        blockedFutures.add(blocked.get());
-                    }
-                }
+                        blockedFutures.add(value);
+                    });
+                });
 
                 if (!blockedFutures.isEmpty()) {
                     // unblock when the first future is complete
@@ -437,10 +430,8 @@ public class Driver
                     // driver records serial blocked time
                     driverContext.recordBlocked(blocked);
                     // each blocked operator is responsible for blocking the execution
-                    // until one of the operators can continue
-                    for (Operator operator : blockedOperators) {
-                        operator.getOperatorContext().recordBlocked(blocked);
-                    }
+					// until one of the operators can continue
+					blockedOperators.forEach(operator -> operator.getOperatorContext().recordBlocked(blocked));
                     return blocked;
                 }
             }
@@ -465,7 +456,7 @@ public class Driver
         }
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private void handleMemoryRevoke()
     {
         for (int i = 0; i < activeOperators.size() && !driverContext.isDone(); i++) {
@@ -482,19 +473,20 @@ public class Driver
         }
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private void checkOperatorFinishedRevoking(Operator operator)
     {
         ListenableFuture<?> future = revokingOperators.get(operator);
-        if (future.isDone()) {
-            getFutureValue(future); // propagate exception if there was some
-            revokingOperators.remove(operator);
-            operator.finishMemoryRevoke();
-            operator.getOperatorContext().resetMemoryRevokingRequested();
-        }
+        if (!future.isDone()) {
+			return;
+		}
+		getFutureValue(future); // propagate exception if there was some
+		revokingOperators.remove(operator);
+		operator.finishMemoryRevoke();
+		operator.getOperatorContext().resetMemoryRevokingRequested();
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private void destroyIfNecessary()
     {
         checkLockHeld("Lock must be held to call destroyIfNecessary");
@@ -527,14 +519,15 @@ public class Driver
                     driverContext.getTaskId());
         }
 
-        if (inFlightException != null) {
-            // this will always be an Error or Runtime
-            throwIfUnchecked(inFlightException);
-            throw new RuntimeException(inFlightException);
-        }
+        if (inFlightException == null) {
+			return;
+		}
+		// this will always be an Error or Runtime
+		throwIfUnchecked(inFlightException);
+		throw new RuntimeException(inFlightException);
     }
 
-    private Throwable closeAndDestroyOperators(List<Operator> operators)
+	private Throwable closeAndDestroyOperators(List<Operator> operators)
     {
         // record the current interrupted status (and clear the flag); we'll reset it later
         boolean wasInterrupted = Thread.interrupted();
@@ -579,7 +572,7 @@ public class Driver
         return inFlightException;
     }
 
-    private Optional<ListenableFuture<?>> getBlockedFuture(Operator operator)
+	private Optional<ListenableFuture<?>> getBlockedFuture(Operator operator)
     {
         ListenableFuture<?> blocked = revokingOperators.get(operator);
         if (blocked != null) {
@@ -601,7 +594,7 @@ public class Driver
         return Optional.empty();
     }
 
-    private static Throwable addSuppressedException(Throwable inFlightException, Throwable newException, String message, Object... args)
+	private static Throwable addSuppressedException(Throwable inFlightException, Throwable newException, String message, Object... args)
     {
         if (newException instanceof Error) {
             if (inFlightException == null) {
@@ -621,18 +614,18 @@ public class Driver
         return inFlightException;
     }
 
-    private synchronized void checkLockNotHeld(String message)
+	private synchronized void checkLockNotHeld(String message)
     {
         checkState(!exclusiveLock.isHeldByCurrentThread(), message);
     }
 
-    @GuardedBy("exclusiveLock")
+	@GuardedBy("exclusiveLock")
     private synchronized void checkLockHeld(String message)
     {
         checkState(exclusiveLock.isHeldByCurrentThread(), message);
     }
 
-    private static ListenableFuture<?> firstFinishedFuture(List<ListenableFuture<?>> futures)
+	private static ListenableFuture<?> firstFinishedFuture(List<ListenableFuture<?>> futures)
     {
         if (futures.size() == 1) {
             return futures.get(0);
@@ -647,13 +640,13 @@ public class Driver
         return result;
     }
 
-    // Note: task can not return null
+	// Note: task can not return null
     private <T> Optional<T> tryWithLock(Supplier<T> task)
     {
         return tryWithLock(0, TimeUnit.MILLISECONDS, task);
     }
 
-    // Note: task can not return null
+	// Note: task can not return null
     private <T> Optional<T> tryWithLock(long timeout, TimeUnit unit, Supplier<T> task)
     {
         checkLockNotHeld("Lock can not be reacquired");
@@ -711,7 +704,12 @@ public class Driver
         return result;
     }
 
-    private static class DriverLock
+	private enum State
+    {
+        ALIVE, NEED_DESTRUCTION, DESTROYED
+    }
+
+	private static class DriverLock
     {
         private final ReentrantLock lock = new ReentrantLock();
 

@@ -38,19 +38,6 @@ public abstract class SqlAggregationFunction
     private final Signature signature;
     private final boolean hidden;
 
-    public static List<SqlAggregationFunction> createFunctionByAnnotations(Class<?> aggregationDefinition)
-    {
-        return ImmutableList.of(AggregationFromAnnotationsParser.parseFunctionDefinition(aggregationDefinition));
-    }
-
-    public static List<SqlAggregationFunction> createFunctionsByAnnotations(Class<?> aggregationDefinition)
-    {
-        return AggregationFromAnnotationsParser.parseFunctionDefinitions(aggregationDefinition)
-                .stream()
-                .map(x -> (SqlAggregationFunction) x)
-                .collect(toImmutableList());
-    }
-
     protected SqlAggregationFunction(
             String name,
             List<TypeVariableConstraint> typeVariableConstraints,
@@ -61,7 +48,7 @@ public abstract class SqlAggregationFunction
         this(name, typeVariableConstraints, longVariableConstraints, returnType, argumentTypes, AGGREGATE);
     }
 
-    protected SqlAggregationFunction(
+	protected SqlAggregationFunction(
             String name,
             List<TypeVariableConstraint> typeVariableConstraints,
             List<LongVariableConstraint> longVariableConstraints,
@@ -72,13 +59,26 @@ public abstract class SqlAggregationFunction
         this(createSignature(name, typeVariableConstraints, longVariableConstraints, returnType, argumentTypes, kind), false);
     }
 
-    protected SqlAggregationFunction(Signature signature, boolean hidden)
+	protected SqlAggregationFunction(Signature signature, boolean hidden)
     {
         this.signature = requireNonNull(signature, "signature is null");
         this.hidden = hidden;
     }
 
-    private static Signature createSignature(
+	public static List<SqlAggregationFunction> createFunctionByAnnotations(Class<?> aggregationDefinition)
+    {
+        return ImmutableList.of(AggregationFromAnnotationsParser.parseFunctionDefinition(aggregationDefinition));
+    }
+
+	public static List<SqlAggregationFunction> createFunctionsByAnnotations(Class<?> aggregationDefinition)
+    {
+        return AggregationFromAnnotationsParser.parseFunctionDefinitions(aggregationDefinition)
+                .stream()
+                .map(x -> (SqlAggregationFunction) x)
+                .collect(toImmutableList());
+    }
+
+	private static Signature createSignature(
             String name,
             List<TypeVariableConstraint> typeVariableConstraints,
             List<LongVariableConstraint> longVariableConstraints,
@@ -102,23 +102,23 @@ public abstract class SqlAggregationFunction
                 false);
     }
 
-    @Override
+	@Override
     public final Signature getSignature()
     {
         return signature;
     }
 
-    @Override
+	@Override
     public boolean isHidden()
     {
         return hidden;
     }
 
-    @Override
+	@Override
     public boolean isDeterministic()
     {
         return true;
     }
 
-    public abstract InternalAggregationFunction specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager);
+	public abstract InternalAggregationFunction specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager);
 }

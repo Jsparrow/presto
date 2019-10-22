@@ -123,28 +123,30 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static Slice unscaledDecimal()
+    private UnscaledDecimal128Arithmetic() {}
+
+	public static Slice unscaledDecimal()
     {
         return Slices.allocate(UNSCALED_DECIMAL_128_SLICE_LENGTH);
     }
 
-    public static Slice unscaledDecimal(Slice decimal)
+	public static Slice unscaledDecimal(Slice decimal)
     {
         return Slices.copyOf(decimal);
     }
 
-    public static Slice unscaledDecimal(String unscaledValue)
+	public static Slice unscaledDecimal(String unscaledValue)
     {
         return unscaledDecimal(new BigInteger(unscaledValue));
     }
 
-    public static Slice unscaledDecimal(BigInteger unscaledValue)
+	public static Slice unscaledDecimal(BigInteger unscaledValue)
     {
         Slice decimal = Slices.allocate(UNSCALED_DECIMAL_128_SLICE_LENGTH);
         return pack(unscaledValue, decimal);
     }
 
-    public static Slice pack(BigInteger unscaledValue, Slice result)
+	public static Slice pack(BigInteger unscaledValue, Slice result)
     {
         pack(0, 0, false, result);
         byte[] bytes = unscaledValue.abs().toByteArray();
@@ -167,7 +169,7 @@ public final class UnscaledDecimal128Arithmetic
         return result;
     }
 
-    public static Slice unscaledDecimal(long unscaledValue)
+	public static Slice unscaledDecimal(long unscaledValue)
     {
         long[] longs = new long[NUMBER_OF_LONGS];
         if (unscaledValue < 0) {
@@ -180,7 +182,7 @@ public final class UnscaledDecimal128Arithmetic
         return Slices.wrappedLongArray(longs);
     }
 
-    public static BigInteger unscaledDecimalToBigInteger(Slice decimal)
+	public static BigInteger unscaledDecimalToBigInteger(Slice decimal)
     {
         byte[] bytes = decimal.getBytes(0, UNSCALED_DECIMAL_128_SLICE_LENGTH);
         // convert to big-endian order
@@ -189,7 +191,7 @@ public final class UnscaledDecimal128Arithmetic
         return new BigInteger(isNegative(decimal) ? -1 : 1, bytes);
     }
 
-    public static long unscaledDecimalToUnscaledLong(Slice decimal)
+	public static long unscaledDecimalToUnscaledLong(Slice decimal)
     {
         long low = getLong(decimal, 0);
         long high = getLong(decimal, 1);
@@ -202,13 +204,13 @@ public final class UnscaledDecimal128Arithmetic
         return negative ? -low : low;
     }
 
-    public static long unscaledDecimalToUnscaledLongUnsafe(Slice decimal)
+	public static long unscaledDecimalToUnscaledLongUnsafe(Slice decimal)
     {
         long low = getLong(decimal, 0);
         return isNegative(decimal) ? -low : low;
     }
 
-    public static Slice rescale(Slice decimal, int rescaleFactor)
+	public static Slice rescale(Slice decimal, int rescaleFactor)
     {
         if (rescaleFactor == 0) {
             return decimal;
@@ -220,7 +222,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static void rescale(Slice decimal, int rescaleFactor, Slice result)
+	public static void rescale(Slice decimal, int rescaleFactor, Slice result)
     {
         if (rescaleFactor == 0) {
             copyUnscaledDecimal(decimal, result);
@@ -236,7 +238,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static Slice rescaleTruncate(Slice decimal, int rescaleFactor)
+	public static Slice rescaleTruncate(Slice decimal, int rescaleFactor)
     {
         if (rescaleFactor == 0) {
             return decimal;
@@ -248,7 +250,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static void rescaleTruncate(Slice decimal, int rescaleFactor, Slice result)
+	public static void rescaleTruncate(Slice decimal, int rescaleFactor, Slice result)
     {
         if (rescaleFactor == 0) {
             copyUnscaledDecimal(decimal, result);
@@ -264,7 +266,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    private static void scaleDownTruncate(Slice decimal, int scaleFactor, Slice result)
+	private static void scaleDownTruncate(Slice decimal, int scaleFactor, Slice result)
     {
         // optimized path for smaller values
         long low = getLong(decimal, 0);
@@ -288,14 +290,14 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static Slice add(Slice left, Slice right)
+	public static Slice add(Slice left, Slice right)
     {
         Slice result = unscaledDecimal();
         add(left, right, result);
         return result;
     }
 
-    public static void add(Slice left, Slice right, Slice result)
+	public static void add(Slice left, Slice right, Slice result)
     {
         long overflow = addWithOverflow(left, right, result);
         if (overflow != 0) {
@@ -303,7 +305,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * Instead of throwing overflow exception, this function returns:
      * 0 when there was no overflow
      * +1 when there was overflow
@@ -336,14 +338,14 @@ public final class UnscaledDecimal128Arithmetic
         return overflow;
     }
 
-    public static Slice subtract(Slice left, Slice right)
+	public static Slice subtract(Slice left, Slice right)
     {
         Slice result = unscaledDecimal();
         subtract(left, right, result);
         return result;
     }
 
-    public static void subtract(Slice left, Slice right, Slice result)
+	public static void subtract(Slice left, Slice right, Slice result)
     {
         if (isNegative(left) != isNegative(right)) {
             // only one is negative
@@ -365,7 +367,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * This method ignores signs of the left and right. Returns overflow value.
      */
     private static long addUnsignedReturnOverflow(Slice left, Slice right, Slice result, boolean resultNegative)
@@ -403,7 +405,7 @@ public final class UnscaledDecimal128Arithmetic
         return intermediateResult >> 31;
     }
 
-    /**
+	/**
      * This method ignores signs of the left and right and assumes that left is greater then right
      */
     private static void subtractUnsigned(Slice left, Slice right, Slice result, boolean resultNegative)
@@ -443,14 +445,14 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static Slice multiply(Slice left, Slice right)
+	public static Slice multiply(Slice left, Slice right)
     {
         Slice result = unscaledDecimal();
         multiply(left, right, result);
         return result;
     }
 
-    public static void multiply(Slice left, Slice right, Slice result)
+	public static void multiply(Slice left, Slice right, Slice result)
     {
         checkArgument(result.length() == NUMBER_OF_LONGS * Long.BYTES);
 
@@ -531,7 +533,7 @@ public final class UnscaledDecimal128Arithmetic
         pack(result, (int) z0, (int) z1, (int) z2, (int) z3, isNegative(left) != isNegative(right));
     }
 
-    public static void multiply256(Slice left, Slice right, Slice result)
+	public static void multiply256(Slice left, Slice right, Slice result)
     {
         checkArgument(result.length() >= NUMBER_OF_LONGS * Long.BYTES * 2);
 
@@ -624,14 +626,14 @@ public final class UnscaledDecimal128Arithmetic
         setRawInt(result, 7, (int) z7);
     }
 
-    public static Slice multiply(Slice decimal, int multiplier)
+	public static Slice multiply(Slice decimal, int multiplier)
     {
         Slice result = Slices.copyOf(decimal);
         multiplyDestructive(result, multiplier);
         return result;
     }
 
-    private static void multiplyDestructive(Slice decimal, int multiplier)
+	private static void multiplyDestructive(Slice decimal, int multiplier)
     {
         long l0 = getInt(decimal, 0) & LONG_MASK;
         long l1 = getInt(decimal, 1) & LONG_MASK;
@@ -662,7 +664,7 @@ public final class UnscaledDecimal128Arithmetic
         pack(decimal, z0, z1, z2, z3, negative);
     }
 
-    public static int compare(Slice left, Slice right)
+	public static int compare(Slice left, Slice right)
     {
         boolean leftStrictlyNegative = isStrictlyNegative(left);
         boolean rightStrictlyNegative = isStrictlyNegative(right);
@@ -675,7 +677,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static int compare(long leftRawLow, long leftRawHigh, long rightRawLow, long rightRawHigh)
+	public static int compare(long leftRawLow, long leftRawHigh, long rightRawLow, long rightRawHigh)
     {
         boolean leftStrictlyNegative = isStrictlyNegative(leftRawLow, leftRawHigh);
         boolean rightStrictlyNegative = isStrictlyNegative(rightRawLow, rightRawHigh);
@@ -690,7 +692,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    public static int compareAbsolute(Slice left, Slice right)
+	public static int compareAbsolute(Slice left, Slice right)
     {
         long leftHigh = getLong(left, 1);
         long rightHigh = getLong(right, 1);
@@ -707,7 +709,7 @@ public final class UnscaledDecimal128Arithmetic
         return 0;
     }
 
-    public static int compareUnsigned(long leftRawLow, long leftRawHigh, long rightRawLow, long rightRawHigh)
+	public static int compareUnsigned(long leftRawLow, long leftRawHigh, long rightRawLow, long rightRawHigh)
     {
         if (leftRawHigh != rightRawHigh) {
             return Long.compareUnsigned(leftRawHigh, rightRawHigh);
@@ -718,7 +720,7 @@ public final class UnscaledDecimal128Arithmetic
         return 0;
     }
 
-    public static void incrementUnsafe(Slice decimal)
+	public static void incrementUnsafe(Slice decimal)
     {
         long low = getLong(decimal, 0);
         if (low != ALL_BITS_SET_64) {
@@ -730,47 +732,47 @@ public final class UnscaledDecimal128Arithmetic
         setNegativeLong(decimal, high + 1, isNegative(decimal));
     }
 
-    public static void negate(Slice decimal)
+	public static void negate(Slice decimal)
     {
         setNegative(decimal, !isNegative(decimal));
     }
 
-    public static boolean isStrictlyNegative(Slice decimal)
+	public static boolean isStrictlyNegative(Slice decimal)
     {
         return isNegative(decimal) && (getLong(decimal, 0) != 0 || getLong(decimal, 1) != 0);
     }
 
-    public static boolean isStrictlyNegative(long rawLow, long rawHigh)
+	public static boolean isStrictlyNegative(long rawLow, long rawHigh)
     {
         return isNegative(rawLow, rawHigh) && (rawLow != 0 || unpackUnsignedLong(rawHigh) != 0);
     }
 
-    public static boolean isNegative(Slice decimal)
+	public static boolean isNegative(Slice decimal)
     {
         return (getRawInt(decimal, SIGN_INT_INDEX) & SIGN_INT_MASK) != 0;
     }
 
-    public static boolean isNegative(long rawLow, long rawHigh)
+	public static boolean isNegative(long rawLow, long rawHigh)
     {
         return (rawHigh & SIGN_LONG_MASK) != 0;
     }
 
-    public static boolean isZero(Slice decimal)
+	public static boolean isZero(Slice decimal)
     {
         return getLong(decimal, 0) == 0 && getLong(decimal, 1) == 0;
     }
 
-    public static long hash(Slice decimal)
+	public static long hash(Slice decimal)
     {
         return hash(getRawLong(decimal, 0), getRawLong(decimal, 1));
     }
 
-    public static long hash(long rawLow, long rawHigh)
+	public static long hash(long rawLow, long rawHigh)
     {
         return XxHash64.hash(rawLow) ^ XxHash64.hash(unpackUnsignedLong(rawHigh));
     }
 
-    public static String toUnscaledString(Slice decimal)
+	public static String toUnscaledString(Slice decimal)
     {
         if (isZero(decimal)) {
             return "0";
@@ -793,7 +795,7 @@ public final class UnscaledDecimal128Arithmetic
         return new String(buffer, index, buffer.length - index);
     }
 
-    public static boolean overflows(Slice value, int precision)
+	public static boolean overflows(Slice value, int precision)
     {
         if (precision == MAX_PRECISION) {
             return exceedsOrEqualTenToThirtyEight(value);
@@ -801,21 +803,21 @@ public final class UnscaledDecimal128Arithmetic
         return precision < MAX_PRECISION && compareAbsolute(value, POWERS_OF_TEN[precision]) >= 0;
     }
 
-    public static void throwIfOverflows(Slice decimal)
+	public static void throwIfOverflows(Slice decimal)
     {
         if (exceedsOrEqualTenToThirtyEight(decimal)) {
             throwOverflowException();
         }
     }
 
-    public static void throwIfOverflows(Slice value, int precision)
+	public static void throwIfOverflows(Slice value, int precision)
     {
         if (overflows(value, precision)) {
             throwOverflowException();
         }
     }
 
-    private static void scaleDownRoundUp(Slice decimal, int scaleFactor, Slice result)
+	private static void scaleDownRoundUp(Slice decimal, int scaleFactor, Slice result)
     {
         // optimized path for smaller values
         long low = getLong(decimal, 0);
@@ -842,7 +844,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * Scale down the value for 5**fiveScale (result := decimal / 5**fiveScale).
      */
     private static void scaleDownFive(Slice decimal, int fiveScale, Slice result)
@@ -861,7 +863,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * Scale up the value for 5**fiveScale (decimal := decimal * 5**fiveScale).
      */
     private static void scaleUpFiveDestructive(Slice decimal, int fiveScale)
@@ -874,7 +876,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * Scale down the value for 10**tenScale (this := this / 5**tenScale). This
      * method rounds-up, eg 44/10=4, 44/10=5.
      */
@@ -896,7 +898,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    private static void scaleDownTenTruncate(Slice decimal, int tenScale, Slice result)
+	private static void scaleDownTenTruncate(Slice decimal, int tenScale, Slice result)
     {
         do {
             int powerTen = Math.min(tenScale, MAX_POWER_OF_TEN_INT);
@@ -909,17 +911,17 @@ public final class UnscaledDecimal128Arithmetic
         while (tenScale > 0);
     }
 
-    private static void shiftRightRoundUp(Slice decimal, int rightShifts, Slice result)
+	private static void shiftRightRoundUp(Slice decimal, int rightShifts, Slice result)
     {
         shiftRight(decimal, rightShifts, true, result);
     }
 
-    private static void shiftRightTruncate(Slice decimal, int rightShifts, Slice result)
+	private static void shiftRightTruncate(Slice decimal, int rightShifts, Slice result)
     {
         shiftRight(decimal, rightShifts, false, result);
     }
 
-    // visible for testing
+	// visible for testing
     static void shiftRight(Slice decimal, int rightShifts, boolean roundUp, Slice result)
     {
         if (rightShifts == 0) {
@@ -978,7 +980,7 @@ public final class UnscaledDecimal128Arithmetic
         pack(result, low, high, negative);
     }
 
-    /**
+	/**
      * shift right array of 8 ints (rounding up) and ensure that result fits in unscaledDecimal
      */
     public static void shiftRightArray8(int[] values, int rightShifts, Slice result)
@@ -1056,35 +1058,35 @@ public final class UnscaledDecimal128Arithmetic
         pack(result, r0, r1, r2, r3, false);
     }
 
-    public static Slice divideRoundUp(long dividend, int dividendScaleFactor, long divisor)
+	public static Slice divideRoundUp(long dividend, int dividendScaleFactor, long divisor)
     {
         return divideRoundUp(
                 Math.abs(dividend), dividend < 0 ? SIGN_LONG_MASK : 0, dividendScaleFactor,
                 Math.abs(divisor), divisor < 0 ? SIGN_LONG_MASK : 0);
     }
 
-    public static Slice divideRoundUp(long dividend, int dividendScaleFactor, Slice divisor)
+	public static Slice divideRoundUp(long dividend, int dividendScaleFactor, Slice divisor)
     {
         return divideRoundUp(
                 Math.abs(dividend), dividend < 0 ? SIGN_LONG_MASK : 0, dividendScaleFactor,
                 getRawLong(divisor, 0), getRawLong(divisor, 1));
     }
 
-    public static Slice divideRoundUp(Slice dividend, int dividendScaleFactor, long divisor)
+	public static Slice divideRoundUp(Slice dividend, int dividendScaleFactor, long divisor)
     {
         return divideRoundUp(
                 getRawLong(dividend, 0), getRawLong(dividend, 1), dividendScaleFactor,
                 Math.abs(divisor), divisor < 0 ? SIGN_LONG_MASK : 0);
     }
 
-    public static Slice divideRoundUp(Slice dividend, int dividendScaleFactor, Slice divisor)
+	public static Slice divideRoundUp(Slice dividend, int dividendScaleFactor, Slice divisor)
     {
         return divideRoundUp(
                 getRawLong(dividend, 0), getRawLong(dividend, 1), dividendScaleFactor,
                 getRawLong(divisor, 0), getRawLong(divisor, 1));
     }
 
-    private static Slice divideRoundUp(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh)
+	private static Slice divideRoundUp(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh)
     {
         Slice quotient = unscaledDecimal();
         Slice remainder = unscaledDecimal();
@@ -1109,7 +1111,7 @@ public final class UnscaledDecimal128Arithmetic
         return quotient;
     }
 
-    // visible for testing
+	// visible for testing
     static Slice shiftLeft(Slice decimal, int leftShifts)
     {
         Slice result = Slices.copyOf(decimal);
@@ -1117,7 +1119,7 @@ public final class UnscaledDecimal128Arithmetic
         return result;
     }
 
-    // visible for testing
+	// visible for testing
     static void shiftLeftDestructive(Slice decimal, int leftShifts)
     {
         if (leftShifts == 0) {
@@ -1128,17 +1130,15 @@ public final class UnscaledDecimal128Arithmetic
         int bitShiftsInWord = leftShifts % 64;
         int shiftRestore = 64 - bitShiftsInWord;
 
-        // check overflow
-        if (bitShiftsInWord != 0) {
-            if ((getLong(decimal, 1 - wordShifts) & (-1L << shiftRestore)) != 0) {
-                throwOverflowException();
-            }
-        }
-        if (wordShifts == 1) {
-            if (getLong(decimal, 1) != 0) {
-                throwOverflowException();
-            }
-        }
+        boolean condition = bitShiftsInWord != 0 && (getLong(decimal, 1 - wordShifts) & (-1L << shiftRestore)) != 0;
+		// check overflow
+        if (condition) {
+		    throwOverflowException();
+		}
+        boolean condition1 = wordShifts == 1 && getLong(decimal, 1) != 0;
+		if (condition1) {
+		    throwOverflowException();
+		}
 
         // Store negative before settings values to result.
         boolean negative = isNegative(decimal);
@@ -1167,35 +1167,35 @@ public final class UnscaledDecimal128Arithmetic
         pack(decimal, low, high, negative);
     }
 
-    public static Slice remainder(long dividend, int dividendScaleFactor, long divisor, int divisorScaleFactor)
+	public static Slice remainder(long dividend, int dividendScaleFactor, long divisor, int divisorScaleFactor)
     {
         return remainder(
                 Math.abs(dividend), dividend < 0 ? SIGN_LONG_MASK : 0, dividendScaleFactor,
                 Math.abs(divisor), divisor < 0 ? SIGN_LONG_MASK : 0, divisorScaleFactor);
     }
 
-    public static Slice remainder(long dividend, int dividendScaleFactor, Slice divisor, int divisorScaleFactor)
+	public static Slice remainder(long dividend, int dividendScaleFactor, Slice divisor, int divisorScaleFactor)
     {
         return remainder(
                 Math.abs(dividend), dividend < 0 ? SIGN_LONG_MASK : 0, dividendScaleFactor,
                 getRawLong(divisor, 0), getRawLong(divisor, 1), divisorScaleFactor);
     }
 
-    public static Slice remainder(Slice dividend, int dividendScaleFactor, long divisor, int divisorScaleFactor)
+	public static Slice remainder(Slice dividend, int dividendScaleFactor, long divisor, int divisorScaleFactor)
     {
         return remainder(
                 getRawLong(dividend, 0), getRawLong(dividend, 1), dividendScaleFactor,
                 Math.abs(divisor), divisor < 0 ? SIGN_LONG_MASK : 0, divisorScaleFactor);
     }
 
-    public static Slice remainder(Slice dividend, int dividendScaleFactor, Slice divisor, int divisorScaleFactor)
+	public static Slice remainder(Slice dividend, int dividendScaleFactor, Slice divisor, int divisorScaleFactor)
     {
         return remainder(
                 getRawLong(dividend, 0), getRawLong(dividend, 1), dividendScaleFactor,
                 getRawLong(divisor, 0), getRawLong(divisor, 1), divisorScaleFactor);
     }
 
-    private static Slice remainder(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh, int divisorScaleFactor)
+	private static Slice remainder(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh, int divisorScaleFactor)
     {
         Slice quotient = unscaledDecimal();
         Slice remainder = unscaledDecimal();
@@ -1203,13 +1203,13 @@ public final class UnscaledDecimal128Arithmetic
         return remainder;
     }
 
-    // visible for testing
+	// visible for testing
     static void divide(Slice dividend, int dividendScaleFactor, Slice divisor, int divisorScaleFactor, Slice quotient, Slice remainder)
     {
         divide(getRawLong(dividend, 0), getRawLong(dividend, 1), dividendScaleFactor, getRawLong(divisor, 0), getRawLong(divisor, 1), divisorScaleFactor, quotient, remainder);
     }
 
-    private static void divide(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh, int divisorScaleFactor, Slice quotient, Slice remainder)
+	private static void divide(long dividendLow, long dividendHigh, int dividendScaleFactor, long divisorLow, long divisorHigh, int divisorScaleFactor, Slice quotient, Slice remainder)
     {
         if (compare(divisorLow, divisorHigh, 0, 0) == 0) {
             throwDivisionByZeroException();
@@ -1263,7 +1263,7 @@ public final class UnscaledDecimal128Arithmetic
         throwIfOverflows(remainder);
     }
 
-    /**
+	/**
      * Divides mutableDividend / mutable divisor
      * Places quotient in first argument and reminder in first argument
      */
@@ -1302,7 +1302,7 @@ public final class UnscaledDecimal128Arithmetic
         shiftRightMultiPrecision(dividend, normalizedDividendLength, nlz);
     }
 
-    private static void divideKnuthNormalized(int[] remainder, int dividendLength, int[] divisor, int divisorLength, int[] quotient)
+	private static void divideKnuthNormalized(int[] remainder, int dividendLength, int[] divisor, int divisorLength, int[] quotient)
     {
         int v1 = divisor[divisorLength - 1];
         int v0 = divisor[divisorLength - 2];
@@ -1320,7 +1320,7 @@ public final class UnscaledDecimal128Arithmetic
         }
     }
 
-    /**
+	/**
      * Use the Knuth notation
      * <p>
      * u{x} - dividend
@@ -1371,7 +1371,7 @@ public final class UnscaledDecimal128Arithmetic
         return (int) qhat;
     }
 
-    /**
+	/**
      * See Hacker's Delight, Section 9.3
      */
     private static long divideUnsignedLong(long dividend, long divisor)
@@ -1392,7 +1392,7 @@ public final class UnscaledDecimal128Arithmetic
         return quotient;
     }
 
-    /**
+	/**
      * Calculate multi-precision [left - right * multiplier] with given left offset and length.
      * Return true when overflow occurred
      */
@@ -1414,7 +1414,7 @@ public final class UnscaledDecimal128Arithmetic
         return highInt(subtractAccumulator) == 0;
     }
 
-    private static void addUnsignedMultiPrecision(int[] left, int leftOffset, int[] right, int length)
+	private static void addUnsignedMultiPrecision(int[] left, int leftOffset, int[] right, int length)
     {
         int leftIndex = leftOffset - length;
         int carry = 0;
@@ -1426,7 +1426,7 @@ public final class UnscaledDecimal128Arithmetic
         left[leftIndex] += carry;
     }
 
-    // visible for testing
+	// visible for testing
     static int[] shiftLeftMultiPrecision(int[] number, int length, int shifts)
     {
         if (shifts == 0) {
@@ -1455,7 +1455,7 @@ public final class UnscaledDecimal128Arithmetic
         return number;
     }
 
-    // visible for testing
+	// visible for testing
     static int[] shiftRightMultiPrecision(int[] number, int length, int shifts)
     {
         if (shifts == 0) {
@@ -1484,7 +1484,7 @@ public final class UnscaledDecimal128Arithmetic
         return number;
     }
 
-    private static int divideUnsignedMultiPrecision(int[] dividend, int dividendLength, int divisor)
+	private static int divideUnsignedMultiPrecision(int[] dividend, int dividendLength, int divisor)
     {
         if (divisor == 0) {
             throwDivisionByZeroException();
@@ -1505,12 +1505,12 @@ public final class UnscaledDecimal128Arithmetic
             remainder = (remainder << 32) + (dividend[dividendIndex] & LONG_MASK);
             long quotient = divideUnsignedLong(remainder, divisorUnsigned);
             dividend[dividendIndex] = (int) quotient;
-            remainder = remainder - (quotient * divisorUnsigned);
+            remainder -= (quotient * divisorUnsigned);
         }
         return (int) remainder;
     }
 
-    private static int digitsInIntegerBase(int[] digits)
+	private static int digitsInIntegerBase(int[] digits)
     {
         int length = digits.length;
         while (length > 0 && digits[length - 1] == 0) {
@@ -1519,22 +1519,22 @@ public final class UnscaledDecimal128Arithmetic
         return length;
     }
 
-    private static long combineInts(int high, int low)
+	private static long combineInts(int high, int low)
     {
         return ((high & LONG_MASK) << 32L) | (low & LONG_MASK);
     }
 
-    private static int highInt(long val)
+	private static int highInt(long val)
     {
         return (int) (val >>> 32);
     }
 
-    private static int lowInt(long val)
+	private static int lowInt(long val)
     {
         return (int) val;
     }
 
-    private static void packUnsigned(int[] digits, Slice decimal)
+	private static void packUnsigned(int[] digits, Slice decimal)
     {
         if (digitsInIntegerBase(digits) > NUMBER_OF_INTS) {
             throwOverflowException();
@@ -1545,13 +1545,13 @@ public final class UnscaledDecimal128Arithmetic
         pack(decimal, digits[0], digits[1], digits[2], digits[3], false);
     }
 
-    private static boolean divideCheckRound(Slice decimal, int divisor, Slice result)
+	private static boolean divideCheckRound(Slice decimal, int divisor, Slice result)
     {
         int remainder = divide(decimal, divisor, result);
         return (remainder >= (divisor >> 1));
     }
 
-    // visible for testing
+	// visible for testing
     static int divide(Slice decimal, int divisor, Slice result)
     {
         if (divisor == 0) {
@@ -1574,12 +1574,12 @@ public final class UnscaledDecimal128Arithmetic
         return (int) (remainder % divisor);
     }
 
-    private static void throwDivisionByZeroException()
+	private static void throwDivisionByZeroException()
     {
         throw new ArithmeticException("Division by zero");
     }
 
-    private static void multiplyShiftDestructive(Slice decimal, Slice multiplier, int rightShifts)
+	private static void multiplyShiftDestructive(Slice decimal, Slice multiplier, int rightShifts)
     {
         int[] product = new int[NUMBER_OF_INTS * 2];
         Slice multiplicationResult = Slices.wrappedIntArray(product);
@@ -1587,12 +1587,12 @@ public final class UnscaledDecimal128Arithmetic
         shiftRightArray8(product, rightShifts, decimal);
     }
 
-    private static void setNegative(Slice decimal, boolean negative)
+	private static void setNegative(Slice decimal, boolean negative)
     {
         setRawInt(decimal, SIGN_INT_INDEX, getInt(decimal, SIGN_INT_INDEX) | (negative ? SIGN_INT_MASK : 0));
     }
 
-    private static void setNegativeInt(Slice decimal, int v3, boolean negative)
+	private static void setNegativeInt(Slice decimal, int v3, boolean negative)
     {
         if (v3 < 0) {
             throwOverflowException();
@@ -1600,18 +1600,18 @@ public final class UnscaledDecimal128Arithmetic
         setRawInt(decimal, SIGN_INT_INDEX, v3 | (negative ? SIGN_INT_MASK : 0));
     }
 
-    private static void setNegativeLong(Slice decimal, long high, boolean negative)
+	private static void setNegativeLong(Slice decimal, long high, boolean negative)
     {
         setRawLong(decimal, SIGN_LONG_INDEX, high | (negative ? SIGN_LONG_MASK : 0));
     }
 
-    private static void copyUnscaledDecimal(Slice from, Slice to)
+	private static void copyUnscaledDecimal(Slice from, Slice to)
     {
         setRawLong(to, 0, getRawLong(from, 0));
         setRawLong(to, 1, getRawLong(from, 1));
     }
 
-    private static void pack(Slice decimal, int v0, int v1, int v2, int v3, boolean negative)
+	private static void pack(Slice decimal, int v0, int v1, int v2, int v3, boolean negative)
     {
         setRawInt(decimal, 0, v0);
         setRawInt(decimal, 1, v1);
@@ -1619,38 +1619,38 @@ public final class UnscaledDecimal128Arithmetic
         setNegativeInt(decimal, v3, negative);
     }
 
-    private static void pack(Slice decimal, int v0, int v1, long high, boolean negative)
+	private static void pack(Slice decimal, int v0, int v1, long high, boolean negative)
     {
         setRawInt(decimal, 0, v0);
         setRawInt(decimal, 1, v1);
         setNegativeLong(decimal, high, negative);
     }
 
-    private static void pack(Slice decimal, long low, long high, boolean negative)
+	private static void pack(Slice decimal, long low, long high, boolean negative)
     {
         setRawLong(decimal, 0, low);
         setNegativeLong(decimal, high, negative);
     }
 
-    public static Slice pack(long low, long high, boolean negative)
+	public static Slice pack(long low, long high, boolean negative)
     {
         Slice decimal = unscaledDecimal();
         pack(low, high, negative, decimal);
         return decimal;
     }
 
-    public static void pack(long low, long high, boolean negative, Slice result)
+	public static void pack(long low, long high, boolean negative, Slice result)
     {
         setRawLong(result, 0, low);
         setRawLong(result, 1, high | (negative ? SIGN_LONG_MASK : 0));
     }
 
-    public static void throwOverflowException()
+	public static void throwOverflowException()
     {
         throw new ArithmeticException("Decimal overflow");
     }
 
-    public static int getInt(Slice decimal, int index)
+	public static int getInt(Slice decimal, int index)
     {
         int value = getRawInt(decimal, index);
         if (index == SIGN_INT_INDEX) {
@@ -1659,7 +1659,7 @@ public final class UnscaledDecimal128Arithmetic
         return value;
     }
 
-    public static long getLong(Slice decimal, int index)
+	public static long getLong(Slice decimal, int index)
     {
         long value = getRawLong(decimal, index);
         if (index == SIGN_LONG_INDEX) {
@@ -1668,7 +1668,7 @@ public final class UnscaledDecimal128Arithmetic
         return value;
     }
 
-    private static boolean exceedsOrEqualTenToThirtyEight(Slice decimal)
+	private static boolean exceedsOrEqualTenToThirtyEight(Slice decimal)
     {
         // 10**38=
         // i0 = 0(0), i1 = 160047680(98a22400), i2 = 1518781562(5a86c47a), i3 = 1262177448(4b3b4ca8)
@@ -1685,7 +1685,7 @@ public final class UnscaledDecimal128Arithmetic
         return low < 0 || low >= 0x098a224000000000L;
     }
 
-    private static byte[] reverse(final byte[] a)
+	private static byte[] reverse(final byte[] a)
     {
         final int length = a.length;
         for (int i = length / 2; i-- != 0; ) {
@@ -1696,51 +1696,49 @@ public final class UnscaledDecimal128Arithmetic
         return a;
     }
 
-    private static void setToZero(Slice decimal)
+	private static void setToZero(Slice decimal)
     {
         for (int i = 0; i < NUMBER_OF_LONGS; i++) {
             setRawLong(decimal, i, 0);
         }
     }
 
-    private static long unpackUnsignedLong(long value)
+	private static long unpackUnsignedLong(long value)
     {
         return value & ~SIGN_LONG_MASK;
     }
 
-    private static int getRawInt(Slice decimal, int index)
+	private static int getRawInt(Slice decimal, int index)
     {
         return unsafe.getInt(decimal.getBase(), decimal.getAddress() + SIZE_OF_INT * index);
     }
 
-    private static void setRawInt(Slice decimal, int index, int value)
+	private static void setRawInt(Slice decimal, int index, int value)
     {
         unsafe.putInt(decimal.getBase(), decimal.getAddress() + SIZE_OF_INT * index, value);
     }
 
-    private static long getRawLong(Slice decimal, int index)
+	private static long getRawLong(Slice decimal, int index)
     {
         return unsafe.getLong(decimal.getBase(), decimal.getAddress() + SIZE_OF_LONG * index);
     }
 
-    private static void setRawLong(Slice decimal, int index, long value)
+	private static void setRawLong(Slice decimal, int index, long value)
     {
         unsafe.putLong(decimal.getBase(), decimal.getAddress() + SIZE_OF_LONG * index, value);
     }
 
-    private static void checkArgument(boolean condition)
+	private static void checkArgument(boolean condition)
     {
         if (!condition) {
             throw new IllegalArgumentException();
         }
     }
 
-    private static void checkState(boolean condition)
+	private static void checkState(boolean condition)
     {
         if (!condition) {
             throw new IllegalStateException();
         }
     }
-
-    private UnscaledDecimal128Arithmetic() {}
 }

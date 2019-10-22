@@ -58,11 +58,14 @@ import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test
 public abstract class AbstractTestBlock
 {
-    private static final TypeManager TYPE_MANAGER = new TypeRegistry();
+    private static final Logger logger = LoggerFactory.getLogger(AbstractTestBlock.class);
+	private static final TypeManager TYPE_MANAGER = new TypeRegistry();
     private static final BlockEncodingSerde BLOCK_ENCODING_SERDE = new BlockEncodingManager(TYPE_MANAGER);
 
     static {
@@ -92,12 +95,14 @@ public abstract class AbstractTestBlock
             fail("expected IllegalArgumentException");
         }
         catch (IllegalArgumentException expected) {
+			logger.error(expected.getMessage(), expected);
         }
         try {
             block.isNull(block.getPositionCount());
             fail("expected IllegalArgumentException");
         }
         catch (IllegalArgumentException expected) {
+			logger.error(expected.getMessage(), expected);
         }
     }
 
@@ -611,10 +616,11 @@ public abstract class AbstractTestBlock
     protected static void testCopyRegionCompactness(Block block)
     {
         assertCompact(block.copyRegion(0, block.getPositionCount()));
-        if (block.getPositionCount() > 0) {
-            assertCompact(block.copyRegion(0, block.getPositionCount() - 1));
-            assertCompact(block.copyRegion(1, block.getPositionCount() - 1));
-        }
+        if (block.getPositionCount() <= 0) {
+			return;
+		}
+		assertCompact(block.copyRegion(0, block.getPositionCount() - 1));
+		assertCompact(block.copyRegion(1, block.getPositionCount() - 1));
     }
 
     protected static void assertCompact(Block block)

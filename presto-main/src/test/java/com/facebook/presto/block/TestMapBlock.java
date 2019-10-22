@@ -237,10 +237,10 @@ public class TestMapBlock
                 offsets[i + 1] = offsets[i];
             }
             else {
-                for (Map.Entry<String, Long> entry : map.entrySet()) {
+                map.entrySet().forEach(entry -> {
                     keys.add(entry.getKey());
                     values.add(entry.getValue());
-                }
+                });
                 offsets[i + 1] = offsets[i] + map.size();
             }
         }
@@ -254,7 +254,7 @@ public class TestMapBlock
         }
         else {
             BlockBuilder elementBlockBuilder = mapBlockBuilder.beginBlockEntry();
-            for (Map.Entry<String, Long> entry : map.entrySet()) {
+            map.entrySet().forEach(entry -> {
                 VARCHAR.writeSlice(elementBlockBuilder, utf8Slice(entry.getKey()));
                 if (entry.getValue() == null) {
                     elementBlockBuilder.appendNull();
@@ -262,7 +262,7 @@ public class TestMapBlock
                 else {
                     BIGINT.writeLong(elementBlockBuilder, entry.getValue());
                 }
-            }
+            });
             mapBlockBuilder.closeEntry();
         }
     }
@@ -299,7 +299,7 @@ public class TestMapBlock
         assertEquals(elementBlock.getPositionCount(), map.size() * 2);
 
         // Test new/hash-index access: assert inserted keys
-        for (Map.Entry<String, Long> entry : map.entrySet()) {
+		map.entrySet().forEach(entry -> {
             int pos = elementBlock.seekKey(utf8Slice(entry.getKey()));
             assertNotEquals(pos, -1);
             if (entry.getValue() == null) {
@@ -309,7 +309,7 @@ public class TestMapBlock
                 assertFalse(elementBlock.isNull(pos));
                 assertEquals(BIGINT.getLong(elementBlock, pos), (long) entry.getValue());
             }
-        }
+        });
         // Test new/hash-index access: assert non-existent keys
         for (int i = 0; i < 10; i++) {
             assertEquals(elementBlock.seekKey(utf8Slice("not-inserted-" + i)), -1);
@@ -342,7 +342,7 @@ public class TestMapBlock
         assertEquals(elementBlock.getPositionCount(), map.size() * 2);
 
         // Test new/hash-index access: assert inserted keys
-        for (Map.Entry<String, Long> entry : map.entrySet()) {
+		map.entrySet().forEach(entry -> {
             int pos = elementBlock.seekKey(utf8Slice(entry.getKey()));
             assertNotEquals(pos, -1);
             if (entry.getValue() == null) {
@@ -352,7 +352,7 @@ public class TestMapBlock
                 assertFalse(elementBlock.isNullUnchecked(pos + elementBlock.getOffsetBase()));
                 assertEquals(BIGINT.getLongUnchecked(elementBlock, pos + elementBlock.getOffsetBase()), (long) entry.getValue());
             }
-        }
+        });
         // Test new/hash-index access: assert non-existent keys
         for (int i = 0; i < 10; i++) {
             assertEquals(elementBlock.seekKey(utf8Slice("not-inserted-" + i)), -1);

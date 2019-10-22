@@ -114,9 +114,10 @@ public class TestBooleanStatisticsBuilder
 
     private void assertBooleanStatistics(ColumnStatistics columnStatistics, int expectedNumberOfValues, int trueValueCount)
     {
-        if (expectedNumberOfValues > 0) {
-            assertColumnStatistics(columnStatistics, expectedNumberOfValues, null, null);
-            assertEquals(columnStatistics.getBooleanStatistics().getTrueValueCount(), trueValueCount);
-        }
+        if (expectedNumberOfValues <= 0) {
+			return;
+		}
+		assertColumnStatistics(columnStatistics, expectedNumberOfValues, null, null);
+		assertEquals(columnStatistics.getBooleanStatistics().getTrueValueCount(), trueValueCount);
     }
 }

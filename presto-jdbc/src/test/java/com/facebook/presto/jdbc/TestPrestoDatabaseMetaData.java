@@ -83,7 +83,7 @@ public class TestPrestoDatabaseMetaData
         DatabaseMetaData metaData = connection.getMetaData();
 
         Set<String> queries = captureQueries(() -> {
-            String schemaPattern = "defau" + metaData.getSearchStringEscape() + "_t";
+            String schemaPattern = new StringBuilder().append("defau").append(metaData.getSearchStringEscape()).append("_t").toString();
             try (ResultSet resultSet = metaData.getColumns("blackhole", schemaPattern, null, null)) {
                 assertFalse(resultSet.next(), "There should be no results");
             }
@@ -133,7 +133,7 @@ public class TestPrestoDatabaseMetaData
     private static void assertColumnSpec(ResultSet rs, int dataType, Long precision, Long numPrecRadix, String typeName)
             throws SQLException
     {
-        String message = " of " + typeName + ": ";
+        String message = new StringBuilder().append(" of ").append(typeName).append(": ").toString();
         assertEquals(rs.getObject("TYPE_NAME"), typeName, "TYPE_NAME" + message);
         assertEquals(rs.getObject("DATA_TYPE"), (long) dataType, "DATA_TYPE" + message);
         assertEquals(rs.getObject("PRECISION"), precision, "PRECISION" + message);

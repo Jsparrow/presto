@@ -44,9 +44,10 @@ public class SourceQueryModule
         String sourceQuerySupplierType = buildConfigObject(VerifierConfig.class).getSourceQuerySupplier();
         checkArgument(supportedSourceQuerySupplierTypes.contains(sourceQuerySupplierType), "Unsupported SourceQuerySupplier: %s", sourceQuerySupplierType);
 
-        if (MYSQL_SOURCE_QUERY_SUPPLIER.equals(sourceQuerySupplierType)) {
-            configBinder(binder).bindConfig(MySqlSourceQueryConfig.class, "source-query");
-            binder.bind(SourceQuerySupplier.class).to(MySqlSourceQuerySupplier.class).in(SINGLETON);
-        }
+        if (!MYSQL_SOURCE_QUERY_SUPPLIER.equals(sourceQuerySupplierType)) {
+			return;
+		}
+		configBinder(binder).bindConfig(MySqlSourceQueryConfig.class, "source-query");
+		binder.bind(SourceQuerySupplier.class).to(MySqlSourceQuerySupplier.class).in(SINGLETON);
     }
 }

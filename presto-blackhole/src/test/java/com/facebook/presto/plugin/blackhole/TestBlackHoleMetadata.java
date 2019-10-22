@@ -69,7 +69,7 @@ public class TestBlackHoleMetadata
 
         List<SchemaTableName> tables = metadata.listTables(SESSION, Optional.empty());
         assertTrue(tables.size() == 1, "Expected only one table.");
-        assertTrue(tables.get(0).getTableName().equals("temp_table"), "Expected table with name 'temp_table'");
+        assertTrue("temp_table".equals(tables.get(0).getTableName()), "Expected table with name 'temp_table'");
     }
 
     @Test
@@ -82,7 +82,7 @@ public class TestBlackHoleMetadata
         }
         catch (PrestoException ex) {
             assertEquals(ex.getErrorCode(), NOT_FOUND.toErrorCode());
-            assertTrue(ex.getMessage().equals("Schema schema1 not found"));
+            assertTrue("Schema schema1 not found".equals(ex.getMessage()));
         }
     }
 

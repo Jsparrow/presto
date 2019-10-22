@@ -278,6 +278,6 @@ public final class Domain
 
     public String toString(ConnectorSession session)
     {
-        return "[ " + (nullAllowed ? "NULL, " : "") + values.toString(session) + " ]";
+        return new StringBuilder().append("[ ").append(nullAllowed ? "NULL, " : "").append(values.toString(session)).append(" ]").toString();
     }
 }

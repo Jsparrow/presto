@@ -19,11 +19,14 @@ import java.util.Optional;
 import static com.facebook.presto.orc.metadata.statistics.IntegerStatistics.INTEGER_VALUE_BYTES;
 import static java.lang.Math.addExact;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IntegerStatisticsBuilder
         implements LongValueStatisticsBuilder
 {
-    private long nonNullValueCount;
+    private static final Logger logger = LoggerFactory.getLogger(IntegerStatisticsBuilder.class);
+	private long nonNullValueCount;
     private long minimum = Long.MAX_VALUE;
     private long maximum = Long.MIN_VALUE;
     private long sum;
@@ -42,7 +45,8 @@ public class IntegerStatisticsBuilder
                 sum = addExact(sum, value);
             }
             catch (ArithmeticException e) {
-                overflow = true;
+                logger.error(e.getMessage(), e);
+				overflow = true;
             }
         }
     }
@@ -68,7 +72,8 @@ public class IntegerStatisticsBuilder
                 sum = addExact(sum, value.getSum());
             }
             catch (ArithmeticException e) {
-                overflow = true;
+                logger.error(e.getMessage(), e);
+				overflow = true;
             }
         }
     }

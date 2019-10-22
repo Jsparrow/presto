@@ -27,7 +27,84 @@ import static java.util.Objects.requireNonNull;
 public class NestedLoopBuildOperator
         implements Operator
 {
-    public static class NestedLoopBuildOperatorFactory
+    private final OperatorContext operatorContext;
+	private final NestedLoopJoinBridge nestedLoopJoinBridge;
+	private final NestedLoopJoinPagesBuilder nestedLoopJoinPagesBuilder;
+	private final LocalMemoryContext localUserMemoryContext;
+	// Initially, probeDoneWithPages is not present.
+    // Once finish is called, probeDoneWithPages will be set to a future that completes when the pages are no longer needed by the probe side.
+    // When the pages are no longer needed, the isFinished method on this operator will return true.
+    private Optional<ListenableFuture<?>> probeDoneWithPages = Optional.empty();
+
+	public NestedLoopBuildOperator(OperatorContext operatorContext, NestedLoopJoinBridge nestedLoopJoinBridge)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.nestedLoopJoinBridge = requireNonNull(nestedLoopJoinBridge, "nestedLoopJoinBridge is null");
+        this.nestedLoopJoinPagesBuilder = new NestedLoopJoinPagesBuilder(operatorContext);
+        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        if (probeDoneWithPages.isPresent()) {
+            return;
+        }
+
+        // nestedLoopJoinPagesBuilder and the built NestedLoopJoinPages will mostly share the same objects.
+        // Extra allocation is minimal during build call. As a result, memory accounting is not updated here.
+        probeDoneWithPages = Optional.of(nestedLoopJoinBridge.setPages(nestedLoopJoinPagesBuilder.build()));
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return probeDoneWithPages.map(Future::isDone).orElse(false);
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return probeDoneWithPages.orElse(NOT_BLOCKED);
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !probeDoneWithPages.isPresent();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!isFinished(), "Operator is already finished");
+
+        if (page.getPositionCount() == 0) {
+            return;
+        }
+
+        nestedLoopJoinPagesBuilder.addPage(page);
+        if (!localUserMemoryContext.trySetBytes(nestedLoopJoinPagesBuilder.getEstimatedSize().toBytes())) {
+            nestedLoopJoinPagesBuilder.compact();
+            localUserMemoryContext.setBytes(nestedLoopJoinPagesBuilder.getEstimatedSize().toBytes());
+        }
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class NestedLoopBuildOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -65,83 +142,5 @@ public class NestedLoopBuildOperator
         {
             return new NestedLoopBuildOperatorFactory(operatorId, planNodeId, nestedLoopJoinBridgeManager);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final NestedLoopJoinBridge nestedLoopJoinBridge;
-    private final NestedLoopJoinPagesBuilder nestedLoopJoinPagesBuilder;
-    private final LocalMemoryContext localUserMemoryContext;
-
-    // Initially, probeDoneWithPages is not present.
-    // Once finish is called, probeDoneWithPages will be set to a future that completes when the pages are no longer needed by the probe side.
-    // When the pages are no longer needed, the isFinished method on this operator will return true.
-    private Optional<ListenableFuture<?>> probeDoneWithPages = Optional.empty();
-
-    public NestedLoopBuildOperator(OperatorContext operatorContext, NestedLoopJoinBridge nestedLoopJoinBridge)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.nestedLoopJoinBridge = requireNonNull(nestedLoopJoinBridge, "nestedLoopJoinBridge is null");
-        this.nestedLoopJoinPagesBuilder = new NestedLoopJoinPagesBuilder(operatorContext);
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        if (probeDoneWithPages.isPresent()) {
-            return;
-        }
-
-        // nestedLoopJoinPagesBuilder and the built NestedLoopJoinPages will mostly share the same objects.
-        // Extra allocation is minimal during build call. As a result, memory accounting is not updated here.
-        probeDoneWithPages = Optional.of(nestedLoopJoinBridge.setPages(nestedLoopJoinPagesBuilder.build()));
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return probeDoneWithPages.map(Future::isDone).orElse(false);
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return probeDoneWithPages.orElse(NOT_BLOCKED);
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !probeDoneWithPages.isPresent();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!isFinished(), "Operator is already finished");
-
-        if (page.getPositionCount() == 0) {
-            return;
-        }
-
-        nestedLoopJoinPagesBuilder.addPage(page);
-        if (!localUserMemoryContext.trySetBytes(nestedLoopJoinPagesBuilder.getEstimatedSize().toBytes())) {
-            nestedLoopJoinPagesBuilder.compact();
-            localUserMemoryContext.setBytes(nestedLoopJoinPagesBuilder.getEstimatedSize().toBytes());
-        }
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 }

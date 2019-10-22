@@ -68,37 +68,36 @@ import static java.util.Objects.requireNonNull;
 public class JoinFilterFunctionCompiler
 {
     private final Metadata metadata;
+	private final LoadingCache<JoinFilterCacheKey, JoinFilterFunctionFactory> joinFilterFunctionFactories = CacheBuilder.newBuilder()
+            .recordStats()
+            .maximumSize(1000)
+            .build(CacheLoader.from(key -> internalCompileFilterFunctionFactory(key.getFilter(), key.getLeftBlocksSize())));
 
-    @Inject
+	@Inject
     public JoinFilterFunctionCompiler(Metadata metadata)
     {
         this.metadata = metadata;
     }
 
-    private final LoadingCache<JoinFilterCacheKey, JoinFilterFunctionFactory> joinFilterFunctionFactories = CacheBuilder.newBuilder()
-            .recordStats()
-            .maximumSize(1000)
-            .build(CacheLoader.from(key -> internalCompileFilterFunctionFactory(key.getFilter(), key.getLeftBlocksSize())));
-
-    @Managed
+	@Managed
     @Nested
     public CacheStatsMBean getJoinFilterFunctionFactoryStats()
     {
         return new CacheStatsMBean(joinFilterFunctionFactories);
     }
 
-    public JoinFilterFunctionFactory compileJoinFilterFunction(RowExpression filter, int leftBlocksSize)
+	public JoinFilterFunctionFactory compileJoinFilterFunction(RowExpression filter, int leftBlocksSize)
     {
         return joinFilterFunctionFactories.getUnchecked(new JoinFilterCacheKey(filter, leftBlocksSize));
     }
 
-    private JoinFilterFunctionFactory internalCompileFilterFunctionFactory(RowExpression filterExpression, int leftBlocksSize)
+	private JoinFilterFunctionFactory internalCompileFilterFunctionFactory(RowExpression filterExpression, int leftBlocksSize)
     {
         Class<? extends InternalJoinFilterFunction> internalJoinFilterFunction = compileInternalJoinFilterFunction(filterExpression, leftBlocksSize);
         return new IsolatedJoinFilterFunctionFactory(internalJoinFilterFunction);
     }
 
-    private Class<? extends InternalJoinFilterFunction> compileInternalJoinFilterFunction(RowExpression filterExpression, int leftBlocksSize)
+	private Class<? extends InternalJoinFilterFunction> compileInternalJoinFilterFunction(RowExpression filterExpression, int leftBlocksSize)
     {
         ClassDefinition classDefinition = new ClassDefinition(
                 a(PUBLIC, FINAL),
@@ -124,7 +123,7 @@ public class JoinFilterFunctionCompiler
         return defineClass(classDefinition, InternalJoinFilterFunction.class, callSiteBinder.getBindings(), getClass().getClassLoader());
     }
 
-    private void generateMethods(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, RowExpression filter, int leftBlocksSize)
+	private void generateMethods(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, RowExpression filter, int leftBlocksSize)
     {
         CachedInstanceBinder cachedInstanceBinder = new CachedInstanceBinder(classDefinition, callSiteBinder);
 
@@ -136,7 +135,7 @@ public class JoinFilterFunctionCompiler
         generateConstructor(classDefinition, sessionField, cachedInstanceBinder);
     }
 
-    private static void generateConstructor(
+	private static void generateConstructor(
             ClassDefinition classDefinition,
             FieldDefinition sessionField,
             CachedInstanceBinder cachedInstanceBinder)
@@ -156,7 +155,7 @@ public class JoinFilterFunctionCompiler
         body.ret();
     }
 
-    private void generateFilterMethod(
+	private void generateFilterMethod(
             ClassDefinition classDefinition,
             CallSiteBinder callSiteBinder,
             CachedInstanceBinder cachedInstanceBinder,
@@ -207,7 +206,7 @@ public class JoinFilterFunctionCompiler
                         .ifFalse(result.ret()));
     }
 
-    private static void generateToString(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, String string)
+	private static void generateToString(ClassDefinition classDefinition, CallSiteBinder callSiteBinder, String string)
     {
         // bind constant via invokedynamic to avoid constant pool issues due to large strings
         classDefinition.declareMethod(a(PUBLIC), "toString", type(String.class))
@@ -216,12 +215,7 @@ public class JoinFilterFunctionCompiler
                 .retObject();
     }
 
-    public interface JoinFilterFunctionFactory
-    {
-        JoinFilterFunction create(ConnectorSession session, LongArrayList addresses, List<Page> pages);
-    }
-
-    private static RowExpressionVisitor<BytecodeNode, Scope> fieldReferenceCompiler(
+	private static RowExpressionVisitor<BytecodeNode, Scope> fieldReferenceCompiler(
             final CallSiteBinder callSiteBinder,
             final Variable leftPosition,
             final Variable leftPage,
@@ -238,6 +232,11 @@ public class JoinFilterFunctionCompiler
                 },
                 (scope, field) -> field < leftBlocksSize ? leftPosition : rightPosition,
                 callSiteBinder);
+    }
+
+    public interface JoinFilterFunctionFactory
+    {
+        JoinFilterFunction create(ConnectorSession session, LongArrayList addresses, List<Page> pages);
     }
 
     private static final class JoinFilterCacheKey

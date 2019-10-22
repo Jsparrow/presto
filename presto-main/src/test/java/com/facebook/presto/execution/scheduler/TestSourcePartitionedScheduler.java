@@ -175,9 +175,7 @@ public class TestSourcePartitionedScheduler
             assertPartitionedSplitCount(stage, min(i + 1, 60));
         }
 
-        for (RemoteTask remoteTask : stage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 20);
-        }
+        stage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 20));
 
         stage.abort();
     }
@@ -212,9 +210,7 @@ public class TestSourcePartitionedScheduler
             assertPartitionedSplitCount(stage, min((i + 1) * 7, 60));
         }
 
-        for (RemoteTask remoteTask : stage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 20);
-        }
+        stage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 20));
 
         stage.abort();
     }
@@ -244,9 +240,7 @@ public class TestSourcePartitionedScheduler
             assertPartitionedSplitCount(stage, min(i + 1, 60));
         }
 
-        for (RemoteTask remoteTask : stage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 20);
-        }
+        stage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 20));
 
         // todo rewrite MockRemoteTask to fire a tate transition when splits are cleared, and then validate blocked future completes
 
@@ -276,9 +270,7 @@ public class TestSourcePartitionedScheduler
             assertPartitionedSplitCount(stage, min(i + 41, 60));
         }
 
-        for (RemoteTask remoteTask : stage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 20);
-        }
+        stage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 20));
 
         stage.abort();
     }
@@ -351,9 +343,7 @@ public class TestSourcePartitionedScheduler
         assertTrue(scheduleResult.getBlocked().isDone());
         assertEquals(scheduleResult.getNewTasks().size(), 3);
         assertEquals(firstStage.getAllTasks().size(), 3);
-        for (RemoteTask remoteTask : firstStage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 5);
-        }
+        firstStage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 5));
 
         // Add new node
         InternalNode additionalNode = new InternalNode("other4", URI.create("http://127.0.0.1:14"), NodeVersion.UNKNOWN, false);
@@ -391,9 +381,7 @@ public class TestSourcePartitionedScheduler
         assertTrue(scheduleResult.getBlocked().isDone());
         assertEquals(scheduleResult.getNewTasks().size(), 3);
         assertEquals(firstStage.getAllTasks().size(), 3);
-        for (RemoteTask remoteTask : firstStage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 20);
-        }
+        firstStage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 20));
 
         // Schedule more splits in another query, which will block since all nodes are full
         SubPlan secondPlan = createPlan();
@@ -405,9 +393,7 @@ public class TestSourcePartitionedScheduler
         assertTrue(scheduleResult.getBlocked().isDone());
         assertEquals(scheduleResult.getNewTasks().size(), 3);
         assertEquals(secondStage.getAllTasks().size(), 3);
-        for (RemoteTask remoteTask : secondStage.getAllTasks()) {
-            assertEquals(remoteTask.getPartitionedSplitCount(), 0);
-        }
+        secondStage.getAllTasks().forEach(remoteTask -> assertEquals(remoteTask.getPartitionedSplitCount(), 0));
 
         firstStage.abort();
         secondStage.abort();
@@ -559,13 +545,12 @@ public class TestSourcePartitionedScheduler
             List<ConnectorSplit> elements = new ArrayList<>(maxSize);
             queue.drainTo(elements, maxSize);
 
-            // if the queue is empty and the current future is finished, create a new one so
+            boolean condition = queue.isEmpty() && !closed && notEmptyFuture.isDone();
+			// if the queue is empty and the current future is finished, create a new one so
             // a new readers can be notified when the queue has elements to read
-            if (queue.isEmpty() && !closed) {
-                if (notEmptyFuture.isDone()) {
-                    notEmptyFuture = new CompletableFuture<>();
-                }
-            }
+            if (condition) {
+			    notEmptyFuture = new CompletableFuture<>();
+			}
 
             return ImmutableList.copyOf(elements);
         }

@@ -387,7 +387,7 @@ public class TestMemoryTracking
         }
         catch (IllegalArgumentException e) {
             assertTrue(Pattern.matches(expectedPattern, e.getMessage()),
-                    "\nExpected (re) :" + expectedPattern + "\nActual :" + e.getMessage());
+                    new StringBuilder().append("\nExpected (re) :").append(expectedPattern).append("\nActual :").append(e.getMessage()).toString());
         }
     }
 

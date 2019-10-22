@@ -198,10 +198,10 @@ public final class AccumuloTableProperties
             ImmutableSet.Builder<String> colSet = ImmutableSet.builder();
 
             for (String f : COMMA_SPLITTER.split(locGroups[1])) {
-                colSet.add(f.toLowerCase(Locale.ENGLISH));
+                colSet.add(StringUtils.lowerCase(f, Locale.ENGLISH));
             }
 
-            groups.put(grpName.toLowerCase(Locale.ENGLISH), colSet.build());
+            groups.put(StringUtils.lowerCase(grpName, Locale.ENGLISH), colSet.build());
         }
 
         return Optional.of(groups.build());

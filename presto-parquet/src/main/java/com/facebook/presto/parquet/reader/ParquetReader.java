@@ -140,7 +140,7 @@ public class ParquetReader
             return false;
         }
         currentBlockMetadata = blocks.get(currentBlock);
-        currentBlock = currentBlock + 1;
+        currentBlock += 1;
 
         nextRowInGroup = 0L;
         currentGroupRowCount = currentBlockMetadata.getRowCount();
@@ -256,10 +256,10 @@ public class ParquetReader
 
     private void initializeColumnReaders()
     {
-        for (PrimitiveColumnIO columnIO : columns) {
+        columns.forEach(columnIO -> {
             RichColumnDescriptor column = new RichColumnDescriptor(columnIO.getColumnDescriptor(), columnIO.getType().asPrimitiveType());
             columnReaders[columnIO.getId()] = PrimitiveColumnReader.createReader(column);
-        }
+        });
     }
 
     public Block readBlock(Field field)

@@ -41,9 +41,8 @@ public class TotalReservationOnBlockedNodesLowMemoryKiller
                 continue;
             }
             Map<QueryId, Long> queryMemoryReservations = generalPool.getQueryMemoryReservations();
-            queryMemoryReservations.forEach((queryId, memoryReservation) -> {
-                memoryReservationOnBlockedNodes.compute(queryId, (id, oldValue) -> oldValue == null ? memoryReservation : oldValue + memoryReservation);
-            });
+            queryMemoryReservations.forEach((queryId, memoryReservation) -> memoryReservationOnBlockedNodes.compute(queryId,
+					(id, oldValue) -> oldValue == null ? memoryReservation : oldValue + memoryReservation));
         }
 
         return memoryReservationOnBlockedNodes.entrySet().stream()

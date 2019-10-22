@@ -167,12 +167,11 @@ class TranslationMap
         }
 
         Expression translated = translateNamesToSymbols(expression);
-        if (!expressionToVariables.containsKey(translated)) {
-            checkArgument(expressionToExpressions.containsKey(translated), "No mapping for expression: %s", expression);
-            return get(expressionToExpressions.get(translated));
-        }
-
-        return expressionToVariables.get(translated);
+        if (expressionToVariables.containsKey(translated)) {
+			return expressionToVariables.get(translated);
+		}
+		checkArgument(expressionToExpressions.containsKey(translated), "No mapping for expression: %s", expression);
+		return get(expressionToExpressions.get(translated));
     }
 
     public void put(Expression expression, Expression rewritten)
@@ -222,19 +221,17 @@ class TranslationMap
             @Override
             public Expression rewriteDereferenceExpression(DereferenceExpression node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
             {
-                if (analysis.isColumnReference(node)) {
-                    Optional<ResolvedField> resolvedField = rewriteBase.getScope().tryResolveField(node);
-                    if (resolvedField.isPresent()) {
-                        if (resolvedField.get().isLocal()) {
-                            return getVariable(rewriteBase, node)
-                                    .map(variable -> coerceIfNecessary(node, new SymbolReference(variable.getName())))
-                                    .orElseThrow(() -> new IllegalStateException("No symbol mapping for node " + node));
-                        }
-                    }
-                    // do not rewrite outer references, it will be handled in outer scope planner
-                    return node;
-                }
-                return rewriteExpression(node, context, treeRewriter);
+                if (!analysis.isColumnReference(node)) {
+					return rewriteExpression(node, context, treeRewriter);
+				}
+				Optional<ResolvedField> resolvedField = rewriteBase.getScope().tryResolveField(node);
+				if (resolvedField.isPresent() && resolvedField.get().isLocal()) {
+				    return getVariable(rewriteBase, node)
+				            .map(variable -> coerceIfNecessary(node, new SymbolReference(variable.getName())))
+				            .orElseThrow(() -> new IllegalStateException("No symbol mapping for node " + node));
+				}
+				// do not rewrite outer references, it will be handled in outer scope planner
+				return node;
             }
 
             @Override
@@ -243,10 +240,7 @@ class TranslationMap
                 checkState(analysis.getCoercion(node) == null, "cannot coerce a lambda expression");
 
                 ImmutableList.Builder<LambdaArgumentDeclaration> newArguments = ImmutableList.builder();
-                for (LambdaArgumentDeclaration argument : node.getArguments()) {
-                    VariableReferenceExpression variable = lambdaDeclarationToVariableMap.get(NodeRef.of(argument));
-                    newArguments.add(new LambdaArgumentDeclaration(new Identifier(variable.getName())));
-                }
+                node.getArguments().stream().map(argument -> lambdaDeclarationToVariableMap.get(NodeRef.of(argument))).forEach(variable -> newArguments.add(new LambdaArgumentDeclaration(new Identifier(variable.getName()))));
                 Expression rewrittenBody = treeRewriter.rewrite(node.getBody(), null);
                 return new LambdaExpression(newArguments.build(), rewrittenBody);
             }

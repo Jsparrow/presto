@@ -43,7 +43,7 @@ public class TestPruneJoinColumns
     public void testNotAllOutputsReferenced()
     {
         tester().assertThat(new PruneJoinColumns())
-                .on(p -> buildProjectedJoin(p, variable -> variable.getName().equals("rightValue")))
+                .on(p -> buildProjectedJoin(p, variable -> "rightValue".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("rightValue", PlanMatchPattern.expression("rightValue")),

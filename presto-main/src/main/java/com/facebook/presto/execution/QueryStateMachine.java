@@ -1156,9 +1156,7 @@ public class QueryStateMachine
 
         private void fireStateChanged(QueryOutputInfo queryOutputInfo, List<Consumer<QueryOutputInfo>> outputInfoListeners)
         {
-            for (Consumer<QueryOutputInfo> outputInfoListener : outputInfoListeners) {
-                executor.execute(() -> outputInfoListener.accept(queryOutputInfo));
-            }
+            outputInfoListeners.forEach(outputInfoListener -> executor.execute(() -> outputInfoListener.accept(queryOutputInfo)));
         }
     }
 }

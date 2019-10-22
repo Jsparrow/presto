@@ -34,17 +34,6 @@ public class SystemTransactionHandle
     private final TransactionId transactionId;
     private final Supplier<ConnectorTransactionHandle> connectorTransactionHandle;
 
-    SystemTransactionHandle(
-            ConnectorId connectorId,
-            TransactionId transactionId,
-            Function<TransactionId, ConnectorTransactionHandle> transactionHandleFunction)
-    {
-        this.connectorId = requireNonNull(connectorId, "connectorId is null");
-        this.transactionId = requireNonNull(transactionId, "transactionId is null");
-        requireNonNull(transactionHandleFunction, "transactionHandleFunction is null");
-        this.connectorTransactionHandle = Suppliers.memoize(() -> transactionHandleFunction.apply(transactionId));
-    }
-
     @JsonCreator
     public SystemTransactionHandle(
             @JsonProperty("connectorId") ConnectorId connectorId,
@@ -57,31 +46,42 @@ public class SystemTransactionHandle
         this.connectorTransactionHandle = () -> connectorTransactionHandle;
     }
 
-    @JsonProperty
+	SystemTransactionHandle(
+            ConnectorId connectorId,
+            TransactionId transactionId,
+            Function<TransactionId, ConnectorTransactionHandle> transactionHandleFunction)
+    {
+        this.connectorId = requireNonNull(connectorId, "connectorId is null");
+        this.transactionId = requireNonNull(transactionId, "transactionId is null");
+        requireNonNull(transactionHandleFunction, "transactionHandleFunction is null");
+        this.connectorTransactionHandle = Suppliers.memoize(() -> transactionHandleFunction.apply(transactionId));
+    }
+
+	@JsonProperty
     public ConnectorId getConnectorId()
     {
         return connectorId;
     }
 
-    @JsonProperty
+	@JsonProperty
     public TransactionId getTransactionId()
     {
         return transactionId;
     }
 
-    @JsonProperty
+	@JsonProperty
     public ConnectorTransactionHandle getConnectorTransactionHandle()
     {
         return connectorTransactionHandle.get();
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(connectorId, transactionId);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -95,7 +95,7 @@ public class SystemTransactionHandle
                 Objects.equals(this.transactionId, other.transactionId);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

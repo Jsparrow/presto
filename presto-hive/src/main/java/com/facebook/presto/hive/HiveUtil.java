@@ -159,10 +159,14 @@ import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_LIB;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_ALL_COLUMNS;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR;
 import static org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class HiveUtil
 {
-    private static final Pattern DEFAULT_HIVE_COLUMN_NAME_PATTERN = Pattern.compile("_col\\d+");
+    private static final Logger logger = LoggerFactory.getLogger(HiveUtil.class);
+
+	private static final Pattern DEFAULT_HIVE_COLUMN_NAME_PATTERN = Pattern.compile("_col\\d+");
 
     public static final String PRESTO_VIEW_FLAG = "presto_view";
 
@@ -339,7 +343,7 @@ public final class HiveUtil
     public static boolean isSplittable(InputFormat<?, ?> inputFormat, FileSystem fileSystem, Path path)
     {
         // ORC uses a custom InputFormat but is always splittable
-        if (inputFormat.getClass().getSimpleName().equals("OrcInputFormat")) {
+        if ("OrcInputFormat".equals(inputFormat.getClass().getSimpleName())) {
             return true;
         }
 
@@ -351,6 +355,7 @@ public final class HiveUtil
                 break;
             }
             catch (NoSuchMethodException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
         }
 
@@ -416,10 +421,12 @@ public final class HiveUtil
             return Class.forName(name, true, JavaUtils.getClassLoader()).asSubclass(Deserializer.class);
         }
         catch (ClassNotFoundException e) {
-            throw new PrestoException(HIVE_SERDE_NOT_FOUND, "deserializer does not exist: " + name);
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_SERDE_NOT_FOUND, "deserializer does not exist: " + name);
         }
         catch (ClassCastException e) {
-            throw new RuntimeException("invalid deserializer class: " + name);
+            logger.error(e.getMessage(), e);
+			throw new RuntimeException("invalid deserializer class: " + name);
         }
     }
 
@@ -616,7 +623,7 @@ public final class HiveUtil
 
     public static String encodeViewData(String data)
     {
-        return VIEW_PREFIX + Base64.getEncoder().encodeToString(data.getBytes(UTF_8)) + VIEW_SUFFIX;
+        return new StringBuilder().append(VIEW_PREFIX).append(Base64.getEncoder().encodeToString(data.getBytes(UTF_8))).append(VIEW_SUFFIX).toString();
     }
 
     public static String decodeViewData(String data)
@@ -636,14 +643,12 @@ public final class HiveUtil
     public static Optional<DecimalType> getDecimalType(String hiveTypeName)
     {
         Matcher matcher = SUPPORTED_DECIMAL_TYPE.matcher(hiveTypeName);
-        if (matcher.matches()) {
-            int precision = parseInt(matcher.group(DECIMAL_PRECISION_GROUP));
-            int scale = parseInt(matcher.group(DECIMAL_SCALE_GROUP));
-            return Optional.of(createDecimalType(precision, scale));
-        }
-        else {
-            return Optional.empty();
-        }
+        if (!matcher.matches()) {
+			return Optional.empty();
+		}
+		int precision = parseInt(matcher.group(DECIMAL_PRECISION_GROUP));
+		int scale = parseInt(matcher.group(DECIMAL_SCALE_GROUP));
+		return Optional.of(createDecimalType(precision, scale));
     }
 
     public static boolean isArrayType(Type type)
@@ -674,10 +679,10 @@ public final class HiveUtil
 
     public static boolean booleanPartitionKey(String value, String name)
     {
-        if (value.equalsIgnoreCase("true")) {
+        if ("true".equalsIgnoreCase(value)) {
             return true;
         }
-        if (value.equalsIgnoreCase("false")) {
+        if ("false".equalsIgnoreCase(value)) {
             return false;
         }
         throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for BOOLEAN partition key: %s", value, name));
@@ -689,7 +694,8 @@ public final class HiveUtil
             return parseLong(value);
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for BIGINT partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for BIGINT partition key: %s", value, name));
         }
     }
 
@@ -699,7 +705,8 @@ public final class HiveUtil
             return parseInt(value);
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for INTEGER partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for INTEGER partition key: %s", value, name));
         }
     }
 
@@ -709,7 +716,8 @@ public final class HiveUtil
             return parseShort(value);
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for SMALLINT partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for SMALLINT partition key: %s", value, name));
         }
     }
 
@@ -719,7 +727,8 @@ public final class HiveUtil
             return parseByte(value);
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TINYINT partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TINYINT partition key: %s", value, name));
         }
     }
 
@@ -729,7 +738,8 @@ public final class HiveUtil
             return floatToRawIntBits(parseFloat(value));
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for FLOAT partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for FLOAT partition key: %s", value, name));
         }
     }
 
@@ -739,7 +749,8 @@ public final class HiveUtil
             return parseDouble(value);
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for DOUBLE partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for DOUBLE partition key: %s", value, name));
         }
     }
 
@@ -749,7 +760,8 @@ public final class HiveUtil
             return parseHiveDate(value);
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for DATE partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for DATE partition key: %s", value, name));
         }
     }
 
@@ -759,7 +771,8 @@ public final class HiveUtil
             return parseHiveTimestamp(value, zone);
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TIMESTAMP partition key: %s", value, name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for TIMESTAMP partition key: %s", value, name));
         }
     }
 
@@ -788,7 +801,8 @@ public final class HiveUtil
             return decimal;
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for %s partition key: %s", value, type.toString(), name));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_PARTITION_VALUE, format("Invalid partition value '%s' for %s partition key: %s", value, type.toString(), name));
         }
     }
 
@@ -966,7 +980,8 @@ public final class HiveUtil
             return intValue;
         }
         catch (NumberFormatException e) {
-            throw new PrestoException(HIVE_INVALID_METADATA, format("Invalid value for %s property: %s", key, value));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_INVALID_METADATA, format("Invalid value for %s property: %s", key, value));
         }
     }
 
@@ -1101,7 +1116,7 @@ public final class HiveUtil
     {
         List<TypeSignatureParameter> parameters = typeSignature.getParameters();
 
-        if (typeSignature.getBase().equals("unknown")) {
+        if ("unknown".equals(typeSignature.getBase())) {
             return new TypeSignature(StandardTypes.BOOLEAN);
         }
 
@@ -1118,30 +1133,29 @@ public final class HiveUtil
             return new TypeSignature(StandardTypes.ROW, updatedParameters.build());
         }
 
-        if (!parameters.isEmpty()) {
-            ImmutableList.Builder<TypeSignatureParameter> updatedParameters = ImmutableList.builder();
-            for (TypeSignatureParameter parameter : parameters) {
-                switch (parameter.getKind()) {
-                    case LONG:
-                    case VARIABLE:
-                        updatedParameters.add(parameter);
-                        continue;
-                    case TYPE:
-                        updatedParameters.add(TypeSignatureParameter.of(translateHiveUnsupportedTypeSignatureForTemporaryTable(parameter.getTypeSignature())));
-                        break;
-                    case NAMED_TYPE:
-                        NamedTypeSignature namedTypeSignature = parameter.getNamedTypeSignature();
-                        updatedParameters.add(TypeSignatureParameter.of(new NamedTypeSignature(
-                                namedTypeSignature.getFieldName(),
-                                translateHiveUnsupportedTypeSignatureForTemporaryTable(namedTypeSignature.getTypeSignature()))));
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unexpected parameter type: " + parameter.getKind());
-                }
-            }
-            return new TypeSignature(typeSignature.getBase(), updatedParameters.build());
-        }
-
-        return typeSignature;
+        if (parameters.isEmpty()) {
+			return typeSignature;
+		}
+		ImmutableList.Builder<TypeSignatureParameter> updatedParameters = ImmutableList.builder();
+		for (TypeSignatureParameter parameter : parameters) {
+		    switch (parameter.getKind()) {
+		        case LONG:
+		        case VARIABLE:
+		            updatedParameters.add(parameter);
+		            continue;
+		        case TYPE:
+		            updatedParameters.add(TypeSignatureParameter.of(translateHiveUnsupportedTypeSignatureForTemporaryTable(parameter.getTypeSignature())));
+		            break;
+		        case NAMED_TYPE:
+		            NamedTypeSignature namedTypeSignature = parameter.getNamedTypeSignature();
+		            updatedParameters.add(TypeSignatureParameter.of(new NamedTypeSignature(
+		                    namedTypeSignature.getFieldName(),
+		                    translateHiveUnsupportedTypeSignatureForTemporaryTable(namedTypeSignature.getTypeSignature()))));
+		            break;
+		        default:
+		            throw new IllegalArgumentException("Unexpected parameter type: " + parameter.getKind());
+		    }
+		}
+		return new TypeSignature(typeSignature.getBase(), updatedParameters.build());
     }
 }

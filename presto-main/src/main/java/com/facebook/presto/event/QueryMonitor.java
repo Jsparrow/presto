@@ -295,11 +295,11 @@ public class QueryMonitor
         try {
             if (queryInfo.getOutputStage().isPresent()) {
                 ImmutableSortedMap.Builder<PlanFragmentId, JsonPlanFragment> fragmentJsonMap = ImmutableSortedMap.naturalOrder();
-                for (StageInfo stage : getAllStages(queryInfo.getOutputStage())) {
+                getAllStages(queryInfo.getOutputStage()).forEach(stage -> {
                     PlanFragmentId fragmentId = stage.getPlan().get().getId();
                     JsonPlanFragment jsonPlanFragment = new JsonPlanFragment(stage.getPlan().get().getJsonRepresentation().get());
                     fragmentJsonMap.put(fragmentId, jsonPlanFragment);
-                }
+                });
                 return Optional.of(PLAN_MAP_CODEC.toJson(fragmentJsonMap.build()));
             }
         }
@@ -313,16 +313,9 @@ public class QueryMonitor
     private static QueryIOMetadata getQueryIOMetadata(QueryInfo queryInfo)
     {
         ImmutableList.Builder<QueryInputMetadata> inputs = ImmutableList.builder();
-        for (Input input : queryInfo.getInputs()) {
-            inputs.add(new QueryInputMetadata(
-                    input.getConnectorId().getCatalogName(),
-                    input.getSchema(),
-                    input.getTable(),
-                    input.getColumns().stream()
-                            .map(Column::getName).collect(Collectors.toList()),
-                    input.getConnectorInfo(),
-                    input.getStatistics()));
-        }
+        queryInfo.getInputs().forEach(input -> inputs.add(new QueryInputMetadata(input.getConnectorId().getCatalogName(), input.getSchema(), input.getTable(),
+				input.getColumns().stream().map(Column::getName).collect(Collectors.toList()), input.getConnectorInfo(),
+				input.getStatistics())));
 
         Optional<QueryOutputMetadata> output = Optional.empty();
         if (queryInfo.getOutput().isPresent()) {
@@ -378,17 +371,11 @@ public class QueryMonitor
         Map<String, String> mergedProperties = new LinkedHashMap<>(session.getSystemProperties());
 
         // Either processed or unprocessed catalog properties, but not both.  Instead of trying to enforces this while
-        // firing events, allow both to be set and if there is a duplicate favor the processed properties.
-        for (Map.Entry<String, Map<String, String>> catalogEntry : session.getUnprocessedCatalogProperties().entrySet()) {
-            for (Map.Entry<String, String> entry : catalogEntry.getValue().entrySet()) {
-                mergedProperties.put(catalogEntry.getKey() + "." + entry.getKey(), entry.getValue());
-            }
-        }
-        for (Map.Entry<ConnectorId, Map<String, String>> catalogEntry : session.getCatalogProperties().entrySet()) {
-            for (Map.Entry<String, String> entry : catalogEntry.getValue().entrySet()) {
-                mergedProperties.put(catalogEntry.getKey().getCatalogName() + "." + entry.getKey(), entry.getValue());
-            }
-        }
+		// firing events, allow both to be set and if there is a duplicate favor the processed properties.
+		session.getUnprocessedCatalogProperties().entrySet().forEach(catalogEntry -> catalogEntry.getValue().entrySet()
+				.forEach(entry -> mergedProperties.put(new StringBuilder().append(catalogEntry.getKey()).append(".").append(entry.getKey()).toString(), entry.getValue())));
+        session.getCatalogProperties().entrySet().forEach(catalogEntry -> catalogEntry.getValue().entrySet().forEach(entry -> mergedProperties
+				.put(new StringBuilder().append(catalogEntry.getKey().getCatalogName()).append(".").append(entry.getKey()).toString(), entry.getValue())));
         return ImmutableMap.copyOf(mergedProperties);
     }
 
@@ -521,18 +508,14 @@ public class QueryMonitor
     private static void populateDistribution(StageInfo stageInfo, ImmutableList.Builder<StageCpuDistribution> distributions)
     {
         distributions.add(computeCpuDistribution(stageInfo));
-        for (StageInfo subStage : stageInfo.getSubStages()) {
-            populateDistribution(subStage, distributions);
-        }
+        stageInfo.getSubStages().forEach(subStage -> populateDistribution(subStage, distributions));
     }
 
     private static StageCpuDistribution computeCpuDistribution(StageInfo stageInfo)
     {
         Distribution cpuDistribution = new Distribution();
 
-        for (TaskInfo taskInfo : stageInfo.getLatestAttemptExecutionInfo().getTasks()) {
-            cpuDistribution.add(taskInfo.getStats().getTotalCpuTime().toMillis());
-        }
+        stageInfo.getLatestAttemptExecutionInfo().getTasks().forEach(taskInfo -> cpuDistribution.add(taskInfo.getStats().getTotalCpuTime().toMillis()));
 
         DistributionSnapshot snapshot = cpuDistribution.snapshot();
 

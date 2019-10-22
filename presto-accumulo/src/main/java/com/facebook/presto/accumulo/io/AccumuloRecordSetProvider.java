@@ -69,9 +69,7 @@ public class AccumuloRecordSetProvider
 
         // Convert all columns handles
         ImmutableList.Builder<AccumuloColumnHandle> handles = ImmutableList.builder();
-        for (ColumnHandle handle : columns) {
-            handles.add((AccumuloColumnHandle) handle);
-        }
+        columns.forEach(handle -> handles.add((AccumuloColumnHandle) handle));
 
         // Return new record set
         return new AccumuloRecordSet(connector, session, accSplit, username, handles.build());

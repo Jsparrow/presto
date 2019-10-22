@@ -471,9 +471,7 @@ public class MultiChannelGroupByHash
         blocks[channels[0]] = dictionary;
 
         // extract hash dictionary
-        if (inputHashChannel.isPresent()) {
-            blocks[inputHashChannel.get()] = ((DictionaryBlock) page.getBlock(inputHashChannel.get())).getDictionary();
-        }
+		inputHashChannel.ifPresent(value -> blocks[value] = ((DictionaryBlock) page.getBlock(value)).getDictionary());
 
         return new Page(dictionary.getPositionCount(), blocks);
     }
@@ -503,8 +501,8 @@ public class MultiChannelGroupByHash
 
     private boolean isRunLengthEncoded(Page page)
     {
-        for (int i = 0; i < channels.length; i++) {
-            if (!(page.getBlock(channels[i]) instanceof RunLengthEncodedBlock)) {
+        for (int channel : channels) {
+            if (!(page.getBlock(channel) instanceof RunLengthEncodedBlock)) {
                 return false;
             }
         }

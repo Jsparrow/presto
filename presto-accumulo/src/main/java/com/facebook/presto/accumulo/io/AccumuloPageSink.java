@@ -245,9 +245,7 @@ public class AccumuloPageSink
                 // Convert row to a Mutation, writing and indexing it
                 Mutation mutation = toMutation(row, rowIdOrdinal, columns, serializer);
                 writer.addMutation(mutation);
-                if (indexer.isPresent()) {
-                    indexer.get().index(mutation);
-                }
+                indexer.ifPresent(value -> value.index(mutation));
                 ++numRows;
             }
             catch (MutationsRejectedException e) {
@@ -270,9 +268,7 @@ public class AccumuloPageSink
             // Done serializing rows, so flush and close the writer and indexer
             writer.flush();
             writer.close();
-            if (indexer.isPresent()) {
-                indexer.get().close();
-            }
+            indexer.ifPresent(Indexer::close);
         }
         catch (MutationsRejectedException e) {
             throw new PrestoException(UNEXPECTED_ACCUMULO_ERROR, "Mutation rejected by server on flush", e);
@@ -291,10 +287,8 @@ public class AccumuloPageSink
     private void flush()
     {
         try {
-            if (indexer.isPresent()) {
-                indexer.get().flush();
-                // MetricsWriter is non-null if Indexer is present
-            }
+            // MetricsWriter is non-null if Indexer is present
+			indexer.ifPresent(Indexer::flush);
             writer.flush();
         }
         catch (MutationsRejectedException e) {

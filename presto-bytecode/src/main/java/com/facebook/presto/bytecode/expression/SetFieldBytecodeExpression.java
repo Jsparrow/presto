@@ -111,10 +111,10 @@ class SetFieldBytecodeExpression
     protected String formatOneLine()
     {
         if (instance == null) {
-            return declaringClass.getSimpleName() + "." + name + " = " + value;
+            return new StringBuilder().append(declaringClass.getSimpleName()).append(".").append(name).append(" = ").append(value).toString();
         }
         else {
-            return instance + "." + name + " = " + value;
+            return new StringBuilder().append(instance).append(".").append(name).append(" = ").append(value).toString();
         }
     }
 

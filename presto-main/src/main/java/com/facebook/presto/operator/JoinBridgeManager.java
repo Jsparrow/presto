@@ -35,29 +35,16 @@ import static java.util.Objects.requireNonNull;
 
 public class JoinBridgeManager<T extends JoinBridge>
 {
-    @VisibleForTesting
-    public static JoinBridgeManager<PartitionedLookupSourceFactory> lookupAllAtOnce(PartitionedLookupSourceFactory factory)
-    {
-        return new JoinBridgeManager<>(
-                false,
-                UNGROUPED_EXECUTION,
-                UNGROUPED_EXECUTION,
-                ignored -> factory,
-                factory.getOutputTypes());
-    }
-
     private final List<Type> buildOutputTypes;
-    private final boolean buildOuter;
-    private final PipelineExecutionStrategy probeExecutionStrategy;
-    private final PipelineExecutionStrategy buildExecutionStrategy;
-    private final Function<Lifespan, T> joinBridgeProvider;
+	private final boolean buildOuter;
+	private final PipelineExecutionStrategy probeExecutionStrategy;
+	private final PipelineExecutionStrategy buildExecutionStrategy;
+	private final Function<Lifespan, T> joinBridgeProvider;
+	private final FreezeOnReadCounter probeFactoryCount = new FreezeOnReadCounter();
+	private final AtomicBoolean initialized = new AtomicBoolean();
+	private InternalJoinBridgeDataManager<T> internalJoinBridgeDataManager;
 
-    private final FreezeOnReadCounter probeFactoryCount = new FreezeOnReadCounter();
-
-    private final AtomicBoolean initialized = new AtomicBoolean();
-    private InternalJoinBridgeDataManager<T> internalJoinBridgeDataManager;
-
-    public JoinBridgeManager(
+	public JoinBridgeManager(
             boolean buildOuter,
             PipelineExecutionStrategy probeExecutionStrategy,
             PipelineExecutionStrategy lookupSourceExecutionStrategy,
@@ -71,7 +58,18 @@ public class JoinBridgeManager<T extends JoinBridge>
         this.buildOutputTypes = requireNonNull(buildOutputTypes, "buildOutputTypes is null");
     }
 
-    private void initializeIfNecessary()
+	@VisibleForTesting
+    public static JoinBridgeManager<PartitionedLookupSourceFactory> lookupAllAtOnce(PartitionedLookupSourceFactory factory)
+    {
+        return new JoinBridgeManager<>(
+                false,
+                UNGROUPED_EXECUTION,
+                UNGROUPED_EXECUTION,
+                ignored -> factory,
+                factory.getOutputTypes());
+    }
+
+	private void initializeIfNecessary()
     {
         if (!initialized.get()) {
             synchronized (this) {
@@ -85,28 +83,28 @@ public class JoinBridgeManager<T extends JoinBridge>
         }
     }
 
-    public List<Type> getBuildOutputTypes()
+	public List<Type> getBuildOutputTypes()
     {
         return buildOutputTypes;
     }
 
-    public PipelineExecutionStrategy getBuildExecutionStrategy()
+	public PipelineExecutionStrategy getBuildExecutionStrategy()
     {
         return buildExecutionStrategy;
     }
 
-    public void incrementProbeFactoryCount()
+	public void incrementProbeFactoryCount()
     {
         probeFactoryCount.increment();
     }
 
-    public T getJoinBridge(Lifespan lifespan)
+	public T getJoinBridge(Lifespan lifespan)
     {
         initializeIfNecessary();
         return internalJoinBridgeDataManager.getJoinBridge(lifespan);
     }
 
-    /**
+	/**
      * Invoked when a probe operator factory indicates that it will not
      * create any more operators, for any lifespan.
      * <p>
@@ -120,49 +118,49 @@ public class JoinBridgeManager<T extends JoinBridge>
         internalJoinBridgeDataManager.probeOperatorFactoryClosedForAllLifespans();
     }
 
-    public void probeOperatorFactoryClosed(Lifespan lifespan)
+	public void probeOperatorFactoryClosed(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.probeOperatorFactoryClosed(lifespan);
     }
 
-    public void probeOperatorCreated(Lifespan lifespan)
+	public void probeOperatorCreated(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.probeOperatorCreated(lifespan);
     }
 
-    public void probeOperatorClosed(Lifespan lifespan)
+	public void probeOperatorClosed(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.probeOperatorClosed(lifespan);
     }
 
-    public void outerOperatorFactoryClosed(Lifespan lifespan)
+	public void outerOperatorFactoryClosed(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.outerOperatorFactoryClosed(lifespan);
     }
 
-    public void outerOperatorCreated(Lifespan lifespan)
+	public void outerOperatorCreated(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.outerOperatorCreated(lifespan);
     }
 
-    public void outerOperatorClosed(Lifespan lifespan)
+	public void outerOperatorClosed(Lifespan lifespan)
     {
         initializeIfNecessary();
         internalJoinBridgeDataManager.outerOperatorClosed(lifespan);
     }
 
-    public ListenableFuture<OuterPositionIterator> getOuterPositionsFuture(Lifespan lifespan)
+	public ListenableFuture<OuterPositionIterator> getOuterPositionsFuture(Lifespan lifespan)
     {
         initializeIfNecessary();
         return internalJoinBridgeDataManager.getOuterPositionsFuture(lifespan);
     }
 
-    private static <T extends JoinBridge> InternalJoinBridgeDataManager<T> internalJoinBridgeDataManager(
+	private static <T extends JoinBridge> InternalJoinBridgeDataManager<T> internalJoinBridgeDataManager(
             PipelineExecutionStrategy probeExecutionStrategy,
             PipelineExecutionStrategy buildExecutionStrategy,
             Function<Lifespan, T> joinBridgeProvider,
@@ -194,7 +192,7 @@ public class JoinBridgeManager<T extends JoinBridge>
         }
     }
 
-    private interface InternalJoinBridgeDataManager<T extends JoinBridge>
+	private interface InternalJoinBridgeDataManager<T extends JoinBridge>
     {
         T getJoinBridge(Lifespan lifespan);
 

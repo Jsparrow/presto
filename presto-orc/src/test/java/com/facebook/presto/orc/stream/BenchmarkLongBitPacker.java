@@ -204,7 +204,22 @@ public class BenchmarkLongBitPacker
         return data.buffer;
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkLongBitPacker().baselineLength256(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkLongBitPacker.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -223,20 +238,5 @@ public class BenchmarkLongBitPacker
             ThreadLocalRandom.current().nextBytes(bytes);
             input = Slices.wrappedBuffer(bytes).getInput();
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkLongBitPacker().baselineLength256(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkLongBitPacker.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

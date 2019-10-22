@@ -485,9 +485,7 @@ public class PrestoConnection
             throws SQLException
     {
         Properties properties = new Properties();
-        for (Map.Entry<String, String> entry : clientInfo.entrySet()) {
-            properties.setProperty(entry.getKey(), entry.getValue());
-        }
+        clientInfo.entrySet().forEach(entry -> properties.setProperty(entry.getKey(), entry.getValue()));
         return properties;
     }
 

@@ -90,7 +90,23 @@ public class BenchmarkMapSubscript
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkMapSubscript().mapSubscript(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.INDI)
+                .include(new StringBuilder().append(".*").append(BenchmarkMapSubscript.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -249,21 +265,5 @@ public class BenchmarkMapSubscript
             }
             return createSlicesBlock(sliceArray);
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkMapSubscript().mapSubscript(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.INDI)
-                .include(".*" + BenchmarkMapSubscript.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -87,12 +87,12 @@ public class TestPageFunctionCompiler
 
         String planNodeId = "7";
         String stageId = "20170707_223500_67496_zguwn.2";
-        String classSuffix = stageId + "_" + planNodeId;
+        String classSuffix = new StringBuilder().append(stageId).append("_").append(planNodeId).toString();
         Supplier<PageProjection> projectionSupplier = functionCompiler.compileProjection(ADD_10_EXPRESSION, Optional.of(classSuffix));
         PageProjection projection = projectionSupplier.get();
         Work<Block> work = projection.project(SESSION, new DriverYieldSignal(), createLongBlockPage(0), SelectedPositions.positionsRange(0, 1));
         // class name should look like PageProjectionOutput_20170707_223500_67496_zguwn_2_7_XX
-        assertTrue(work.getClass().getSimpleName().startsWith("PageProjectionWork_" + stageId.replace('.', '_') + "_" + planNodeId));
+        assertTrue(work.getClass().getSimpleName().startsWith(new StringBuilder().append("PageProjectionWork_").append(stageId.replace('.', '_')).append("_").append(planNodeId).toString()));
     }
 
     @Test

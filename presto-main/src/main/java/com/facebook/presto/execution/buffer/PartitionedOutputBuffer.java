@@ -81,10 +81,7 @@ public class PartitionedOutputBuffer
                 requireNonNull(notificationExecutor, "notificationExecutor is null"));
 
         ImmutableList.Builder<ClientBuffer> partitions = ImmutableList.builder();
-        for (OutputBufferId bufferId : outputBuffers.getBuffers().keySet()) {
-            ClientBuffer partition = new ClientBuffer(taskInstanceId, bufferId);
-            partitions.add(partition);
-        }
+        outputBuffers.getBuffers().keySet().stream().map(bufferId -> new ClientBuffer(taskInstanceId, bufferId)).forEach(partitions::add);
         this.partitions = partitions.build();
 
         state.compareAndSet(OPEN, NO_MORE_BUFFERS);
@@ -282,22 +279,24 @@ public class PartitionedOutputBuffer
     public void destroy()
     {
         // ignore destroy if the buffer already in a terminal state.
-        if (state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
-            partitions.forEach(ClientBuffer::destroy);
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-        }
+		if (!state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		partitions.forEach(ClientBuffer::destroy);
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
     }
 
     @Override
     public void fail()
     {
         // ignore fail if the buffer already in a terminal state.
-        if (state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-            // DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
-        }
+		if (!state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
+		// DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
     }
 
     @Override

@@ -35,10 +35,7 @@ public class TestGeometryUtils
                 "LINESTRING (-75.9375 23.6359, -75.9375 23.6364)",
                 new Envelope(-75.9375, -75.9375, 23.6359, 23.6364));
         assertJtsEnvelope(
-                "GEOMETRYCOLLECTION (" +
-                        "  LINESTRING (-75.9375 23.6359, -75.9375 23.6364)," +
-                        "  MULTIPOLYGON (((-75.9375 23.45520, -75.9371 23.4554, -75.9375 23.46023325, -75.9375 23.45520)))" +
-                        ")",
+                new StringBuilder().append("GEOMETRYCOLLECTION (").append("  LINESTRING (-75.9375 23.6359, -75.9375 23.6364),").append("  MULTIPOLYGON (((-75.9375 23.45520, -75.9371 23.4554, -75.9375 23.46023325, -75.9375 23.45520)))").append(")").toString(),
                 new Envelope(-75.9375, -75.9371, 23.4552, 23.6364));
     }
 
@@ -58,10 +55,7 @@ public class TestGeometryUtils
                 "LINESTRING (-75.9375 23.6359, -75.9375 23.6364)",
                 new Rectangle(-75.9375, 23.6359, -75.9375, 23.6364));
         assertGetExtent(
-                "GEOMETRYCOLLECTION (" +
-                        "  LINESTRING (-75.9375 23.6359, -75.9375 23.6364)," +
-                        "  MULTIPOLYGON (((-75.9375 23.45520, -75.9371 23.4554, -75.9375 23.46023325, -75.9375 23.45520)))" +
-                        ")",
+                new StringBuilder().append("GEOMETRYCOLLECTION (").append("  LINESTRING (-75.9375 23.6359, -75.9375 23.6364),").append("  MULTIPOLYGON (((-75.9375 23.45520, -75.9371 23.4554, -75.9375 23.46023325, -75.9375 23.45520)))").append(")").toString(),
                 new Rectangle(-75.9375, 23.4552, -75.9371, 23.6364));
     }
 

@@ -37,11 +37,14 @@ import java.util.Set;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IndexedTpchConnectorFactory
         implements ConnectorFactory
 {
-    private final TpchIndexSpec indexSpec;
+    private static final Logger logger = LoggerFactory.getLogger(IndexedTpchConnectorFactory.class);
+	private final TpchIndexSpec indexSpec;
     private final int defaultSplitsPerNode;
 
     public IndexedTpchConnectorFactory(TpchIndexSpec indexSpec, int defaultSplitsPerNode)
@@ -121,7 +124,8 @@ public class IndexedTpchConnectorFactory
             return Integer.parseInt(firstNonNull(properties.get("tpch.splits-per-node"), String.valueOf(defaultSplitsPerNode)));
         }
         catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid property tpch.splits-per-node");
+            logger.error(e.getMessage(), e);
+			throw new IllegalArgumentException("Invalid property tpch.splits-per-node");
         }
     }
 }

@@ -106,29 +106,13 @@ public class TestHiveRecoverableGroupedExecution
     {
         testRecoverableGroupedExecution(
                 ImmutableList.of(
-                        "CREATE TABLE test_table1\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                                "SELECT orderkey key1, comment value1 FROM orders",
-                        "CREATE TABLE test_table2\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n" +
-                                "SELECT orderkey key2, comment value2 FROM orders",
-                        "CREATE TABLE test_table3\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n" +
-                                "SELECT orderkey key3, comment value3 FROM orders"),
-                "CREATE TABLE test_success WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                        "SELECT key1, value1, key2, value2, key3, value3\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
-                "CREATE TABLE test_failure WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                        "SELECT key1, value1, key2, value2, key3, value3\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
+                        new StringBuilder().append("CREATE TABLE test_table1\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT orderkey key1, comment value1 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table2\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n").append("SELECT orderkey key2, comment value2 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table3\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n").append("SELECT orderkey key3, comment value3 FROM orders").toString()),
+                new StringBuilder().append("CREATE TABLE test_success WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
+                new StringBuilder().append("CREATE TABLE test_failure WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
                 15000,
                 ImmutableList.of(
                         "DROP TABLE IF EXISTS test_table1",
@@ -144,33 +128,17 @@ public class TestHiveRecoverableGroupedExecution
     {
         testRecoverableGroupedExecution(
                 ImmutableList.of(
-                        "CREATE TABLE test_table1\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                                "SELECT orderkey key1, comment value1 FROM orders",
-                        "CREATE TABLE test_table2\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n" +
-                                "SELECT orderkey key2, comment value2 FROM orders",
-                        "CREATE TABLE test_table3\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n" +
-                                "SELECT orderkey key3, comment value3 FROM orders",
+                        new StringBuilder().append("CREATE TABLE test_table1\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT orderkey key1, comment value1 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table2\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n").append("SELECT orderkey key2, comment value2 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table3\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n").append("SELECT orderkey key3, comment value3 FROM orders").toString(),
                         "CREATE TABLE test_success (key BIGINT, value VARCHAR, partition_key VARCHAR)\n" +
                                 "WITH (bucket_count = 13, bucketed_by = ARRAY['key'], partitioned_by = ARRAY['partition_key'])",
                         "CREATE TABLE test_failure (key BIGINT, value VARCHAR, partition_key VARCHAR)\n" +
                                 "WITH (bucket_count = 13, bucketed_by = ARRAY['key'], partitioned_by = ARRAY['partition_key'])"),
-                "INSERT INTO test_success\n" +
-                        "SELECT key1, value1, 'foo'\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
-                "INSERT INTO test_failure\n" +
-                        "SELECT key1, value1, 'foo'\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
+                new StringBuilder().append("INSERT INTO test_success\n").append("SELECT key1, value1, 'foo'\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
+                new StringBuilder().append("INSERT INTO test_failure\n").append("SELECT key1, value1, 'foo'\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
                 15000,
                 ImmutableList.of(
                         "DROP TABLE IF EXISTS test_table1",
@@ -186,29 +154,13 @@ public class TestHiveRecoverableGroupedExecution
     {
         testRecoverableGroupedExecution(
                 ImmutableList.of(
-                        "CREATE TABLE test_table1\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                                "SELECT orderkey key1, comment value1 FROM orders",
-                        "CREATE TABLE test_table2\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n" +
-                                "SELECT orderkey key2, comment value2 FROM orders",
-                        "CREATE TABLE test_table3\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n" +
-                                "SELECT orderkey key3, comment value3 FROM orders"),
-                "CREATE TABLE test_success AS\n" +
-                        "SELECT key1, value1, key2, value2, key3, value3\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
-                "CREATE TABLE test_failure AS\n" +
-                        "SELECT key1, value1, key2, value2, key3, value3\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
+                        new StringBuilder().append("CREATE TABLE test_table1\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT orderkey key1, comment value1 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table2\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n").append("SELECT orderkey key2, comment value2 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table3\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n").append("SELECT orderkey key3, comment value3 FROM orders").toString()),
+                new StringBuilder().append("CREATE TABLE test_success AS\n").append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
+                new StringBuilder().append("CREATE TABLE test_failure AS\n").append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
                 15000,
                 ImmutableList.of(
                         "DROP TABLE IF EXISTS test_table1",
@@ -224,33 +176,17 @@ public class TestHiveRecoverableGroupedExecution
     {
         testRecoverableGroupedExecution(
                 ImmutableList.of(
-                        "CREATE TABLE test_table1\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                                "SELECT orderkey key1, comment value1 FROM orders",
-                        "CREATE TABLE test_table2\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n" +
-                                "SELECT orderkey key2, comment value2 FROM orders",
-                        "CREATE TABLE test_table3\n" +
-                                "WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n" +
-                                "SELECT orderkey key3, comment value3 FROM orders",
+                        new StringBuilder().append("CREATE TABLE test_table1\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT orderkey key1, comment value1 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table2\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n").append("SELECT orderkey key2, comment value2 FROM orders").toString(),
+                        new StringBuilder().append("CREATE TABLE test_table3\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n").append("SELECT orderkey key3, comment value3 FROM orders").toString(),
                         "CREATE TABLE test_success (key BIGINT, value VARCHAR, partition_key VARCHAR)\n" +
                                 "WITH (partitioned_by = ARRAY['partition_key'])",
                         "CREATE TABLE test_failure (key BIGINT, value VARCHAR, partition_key VARCHAR)\n" +
                                 "WITH (partitioned_by = ARRAY['partition_key'])"),
-                "INSERT INTO test_success\n" +
-                        "SELECT key1, value1, 'foo'\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
-                "INSERT INTO test_failure\n" +
-                        "SELECT key1, value1, 'foo'\n" +
-                        "FROM test_table1\n" +
-                        "JOIN test_table2\n" +
-                        "ON key1 = key2\n" +
-                        "JOIN test_table3\n" +
-                        "ON key2 = key3",
+                new StringBuilder().append("INSERT INTO test_success\n").append("SELECT key1, value1, 'foo'\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
+                new StringBuilder().append("INSERT INTO test_failure\n").append("SELECT key1, value1, 'foo'\n").append("FROM test_table1\n").append("JOIN test_table2\n").append("ON key1 = key2\n").append("JOIN test_table3\n").append("ON key2 = key3")
+						.toString(),
                 15000,
                 ImmutableList.of(
                         "DROP TABLE IF EXISTS test_table1",
@@ -266,10 +202,7 @@ public class TestHiveRecoverableGroupedExecution
     {
         testRecoverableGroupedExecution(
                 ImmutableList.of(
-                        "CREATE TABLE test_table AS\n" +
-                                "SELECT t.comment\n" +
-                                "FROM orders\n" +
-                                "CROSS JOIN UNNEST(REPEAT(comment, 10)) AS t (comment)"),
+                        new StringBuilder().append("CREATE TABLE test_table AS\n").append("SELECT t.comment\n").append("FROM orders\n").append("CROSS JOIN UNNEST(REPEAT(comment, 10)) AS t (comment)").toString()),
                 "CREATE TABLE test_success AS\n" +
                         "SELECT comment value1 FROM test_table",
                 "CREATE TABLE test_failure AS\n" +
@@ -291,9 +224,7 @@ public class TestHiveRecoverableGroupedExecution
     {
         try (DistributedQueryRunner queryRunner = distributedQueryRunnerSupplier.get()) {
             try {
-                for (@Language("SQL") String preQuery : preQueries) {
-                    queryRunner.execute(recoverableSession, preQuery);
-                }
+                preQueries.forEach((@Language("SQL") String preQuery) -> queryRunner.execute(recoverableSession, preQuery));
 
                 // test no failure case
                 assertEquals(queryRunner.execute(recoverableSession, queryWithoutFailure).getUpdateCount(), OptionalLong.of(expectedUpdateCount));
@@ -319,9 +250,7 @@ public class TestHiveRecoverableGroupedExecution
                 assertEquals(result.get(30, SECONDS).getUpdateCount(), OptionalLong.of(expectedUpdateCount));
             }
             finally {
-                for (@Language("SQL") String postQuery : postQueries) {
-                    queryRunner.execute(recoverableSession, postQuery);
-                }
+                postQueries.forEach((@Language("SQL") String postQuery) -> queryRunner.execute(recoverableSession, postQuery));
             }
         }
     }

@@ -27,7 +27,77 @@ public class CurrentTime
     private final Function function;
     private final Integer precision;
 
-    public enum Function
+    public CurrentTime(Function function)
+    {
+        this(Optional.empty(), function, null);
+    }
+
+	public CurrentTime(NodeLocation location, Function function)
+    {
+        this(Optional.of(location), function, null);
+    }
+
+	public CurrentTime(Function function, Integer precision)
+    {
+        this(Optional.empty(), function, precision);
+    }
+
+	public CurrentTime(NodeLocation location, Function function, Integer precision)
+    {
+        this(Optional.of(location), function, precision);
+    }
+
+	private CurrentTime(Optional<NodeLocation> location, Function function, Integer precision)
+    {
+        super(location);
+        requireNonNull(function, "type is null");
+        this.function = function;
+        this.precision = precision;
+    }
+
+	public Function getFunction()
+    {
+        return function;
+    }
+
+	public Integer getPrecision()
+    {
+        return precision;
+    }
+
+	@Override
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitCurrentTime(this, context);
+    }
+
+	@Override
+    public List<Node> getChildren()
+    {
+        return ImmutableList.of();
+    }
+
+	@Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if ((o == null) || (getClass() != o.getClass())) {
+            return false;
+        }
+        CurrentTime that = (CurrentTime) o;
+        return (function == that.function) &&
+                Objects.equals(precision, that.precision);
+    }
+
+	@Override
+    public int hashCode()
+    {
+        return Objects.hash(function, precision);
+    }
+
+	public enum Function
     {
         TIME("current_time"),
         DATE("current_date"),
@@ -46,75 +116,5 @@ public class CurrentTime
         {
             return name;
         }
-    }
-
-    public CurrentTime(Function function)
-    {
-        this(Optional.empty(), function, null);
-    }
-
-    public CurrentTime(NodeLocation location, Function function)
-    {
-        this(Optional.of(location), function, null);
-    }
-
-    public CurrentTime(Function function, Integer precision)
-    {
-        this(Optional.empty(), function, precision);
-    }
-
-    public CurrentTime(NodeLocation location, Function function, Integer precision)
-    {
-        this(Optional.of(location), function, precision);
-    }
-
-    private CurrentTime(Optional<NodeLocation> location, Function function, Integer precision)
-    {
-        super(location);
-        requireNonNull(function, "type is null");
-        this.function = function;
-        this.precision = precision;
-    }
-
-    public Function getFunction()
-    {
-        return function;
-    }
-
-    public Integer getPrecision()
-    {
-        return precision;
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitCurrentTime(this, context);
-    }
-
-    @Override
-    public List<Node> getChildren()
-    {
-        return ImmutableList.of();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if ((o == null) || (getClass() != o.getClass())) {
-            return false;
-        }
-        CurrentTime that = (CurrentTime) o;
-        return (function == that.function) &&
-                Objects.equals(precision, that.precision);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(function, precision);
     }
 }

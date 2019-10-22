@@ -94,30 +94,30 @@ public class SqlQueryManagerStats
             peakRunningTasksStat.add(peakRunningTasks);
         }
 
-        if (info.getErrorCode() != null) {
-            switch (info.getErrorCode().getType()) {
-                case USER_ERROR:
-                    userErrorFailures.update(1);
-                    break;
-                case INTERNAL_ERROR:
-                    internalFailures.update(1);
-                    break;
-                case INSUFFICIENT_RESOURCES:
-                    insufficientResourcesFailures.update(1);
-                    break;
-                case EXTERNAL:
-                    externalFailures.update(1);
-                    break;
-            }
-
-            if (info.getErrorCode().getCode() == ABANDONED_QUERY.toErrorCode().getCode()) {
-                abandonedQueries.update(1);
-            }
-            else if (info.getErrorCode().getCode() == USER_CANCELED.toErrorCode().getCode()) {
-                canceledQueries.update(1);
-            }
-            failedQueries.update(1);
-        }
+        if (info.getErrorCode() == null) {
+			return;
+		}
+		switch (info.getErrorCode().getType()) {
+		    case USER_ERROR:
+		        userErrorFailures.update(1);
+		        break;
+		    case INTERNAL_ERROR:
+		        internalFailures.update(1);
+		        break;
+		    case INSUFFICIENT_RESOURCES:
+		        insufficientResourcesFailures.update(1);
+		        break;
+		    case EXTERNAL:
+		        externalFailures.update(1);
+		        break;
+		}
+		if (info.getErrorCode().getCode() == ABANDONED_QUERY.toErrorCode().getCode()) {
+		    abandonedQueries.update(1);
+		}
+		else if (info.getErrorCode().getCode() == USER_CANCELED.toErrorCode().getCode()) {
+		    canceledQueries.update(1);
+		}
+		failedQueries.update(1);
     }
 
     @Managed

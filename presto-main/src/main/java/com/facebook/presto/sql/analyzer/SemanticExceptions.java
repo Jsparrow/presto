@@ -53,10 +53,10 @@ public final class SemanticExceptions
 
     public static String subQueryNotSupportedError(Node node, String notSupportedFeatureDescription)
     {
-        if (node.getLocation().isPresent()) {
-            NodeLocation nodeLocation = node.getLocation().get();
-            return format("line %s:%s: %s", nodeLocation.getLineNumber(), nodeLocation.getColumnNumber(), notSupportedFeatureDescription + " is not supported");
-        }
-        return notSupportedFeatureDescription + " is not supported";
+        if (!node.getLocation().isPresent()) {
+			return notSupportedFeatureDescription + " is not supported";
+		}
+		NodeLocation nodeLocation = node.getLocation().get();
+		return format("line %s:%s: %s", nodeLocation.getLineNumber(), nodeLocation.getColumnNumber(), notSupportedFeatureDescription + " is not supported");
     }
 }

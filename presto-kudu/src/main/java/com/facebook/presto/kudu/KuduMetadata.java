@@ -56,11 +56,14 @@ import java.util.Set;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KuduMetadata
         implements ConnectorMetadata
 {
-    private final String connectorId;
+    private static final Logger logger = LoggerFactory.getLogger(KuduMetadata.class);
+	private final String connectorId;
     private final KuduClientSession clientSession;
 
     @Inject
@@ -96,13 +99,13 @@ public class KuduMetadata
         }
 
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : tables) {
+        tables.forEach(tableName -> {
             KuduTableHandle tableHandle = getTableHandle(session, tableName);
             if (tableHandle != null) {
                 ConnectorTableMetadata tableMetadata = getTableMetadata(tableHandle);
                 columns.put(tableName, tableMetadata.getColumns());
             }
-        }
+        });
         return columns.build();
     }
 
@@ -121,13 +124,13 @@ public class KuduMetadata
         }
 
         String encoding = KuduTableProperties.lookupEncodingString(column.getEncoding());
-        if (!column.getEncoding().equals(ColumnSchema.Encoding.AUTO_ENCODING)) {
+        if (column.getEncoding() != ColumnSchema.Encoding.AUTO_ENCODING) {
             properties.put(KuduTableProperties.ENCODING, encoding);
         }
         extra.append("encoding=").append(encoding).append(", ");
 
         String compression = KuduTableProperties.lookupCompressionString(column.getCompressionAlgorithm());
-        if (!column.getCompressionAlgorithm().equals(ColumnSchema.CompressionAlgorithm.DEFAULT_COMPRESSION)) {
+        if (column.getCompressionAlgorithm() != ColumnSchema.CompressionAlgorithm.DEFAULT_COMPRESSION) {
             properties.put(KuduTableProperties.COMPRESSION, compression);
         }
         extra.append("compression=").append(compression);
@@ -188,7 +191,8 @@ public class KuduMetadata
             return new KuduTableHandle(connectorId, schemaTableName, table);
         }
         catch (NotFoundException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 

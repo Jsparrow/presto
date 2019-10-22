@@ -52,32 +52,23 @@ public class UnnestStatsRule
         // Thus we'd still populate the inaccurate numbers just so stats are populated to enable optimization
         // potential.
         calculatedStats.setOutputRowCount(sourceStats.getOutputRowCount());
-        for (VariableReferenceExpression variable : node.getReplicateVariables()) {
-            calculatedStats.addVariableStatistics(variable, sourceStats.getVariableStatistics(variable));
-        }
-        for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : node.getUnnestVariables().entrySet()) {
+        node.getReplicateVariables().forEach(variable -> calculatedStats.addVariableStatistics(variable, sourceStats.getVariableStatistics(variable)));
+        node.getUnnestVariables().entrySet().forEach(entry -> {
             List<VariableReferenceExpression> unnestToVariables = entry.getValue();
             VariableStatsEstimate stats = sourceStats.getVariableStatistics(entry.getKey());
-            for (VariableReferenceExpression variable : unnestToVariables) {
-                // This is a very conservative way on estimating stats after unnest. We assume each symbol
-                // after unnest would have as much data as the symbol before unnest. This would over
-                // estimate, which are more likely to mean we'd loose an optimization opportunity, but at
-                // least it won't cause false optimizations.
-                calculatedStats.addVariableStatistics(
-                        variable,
-                        VariableStatsEstimate.builder()
-                                .setAverageRowSize(stats.getAverageRowSize())
-                                .build());
-            }
-        }
-        if (node.getOrdinalityVariable().isPresent()) {
-            calculatedStats.addVariableStatistics(
-                    node.getOrdinalityVariable().get(),
-                    VariableStatsEstimate.builder()
-                        .setLowValue(0)
-                        .setNullsFraction(0)
-                        .build());
-        }
+            // This is a very conservative way on estimating stats after unnest. We assume each symbol
+			// after unnest would have as much data as the symbol before unnest. This would over
+			// estimate, which are more likely to mean we'd loose an optimization opportunity, but at
+			// least it won't cause false optimizations.
+			unnestToVariables.forEach(variable -> calculatedStats.addVariableStatistics(variable,
+					VariableStatsEstimate.builder().setAverageRowSize(stats.getAverageRowSize()).build()));
+        });
+        node.getOrdinalityVariable().ifPresent(value -> calculatedStats.addVariableStatistics(
+		        value,
+		        VariableStatsEstimate.builder()
+		            .setLowValue(0)
+		            .setNullsFraction(0)
+		            .build()));
         return Optional.of(calculatedStats.build());
     }
 }

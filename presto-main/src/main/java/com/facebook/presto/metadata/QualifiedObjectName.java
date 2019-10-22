@@ -32,7 +32,19 @@ import static java.util.Objects.requireNonNull;
 @Immutable
 public class QualifiedObjectName
 {
-    @JsonCreator
+    private final String catalogName;
+	private final String schemaName;
+	private final String objectName;
+
+	public QualifiedObjectName(String catalogName, String schemaName, String objectName)
+    {
+        checkObjectName(catalogName, schemaName, objectName);
+        this.catalogName = catalogName;
+        this.schemaName = schemaName;
+        this.objectName = objectName;
+    }
+
+	@JsonCreator
     public static QualifiedObjectName valueOf(String name)
     {
         requireNonNull(name, "name is null");
@@ -43,49 +55,37 @@ public class QualifiedObjectName
         return new QualifiedObjectName(ids.get(0), ids.get(1), ids.get(2));
     }
 
-    private final String catalogName;
-    private final String schemaName;
-    private final String objectName;
-
-    public QualifiedObjectName(String catalogName, String schemaName, String objectName)
-    {
-        checkObjectName(catalogName, schemaName, objectName);
-        this.catalogName = catalogName;
-        this.schemaName = schemaName;
-        this.objectName = objectName;
-    }
-
-    public String getCatalogName()
+	public String getCatalogName()
     {
         return catalogName;
     }
 
-    public String getSchemaName()
+	public String getSchemaName()
     {
         return schemaName;
     }
 
-    public String getObjectName()
+	public String getObjectName()
     {
         return objectName;
     }
 
-    public SchemaTableName asSchemaTableName()
+	public SchemaTableName asSchemaTableName()
     {
         return new SchemaTableName(schemaName, objectName);
     }
 
-    public CatalogSchemaTableName asCatalogSchemaTableName()
+	public CatalogSchemaTableName asCatalogSchemaTableName()
     {
         return new CatalogSchemaTableName(catalogName, schemaName, objectName);
     }
 
-    public QualifiedTablePrefix asQualifiedTablePrefix()
+	public QualifiedTablePrefix asQualifiedTablePrefix()
     {
         return new QualifiedTablePrefix(catalogName, schemaName, objectName);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (obj == this) {
@@ -100,20 +100,20 @@ public class QualifiedObjectName
                 Objects.equals(objectName, o.objectName);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(catalogName, schemaName, objectName);
     }
 
-    @JsonValue
+	@JsonValue
     @Override
     public String toString()
     {
-        return catalogName + '.' + schemaName + '.' + objectName;
+        return new StringBuilder().append(catalogName).append('.').append(schemaName).append('.').append(objectName).toString();
     }
 
-    public static Function<SchemaTableName, QualifiedObjectName> convertFromSchemaTableName(String catalogName)
+	public static Function<SchemaTableName, QualifiedObjectName> convertFromSchemaTableName(String catalogName)
     {
         return input -> new QualifiedObjectName(catalogName, input.getSchemaName(), input.getTableName());
     }

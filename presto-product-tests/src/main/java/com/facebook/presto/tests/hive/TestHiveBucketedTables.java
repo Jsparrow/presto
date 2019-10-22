@@ -45,27 +45,14 @@ public class TestHiveBucketedTables
 {
     @TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition BUCKETED_PARTITIONED_NATION = HiveTableDefinition.builder("bucket_partition_nation")
-            .setCreateTableDDLTemplate("CREATE TABLE %NAME%(" +
-                    "n_nationkey     BIGINT," +
-                    "n_name          STRING," +
-                    "n_regionkey     BIGINT," +
-                    "n_comment       STRING) " +
-                    "PARTITIONED BY (part_key STRING) " +
-                    "CLUSTERED BY (n_regionkey) " +
-                    "INTO 2 BUCKETS " +
-                    "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'")
+            .setCreateTableDDLTemplate(new StringBuilder().append("CREATE TABLE %NAME%(").append("n_nationkey     BIGINT,").append("n_name          STRING,").append("n_regionkey     BIGINT,").append("n_comment       STRING) ").append("PARTITIONED BY (part_key STRING) ").append("CLUSTERED BY (n_regionkey) ").append("INTO 2 BUCKETS ")
+					.append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'").toString())
             .setNoData()
             .build();
 
     @TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition PARTITIONED_NATION = HiveTableDefinition.builder("partitioned_nation")
-            .setCreateTableDDLTemplate("CREATE TABLE %NAME%(" +
-                    "n_nationkey     BIGINT," +
-                    "n_name          STRING," +
-                    "n_regionkey     BIGINT," +
-                    "n_comment       STRING) " +
-                    "PARTITIONED BY (part_key STRING) " +
-                    "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'")
+            .setCreateTableDDLTemplate(new StringBuilder().append("CREATE TABLE %NAME%(").append("n_nationkey     BIGINT,").append("n_name          STRING,").append("n_regionkey     BIGINT,").append("n_comment       STRING) ").append("PARTITIONED BY (part_key STRING) ").append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '|'").toString())
             .setNoData()
             .build();
 

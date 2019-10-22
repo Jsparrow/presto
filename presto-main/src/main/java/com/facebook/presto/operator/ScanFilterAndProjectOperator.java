@@ -196,11 +196,11 @@ public class ScanFilterAndProjectOperator
         if (!blocked.isDone()) {
             return blocked;
         }
-        if (pageSource != null) {
-            CompletableFuture<?> pageSourceBlocked = pageSource.isBlocked();
-            return pageSourceBlocked.isDone() ? NOT_BLOCKED : toListenableFuture(pageSourceBlocked);
-        }
-        return NOT_BLOCKED;
+        if (pageSource == null) {
+			return NOT_BLOCKED;
+		}
+		CompletableFuture<?> pageSourceBlocked = pageSource.isBlocked();
+		return pageSourceBlocked.isDone() ? NOT_BLOCKED : toListenableFuture(pageSourceBlocked);
     }
 
     @Override

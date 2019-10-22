@@ -58,11 +58,9 @@ public abstract class SetOperationNode
         this.outputToInputs = unmodifiableMap(copiedMap);
         this.outputVariables = unmodifiableList(new ArrayList<>(outputVariables));
 
-        for (Collection<VariableReferenceExpression> inputs : this.outputToInputs.values()) {
-            checkArgument(
-                    inputs.size() == this.sources.size(),
-                    format("Every source needs to map its variables to an output %s operation variables", this.getClass().getSimpleName()));
-        }
+        this.outputToInputs.values().forEach(inputs -> checkArgument(inputs.size() == this.sources.size(),
+				format("Every source needs to map its variables to an output %s operation variables",
+						this.getClass().getSimpleName())));
 
         // Make sure each source positionally corresponds to their variable values in the Multimap
         for (int i = 0; i < sources.size(); i++) {
@@ -104,9 +102,7 @@ public abstract class SetOperationNode
     public Map<VariableReferenceExpression, VariableReferenceExpression> sourceVariableMap(int sourceIndex)
     {
         Map<VariableReferenceExpression, VariableReferenceExpression> result = new LinkedHashMap<>();
-        for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : outputToInputs.entrySet()) {
-            result.put(entry.getKey(), entry.getValue().get(sourceIndex));
-        }
+        outputToInputs.entrySet().forEach(entry -> result.put(entry.getKey(), entry.getValue().get(sourceIndex)));
 
         return unmodifiableMap(result);
     }

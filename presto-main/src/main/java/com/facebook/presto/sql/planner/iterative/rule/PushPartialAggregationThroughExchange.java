@@ -59,35 +59,35 @@ import static java.util.Objects.requireNonNull;
 public class PushPartialAggregationThroughExchange
         implements Rule<AggregationNode>
 {
-    private final FunctionManager functionManager;
-
-    public PushPartialAggregationThroughExchange(FunctionManager functionManager)
-    {
-        this.functionManager = requireNonNull(functionManager, "functionManager is null");
-    }
-
     private static final Capture<ExchangeNode> EXCHANGE_NODE = Capture.newCapture();
 
-    private static final Pattern<AggregationNode> PATTERN = aggregation()
+	private static final Pattern<AggregationNode> PATTERN = aggregation()
             .with(source().matching(
                     exchange()
                             .matching(node -> !node.getOrderingScheme().isPresent())
                             .capturedAs(EXCHANGE_NODE)));
 
-    @Override
+	private final FunctionManager functionManager;
+
+	public PushPartialAggregationThroughExchange(FunctionManager functionManager)
+    {
+        this.functionManager = requireNonNull(functionManager, "functionManager is null");
+    }
+
+	@Override
     public Pattern<AggregationNode> getPattern()
     {
         return PATTERN;
     }
 
-    @Override
+	@Override
     public Result apply(AggregationNode aggregationNode, Captures captures, Context context)
     {
         ExchangeNode exchangeNode = captures.get(EXCHANGE_NODE);
 
         boolean decomposable = isDecomposable(aggregationNode, functionManager);
 
-        if (aggregationNode.getStep().equals(SINGLE) &&
+        if (aggregationNode.getStep() == SINGLE &&
                 aggregationNode.hasEmptyGroupingSet() &&
                 aggregationNode.hasNonEmptyGroupingSet() &&
                 exchangeNode.getType() == REPARTITION) {
@@ -144,7 +144,7 @@ public class PushPartialAggregationThroughExchange
         }
     }
 
-    private PlanNode pushPartial(AggregationNode aggregation, ExchangeNode exchange, Context context)
+	private PlanNode pushPartial(AggregationNode aggregation, ExchangeNode exchange, Context context)
     {
         List<PlanNode> partials = new ArrayList<>();
         for (int i = 0; i < exchange.getSources().size(); i++) {
@@ -164,16 +164,14 @@ public class PushPartialAggregationThroughExchange
 
             Assignments.Builder assignments = Assignments.builder();
 
-            for (VariableReferenceExpression output : aggregation.getOutputVariables()) {
+            aggregation.getOutputVariables().forEach(output -> {
                 VariableReferenceExpression input = symbolMapper.map(output);
                 assignments.put(output, input);
-            }
+            });
             partials.add(new ProjectNode(context.getIdAllocator().getNextId(), mappedPartial, assignments.build()));
         }
 
-        for (PlanNode node : partials) {
-            verify(aggregation.getOutputVariables().equals(node.getOutputVariables()));
-        }
+        partials.forEach(node -> verify(aggregation.getOutputVariables().equals(node.getOutputVariables())));
         // Since this exchange source is now guaranteed to have the same symbols as the inputs to the the partial
         // aggregation, we don't need to rewrite symbols in the partitioning function
         List<VariableReferenceExpression> aggregationOutputs = aggregation.getOutputVariables();
@@ -194,12 +192,12 @@ public class PushPartialAggregationThroughExchange
                 Optional.empty());
     }
 
-    private PlanNode split(AggregationNode node, Context context)
+	private PlanNode split(AggregationNode node, Context context)
     {
         // otherwise, add a partial and final with an exchange in between
         Map<VariableReferenceExpression, AggregationNode.Aggregation> intermediateAggregation = new HashMap<>();
         Map<VariableReferenceExpression, AggregationNode.Aggregation> finalAggregation = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, AggregationNode.Aggregation> entry : node.getAggregations().entrySet()) {
+        node.getAggregations().entrySet().forEach(entry -> {
             AggregationNode.Aggregation originalAggregation = entry.getValue();
             String functionName = functionManager.getFunctionMetadata(originalAggregation.getFunctionHandle()).getName().getSuffix();
             FunctionHandle functionHandle = originalAggregation.getFunctionHandle();
@@ -236,7 +234,7 @@ public class PushPartialAggregationThroughExchange
                             Optional.empty(),
                             false,
                             Optional.empty()));
-        }
+        });
 
         PlanNode partial = new AggregationNode(
                 context.getIdAllocator().getNextId(),
@@ -263,7 +261,7 @@ public class PushPartialAggregationThroughExchange
                 node.getGroupIdVariable());
     }
 
-    private static boolean isLambda(RowExpression rowExpression)
+	private static boolean isLambda(RowExpression rowExpression)
     {
         return rowExpression instanceof LambdaDefinitionExpression;
     }

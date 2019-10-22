@@ -30,7 +30,7 @@ public class TestFailureFunction
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "fail me")
     public void testFailure()
     {
-        assertFunction("fail(json_parse('" + FAILURE_INFO + "'))", UNKNOWN, null);
+        assertFunction(new StringBuilder().append("fail(json_parse('").append(FAILURE_INFO).append("'))").toString(), UNKNOWN, null);
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "/ by zero")

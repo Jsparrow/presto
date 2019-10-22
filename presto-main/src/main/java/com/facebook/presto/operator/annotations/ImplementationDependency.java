@@ -80,12 +80,7 @@ public interface ImplementationDependency
             return;
         }
 
-        for (TypeSignatureParameter parameter : typeSignature.getParameters()) {
-            Optional<TypeSignature> childTypeSignature = parameter.getTypeSignatureOrNamedTypeSignature();
-            if (childTypeSignature.isPresent()) {
-                checkTypeParameters(childTypeSignature.get(), typeParameterNames, element);
-            }
-        }
+        typeSignature.getParameters().stream().map(TypeSignatureParameter::getTypeSignatureOrNamedTypeSignature).forEach(childTypeSignature -> childTypeSignature.ifPresent(value -> checkTypeParameters(value, typeParameterNames, element)));
     }
 
     class Factory

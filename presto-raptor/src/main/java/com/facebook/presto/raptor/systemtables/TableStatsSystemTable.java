@@ -104,7 +104,7 @@ public class TableStatsSystemTable
                 .map(ColumnMetadata::getType)
                 .collect(toList()));
 
-        for (TableStatsRow row : dao.getTableStatsRows(schemaName, tableName)) {
+        dao.getTableStatsRows(schemaName, tableName).forEach(row -> {
             pageBuilder.beginRow();
             VARCHAR.writeSlice(pageBuilder.nextBlockBuilder(), utf8Slice(row.getSchemaName()));
             VARCHAR.writeSlice(pageBuilder.nextBlockBuilder(), utf8Slice(row.getTableName()));
@@ -115,7 +115,7 @@ public class TableStatsSystemTable
             BIGINT.writeLong(pageBuilder.nextBlockBuilder(), row.getRowCount());
             BIGINT.writeLong(pageBuilder.nextBlockBuilder(), row.getCompressedSize());
             BIGINT.writeLong(pageBuilder.nextBlockBuilder(), row.getUncompressedSize());
-        }
+        });
 
         return pageBuilder.build();
     }

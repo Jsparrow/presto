@@ -101,10 +101,13 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestPrestoDriver
 {
-    private static final DateTimeZone ASIA_ORAL_ZONE = DateTimeZone.forID("Asia/Oral");
+    private static final Logger logger = LoggerFactory.getLogger(TestPrestoDriver.class);
+	private static final DateTimeZone ASIA_ORAL_ZONE = DateTimeZone.forID("Asia/Oral");
     private static final GregorianCalendar ASIA_ORAL_CALENDAR = new GregorianCalendar(ASIA_ORAL_ZONE.toTimeZone());
     private static final String TEST_CATALOG = "test_catalog";
 
@@ -144,13 +147,7 @@ public class TestPrestoDriver
             assertEquals(statement.executeUpdate("CREATE SCHEMA blackhole.blackhole"), 0);
             assertEquals(statement.executeUpdate("CREATE TABLE test_table (x bigint)"), 0);
 
-            assertEquals(statement.executeUpdate("CREATE TABLE slow_test_table (x bigint) " +
-                    "WITH (" +
-                    "   split_count = 1, " +
-                    "   pages_per_split = 1, " +
-                    "   rows_per_page = 1, " +
-                    "   page_processing_delay = '1m'" +
-                    ")"), 0);
+            assertEquals(statement.executeUpdate(new StringBuilder().append("CREATE TABLE slow_test_table (x bigint) ").append("WITH (").append("   split_count = 1, ").append("   pages_per_split = 1, ").append("   rows_per_page = 1, ").append("   page_processing_delay = '1m'").append(")").toString()), 0);
         }
     }
 
@@ -167,18 +164,8 @@ public class TestPrestoDriver
     {
         try (Connection connection = createConnection()) {
             try (Statement statement = connection.createStatement()) {
-                try (ResultSet rs = statement.executeQuery("" +
-                        "SELECT " +
-                        "  123 _integer" +
-                        ",  12300000000 _bigint" +
-                        ", 'foo' _varchar" +
-                        ", 0.1E0 _double" +
-                        ", true _boolean" +
-                        ", cast('hello' as varbinary) _varbinary" +
-                        ", DECIMAL '1234567890.1234567' _decimal_short" +
-                        ", DECIMAL '.12345678901234567890123456789012345678' _decimal_long" +
-                        ", approx_set(42) _hll" +
-                        ", cast('foo' as char(5)) _char")) {
+                try (ResultSet rs = statement.executeQuery(new StringBuilder().append("").append("SELECT ").append("  123 _integer").append(",  12300000000 _bigint").append(", 'foo' _varchar").append(", 0.1E0 _double").append(", true _boolean")
+						.append(", cast('hello' as varbinary) _varbinary").append(", DECIMAL '1234567890.1234567' _decimal_short").append(", DECIMAL '.12345678901234567890123456789012345678' _decimal_long").append(", approx_set(42) _hll").append(", cast('foo' as char(5)) _char").toString())) {
                     ResultSetMetaData metadata = rs.getMetaData();
 
                     assertEquals(metadata.getColumnCount(), 10);
@@ -289,19 +276,8 @@ public class TestPrestoDriver
     {
         try (Connection connection = createConnection()) {
             try (Statement statement = connection.createStatement()) {
-                try (ResultSet rs = statement.executeQuery("SELECT " +
-                        "  TIME '3:04:05' as a" +
-                        ", TIME '6:07:08 +06:17' as b" +
-                        ", TIME '9:10:11 Europe/Berlin' as c" +
-                        ", TIMESTAMP '2001-02-03 3:04:05' as d" +
-                        ", TIMESTAMP '2004-05-06 6:07:08 +06:17' as e" +
-                        ", TIMESTAMP '2007-08-09 9:10:11 Europe/Berlin' as f" +
-                        ", DATE '2013-03-22' as g" +
-                        ", INTERVAL '123-11' YEAR TO MONTH as h" +
-                        ", INTERVAL '11 22:33:44.555' DAY TO SECOND as i" +
-                        ", REAL '123.45' as j" +
-                        ", REAL 'Infinity' as k" +
-                        "")) {
+                try (ResultSet rs = statement.executeQuery(new StringBuilder().append("SELECT ").append("  TIME '3:04:05' as a").append(", TIME '6:07:08 +06:17' as b").append(", TIME '9:10:11 Europe/Berlin' as c").append(", TIMESTAMP '2001-02-03 3:04:05' as d").append(", TIMESTAMP '2004-05-06 6:07:08 +06:17' as e").append(", TIMESTAMP '2007-08-09 9:10:11 Europe/Berlin' as f")
+						.append(", DATE '2013-03-22' as g").append(", INTERVAL '123-11' YEAR TO MONTH as h").append(", INTERVAL '11 22:33:44.555' DAY TO SECOND as i").append(", REAL '123.45' as j").append(", REAL 'Infinity' as k").append("").toString())) {
                     assertTrue(rs.next());
 
                     assertEquals(rs.getTime(1), new Time(new DateTime(1970, 1, 1, 3, 4, 5).getMillis()));
@@ -436,9 +412,7 @@ public class TestPrestoDriver
 
         List<List<String>> test = new ArrayList<>();
         test.add(list(TEST_CATALOG, "information_schema"));
-        for (String schema : TpchMetadata.SCHEMA_NAMES) {
-            test.add(list(TEST_CATALOG, schema));
-        }
+        TpchMetadata.SCHEMA_NAMES.forEach(schema -> test.add(list(TEST_CATALOG, schema)));
 
         List<List<String>> all = new ArrayList<>();
         all.addAll(system);
@@ -509,9 +483,7 @@ public class TestPrestoDriver
         List<List<Object>> data = readRows(rs);
 
         assertEquals(data.size(), expectedSchemas.size());
-        for (List<Object> row : data) {
-            assertTrue(expectedSchemas.contains(list((String) row.get(1), (String) row.get(0))));
-        }
+        data.forEach(row -> assertTrue(expectedSchemas.contains(list((String) row.get(1), (String) row.get(0)))));
 
         ResultSetMetaData metadata = rs.getMetaData();
         assertEquals(metadata.getColumnCount(), 2);
@@ -829,28 +801,9 @@ public class TestPrestoDriver
         try (Connection connection = createConnection("blackhole", "blackhole");
                 Statement statement = connection.createStatement()) {
             assertEquals(statement.executeUpdate(
-                    "CREATE TABLE test_get_columns_table (" +
-                            "c_boolean boolean, " +
-                            "c_bigint bigint, " +
-                            "c_integer integer, " +
-                            "c_smallint smallint, " +
-                            "c_tinyint tinyint, " +
-                            "c_real real, " +
-                            "c_double double, " +
-                            "c_varchar_1234 varchar(1234), " +
-                            "c_varchar varchar, " +
-                            "c_char_345 char(345), " +
-                            "c_varbinary varbinary, " +
-                            "c_time time, " +
-                            "c_time_with_time_zone time with time zone, " +
-                            "c_timestamp timestamp, " +
-                            "c_timestamp_with_time_zone timestamp with time zone, " +
-                            "c_date date, " +
-                            "c_decimal_8_2 decimal(8,2), " +
-                            "c_decimal_38_0 decimal(38,0), " +
-                            "c_array array<bigint>, " +
-                            "c_color color" +
-                            ")"), 0);
+                    new StringBuilder().append("CREATE TABLE test_get_columns_table (").append("c_boolean boolean, ").append("c_bigint bigint, ").append("c_integer integer, ").append("c_smallint smallint, ").append("c_tinyint tinyint, ").append("c_real real, ")
+							.append("c_double double, ").append("c_varchar_1234 varchar(1234), ").append("c_varchar varchar, ").append("c_char_345 char(345), ").append("c_varbinary varbinary, ").append("c_time time, ").append("c_time_with_time_zone time with time zone, ").append("c_timestamp timestamp, ")
+							.append("c_timestamp_with_time_zone timestamp with time zone, ").append("c_date date, ").append("c_decimal_8_2 decimal(8,2), ").append("c_decimal_38_0 decimal(38,0), ").append("c_array array<bigint>, ").append("c_color color").append(")").toString()), 0);
 
             try (ResultSet rs = connection.getMetaData().getColumns("blackhole", "blackhole", "test_get_columns_table", null)) {
                 assertColumnMetadata(rs);
@@ -882,7 +835,7 @@ public class TestPrestoDriver
     private static void assertColumnSpec(ResultSet rs, int jdbcType, Long columnSize, Long numPrecRadix, Long decimalDigits, Long charOctetLength, Type type)
             throws SQLException
     {
-        String message = " of " + type.getDisplayName() + ": ";
+        String message = new StringBuilder().append(" of ").append(type.getDisplayName()).append(": ").toString();
         assertTrue(rs.next());
         assertEquals(rs.getObject("DATA_TYPE"), (long) jdbcType, "DATA_TYPE" + message);
         assertEquals(rs.getObject("COLUMN_SIZE"), columnSize, "COLUMN_SIZE" + message);
@@ -1324,11 +1277,7 @@ public class TestPrestoDriver
     {
         try (Connection connection = createConnection(TEST_CATALOG, "information_schema")) {
             try (Statement statement = connection.createStatement()) {
-                try (ResultSet rs = statement.executeQuery("" +
-                        "SELECT table_catalog, table_schema " +
-                        "FROM tables " +
-                        "WHERE table_schema = 'information_schema' " +
-                        "  AND table_name = 'tables'")) {
+                try (ResultSet rs = statement.executeQuery(new StringBuilder().append("").append("SELECT table_catalog, table_schema ").append("FROM tables ").append("WHERE table_schema = 'information_schema' ").append("  AND table_name = 'tables'").toString())) {
                     ResultSetMetaData metadata = rs.getMetaData();
                     assertEquals(metadata.getColumnCount(), 2);
                     assertEquals(metadata.getColumnLabel(1), "table_catalog");
@@ -1346,11 +1295,7 @@ public class TestPrestoDriver
     {
         try (Connection connection = createConnection(TEST_CATALOG)) {
             try (Statement statement = connection.createStatement()) {
-                try (ResultSet rs = statement.executeQuery("" +
-                        "SELECT table_catalog, table_schema " +
-                        "FROM information_schema.tables " +
-                        "WHERE table_schema = 'information_schema' " +
-                        "  AND table_name = 'tables'")) {
+                try (ResultSet rs = statement.executeQuery(new StringBuilder().append("").append("SELECT table_catalog, table_schema ").append("FROM information_schema.tables ").append("WHERE table_schema = 'information_schema' ").append("  AND table_name = 'tables'").toString())) {
                     ResultSetMetaData metadata = rs.getMetaData();
                     assertEquals(metadata.getColumnCount(), 2);
                     assertEquals(metadata.getColumnLabel(1), "table_catalog");
@@ -1517,7 +1462,7 @@ public class TestPrestoDriver
         CountDownLatch queryFinished = new CountDownLatch(1);
         AtomicReference<String> queryId = new AtomicReference<>();
         AtomicReference<Throwable> queryFailure = new AtomicReference<>();
-        String queryUuid = "/* " + UUID.randomUUID().toString() + " */";
+        String queryUuid = new StringBuilder().append("/* ").append(UUID.randomUUID().toString()).append(" */").toString();
 
         try (Connection connection = createConnection("blackhole", "blackhole");
                 Statement statement = connection.createStatement()) {
@@ -1560,13 +1505,7 @@ public class TestPrestoDriver
     {
         try (Connection connection = createConnection("blackhole", "blackhole");
                 Statement statement = connection.createStatement()) {
-            statement.executeUpdate("CREATE TABLE test_query_timeout (key BIGINT) " +
-                    "WITH (" +
-                    "   split_count = 1, " +
-                    "   pages_per_split = 1, " +
-                    "   rows_per_page = 1, " +
-                    "   page_processing_delay = '1m'" +
-                    ")");
+            statement.executeUpdate(new StringBuilder().append("CREATE TABLE test_query_timeout (key BIGINT) ").append("WITH (").append("   split_count = 1, ").append("   pages_per_split = 1, ").append("   rows_per_page = 1, ").append("   page_processing_delay = '1m'").append(")").toString());
         }
 
         CountDownLatch queryFinished = new CountDownLatch(1);
@@ -1725,6 +1664,7 @@ public class TestPrestoDriver
             closeable.close();
         }
         catch (Exception ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 }

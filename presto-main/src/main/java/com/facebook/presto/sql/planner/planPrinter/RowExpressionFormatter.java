@@ -66,31 +66,31 @@ public final class RowExpressionFormatter
         {
             if (standardFunctionResolution.isArithmeticFunction(node.getFunctionHandle()) || standardFunctionResolution.isComparisonFunction(node.getFunctionHandle())) {
                 String operation = functionMetadataManager.getFunctionMetadata(node.getFunctionHandle()).getOperatorType().get().getOperator();
-                return String.join(" " + operation + " ", formatRowExpressions(session, node.getArguments()).stream().map(e -> "(" + e + ")").collect(toImmutableList()));
+                return String.join(new StringBuilder().append(" ").append(operation).append(" ").toString(), formatRowExpressions(session, node.getArguments()).stream().map(e -> new StringBuilder().append("(").append(e).append(")").toString()).collect(toImmutableList()));
             }
             else if (standardFunctionResolution.isCastFunction(node.getFunctionHandle())) {
                 return String.format("CAST(%s AS %s)", formatRowExpression(session, node.getArguments().get(0)), node.getType().getDisplayName());
             }
             else if (standardFunctionResolution.isNegateFunction(node.getFunctionHandle())) {
-                return "-(" + formatRowExpression(session, node.getArguments().get(0)) + ")";
+                return new StringBuilder().append("-(").append(formatRowExpression(session, node.getArguments().get(0))).append(")").toString();
             }
             else if (standardFunctionResolution.isSubscriptFunction(node.getFunctionHandle())) {
-                return formatRowExpression(session, node.getArguments().get(0)) + "[" + formatRowExpression(session, node.getArguments().get(1)) + "]";
+                return new StringBuilder().append(formatRowExpression(session, node.getArguments().get(0))).append("[").append(formatRowExpression(session, node.getArguments().get(1))).append("]").toString();
             }
             else if (standardFunctionResolution.isBetweenFunction(node.getFunctionHandle())) {
                 List<String> formattedExpresions = formatRowExpressions(session, node.getArguments());
                 return String.format("%s BETWEEN (%s) AND (%s)", formattedExpresions.get(0), formattedExpresions.get(1), formattedExpresions.get(2));
             }
-            return node.getDisplayName() + "(" + String.join(", ", formatRowExpressions(session, node.getArguments())) + ")";
+            return new StringBuilder().append(node.getDisplayName()).append("(").append(String.join(", ", formatRowExpressions(session, node.getArguments()))).append(")").toString();
         }
 
         @Override
         public String visitSpecialForm(SpecialFormExpression node, ConnectorSession session)
         {
-            if (node.getForm().equals(SpecialFormExpression.Form.AND) || node.getForm().equals(SpecialFormExpression.Form.OR)) {
-                return String.join(" " + node.getForm() + " ", formatRowExpressions(session, node.getArguments()).stream().map(e -> "(" + e + ")").collect(toImmutableList()));
+            if (node.getForm() == SpecialFormExpression.Form.AND || node.getForm() == SpecialFormExpression.Form.OR) {
+                return String.join(new StringBuilder().append(" ").append(node.getForm()).append(" ").toString(), formatRowExpressions(session, node.getArguments()).stream().map(e -> new StringBuilder().append("(").append(e).append(")").toString()).collect(toImmutableList()));
             }
-            return node.getForm().name() + "(" + String.join(", ", formatRowExpressions(session, node.getArguments())) + ")";
+            return new StringBuilder().append(node.getForm().name()).append("(").append(String.join(", ", formatRowExpressions(session, node.getArguments()))).append(")").toString();
         }
 
         @Override
@@ -102,7 +102,7 @@ public final class RowExpressionFormatter
         @Override
         public String visitLambda(LambdaDefinitionExpression node, ConnectorSession session)
         {
-            return "(" + String.join(", ", node.getArguments()) + ") -> " + formatRowExpression(session, node.getBody());
+            return new StringBuilder().append("(").append(String.join(", ", node.getArguments())).append(") -> ").append(formatRowExpression(session, node.getBody())).toString();
         }
 
         @Override
@@ -121,12 +121,12 @@ public final class RowExpressionFormatter
             }
 
             Type type = node.getType();
-            if (node.getType().getJavaType() == Block.class) {
-                Block block = (Block) value;
-                // TODO: format block
-                return format("[Block: position count: %s; size: %s bytes]", block.getPositionCount(), block.getRetainedSizeInBytes());
-            }
-            return type.getDisplayName().toUpperCase() + " " + value.toString();
+            if (node.getType().getJavaType() != Block.class) {
+				return new StringBuilder().append(type.getDisplayName().toUpperCase()).append(" ").append(value.toString()).toString();
+			}
+			Block block = (Block) value;
+			// TODO: format block
+			return format("[Block: position count: %s; size: %s bytes]", block.getPositionCount(), block.getRetainedSizeInBytes());
         }
     }
 }

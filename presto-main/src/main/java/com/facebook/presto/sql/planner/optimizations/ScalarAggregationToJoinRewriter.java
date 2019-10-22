@@ -175,7 +175,7 @@ public class ScalarAggregationToJoinRewriter
             VariableReferenceExpression nonNull)
     {
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> aggregations = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, Aggregation> entry : scalarAggregation.getAggregations().entrySet()) {
+        scalarAggregation.getAggregations().entrySet().forEach(entry -> {
             VariableReferenceExpression variable = entry.getKey();
             if (functionResolution.isCountFunction(entry.getValue().getFunctionHandle())) {
                 Type scalarAggregationSourceType = nonNull.getType();
@@ -193,7 +193,7 @@ public class ScalarAggregationToJoinRewriter
             else {
                 aggregations.put(variable, entry.getValue());
             }
-        }
+        });
 
         return Optional.of(new AggregationNode(
                 idAllocator.getNextId(),

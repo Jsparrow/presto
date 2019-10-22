@@ -87,16 +87,10 @@ public class TestAvroDecoder
     private static String getAvroSchema(Map<String, String> fields)
     {
         String fieldSchema = fields.entrySet().stream()
-                .map(entry -> "{\"name\": \"" + entry.getKey() + "\",\"type\": " + entry.getValue() + ",\"default\": null}")
+                .map(entry -> new StringBuilder().append("{\"name\": \"").append(entry.getKey()).append("\",\"type\": ").append(entry.getValue()).append(",\"default\": null}").toString())
                 .collect(Collectors.joining(","));
 
-        return "{\"type\" : \"record\"," +
-                "  \"name\" : \"test_schema\"," +
-                "  \"namespace\" : \"com.facebook.presto.decoder.avro\"," +
-                "  \"fields\" :" +
-                "  [" +
-                fieldSchema +
-                "  ]}";
+        return new StringBuilder().append("{\"type\" : \"record\",").append("  \"name\" : \"test_schema\",").append("  \"namespace\" : \"com.facebook.presto.decoder.avro\",").append("  \"fields\" :").append("  [").append(fieldSchema).append("  ]}").toString();
     }
 
     private Map<DecoderColumnHandle, FieldValueProvider> buildAndDecodeColumns(Set<DecoderColumnHandle> columns, Map<String, String> fieldSchema, Map<String, Object> fieldValue)
@@ -144,12 +138,9 @@ public class TestAvroDecoder
     {
         GenericData.Record record = new GenericData.Record(schema);
         values.forEach(record::put);
-        try {
-            DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(new GenericDatumWriter<>(schema));
-
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(new GenericDatumWriter<>(schema))) {
             dataFileWriter.create(schema, outputStream);
             dataFileWriter.append(record);
-            dataFileWriter.close();
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to convert to Avro.", e);
@@ -353,24 +344,9 @@ public class TestAvroDecoder
     public void testNestedRecord()
             throws Exception
     {
-        String schema = "{\"type\" : \"record\", " +
-                "  \"name\" : \"nested_schema\"," +
-                "  \"namespace\" : \"com.facebook.presto.decoder.avro\"," +
-                "  \"fields\" :" +
-                "  [{" +
-                "            \"name\":\"nested\"," +
-                "            \"type\":{" +
-                "                      \"type\":\"record\"," +
-                "                      \"name\":\"Nested\"," +
-                "                      \"fields\":" +
-                "                      [" +
-                "                          {" +
-                "                              \"name\":\"id\"," +
-                "                              \"type\":[\"long\", \"null\"]" +
-                "                          }" +
-                "                      ]" +
-                "                  }" +
-                "  }]}";
+        String schema = new StringBuilder().append("{\"type\" : \"record\", ").append("  \"name\" : \"nested_schema\",").append("  \"namespace\" : \"com.facebook.presto.decoder.avro\",").append("  \"fields\" :").append("  [{").append("            \"name\":\"nested\",").append("            \"type\":{").append("                      \"type\":\"record\",")
+				.append("                      \"name\":\"Nested\",").append("                      \"fields\":").append("                      [").append("                          {").append("                              \"name\":\"id\",").append("                              \"type\":[\"long\", \"null\"]").append("                          }").append("                      ]").append("                  }")
+				.append("  }]}").toString();
         DecoderTestColumnHandle row = new DecoderTestColumnHandle(0, "row", BIGINT, "nested/id", null, null, false, false, false);
 
         Schema nestedSchema = new Schema.Parser().parse(schema);

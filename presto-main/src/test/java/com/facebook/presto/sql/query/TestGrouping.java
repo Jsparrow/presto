@@ -43,11 +43,7 @@ public class TestGrouping
                 "VALUES (0, 2e0)");
 
         assertions.assertQuery(
-                "SELECT\n" +
-                        "    1e0 * count(*), " +
-                        "    grouping(x) " +
-                        "FROM (VALUES 1) t(x) " +
-                        "GROUP BY GROUPING SETS ((x), ()) ",
+                new StringBuilder().append("SELECT\n").append("    1e0 * count(*), ").append("    grouping(x) ").append("FROM (VALUES 1) t(x) ").append("GROUP BY GROUPING SETS ((x), ()) ").toString(),
                 "VALUES (1e0, 1), (1e0, 0)");
     }
 
@@ -55,10 +51,7 @@ public class TestGrouping
     public void testFilter()
     {
         assertions.assertQuery(
-                "SELECT a, b, grouping(a, b) " +
-                        "FROM (VALUES ('x0', 'y0'), ('x1', 'y1') ) AS t (a, b) " +
-                        "GROUP BY CUBE (a, b)" +
-                        "HAVING grouping(a, b) = 0",
+                new StringBuilder().append("SELECT a, b, grouping(a, b) ").append("FROM (VALUES ('x0', 'y0'), ('x1', 'y1') ) AS t (a, b) ").append("GROUP BY CUBE (a, b)").append("HAVING grouping(a, b) = 0").toString(),
                 "VALUES ('x0', 'y0', 0), ('x1', 'y1', 0)");
     }
 }

@@ -65,10 +65,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTypeRegistry
 {
-    private final TypeManager typeRegistry = new TypeRegistry();
+    private static final Logger logger = LoggerFactory.getLogger(TestTypeRegistry.class);
+	private final TypeManager typeRegistry = new TypeRegistry();
     private final FunctionManager functionManager = new FunctionManager(typeRegistry, new BlockEncodingManager(typeRegistry), new FeaturesConfig());
 
     @Test
@@ -229,44 +232,38 @@ public class TestTypeRegistry
     public void testCanCoerceIsTransitive()
     {
         Set<Type> types = getStandardPrimitiveTypes();
-        for (Type transitiveType : types) {
-            for (Type resultType : types) {
-                if (typeRegistry.canCoerce(transitiveType, resultType)) {
-                    for (Type sourceType : types) {
-                        if (typeRegistry.canCoerce(sourceType, transitiveType)) {
-                            if (!typeRegistry.canCoerce(sourceType, resultType)) {
-                                fail(format("'%s' -> '%s' coercion is missing when transitive coercion is possible: '%s' -> '%s' -> '%s'",
-                                        sourceType, resultType, sourceType, transitiveType, resultType));
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        types.forEach(transitiveType -> types.stream().filter(resultType -> typeRegistry.canCoerce(transitiveType, resultType))
+				.forEach(resultType -> types.forEach(sourceType -> {
+					boolean condition = typeRegistry.canCoerce(sourceType, transitiveType)
+							&& !typeRegistry.canCoerce(sourceType, resultType);
+					if (condition) {
+						fail(format(
+								"'%s' -> '%s' coercion is missing when transitive coercion is possible: '%s' -> '%s' -> '%s'",
+								sourceType, resultType, sourceType, transitiveType, resultType));
+					}
+				})));
     }
 
     @Test
     public void testCastOperatorsExistForCoercions()
     {
         Set<Type> types = getStandardPrimitiveTypes();
-        for (Type sourceType : types) {
-            for (Type resultType : types) {
-                if (typeRegistry.canCoerce(sourceType, resultType) && sourceType != UNKNOWN && resultType != UNKNOWN) {
-                    try {
-                        functionManager.lookupCast(CAST, sourceType.getTypeSignature(), resultType.getTypeSignature());
-                    }
-                    catch (OperatorNotFoundException e) {
-                        fail(format("'%s' -> '%s' coercion exists but there is no cast operator", sourceType, resultType));
-                    }
-                }
-            }
-        }
+        types.forEach(sourceType -> types.stream().filter(resultType -> typeRegistry.canCoerce(sourceType, resultType) && sourceType != UNKNOWN
+				&& resultType != UNKNOWN).forEach(resultType -> {
+					try {
+						functionManager.lookupCast(CAST, sourceType.getTypeSignature(), resultType.getTypeSignature());
+					} catch (OperatorNotFoundException e) {
+						logger.error(e.getMessage(), e);
+						fail(format("'%s' -> '%s' coercion exists but there is no cast operator", sourceType,
+								resultType));
+					}
+				}));
     }
 
     @Test
     public void testOperatorsImplemented()
     {
-        for (Type type : typeRegistry.getTypes()) {
+        typeRegistry.getTypes().forEach(type -> {
             if (type.isComparable()) {
                 functionManager.resolveOperator(EQUAL, fromTypes(type, type));
                 functionManager.resolveOperator(NOT_EQUAL, fromTypes(type, type));
@@ -279,7 +276,7 @@ public class TestTypeRegistry
                 functionManager.resolveOperator(GREATER_THAN_OR_EQUAL, fromTypes(type, type));
                 functionManager.resolveOperator(GREATER_THAN, fromTypes(type, type));
             }
-        }
+        });
     }
 
     @Test

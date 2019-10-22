@@ -401,7 +401,116 @@ public class TestOrcBatchPageSourceMemoryTracking
         assertBetweenInclusive(driverContext.getSystemMemoryUsage(), 0L, 500L);
     }
 
-    private class TestPreparer
+    public static FileSplit createTestFile(String filePath,
+            HiveOutputFormat<?, ?> outputFormat,
+            @SuppressWarnings("deprecation") SerDe serDe,
+            String compressionCodec,
+            List<TestColumn> testColumns,
+            int numRows,
+            int stripeRows)
+            throws Exception
+    {
+        // filter out partition keys, which are not written to the file
+        testColumns = ImmutableList.copyOf(filter(testColumns, not(TestColumn::isPartitionKey)));
+
+        Properties tableProperties = new Properties();
+        tableProperties.setProperty("columns", Joiner.on(',').join(transform(testColumns, TestColumn::getName)));
+        tableProperties.setProperty("columns.types", Joiner.on(',').join(transform(testColumns, TestColumn::getType)));
+        serDe.initialize(CONFIGURATION, tableProperties);
+
+        JobConf jobConf = new JobConf();
+        if (compressionCodec != null) {
+            CompressionCodec codec = new CompressionCodecFactory(CONFIGURATION).getCodecByName(compressionCodec);
+            jobConf.set(COMPRESS_CODEC, codec.getClass().getName());
+            jobConf.set(COMPRESS_TYPE, SequenceFile.CompressionType.BLOCK.toString());
+        }
+
+        RecordWriter recordWriter = createRecordWriter(new Path(filePath), CONFIGURATION);
+
+        try {
+            SettableStructObjectInspector objectInspector = getStandardStructObjectInspector(
+                    ImmutableList.copyOf(transform(testColumns, TestColumn::getName)),
+                    ImmutableList.copyOf(transform(testColumns, TestColumn::getObjectInspector)));
+
+            Object row = objectInspector.create();
+
+            List<StructField> fields = ImmutableList.copyOf(objectInspector.getAllStructFieldRefs());
+
+            for (int rowNumber = 0; rowNumber < numRows; rowNumber++) {
+                for (int i = 0; i < testColumns.size(); i++) {
+                    Object writeValue = testColumns.get(i).getWriteValue();
+                    if (writeValue instanceof Slice) {
+                        writeValue = ((Slice) writeValue).getBytes();
+                    }
+                    objectInspector.setStructFieldData(row, fields.get(i), writeValue);
+                }
+
+                Writable record = serDe.serialize(row, objectInspector);
+                recordWriter.write(record);
+                if (rowNumber % stripeRows == stripeRows - 1) {
+                    flushStripe(recordWriter);
+                }
+            }
+        }
+        finally {
+            recordWriter.close(false);
+        }
+
+        Path path = new Path(filePath);
+        path.getFileSystem(CONFIGURATION).setVerifyChecksum(true);
+        File file = new File(filePath);
+        return new FileSplit(path, 0, file.length(), new String[0]);
+    }
+
+	private static void flushStripe(RecordWriter recordWriter)
+    {
+        try {
+            Field writerField = OrcOutputFormat.class.getClassLoader()
+                    .loadClass(ORC_RECORD_WRITER)
+                    .getDeclaredField("writer");
+            writerField.setAccessible(true);
+            Writer writer = (Writer) writerField.get(recordWriter);
+            Method flushStripe = WriterImpl.class.getDeclaredMethod("flushStripe");
+            flushStripe.setAccessible(true);
+            flushStripe.invoke(writer);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	private static RecordWriter createRecordWriter(Path target, Configuration conf)
+    {
+        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(FileSystem.class.getClassLoader())) {
+            WriterOptions options = new OrcWriterOptions(conf)
+                    .memory(new NullMemoryManager(conf))
+                    .compress(ZLIB);
+
+            try {
+                return WRITER_CONSTRUCTOR.newInstance(target, options);
+            }
+            catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+	private static Constructor<? extends RecordWriter> getOrcWriterConstructor()
+    {
+        try {
+            Constructor<? extends RecordWriter> constructor = OrcOutputFormat.class.getClassLoader()
+                    .loadClass(ORC_RECORD_WRITER)
+                    .asSubclass(RecordWriter.class)
+                    .getDeclaredConstructor(Path.class, WriterOptions.class);
+            constructor.setAccessible(true);
+            return constructor;
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	private class TestPreparer
     {
         private final FileSplit fileSplit;
         private final Storage storage;
@@ -443,8 +552,7 @@ public class TestOrcBatchPageSourceMemoryTracking
             ImmutableList.Builder<HiveColumnHandle> columnsBuilder = ImmutableList.builder();
             ImmutableList.Builder<Type> typesBuilder = ImmutableList.builder();
             int nextHiveColumnIndex = 0;
-            for (int i = 0; i < testColumns.size(); i++) {
-                TestColumn testColumn = testColumns.get(i);
+            for (TestOrcBatchPageSourceMemoryTracking.TestColumn testColumn : testColumns) {
                 int columnIndex = testColumn.isPartitionKey() ? -1 : nextHiveColumnIndex++;
 
                 ObjectInspector inspector = testColumn.getObjectInspector();
@@ -545,115 +653,6 @@ public class TestOrcBatchPageSourceMemoryTracking
             return createTaskContext(executor, scheduledExecutor, testSessionBuilder().build())
                     .addPipelineContext(0, true, true, false)
                     .addDriverContext();
-        }
-    }
-
-    public static FileSplit createTestFile(String filePath,
-            HiveOutputFormat<?, ?> outputFormat,
-            @SuppressWarnings("deprecation") SerDe serDe,
-            String compressionCodec,
-            List<TestColumn> testColumns,
-            int numRows,
-            int stripeRows)
-            throws Exception
-    {
-        // filter out partition keys, which are not written to the file
-        testColumns = ImmutableList.copyOf(filter(testColumns, not(TestColumn::isPartitionKey)));
-
-        Properties tableProperties = new Properties();
-        tableProperties.setProperty("columns", Joiner.on(',').join(transform(testColumns, TestColumn::getName)));
-        tableProperties.setProperty("columns.types", Joiner.on(',').join(transform(testColumns, TestColumn::getType)));
-        serDe.initialize(CONFIGURATION, tableProperties);
-
-        JobConf jobConf = new JobConf();
-        if (compressionCodec != null) {
-            CompressionCodec codec = new CompressionCodecFactory(CONFIGURATION).getCodecByName(compressionCodec);
-            jobConf.set(COMPRESS_CODEC, codec.getClass().getName());
-            jobConf.set(COMPRESS_TYPE, SequenceFile.CompressionType.BLOCK.toString());
-        }
-
-        RecordWriter recordWriter = createRecordWriter(new Path(filePath), CONFIGURATION);
-
-        try {
-            SettableStructObjectInspector objectInspector = getStandardStructObjectInspector(
-                    ImmutableList.copyOf(transform(testColumns, TestColumn::getName)),
-                    ImmutableList.copyOf(transform(testColumns, TestColumn::getObjectInspector)));
-
-            Object row = objectInspector.create();
-
-            List<StructField> fields = ImmutableList.copyOf(objectInspector.getAllStructFieldRefs());
-
-            for (int rowNumber = 0; rowNumber < numRows; rowNumber++) {
-                for (int i = 0; i < testColumns.size(); i++) {
-                    Object writeValue = testColumns.get(i).getWriteValue();
-                    if (writeValue instanceof Slice) {
-                        writeValue = ((Slice) writeValue).getBytes();
-                    }
-                    objectInspector.setStructFieldData(row, fields.get(i), writeValue);
-                }
-
-                Writable record = serDe.serialize(row, objectInspector);
-                recordWriter.write(record);
-                if (rowNumber % stripeRows == stripeRows - 1) {
-                    flushStripe(recordWriter);
-                }
-            }
-        }
-        finally {
-            recordWriter.close(false);
-        }
-
-        Path path = new Path(filePath);
-        path.getFileSystem(CONFIGURATION).setVerifyChecksum(true);
-        File file = new File(filePath);
-        return new FileSplit(path, 0, file.length(), new String[0]);
-    }
-
-    private static void flushStripe(RecordWriter recordWriter)
-    {
-        try {
-            Field writerField = OrcOutputFormat.class.getClassLoader()
-                    .loadClass(ORC_RECORD_WRITER)
-                    .getDeclaredField("writer");
-            writerField.setAccessible(true);
-            Writer writer = (Writer) writerField.get(recordWriter);
-            Method flushStripe = WriterImpl.class.getDeclaredMethod("flushStripe");
-            flushStripe.setAccessible(true);
-            flushStripe.invoke(writer);
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static RecordWriter createRecordWriter(Path target, Configuration conf)
-    {
-        try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(FileSystem.class.getClassLoader())) {
-            WriterOptions options = new OrcWriterOptions(conf)
-                    .memory(new NullMemoryManager(conf))
-                    .compress(ZLIB);
-
-            try {
-                return WRITER_CONSTRUCTOR.newInstance(target, options);
-            }
-            catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    private static Constructor<? extends RecordWriter> getOrcWriterConstructor()
-    {
-        try {
-            Constructor<? extends RecordWriter> constructor = OrcOutputFormat.class.getClassLoader()
-                    .loadClass(ORC_RECORD_WRITER)
-                    .asSubclass(RecordWriter.class)
-                    .getDeclaredConstructor(Path.class, WriterOptions.class);
-            constructor.setAccessible(true);
-            return constructor;
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
         }
     }
 

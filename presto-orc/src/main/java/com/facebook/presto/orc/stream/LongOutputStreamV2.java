@@ -44,58 +44,45 @@ import static java.util.Objects.requireNonNull;
 public class LongOutputStreamV2
         implements LongOutputStream
 {
-    private enum EncodingType
-    {
-        SHORT_REPEAT, DIRECT, PATCHED_BASE, DELTA;
-
-        private int getOpCode()
-        {
-            return ordinal() << 6;
-        }
-    }
-
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(LongOutputStreamV2.class).instanceSize();
-    private static final int MAX_SCOPE = 512;
-    private static final int MIN_REPEAT = 3;
-    private static final int MAX_SHORT_REPEAT_LENGTH = 10;
+	private static final int MAX_SCOPE = 512;
+	private static final int MIN_REPEAT = 3;
+	private static final int MAX_SHORT_REPEAT_LENGTH = 10;
+	private final StreamKind streamKind;
+	private final OrcOutputBuffer buffer;
+	private final List<LongStreamCheckpoint> checkpoints = new ArrayList<>();
+	private long prevDelta;
+	private int fixedRunLength;
+	private int variableRunLength;
+	private final long[] literals = new long[MAX_SCOPE];
+	private final boolean signed;
+	private int numLiterals;
+	private final long[] zigzagLiterals = new long[MAX_SCOPE];
+	private final long[] baseReducedLiterals = new long[MAX_SCOPE];
+	private final long[] adjDeltas = new long[MAX_SCOPE];
+	private long fixedDelta;
+	private int zzBits90p;
+	private int zzBits100p;
+	private int brBits95p;
+	private int brBits100p;
+	private int bitsDeltaMax;
+	private int patchWidth;
+	private int patchGapWidth;
+	private int patchLength;
+	private long[] gapVsPatchList;
+	private long min;
+	private boolean isFixedDelta = true;
+	private final SerializationUtils utils = new SerializationUtils();
+	private boolean closed;
 
-    private final StreamKind streamKind;
-    private final OrcOutputBuffer buffer;
-    private final List<LongStreamCheckpoint> checkpoints = new ArrayList<>();
-
-    private long prevDelta;
-    private int fixedRunLength;
-    private int variableRunLength;
-    private final long[] literals = new long[MAX_SCOPE];
-    private final boolean signed;
-    private int numLiterals;
-    private final long[] zigzagLiterals = new long[MAX_SCOPE];
-    private final long[] baseReducedLiterals = new long[MAX_SCOPE];
-    private final long[] adjDeltas = new long[MAX_SCOPE];
-    private long fixedDelta;
-    private int zzBits90p;
-    private int zzBits100p;
-    private int brBits95p;
-    private int brBits100p;
-    private int bitsDeltaMax;
-    private int patchWidth;
-    private int patchGapWidth;
-    private int patchLength;
-    private long[] gapVsPatchList;
-    private long min;
-    private boolean isFixedDelta = true;
-    private final SerializationUtils utils = new SerializationUtils();
-
-    private boolean closed;
-
-    public LongOutputStreamV2(CompressionKind compression, int bufferSize, boolean signed, StreamKind streamKind)
+	public LongOutputStreamV2(CompressionKind compression, int bufferSize, boolean signed, StreamKind streamKind)
     {
         this.streamKind = requireNonNull(streamKind, "streamKind is null");
         this.buffer = new OrcOutputBuffer(compression, bufferSize);
         this.signed = signed;
     }
 
-    @Override
+	@Override
     // This comes from the Apache Hive ORC code
     // todo most of this should be rewritten for readability and performance
     public void writeLong(long value)
@@ -174,14 +161,13 @@ public class LongOutputStreamV2
             }
         }
 
-        // if fixed run length is <MIN_REPEAT and current value is
+        boolean condition = fixedRunLength > 0 && fixedRunLength < MIN_REPEAT && value != literals[numLiterals - 1];
+		// if fixed run length is <MIN_REPEAT and current value is
         // different from previous then treat it as variable run
-        if (fixedRunLength > 0 && fixedRunLength < MIN_REPEAT) {
-            if (value != literals[numLiterals - 1]) {
-                variableRunLength = fixedRunLength;
-                fixedRunLength = 0;
-            }
-        }
+        if (condition) {
+		    variableRunLength = fixedRunLength;
+		    fixedRunLength = 0;
+		}
 
         // after writing values re-initialize the variables
         if (numLiterals == 0) {
@@ -200,14 +186,14 @@ public class LongOutputStreamV2
         }
     }
 
-    private void initializeLiterals(long val)
+	private void initializeLiterals(long val)
     {
         literals[numLiterals++] = val;
         fixedRunLength = 1;
         variableRunLength = 1;
     }
 
-    private EncodingType determineEncoding()
+	private EncodingType determineEncoding()
     {
         // we need to compute zigzag values for DIRECT encoding if we decide to
         // break early for delta overflows or for shorter runs
@@ -328,7 +314,7 @@ public class LongOutputStreamV2
         return EncodingType.PATCHED_BASE;
     }
 
-    private void writeValues(EncodingType encoding)
+	private void writeValues(EncodingType encoding)
     {
         if (numLiterals == 0) {
             return;
@@ -351,7 +337,7 @@ public class LongOutputStreamV2
         clearEncoder();
     }
 
-    private void writeShortRepeatValues()
+	private void writeShortRepeatValues()
     {
         // get the value that is repeating, compute the bits and bytes required
         long repeatVal;
@@ -394,7 +380,7 @@ public class LongOutputStreamV2
         fixedRunLength = 0;
     }
 
-    private void writeDirectValues()
+	private void writeDirectValues()
     {
         // write the number of fixed bits required in next 5 bits
         int fixedBits = getClosestAlignedFixedBits(zzBits100p);
@@ -423,7 +409,7 @@ public class LongOutputStreamV2
         variableRunLength = 0;
     }
 
-    private void writeDeltaValues()
+	private void writeDeltaValues()
     {
         int fixedBits = getClosestAlignedFixedBits(bitsDeltaMax);
 
@@ -492,7 +478,7 @@ public class LongOutputStreamV2
         }
     }
 
-    private void writePatchedBaseValues()
+	private void writePatchedBaseValues()
     {
         preparePatchedBlob();
 
@@ -571,7 +557,7 @@ public class LongOutputStreamV2
         variableRunLength = 0;
     }
 
-    private void preparePatchedBlob()
+	private void preparePatchedBlob()
     {
         // mask will be max value beyond which patch will be generated
         long mask = (1L << brBits95p) - 1;
@@ -675,7 +661,7 @@ public class LongOutputStreamV2
         }
     }
 
-    private void clearEncoder()
+	private void clearEncoder()
     {
         numLiterals = 0;
         prevDelta = 0;
@@ -693,7 +679,7 @@ public class LongOutputStreamV2
         isFixedDelta = true;
     }
 
-    public void flush()
+	public void flush()
     {
         if (numLiterals == 0) {
             return;
@@ -724,14 +710,14 @@ public class LongOutputStreamV2
         writeValues(EncodingType.DELTA);
     }
 
-    @Override
+	@Override
     public void recordCheckpoint()
     {
         checkState(!closed);
         checkpoints.add(new LongStreamV2Checkpoint(numLiterals, buffer.getCheckpoint()));
     }
 
-    @Override
+	@Override
     public void close()
     {
         closed = true;
@@ -739,26 +725,26 @@ public class LongOutputStreamV2
         buffer.close();
     }
 
-    @Override
+	@Override
     public List<LongStreamCheckpoint> getCheckpoints()
     {
         checkState(closed);
         return ImmutableList.copyOf(checkpoints);
     }
 
-    @Override
+	@Override
     public StreamDataOutput getStreamDataOutput(int column)
     {
         return new StreamDataOutput(buffer::writeDataTo, new Stream(column, streamKind, toIntExact(buffer.getOutputDataSize()), true));
     }
 
-    @Override
+	@Override
     public long getBufferedBytes()
     {
         return buffer.estimateOutputDataSize() + (Long.BYTES * numLiterals);
     }
 
-    @Override
+	@Override
     public long getRetainedBytes()
     {
         // NOTE: we do not include checkpoints because they should be small and it would be annoying to calculate the size
@@ -771,7 +757,7 @@ public class LongOutputStreamV2
                 SizeOf.sizeOf(gapVsPatchList);
     }
 
-    @Override
+	@Override
     public void reset()
     {
         clearEncoder();
@@ -781,7 +767,17 @@ public class LongOutputStreamV2
         checkpoints.clear();
     }
 
-    // this entire class should be rewritten
+	private enum EncodingType
+    {
+        SHORT_REPEAT, DIRECT, PATCHED_BASE, DELTA;
+
+        private int getOpCode()
+        {
+            return ordinal() << 6;
+        }
+    }
+
+	// this entire class should be rewritten
     static final class SerializationUtils
     {
         private static final int BUFFER_SIZE = 64;
@@ -932,14 +928,6 @@ public class LongOutputStreamV2
             }
         }
 
-        enum FixedBitSizes
-        {
-            ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE,
-            THIRTEEN, FOURTEEN, FIFTEEN, SIXTEEN, SEVENTEEN, EIGHTEEN, NINETEEN,
-            TWENTY, TWENTY_ONE, TWENTY_TWO, TWENTY_THREE, TWENTY_FOUR, TWENTY_SIX,
-            TWENTY_EIGHT, THIRTY, THIRTY_TWO, FORTY, FORTY_EIGHT, FIFTY_SIX, SIXTY_FOUR
-        }
-
         /**
          * Finds the closest available fixed bit width match and returns its encoded
          * value (ordinal)
@@ -980,7 +968,7 @@ public class LongOutputStreamV2
             }
         }
 
-        /**
+		/**
          * Decodes the ordinal fixed bit value to actual fixed bit width value
          */
         static int decodeBitWidth(int n)
@@ -1014,7 +1002,7 @@ public class LongOutputStreamV2
             }
         }
 
-        void writeInts(long[] input, int offset, int length, int bitSize, SliceOutput output)
+		void writeInts(long[] input, int offset, int length, int bitSize, SliceOutput output)
         {
             requireNonNull(input, "input is null");
             checkArgument(input.length != 0);
@@ -1090,14 +1078,14 @@ public class LongOutputStreamV2
             }
         }
 
-        private static void unrolledBitPack1(long[] input, int offset, int len, SliceOutput output)
+		private static void unrolledBitPack1(long[] input, int offset, int len, SliceOutput output)
         {
             final int numHops = 8;
             final int remainder = len % numHops;
             final int endOffset = offset + len;
             final int endUnroll = endOffset - remainder;
             int val = 0;
-            for (int i = offset; i < endUnroll; i = i + numHops) {
+            for (int i = offset; i < endUnroll; i += numHops) {
                 val = (int) (val | ((input[i] & 1) << 7)
                         | ((input[i + 1] & 1) << 6)
                         | ((input[i + 2] & 1) << 5)
@@ -1110,24 +1098,25 @@ public class LongOutputStreamV2
                 val = 0;
             }
 
-            if (remainder > 0) {
-                int startShift = 7;
-                for (int i = endUnroll; i < endOffset; i++) {
-                    val = (int) (val | (input[i] & 1) << startShift);
-                    startShift -= 1;
-                }
-                output.write(val);
-            }
+            if (remainder <= 0) {
+				return;
+			}
+			int startShift = 7;
+			for (int i = endUnroll; i < endOffset; i++) {
+			    val = (int) (val | (input[i] & 1) << startShift);
+			    startShift -= 1;
+			}
+			output.write(val);
         }
 
-        private static void unrolledBitPack2(long[] input, int offset, int len, SliceOutput output)
+		private static void unrolledBitPack2(long[] input, int offset, int len, SliceOutput output)
         {
             final int numHops = 4;
             final int remainder = len % numHops;
             final int endOffset = offset + len;
             final int endUnroll = endOffset - remainder;
             int val = 0;
-            for (int i = offset; i < endUnroll; i = i + numHops) {
+            for (int i = offset; i < endUnroll; i += numHops) {
                 val = (int) (val | ((input[i] & 3) << 6)
                         | ((input[i + 1] & 3) << 4)
                         | ((input[i + 2] & 3) << 2)
@@ -1136,94 +1125,96 @@ public class LongOutputStreamV2
                 val = 0;
             }
 
-            if (remainder > 0) {
-                int startShift = 6;
-                for (int i = endUnroll; i < endOffset; i++) {
-                    val = (int) (val | (input[i] & 3) << startShift);
-                    startShift -= 2;
-                }
-                output.write(val);
-            }
+            if (remainder <= 0) {
+				return;
+			}
+			int startShift = 6;
+			for (int i = endUnroll; i < endOffset; i++) {
+			    val = (int) (val | (input[i] & 3) << startShift);
+			    startShift -= 2;
+			}
+			output.write(val);
         }
 
-        private static void unrolledBitPack4(long[] input, int offset, int len, SliceOutput output)
+		private static void unrolledBitPack4(long[] input, int offset, int len, SliceOutput output)
         {
             final int numHops = 2;
             final int remainder = len % numHops;
             final int endOffset = offset + len;
             final int endUnroll = endOffset - remainder;
             int val = 0;
-            for (int i = offset; i < endUnroll; i = i + numHops) {
+            for (int i = offset; i < endUnroll; i += numHops) {
                 val = (int) (val | ((input[i] & 15) << 4) | (input[i + 1]) & 15);
                 output.write(val);
                 val = 0;
             }
 
-            if (remainder > 0) {
-                int startShift = 4;
-                for (int i = endUnroll; i < endOffset; i++) {
-                    val = (int) (val | (input[i] & 15) << startShift);
-                    startShift -= 4;
-                }
-                output.write(val);
-            }
+            if (remainder <= 0) {
+				return;
+			}
+			int startShift = 4;
+			for (int i = endUnroll; i < endOffset; i++) {
+			    val = (int) (val | (input[i] & 15) << startShift);
+			    startShift -= 4;
+			}
+			output.write(val);
         }
 
-        private void unrolledBitPack8(long[] input, int offset, int len, SliceOutput output)
+		private void unrolledBitPack8(long[] input, int offset, int len, SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 1);
         }
 
-        private void unrolledBitPack16(long[] input, int offset, int len,
+		private void unrolledBitPack16(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 2);
         }
 
-        private void unrolledBitPack24(long[] input, int offset, int len,
+		private void unrolledBitPack24(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 3);
         }
 
-        private void unrolledBitPack32(long[] input, int offset, int len,
+		private void unrolledBitPack32(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 4);
         }
 
-        private void unrolledBitPack40(long[] input, int offset, int len,
+		private void unrolledBitPack40(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 5);
         }
 
-        private void unrolledBitPack48(long[] input, int offset, int len,
+		private void unrolledBitPack48(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 6);
         }
 
-        private void unrolledBitPack56(long[] input, int offset, int len,
+		private void unrolledBitPack56(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 7);
         }
 
-        private void unrolledBitPack64(long[] input, int offset, int len,
+		private void unrolledBitPack64(long[] input, int offset, int len,
                 SliceOutput output)
         {
             unrolledBitPackBytes(input, offset, len, output, 8);
         }
 
-        private void unrolledBitPackBytes(long[] input, int offset, int len, SliceOutput output, int numBytes)
+		private void unrolledBitPackBytes(long[] input, int offset, int len, SliceOutput output, int numBytes)
         {
             final int numHops = 8;
             final int remainder = len % numHops;
             final int endOffset = offset + len;
             final int endUnroll = endOffset - remainder;
             int i = offset;
-            for (; i < endUnroll; i = i + numHops) {
+            for (; i < endUnroll; i += numHops) {
                 writeLongBE(output, input, i, numHops, numBytes);
             }
 
@@ -1232,7 +1223,7 @@ public class LongOutputStreamV2
             }
         }
 
-        private void writeRemainingLongs(SliceOutput output, int offset, long[] input, int remainder, int numBytes)
+		private void writeRemainingLongs(SliceOutput output, int offset, long[] input, int remainder, int numBytes)
         {
             final int numHops = remainder;
 
@@ -1302,7 +1293,7 @@ public class LongOutputStreamV2
             output.write(writeBuffer, 0, toWrite);
         }
 
-        private void writeLongBE(SliceOutput output, long[] input, int offset, int numHops, int numBytes)
+		private void writeLongBE(SliceOutput output, long[] input, int offset, int numHops, int numBytes)
         {
             switch (numBytes) {
                 case 1:
@@ -1393,20 +1384,20 @@ public class LongOutputStreamV2
             output.write(writeBuffer, 0, toWrite);
         }
 
-        private void writeLongBE2(long val, int wbOffset)
+		private void writeLongBE2(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 8);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE3(long val, int wbOffset)
+		private void writeLongBE3(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 16);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 8);
             writeBuffer[wbOffset + 2] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE4(long val, int wbOffset)
+		private void writeLongBE4(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 24);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 16);
@@ -1414,7 +1405,7 @@ public class LongOutputStreamV2
             writeBuffer[wbOffset + 3] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE5(long val, int wbOffset)
+		private void writeLongBE5(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 32);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 24);
@@ -1423,7 +1414,7 @@ public class LongOutputStreamV2
             writeBuffer[wbOffset + 4] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE6(long val, int wbOffset)
+		private void writeLongBE6(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 40);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 32);
@@ -1433,7 +1424,7 @@ public class LongOutputStreamV2
             writeBuffer[wbOffset + 5] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE7(long val, int wbOffset)
+		private void writeLongBE7(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 48);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 40);
@@ -1444,7 +1435,7 @@ public class LongOutputStreamV2
             writeBuffer[wbOffset + 6] = (byte) (val >>> 0);
         }
 
-        private void writeLongBE8(long val, int wbOffset)
+		private void writeLongBE8(long val, int wbOffset)
         {
             writeBuffer[wbOffset + 0] = (byte) (val >>> 56);
             writeBuffer[wbOffset + 1] = (byte) (val >>> 48);
@@ -1456,11 +1447,19 @@ public class LongOutputStreamV2
             writeBuffer[wbOffset + 7] = (byte) (val >>> 0);
         }
 
-        // Do not want to use Guava LongMath.checkedSubtract() here as it will throw
+		// Do not want to use Guava LongMath.checkedSubtract() here as it will throw
         // ArithmeticException in case of overflow
         public static boolean isSafeSubtract(long left, long right)
         {
             return (left ^ right) >= 0 | (left ^ (left - right)) >= 0;
+        }
+
+		enum FixedBitSizes
+        {
+            ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE,
+            THIRTEEN, FOURTEEN, FIFTEEN, SIXTEEN, SEVENTEEN, EIGHTEEN, NINETEEN,
+            TWENTY, TWENTY_ONE, TWENTY_TWO, TWENTY_THREE, TWENTY_FOUR, TWENTY_SIX,
+            TWENTY_EIGHT, THIRTY, THIRTY_TWO, FORTY, FORTY_EIGHT, FIFTY_SIX, SIXTY_FOUR
         }
     }
 }

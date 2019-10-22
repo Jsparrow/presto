@@ -56,21 +56,15 @@ public class TestUnnest
                 "VALUES (1), (2)");
 
         assertions.assertFails(
-                "SELECT x FROM" +
-                        "(VALUES (3)) AS t(x)" +
-                        "CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))",
+                new StringBuilder().append("SELECT x FROM").append("(VALUES (3)) AS t(x)").append("CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))").toString(),
                 ".*Column 'x' is ambiguous.*");
 
         assertions.assertQuery(
-                "SELECT t.x FROM" +
-                        "(VALUES (3)) AS t(x)" +
-                        "CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))",
+                new StringBuilder().append("SELECT t.x FROM").append("(VALUES (3)) AS t(x)").append("CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))").toString(),
                 "VALUES (3), (3)");
 
         assertions.assertQuery(
-                "SELECT u.x FROM" +
-                        "(VALUES (3)) AS t(x)" +
-                        "CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar)))) u",
+                new StringBuilder().append("SELECT u.x FROM").append("(VALUES (3)) AS t(x)").append("CROSS JOIN UNNEST(CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar)))) u").toString(),
                 "VALUES (1), (2)");
     }
 
@@ -78,24 +72,15 @@ public class TestUnnest
     public void testUnnestMultiExpr()
     {
         assertions.assertFails(
-                "SELECT x " +
-                        "FROM UNNEST(" +
-                        "   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar)))," +
-                        "   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))",
+                new StringBuilder().append("SELECT x ").append("FROM UNNEST(").append("   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))),").append("   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))))").toString(),
                 ".*Column 'x' is ambiguous.*");
 
         assertions.assertQuery(
-                "SELECT t3 " +
-                        "FROM UNNEST(" +
-                        "   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar)))," +
-                        "   CAST(ARRAY[ROW(3, 'c'), ROW(4, 'd')] as ARRAY(ROW(x int, y varchar)))) t(t1,t2,t3,t4)",
+                new StringBuilder().append("SELECT t3 ").append("FROM UNNEST(").append("   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(x int, y varchar))),").append("   CAST(ARRAY[ROW(3, 'c'), ROW(4, 'd')] as ARRAY(ROW(x int, y varchar)))) t(t1,t2,t3,t4)").toString(),
                 "VALUES (3), (4)");
 
         assertions.assertQuery(
-                "SELECT x " +
-                        "FROM UNNEST(" +
-                        "   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(a int, b varchar)))," +
-                        "   CAST(ARRAY[ROW(3, 'c'), ROW(4, 'd')] as ARRAY(ROW(x int, y varchar))))",
+                new StringBuilder().append("SELECT x ").append("FROM UNNEST(").append("   CAST(ARRAY[ROW(1, 'a'), ROW(2, 'b')] as ARRAY(ROW(a int, b varchar))),").append("   CAST(ARRAY[ROW(3, 'c'), ROW(4, 'd')] as ARRAY(ROW(x int, y varchar))))").toString(),
                 "VALUES (3), (4)");
     }
 }

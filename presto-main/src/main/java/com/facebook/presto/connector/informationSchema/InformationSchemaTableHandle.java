@@ -66,7 +66,7 @@ public class InformationSchemaTableHandle
     @Override
     public String toString()
     {
-        return catalogName + ":" + schemaName + ":" + tableName;
+        return new StringBuilder().append(catalogName).append(":").append(schemaName).append(":").append(tableName).toString();
     }
 
     @Override

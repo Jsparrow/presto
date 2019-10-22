@@ -30,10 +30,13 @@ import static com.facebook.presto.sql.ExpressionUtils.rewriteIdentifiersToSymbol
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestExpressionVerifier
 {
-    private final SqlParser parser = new SqlParser();
+    private static final Logger logger = LoggerFactory.getLogger(TestExpressionVerifier.class);
+	private final SqlParser parser = new SqlParser();
     private final Metadata metadata = MetadataManager.createTestMetadataManager();
     private final TestingRowExpressionTranslator translator = new TestingRowExpressionTranslator(metadata);
 
@@ -108,6 +111,7 @@ public class TestExpressionVerifier
             throw new AssertionError("Method didn't throw exception as expected");
         }
         catch (Exception expected) {
+			logger.error(expected.getMessage(), expected);
         }
     }
 

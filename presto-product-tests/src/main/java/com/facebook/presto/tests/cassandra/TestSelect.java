@@ -184,7 +184,7 @@ public class TestSelect
                                 "d2177dd0-eaa2-11de-a572-001b779c76e3", "01234567-0123-0123-0123-0123456789ab",
                                 "\0", String.valueOf(Long.MIN_VALUE)),
                         row("the quick brown fox jumped over the lazy dog", 9223372036854775807L, "01234".getBytes(),
-                                true, new Double("99999999999999999999999999999999999999"), Double.MAX_VALUE,
+                                true, Double.valueOf("99999999999999999999999999999999999999"), Double.MAX_VALUE,
                                 Float.MAX_VALUE, "[4,5,6,7]", "255.255.255.255", Integer.MAX_VALUE, "[4,5,6]",
                                 "{\"a\":1,\"b\":2}", "[4,5,6]", "this is a text value", Timestamp.valueOf(LocalDateTime.of(9999, 12, 31, 23, 59, 59)),
                                 "d2177dd0-eaa2-11de-a572-001b779c76e3", "01234567-0123-0123-0123-0123456789ab",
@@ -198,9 +198,7 @@ public class TestSelect
     {
         String tableName = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, CASSANDRA_NATION.getName());
         String sql = format(
-                "SELECT n1.n_name, n2.n_regionkey FROM %s n1 JOIN " +
-                        "%s n2 ON n1.n_nationkey = n2.n_regionkey " +
-                        "WHERE n1.n_nationkey=3",
+                new StringBuilder().append("SELECT n1.n_name, n2.n_regionkey FROM %s n1 JOIN ").append("%s n2 ON n1.n_nationkey = n2.n_regionkey ").append("WHERE n1.n_nationkey=3").toString(),
                 tableName,
                 tableName);
         QueryResult queryResult = onPresto()
@@ -218,9 +216,7 @@ public class TestSelect
     public void testNationJoinRegion()
     {
         String sql = format(
-                "SELECT c.n_name, t.name FROM %s.%s.%s c JOIN " +
-                        "tpch.tiny.region t ON c.n_regionkey = t.regionkey " +
-                        "WHERE c.n_nationkey=3",
+                new StringBuilder().append("SELECT c.n_name, t.name FROM %s.%s.%s c JOIN ").append("tpch.tiny.region t ON c.n_regionkey = t.regionkey ").append("WHERE c.n_nationkey=3").toString(),
                 CONNECTOR_NAME,
                 KEY_SPACE,
                 CASSANDRA_NATION.getName());
@@ -273,11 +269,7 @@ public class TestSelect
     {
         String mvName = "clustering_mv";
         onCassandra(format("DROP MATERIALIZED VIEW IF EXISTS %s.%s", KEY_SPACE, mvName));
-        onCassandra(format("CREATE MATERIALIZED VIEW %s.%s AS " +
-                        "SELECT * FROM %s.%s " +
-                        "WHERE s_nationkey IS NOT NULL " +
-                        "PRIMARY KEY (s_nationkey, s_suppkey) " +
-                        "WITH CLUSTERING ORDER BY (s_nationkey DESC)",
+        onCassandra(format(new StringBuilder().append("CREATE MATERIALIZED VIEW %s.%s AS ").append("SELECT * FROM %s.%s ").append("WHERE s_nationkey IS NOT NULL ").append("PRIMARY KEY (s_nationkey, s_suppkey) ").append("WITH CLUSTERING ORDER BY (s_nationkey DESC)").toString(),
                 KEY_SPACE,
                 mvName,
                 KEY_SPACE,

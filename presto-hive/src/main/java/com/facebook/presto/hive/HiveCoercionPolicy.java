@@ -75,7 +75,7 @@ public class HiveCoercionPolicy
 
     private boolean canCoerceForMap(HiveType fromHiveType, HiveType toHiveType)
     {
-        if (!fromHiveType.getCategory().equals(Category.MAP) || !toHiveType.getCategory().equals(Category.MAP)) {
+        if (fromHiveType.getCategory() != Category.MAP || toHiveType.getCategory() != Category.MAP) {
             return false;
         }
         HiveType fromKeyType = HiveType.valueOf(((MapTypeInfo) fromHiveType.getTypeInfo()).getMapKeyTypeInfo().getTypeName());
@@ -88,7 +88,7 @@ public class HiveCoercionPolicy
 
     private boolean canCoerceForList(HiveType fromHiveType, HiveType toHiveType)
     {
-        if (!fromHiveType.getCategory().equals(Category.LIST) || !toHiveType.getCategory().equals(Category.LIST)) {
+        if (fromHiveType.getCategory() != Category.LIST || toHiveType.getCategory() != Category.LIST) {
             return false;
         }
         HiveType fromElementType = HiveType.valueOf(((ListTypeInfo) fromHiveType.getTypeInfo()).getListElementTypeInfo().getTypeName());
@@ -98,7 +98,7 @@ public class HiveCoercionPolicy
 
     private boolean canCoerceForStruct(HiveType fromHiveType, HiveType toHiveType)
     {
-        if (!fromHiveType.getCategory().equals(Category.STRUCT) || !toHiveType.getCategory().equals(Category.STRUCT)) {
+        if (fromHiveType.getCategory() != Category.STRUCT || toHiveType.getCategory() != Category.STRUCT) {
             return false;
         }
         List<String> fromFieldNames = ((StructTypeInfo) fromHiveType.getTypeInfo()).getAllStructFieldNames();

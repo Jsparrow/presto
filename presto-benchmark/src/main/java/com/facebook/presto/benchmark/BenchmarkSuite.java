@@ -32,8 +32,16 @@ import static java.util.Objects.requireNonNull;
 public class BenchmarkSuite
 {
     private static final Logger LOGGER = Logger.get(BenchmarkSuite.class);
+	private final LocalQueryRunner localQueryRunner;
+	private final String outputDirectory;
 
-    public static List<AbstractBenchmark> createBenchmarks(LocalQueryRunner localQueryRunner)
+	public BenchmarkSuite(LocalQueryRunner localQueryRunner, String outputDirectory)
+    {
+        this.localQueryRunner = localQueryRunner;
+        this.outputDirectory = requireNonNull(outputDirectory, "outputDirectory is null");
+    }
+
+	public static List<AbstractBenchmark> createBenchmarks(LocalQueryRunner localQueryRunner)
     {
         Session optimizeHashSession = Session.builder(localQueryRunner.getDefaultSession())
                 .setSystemProperty(OPTIMIZE_HASH_GENERATION, "true")
@@ -101,16 +109,7 @@ public class BenchmarkSuite
                 new SqlApproximateCountDistinctVarBinaryBenchmark(localQueryRunner));
     }
 
-    private final LocalQueryRunner localQueryRunner;
-    private final String outputDirectory;
-
-    public BenchmarkSuite(LocalQueryRunner localQueryRunner, String outputDirectory)
-    {
-        this.localQueryRunner = localQueryRunner;
-        this.outputDirectory = requireNonNull(outputDirectory, "outputDirectory is null");
-    }
-
-    private static File createOutputFile(String fileName)
+	private static File createOutputFile(String fileName)
             throws IOException
     {
         File outputFile = new File(fileName);
@@ -118,15 +117,13 @@ public class BenchmarkSuite
         return outputFile;
     }
 
-    public void runAllBenchmarks()
+	public void runAllBenchmarks()
             throws IOException
     {
         List<AbstractBenchmark> benchmarks = createBenchmarks(localQueryRunner);
 
         LOGGER.info("=== Pre-running all benchmarks for JVM warmup ===");
-        for (AbstractBenchmark benchmark : benchmarks) {
-            benchmark.runBenchmark();
-        }
+        benchmarks.forEach(AbstractBenchmark::runBenchmark);
 
         LOGGER.info("=== Actually running benchmarks for metrics ===");
         for (AbstractBenchmark benchmark : benchmarks) {
@@ -160,18 +157,14 @@ public class BenchmarkSuite
         public BenchmarkResultHook addResults(Map<String, Long> results)
         {
             requireNonNull(results, "results is null");
-            for (BenchmarkResultHook benchmarkResultHook : benchmarkResultHooks) {
-                benchmarkResultHook.addResults(results);
-            }
+            benchmarkResultHooks.forEach(benchmarkResultHook -> benchmarkResultHook.addResults(results));
             return this;
         }
 
         @Override
         public void finished()
         {
-            for (BenchmarkResultHook benchmarkResultHook : benchmarkResultHooks) {
-                benchmarkResultHook.finished();
-            }
+            benchmarkResultHooks.forEach(BenchmarkResultHook::finished);
         }
     }
 }

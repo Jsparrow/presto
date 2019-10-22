@@ -152,8 +152,8 @@ public final class Signature
                 longVariableConstraints.stream().map(LongVariableConstraint::toString))
                 .collect(toList());
 
-        return name + (allConstraints.isEmpty() ? "" : "<" + String.join(",", allConstraints) + ">") +
-                "(" + String.join(",", argumentTypes.stream().map(TypeSignature::toString).collect(toList())) + "):" + returnType;
+        return new StringBuilder().append(name).append(allConstraints.isEmpty() ? "" : "<" + String.join(",", allConstraints) + ">").append("(").append(String.join(",", argumentTypes.stream().map(TypeSignature::toString).collect(toList()))).append("):")
+				.append(returnType).toString();
     }
 
     /*

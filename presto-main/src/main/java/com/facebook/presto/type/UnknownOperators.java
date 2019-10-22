@@ -95,7 +95,14 @@ public final class UnknownOperators
         throw new AssertionError("value of unknown type should all be NULL");
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType("unknown") @SqlNullable Boolean value)
+    {
+        return true;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class UnknownDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -117,12 +124,5 @@ public final class UnknownOperators
         {
             return false;
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType("unknown") @SqlNullable Boolean value)
-    {
-        return true;
     }
 }

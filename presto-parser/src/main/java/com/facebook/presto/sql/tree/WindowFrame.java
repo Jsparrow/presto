@@ -25,26 +25,21 @@ import static java.util.Objects.requireNonNull;
 public class WindowFrame
         extends Node
 {
-    public enum Type
-    {
-        RANGE, ROWS
-    }
-
     private final Type type;
-    private final FrameBound start;
-    private final Optional<FrameBound> end;
+	private final FrameBound start;
+	private final Optional<FrameBound> end;
 
-    public WindowFrame(Type type, FrameBound start, Optional<FrameBound> end)
+	public WindowFrame(Type type, FrameBound start, Optional<FrameBound> end)
     {
         this(Optional.empty(), type, start, end);
     }
 
-    public WindowFrame(NodeLocation location, Type type, FrameBound start, Optional<FrameBound> end)
+	public WindowFrame(NodeLocation location, Type type, FrameBound start, Optional<FrameBound> end)
     {
         this(Optional.of(location), type, start, end);
     }
 
-    private WindowFrame(Optional<NodeLocation> location, Type type, FrameBound start, Optional<FrameBound> end)
+	private WindowFrame(Optional<NodeLocation> location, Type type, FrameBound start, Optional<FrameBound> end)
     {
         super(location);
         this.type = requireNonNull(type, "type is null");
@@ -52,28 +47,28 @@ public class WindowFrame
         this.end = requireNonNull(end, "end is null");
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public FrameBound getStart()
+	public FrameBound getStart()
     {
         return start;
     }
 
-    public Optional<FrameBound> getEnd()
+	public Optional<FrameBound> getEnd()
     {
         return end;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitWindowFrame(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         ImmutableList.Builder<Node> nodes = ImmutableList.builder();
@@ -82,7 +77,7 @@ public class WindowFrame
         return nodes.build();
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -97,13 +92,13 @@ public class WindowFrame
                 Objects.equals(end, o.end);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, start, end);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -111,5 +106,10 @@ public class WindowFrame
                 .add("start", start)
                 .add("end", end)
                 .toString();
+    }
+
+	public enum Type
+    {
+        RANGE, ROWS
     }
 }

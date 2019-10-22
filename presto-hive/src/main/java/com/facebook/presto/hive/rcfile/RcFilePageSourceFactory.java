@@ -72,11 +72,14 @@ import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_LAST_COL
 import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_NULL_FORMAT;
 import static org.apache.hadoop.hive.serde2.lazy.LazySerDeParameters.SERIALIZATION_EXTEND_NESTING_LEVELS;
 import static org.apache.hadoop.hive.serde2.lazy.LazyUtils.getByte;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RcFilePageSourceFactory
         implements HiveBatchPageSourceFactory
 {
-    private static final int TEXT_LEGACY_NESTING_LEVELS = 8;
+    private static final Logger logger = LoggerFactory.getLogger(RcFilePageSourceFactory.class);
+	private static final int TEXT_LEGACY_NESTING_LEVELS = 8;
     private static final int TEXT_EXTENDED_NESTING_LEVELS = 29;
 
     private final TypeManager typeManager;
@@ -126,7 +129,7 @@ public class RcFilePageSourceFactory
             inputStream = fileSystem.open(path);
         }
         catch (Exception e) {
-            if (nullToEmpty(e.getMessage()).trim().equals("Filesystem closed") ||
+            if ("Filesystem closed".equals(nullToEmpty(e.getMessage()).trim()) ||
                     e instanceof FileNotFoundException) {
                 throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, e);
             }
@@ -135,9 +138,7 @@ public class RcFilePageSourceFactory
 
         try {
             ImmutableMap.Builder<Integer, Type> readColumns = ImmutableMap.builder();
-            for (HiveColumnHandle column : columns) {
-                readColumns.put(column.getHiveColumnIndex(), column.getHiveType().getType(typeManager));
-            }
+            columns.forEach(column -> readColumns.put(column.getHiveColumnIndex(), column.getHiveType().getType(typeManager)));
 
             RcFileReader rcFileReader = new RcFileReader(
                     new HdfsRcFileDataSource(path.toString(), inputStream, fileSize, stats),
@@ -159,6 +160,7 @@ public class RcFilePageSourceFactory
                 inputStream.close();
             }
             catch (IOException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
             if (e instanceof PrestoException) {
                 throw (PrestoException) e;
@@ -167,7 +169,7 @@ public class RcFilePageSourceFactory
             if (e instanceof RcFileCorruptionException) {
                 throw new PrestoException(HIVE_BAD_DATA, message, e);
             }
-            if (e.getClass().getSimpleName().equals("BlockMissingException")) {
+            if ("BlockMissingException".equals(e.getClass().getSimpleName())) {
                 throw new PrestoException(HIVE_MISSING_DATA, message, e);
             }
             throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, message, e);

@@ -68,7 +68,7 @@ public class BucketNode
     @Override
     public String toString()
     {
-        return bucketNumber + ":" + nodeIdentifier;
+        return new StringBuilder().append(bucketNumber).append(":").append(nodeIdentifier).toString();
     }
 
     public static class Mapper

@@ -67,7 +67,7 @@ public class MongoQueryRunner
             queryRunner.createCatalog("tpch", "tpch");
 
             Map<String, String> properties = ImmutableMap.of(
-                    "mongodb.seeds", queryRunner.getAddress().getHostString() + ":" + queryRunner.getAddress().getPort(),
+                    "mongodb.seeds", new StringBuilder().append(queryRunner.getAddress().getHostString()).append(":").append(queryRunner.getAddress().getPort()).toString(),
                     "mongodb.socket-keep-alive", "true");
 
             queryRunner.installPlugin(new MongoPlugin());

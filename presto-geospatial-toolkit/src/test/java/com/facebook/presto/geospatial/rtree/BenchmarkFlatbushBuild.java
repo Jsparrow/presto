@@ -57,7 +57,17 @@ public class BenchmarkFlatbushBuild
                 data.getRtreeDegree()));
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkFlatbushBuild.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         @Param({"8", "16", "32"})
@@ -83,15 +93,5 @@ public class BenchmarkFlatbushBuild
         {
             return buildRectangles;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkFlatbushBuild.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

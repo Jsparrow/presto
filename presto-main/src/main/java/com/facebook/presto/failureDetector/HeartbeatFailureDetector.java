@@ -130,20 +130,15 @@ public class HeartbeatFailureDetector
     public void start()
     {
         if (isEnabled && started.compareAndSet(false, true)) {
-            executor.scheduleWithFixedDelay(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    try {
-                        updateMonitoredServices();
-                    }
-                    catch (Throwable e) {
-                        // ignore to avoid getting unscheduled
-                        log.warn(e, "Error updating services");
-                    }
-                }
-            }, 0, 5, TimeUnit.SECONDS);
+            executor.scheduleWithFixedDelay(() -> {
+			    try {
+			        updateMonitoredServices();
+			    }
+			    catch (Throwable e) {
+			        // ignore to avoid getting unscheduled
+			        log.warn(e, "Error updating services");
+			    }
+			}, 0, 5, TimeUnit.SECONDS);
         }
     }
 
@@ -215,9 +210,7 @@ public class HeartbeatFailureDetector
     public Map<ServiceDescriptor, Stats> getStats()
     {
         ImmutableMap.Builder<ServiceDescriptor, Stats> builder = ImmutableMap.builder();
-        for (MonitoringTask task : tasks.values()) {
-            builder.put(task.getService(), task.getStats());
-        }
+        tasks.values().forEach(task -> builder.put(task.getService(), task.getStats()));
         return builder.build();
     }
 
@@ -253,13 +246,13 @@ public class HeartbeatFailureDetector
                     .filter(service -> !tasks.keySet().contains(service.getId()))
                     .collect(toImmutableSet());
 
-            for (ServiceDescriptor service : newServices) {
+            newServices.forEach(service -> {
                 URI uri = getHttpUri(service);
 
                 if (uri != null) {
                     tasks.put(service.getId(), new MonitoringTask(service, uri));
                 }
-            }
+            });
 
             // 4. enable all online tasks (existing plus newly created)
             tasks.values().stream()
@@ -316,33 +309,30 @@ public class HeartbeatFailureDetector
 
         public synchronized void enable()
         {
-            if (future == null) {
-                future = executor.scheduleAtFixedRate(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        try {
-                            ping();
-                            updateState();
-                        }
-                        catch (Throwable e) {
-                            // ignore to avoid getting unscheduled
-                            log.warn(e, "Error pinging service %s (%s)", service.getId(), uri);
-                        }
-                    }
-                }, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
-                disabledTimestamp = null;
-            }
+            if (future != null) {
+				return;
+			}
+			future = executor.scheduleAtFixedRate(() -> {
+			    try {
+			        ping();
+			        updateState();
+			    }
+			    catch (Throwable e) {
+			        // ignore to avoid getting unscheduled
+			        log.warn(e, "Error pinging service %s (%s)", service.getId(), uri);
+			    }
+			}, heartbeat.toMillis(), heartbeat.toMillis(), TimeUnit.MILLISECONDS);
+			disabledTimestamp = null;
         }
 
         public synchronized void disable()
         {
-            if (future != null) {
-                future.cancel(true);
-                future = null;
-                disabledTimestamp = System.nanoTime();
-            }
+            if (future == null) {
+				return;
+			}
+			future.cancel(true);
+			future = null;
+			disabledTimestamp = System.nanoTime();
         }
 
         public synchronized boolean isExpired()

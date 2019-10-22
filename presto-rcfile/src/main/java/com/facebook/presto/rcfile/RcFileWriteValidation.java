@@ -128,9 +128,7 @@ public class RcFileWriteValidation
             this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
 
             ImmutableList.Builder<XxHash64> columnHashes = ImmutableList.builder();
-            for (Type ignored : types) {
-                columnHashes.add(new XxHash64());
-            }
+            types.forEach(ignored -> columnHashes.add(new XxHash64()));
             this.columnHashes = columnHashes.build();
         }
 
@@ -206,17 +204,16 @@ public class RcFileWriteValidation
                 return hash;
             }
 
-            if (type.getTypeSignature().getBase().equals(StandardTypes.ROW)) {
-                Block row = (Block) type.getObject(block, position);
-                long hash = 0;
-                for (int i = 0; i < row.getPositionCount(); i++) {
-                    Type elementType = type.getTypeParameters().get(i);
-                    hash = 31 * hash + hashPositionSkipNullMapKeys(elementType, row, i);
-                }
-                return hash;
-            }
-
-            return type.hash(block, position);
+            if (!type.getTypeSignature().getBase().equals(StandardTypes.ROW)) {
+				return type.hash(block, position);
+			}
+			Block row = (Block) type.getObject(block, position);
+			long hash = 0;
+			for (int i = 0; i < row.getPositionCount(); i++) {
+			    Type elementType = type.getTypeParameters().get(i);
+			    hash = 31 * hash + hashPositionSkipNullMapKeys(elementType, row, i);
+			}
+			return hash;
         }
 
         public WriteChecksum build()

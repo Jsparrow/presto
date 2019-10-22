@@ -202,9 +202,7 @@ public class TableMetadataSystemTable
         }
         else {
             BlockBuilder array = blockBuilder.beginBlockEntry();
-            for (String value : values) {
-                VARCHAR.writeSlice(array, utf8Slice(value));
-            }
+            values.forEach(value -> VARCHAR.writeSlice(array, utf8Slice(value)));
             blockBuilder.closeEntry();
         }
     }

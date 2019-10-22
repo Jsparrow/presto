@@ -45,16 +45,6 @@ public class Re2JCastToRegexpFunction
     private final int dfaRetries;
     private final boolean padSpaces;
 
-    public static SqlOperator castVarcharToRe2JRegexp(int dfaStatesLimit, int dfaRetries)
-    {
-        return new Re2JCastToRegexpFunction("varchar(x)", dfaStatesLimit, dfaRetries, false);
-    }
-
-    public static SqlOperator castCharToRe2JRegexp(int dfaStatesLimit, int dfaRetries)
-    {
-        return new Re2JCastToRegexpFunction("char(x)", dfaStatesLimit, dfaRetries, true);
-    }
-
     private Re2JCastToRegexpFunction(String sourceType, int dfaStatesLimit, int dfaRetries, boolean padSpaces)
     {
         super(CAST, emptyList(), emptyList(), parseTypeSignature(Re2JRegexpType.NAME), ImmutableList.of(parseTypeSignature(sourceType, ImmutableSet.of("x"))));
@@ -63,7 +53,17 @@ public class Re2JCastToRegexpFunction
         this.padSpaces = padSpaces;
     }
 
-    @Override
+	public static SqlOperator castVarcharToRe2JRegexp(int dfaStatesLimit, int dfaRetries)
+    {
+        return new Re2JCastToRegexpFunction("varchar(x)", dfaStatesLimit, dfaRetries, false);
+    }
+
+	public static SqlOperator castCharToRe2JRegexp(int dfaStatesLimit, int dfaRetries)
+    {
+        return new Re2JCastToRegexpFunction("char(x)", dfaStatesLimit, dfaRetries, true);
+    }
+
+	@Override
     public ScalarFunctionImplementation specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager)
     {
         return new ScalarFunctionImplementation(
@@ -72,7 +72,7 @@ public class Re2JCastToRegexpFunction
                 insertArguments(METHOD_HANDLE, 0, dfaStatesLimit, dfaRetries, padSpaces, boundVariables.getLongVariable("x")));
     }
 
-    public static Re2JRegexp castToRegexp(int dfaStatesLimit, int dfaRetries, boolean padSpaces, long typeLength, Slice pattern)
+	public static Re2JRegexp castToRegexp(int dfaStatesLimit, int dfaRetries, boolean padSpaces, long typeLength, Slice pattern)
     {
         try {
             if (padSpaces) {

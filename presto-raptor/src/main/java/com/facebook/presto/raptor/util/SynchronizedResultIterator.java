@@ -51,9 +51,10 @@ public class SynchronizedResultIterator<T>
     @Override
     public synchronized void close()
     {
-        if (!closed) {
-            closed = true;
-            iterator.close();
-        }
+        if (closed) {
+			return;
+		}
+		closed = true;
+		iterator.close();
     }
 }

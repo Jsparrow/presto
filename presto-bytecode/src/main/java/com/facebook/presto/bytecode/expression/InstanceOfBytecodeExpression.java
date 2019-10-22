@@ -53,7 +53,7 @@ class InstanceOfBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return instance + " instanceof " + type;
+        return new StringBuilder().append(instance).append(" instanceof ").append(type).toString();
     }
 
     @Override

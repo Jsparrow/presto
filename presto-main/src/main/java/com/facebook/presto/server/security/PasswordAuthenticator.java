@@ -27,11 +27,14 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.net.HttpHeaders.AUTHORIZATION;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PasswordAuthenticator
         implements Authenticator
 {
-    private final PasswordAuthenticatorManager authenticatorManager;
+    private static final Logger logger = LoggerFactory.getLogger(PasswordAuthenticator.class);
+	private final PasswordAuthenticatorManager authenticatorManager;
 
     @Inject
     public PasswordAuthenticator(PasswordAuthenticatorManager authenticatorManager)
@@ -49,7 +52,7 @@ public class PasswordAuthenticator
         String header = nullToEmpty(request.getHeader(AUTHORIZATION));
 
         int space = header.indexOf(' ');
-        if ((space < 0) || !header.substring(0, space).equalsIgnoreCase("basic")) {
+        if ((space < 0) || !"basic".equalsIgnoreCase(header.substring(0, space))) {
             throw needAuthentication(null);
         }
         String credentials = decodeCredentials(header.substring(space + 1).trim());
@@ -83,7 +86,8 @@ public class PasswordAuthenticator
             return new String(Base64.getDecoder().decode(credentials), ISO_8859_1);
         }
         catch (IllegalArgumentException e) {
-            throw new AuthenticationException("Invalid base64 encoded credentials");
+            logger.error(e.getMessage(), e);
+			throw new AuthenticationException("Invalid base64 encoded credentials");
         }
     }
 

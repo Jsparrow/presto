@@ -35,17 +35,12 @@ import static java.util.Objects.requireNonNull;
 @Immutable
 public class HivePrivilegeInfo
 {
-    public enum HivePrivilege
-    {
-        SELECT, INSERT, UPDATE, DELETE, OWNERSHIP
-    }
-
     private final HivePrivilege hivePrivilege;
-    private final boolean grantOption;
-    private final PrestoPrincipal grantor;
-    private final PrestoPrincipal grantee;
+	private final boolean grantOption;
+	private final PrestoPrincipal grantor;
+	private final PrestoPrincipal grantee;
 
-    @JsonCreator
+	@JsonCreator
     public HivePrivilegeInfo(
             @JsonProperty("hivePrivilege") HivePrivilege hivePrivilege,
             @JsonProperty("grantOption") boolean grantOption,
@@ -58,31 +53,31 @@ public class HivePrivilegeInfo
         this.grantee = requireNonNull(grantee, "grantee is null");
     }
 
-    @JsonProperty
+	@JsonProperty
     public PrestoPrincipal getGrantee()
     {
         return grantee;
     }
 
-    @JsonProperty
+	@JsonProperty
     public HivePrivilege getHivePrivilege()
     {
         return hivePrivilege;
     }
 
-    @JsonProperty
+	@JsonProperty
     public boolean isGrantOption()
     {
         return grantOption;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PrestoPrincipal getGrantor()
     {
         return grantor;
     }
 
-    public static HivePrivilege toHivePrivilege(Privilege privilege)
+	public static HivePrivilege toHivePrivilege(Privilege privilege)
     {
         switch (privilege) {
             case SELECT:
@@ -98,14 +93,14 @@ public class HivePrivilegeInfo
         }
     }
 
-    public boolean isContainedIn(HivePrivilegeInfo hivePrivilegeInfo)
+	public boolean isContainedIn(HivePrivilegeInfo hivePrivilegeInfo)
     {
-        return (getHivePrivilege().equals(hivePrivilegeInfo.getHivePrivilege()) &&
+        return (getHivePrivilege() == hivePrivilegeInfo.getHivePrivilege() &&
                 (isGrantOption() == hivePrivilegeInfo.isGrantOption() ||
                         (!isGrantOption() && hivePrivilegeInfo.isGrantOption())));
     }
 
-    public Set<PrivilegeInfo> toPrivilegeInfo()
+	public Set<PrivilegeInfo> toPrivilegeInfo()
     {
         switch (hivePrivilege) {
             case SELECT:
@@ -123,13 +118,13 @@ public class HivePrivilegeInfo
         }
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(hivePrivilege, grantOption, grantor, grantee);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -145,7 +140,7 @@ public class HivePrivilegeInfo
                 Objects.equals(grantee, hivePrivilegeInfo.grantee);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -154,5 +149,10 @@ public class HivePrivilegeInfo
                 .add("grantor", grantor)
                 .add("grantee", grantee)
                 .toString();
+    }
+
+	public enum HivePrivilege
+    {
+        SELECT, INSERT, UPDATE, DELETE, OWNERSHIP
     }
 }

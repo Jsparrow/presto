@@ -55,14 +55,14 @@ public class RedisJedisManager
     @PreDestroy
     public void tearDown()
     {
-        for (Map.Entry<HostAddress, JedisPool> entry : jedisPoolCache.asMap().entrySet()) {
+        jedisPoolCache.asMap().entrySet().forEach(entry -> {
             try {
                 entry.getValue().destroy();
             }
             catch (Exception e) {
                 log.warn(e, "While destroying JedisPool %s:", entry.getKey());
             }
-        }
+        });
     }
 
     public RedisConnectorConfig getRedisConnectorConfig()

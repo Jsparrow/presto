@@ -32,7 +32,98 @@ import static java.util.Objects.requireNonNull;
 public class GroupIdOperator
         implements Operator
 {
-    public static class GroupIdOperatorFactory
+    private final OperatorContext operatorContext;
+	private final List<Type> types;
+	private final int[][] groupingSetInputs;
+	private final Block[] nullBlocks;
+	private final Block[] groupIdBlocks;
+	private Page currentPage;
+	private int currentGroupingSet;
+	private boolean finishing;
+
+	public GroupIdOperator(
+            OperatorContext operatorContext,
+            List<Type> types,
+            int[][] groupingSetInputs,
+            Block[] nullBlocks,
+            Block[] groupIdBlocks)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
+        this.groupingSetInputs = requireNonNull(groupingSetInputs, "groupingSetInputs is null");
+        this.nullBlocks = requireNonNull(nullBlocks, "nullBlocks is null");
+        this.groupIdBlocks = requireNonNull(groupIdBlocks, "groupIdBlocks is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && currentPage == null;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finishing && currentPage == null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(!finishing, "Operator is already finishing");
+        checkState(currentPage == null, "currentPage must be null to add a new page");
+
+        currentPage = requireNonNull(page, "page is null");
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (currentPage == null) {
+            return null;
+        }
+
+        return generateNextPage();
+    }
+
+	private Page generateNextPage()
+    {
+        // generate 'n' pages for every input page, where n is the number of grouping sets
+        Block[] outputBlocks = new Block[types.size()];
+
+        for (int i = 0; i < groupingSetInputs[currentGroupingSet].length; i++) {
+            if (groupingSetInputs[currentGroupingSet][i] == -1) {
+                outputBlocks[i] = new RunLengthEncodedBlock(nullBlocks[i], currentPage.getPositionCount());
+            }
+            else {
+                outputBlocks[i] = currentPage.getBlock(groupingSetInputs[currentGroupingSet][i]);
+            }
+        }
+
+        outputBlocks[outputBlocks.length - 1] = new RunLengthEncodedBlock(groupIdBlocks[currentGroupingSet], currentPage.getPositionCount());
+        currentGroupingSet = (currentGroupingSet + 1) % groupingSetInputs.length;
+        Page outputPage = new Page(currentPage.getPositionCount(), outputBlocks);
+
+        if (currentGroupingSet == 0) {
+            currentPage = null;
+        }
+
+        return outputPage;
+    }
+
+	public static class GroupIdOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -102,97 +193,5 @@ public class GroupIdOperator
         {
             return new GroupIdOperatorFactory(operatorId, planNodeId, outputTypes, groupingSetMappings);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final List<Type> types;
-    private final int[][] groupingSetInputs;
-    private final Block[] nullBlocks;
-    private final Block[] groupIdBlocks;
-
-    private Page currentPage;
-    private int currentGroupingSet;
-    private boolean finishing;
-
-    public GroupIdOperator(
-            OperatorContext operatorContext,
-            List<Type> types,
-            int[][] groupingSetInputs,
-            Block[] nullBlocks,
-            Block[] groupIdBlocks)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
-        this.groupingSetInputs = requireNonNull(groupingSetInputs, "groupingSetInputs is null");
-        this.nullBlocks = requireNonNull(nullBlocks, "nullBlocks is null");
-        this.groupIdBlocks = requireNonNull(groupIdBlocks, "groupIdBlocks is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && currentPage == null;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finishing && currentPage == null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(!finishing, "Operator is already finishing");
-        checkState(currentPage == null, "currentPage must be null to add a new page");
-
-        currentPage = requireNonNull(page, "page is null");
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (currentPage == null) {
-            return null;
-        }
-
-        return generateNextPage();
-    }
-
-    private Page generateNextPage()
-    {
-        // generate 'n' pages for every input page, where n is the number of grouping sets
-        Block[] outputBlocks = new Block[types.size()];
-
-        for (int i = 0; i < groupingSetInputs[currentGroupingSet].length; i++) {
-            if (groupingSetInputs[currentGroupingSet][i] == -1) {
-                outputBlocks[i] = new RunLengthEncodedBlock(nullBlocks[i], currentPage.getPositionCount());
-            }
-            else {
-                outputBlocks[i] = currentPage.getBlock(groupingSetInputs[currentGroupingSet][i]);
-            }
-        }
-
-        outputBlocks[outputBlocks.length - 1] = new RunLengthEncodedBlock(groupIdBlocks[currentGroupingSet], currentPage.getPositionCount());
-        currentGroupingSet = (currentGroupingSet + 1) % groupingSetInputs.length;
-        Page outputPage = new Page(currentPage.getPositionCount(), outputBlocks);
-
-        if (currentGroupingSet == 0) {
-            currentPage = null;
-        }
-
-        return outputPage;
     }
 }

@@ -132,7 +132,12 @@ public class HandTpchQuery1
         return ImmutableList.of(tableScanOperator, tpchQuery1Operator, aggregationOperator);
     }
 
-    public static class TpchQuery1Operator
+    public static void main(String[] args)
+    {
+        new HandTpchQuery1(createLocalQueryRunner()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
+    }
+
+	public static class TpchQuery1Operator
             implements com.facebook.presto.operator.Operator // TODO: use import when Java 7 compiler bug is fixed
     {
         private static final ImmutableList<Type> TYPES = ImmutableList.of(
@@ -143,71 +148,42 @@ public class HandTpchQuery1
                 DOUBLE,
                 DOUBLE,
                 DOUBLE);
+		private static final int MAX_SHIP_DATE = DateTimeUtils.parseDate("1998-09-02");
+		private final OperatorContext operatorContext;
+		private final PageBuilder pageBuilder;
+		private boolean finishing;
 
-        public static class TpchQuery1OperatorFactory
-                implements OperatorFactory
-        {
-            private final int operatorId;
-
-            public TpchQuery1OperatorFactory(int operatorId)
-            {
-                this.operatorId = operatorId;
-            }
-
-            @Override
-            public Operator createOperator(DriverContext driverContext)
-            {
-                OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, new PlanNodeId("test"), TpchQuery1Operator.class.getSimpleName());
-                return new TpchQuery1Operator(operatorContext);
-            }
-
-            @Override
-            public void noMoreOperators()
-            {
-            }
-
-            @Override
-            public OperatorFactory duplicate()
-            {
-                throw new UnsupportedOperationException();
-            }
-        }
-
-        private final OperatorContext operatorContext;
-        private final PageBuilder pageBuilder;
-        private boolean finishing;
-
-        public TpchQuery1Operator(OperatorContext operatorContext)
+		public TpchQuery1Operator(OperatorContext operatorContext)
         {
             this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
             this.pageBuilder = new PageBuilder(TYPES);
         }
 
-        @Override
+		@Override
         public OperatorContext getOperatorContext()
         {
             return operatorContext;
         }
 
-        @Override
+		@Override
         public void finish()
         {
             finishing = true;
         }
 
-        @Override
+		@Override
         public boolean isFinished()
         {
             return finishing && pageBuilder.isEmpty();
         }
 
-        @Override
+		@Override
         public boolean needsInput()
         {
             return !pageBuilder.isFull();
         }
 
-        @Override
+		@Override
         public void addInput(Page page)
         {
             requireNonNull(page, "page is null");
@@ -224,21 +200,19 @@ public class HandTpchQuery1
                     page.getBlock(6));
         }
 
-        @Override
+		@Override
         public Page getOutput()
         {
             // only return a page if the page buffer isFull or we are finishing and the page buffer has data
-            if (pageBuilder.isFull() || (finishing && !pageBuilder.isEmpty())) {
-                Page page = pageBuilder.build();
-                pageBuilder.reset();
-                return page;
-            }
-            return null;
+			if (!(pageBuilder.isFull() || (finishing && !pageBuilder.isEmpty()))) {
+				return null;
+			}
+			Page page = pageBuilder.build();
+			pageBuilder.reset();
+			return page;
         }
 
-        private static final int MAX_SHIP_DATE = DateTimeUtils.parseDate("1998-09-02");
-
-        private static void filterAndProjectRowOriented(PageBuilder pageBuilder,
+		private static void filterAndProjectRowOriented(PageBuilder pageBuilder,
                 Block returnFlagBlock,
                 Block lineStatusBlock,
                 Block quantityBlock,
@@ -327,10 +301,34 @@ public class HandTpchQuery1
                 }
             }
         }
-    }
 
-    public static void main(String[] args)
-    {
-        new HandTpchQuery1(createLocalQueryRunner()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
+        public static class TpchQuery1OperatorFactory
+                implements OperatorFactory
+        {
+            private final int operatorId;
+
+            public TpchQuery1OperatorFactory(int operatorId)
+            {
+                this.operatorId = operatorId;
+            }
+
+            @Override
+            public Operator createOperator(DriverContext driverContext)
+            {
+                OperatorContext operatorContext = driverContext.addOperatorContext(operatorId, new PlanNodeId("test"), TpchQuery1Operator.class.getSimpleName());
+                return new TpchQuery1Operator(operatorContext);
+            }
+
+            @Override
+            public void noMoreOperators()
+            {
+            }
+
+            @Override
+            public OperatorFactory duplicate()
+            {
+                throw new UnsupportedOperationException();
+            }
+        }
     }
 }

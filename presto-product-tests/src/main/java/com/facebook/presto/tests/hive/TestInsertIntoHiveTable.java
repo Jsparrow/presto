@@ -55,17 +55,8 @@ public class TestInsertIntoHiveTable
 
     private static TableDefinition partitionedTableDefinition()
     {
-        String createTableDdl = "CREATE TABLE %NAME%( " +
-                "id int, " +
-                "name string " +
-                ") " +
-                "PARTITIONED BY (dt string) " +
-                "ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' " +
-                "WITH SERDEPROPERTIES ( " +
-                "'field.delim'='\\t', " +
-                "'line.delim'='\\n', " +
-                "'serialization.format'='\\t' " +
-                ")";
+        String createTableDdl = new StringBuilder().append("CREATE TABLE %NAME%( ").append("id int, ").append("name string ").append(") ").append("PARTITIONED BY (dt string) ").append("ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe' ").append("WITH SERDEPROPERTIES ( ").append("'field.delim'='\\t', ")
+				.append("'line.delim'='\\n', ").append("'serialization.format'='\\t' ").append(")").toString();
 
         return HiveTableDefinition.builder(PARTITIONED_TABLE_WITH_SERDE)
                 .setCreateTableDDLTemplate(createTableDdl)
@@ -78,23 +69,9 @@ public class TestInsertIntoHiveTable
     {
         String tableNameInDatabase = mutableTablesState().get(TABLE_NAME).getNameInDatabase();
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).hasNoRows();
-        query("INSERT INTO " + tableNameInDatabase + " VALUES(" +
-                "TINYINT '127', " +
-                "SMALLINT '32767', " +
-                "2147483647, " +
-                "9223372036854775807, " +
-                "REAL '123.345', " +
-                "234.567, " +
-                "CAST(346 as DECIMAL(10,0))," +
-                "CAST(345.67800 as DECIMAL(10,5))," +
-                "timestamp '2015-05-10 12:15:35.123', " +
-                "date '2015-05-10', " +
-                "'ala ma kota', " +
-                "'ala ma kot', " +
-                "CAST('ala ma    ' as CHAR(10)), " +
-                "true, " +
-                "from_base64('a290IGJpbmFybnk=')" +
-                ")");
+        query(new StringBuilder().append("INSERT INTO ").append(tableNameInDatabase).append(" VALUES(").append("TINYINT '127', ").append("SMALLINT '32767', ").append("2147483647, ").append("9223372036854775807, ").append("REAL '123.345', ")
+				.append("234.567, ").append("CAST(346 as DECIMAL(10,0)),").append("CAST(345.67800 as DECIMAL(10,5)),").append("timestamp '2015-05-10 12:15:35.123', ").append("date '2015-05-10', ").append("'ala ma kota', ").append("'ala ma kot', ").append("CAST('ala ma    ' as CHAR(10)), ").append("true, ")
+				.append("from_base64('a290IGJpbmFybnk=')").append(")").toString());
 
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).containsOnly(
                 row(
@@ -120,7 +97,7 @@ public class TestInsertIntoHiveTable
     {
         String tableNameInDatabase = mutableTablesState().get(TABLE_NAME).getNameInDatabase();
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).hasNoRows();
-        assertThat(query("INSERT INTO " + tableNameInDatabase + " SELECT * from textfile_all_types")).containsExactly(row(1));
+        assertThat(query(new StringBuilder().append("INSERT INTO ").append(tableNameInDatabase).append(" SELECT * from textfile_all_types").toString())).containsExactly(row(1));
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).containsOnly(
                 row(
                         127,
@@ -144,7 +121,7 @@ public class TestInsertIntoHiveTable
     public void testInsertIntoPartitionedWithSerdePropety()
     {
         String tableNameInDatabase = mutableTablesState().get(PARTITIONED_TABLE_WITH_SERDE).getNameInDatabase();
-        assertThat(query("INSERT INTO " + tableNameInDatabase + " SELECT 1, 'presto', '2018-01-01'")).containsExactly(row(1));
+        assertThat(query(new StringBuilder().append("INSERT INTO ").append(tableNameInDatabase).append(" SELECT 1, 'presto', '2018-01-01'").toString())).containsExactly(row(1));
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).containsExactly(row(1, "presto", "2018-01-01"));
     }
 }

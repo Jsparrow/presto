@@ -42,7 +42,7 @@ public class ColumnInfo
     @Override
     public String toString()
     {
-        return columnId + ":" + type;
+        return new StringBuilder().append(columnId).append(":").append(type).toString();
     }
 
     public static ColumnInfo fromHandle(RaptorColumnHandle handle)

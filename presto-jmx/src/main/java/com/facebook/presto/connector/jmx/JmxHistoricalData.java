@@ -45,9 +45,7 @@ public class JmxHistoricalData
         tables = tableNames.stream()
                 .map(tableName -> tableName.toLowerCase(Locale.ENGLISH))
                 .collect(toSet());
-        for (String tableName : tables) {
-            tableData.put(tableName, EvictingQueue.create(maxEntries));
-        }
+        tables.forEach(tableName -> tableData.put(tableName, EvictingQueue.create(maxEntries)));
     }
 
     public Set<String> getTables()
@@ -74,13 +72,11 @@ public class JmxHistoricalData
     private List<List<Object>> projectRows(Collection<List<Object>> rows, List<Integer> selectedColumns)
     {
         ImmutableList.Builder<List<Object>> result = ImmutableList.builder();
-        for (List<Object> row : rows) {
+        rows.forEach(row -> {
             List<Object> projectedRow = new ArrayList<>();
-            for (Integer selectedColumn : selectedColumns) {
-                projectedRow.add(row.get(selectedColumn));
-            }
+            selectedColumns.forEach(selectedColumn -> projectedRow.add(row.get(selectedColumn)));
             result.add(projectedRow);
-        }
+        });
         return result.build();
     }
 }

@@ -31,88 +31,88 @@ import static java.util.Objects.requireNonNull;
 public final class OuterLookupSource
         implements LookupSource
 {
-    public static TrackingLookupSourceSupplier createOuterLookupSourceSupplier(Supplier<LookupSource> lookupSourceSupplier)
-    {
-        return new OuterLookupSourceSupplier(lookupSourceSupplier);
-    }
-
     private final LookupSource lookupSource;
-    private final OuterPositionTracker outerPositionTracker;
+	private final OuterPositionTracker outerPositionTracker;
 
-    private OuterLookupSource(LookupSource lookupSource, OuterPositionTracker outerPositionTracker)
+	private OuterLookupSource(LookupSource lookupSource, OuterPositionTracker outerPositionTracker)
     {
         this.lookupSource = requireNonNull(lookupSource, "lookupSource is null");
         this.outerPositionTracker = requireNonNull(outerPositionTracker, "outerPositionTracker is null");
     }
 
-    @Override
+	public static TrackingLookupSourceSupplier createOuterLookupSourceSupplier(Supplier<LookupSource> lookupSourceSupplier)
+    {
+        return new OuterLookupSourceSupplier(lookupSourceSupplier);
+    }
+
+	@Override
     public boolean isEmpty()
     {
         return lookupSource.isEmpty();
     }
 
-    @Override
+	@Override
     public int getChannelCount()
     {
         return lookupSource.getChannelCount();
     }
 
-    @Override
+	@Override
     public long getJoinPositionCount()
     {
         return lookupSource.getJoinPositionCount();
     }
 
-    @Override
+	@Override
     public long getInMemorySizeInBytes()
     {
         return lookupSource.getInMemorySizeInBytes();
     }
 
-    @Override
+	@Override
     public long joinPositionWithinPartition(long joinPosition)
     {
         return lookupSource.joinPositionWithinPartition(joinPosition);
     }
 
-    @Override
+	@Override
     public long getJoinPosition(int position, Page hashChannelsPage, Page allChannelsPage, long rawHash)
     {
         return lookupSource.getJoinPosition(position, hashChannelsPage, allChannelsPage, rawHash);
     }
 
-    @Override
+	@Override
     public long getJoinPosition(int position, Page hashChannelsPage, Page allChannelsPage)
     {
         return lookupSource.getJoinPosition(position, hashChannelsPage, allChannelsPage);
     }
 
-    @Override
+	@Override
     public long getNextJoinPosition(long currentJoinPosition, int probePosition, Page allProbeChannelsPage)
     {
         return lookupSource.getNextJoinPosition(currentJoinPosition, probePosition, allProbeChannelsPage);
     }
 
-    @Override
+	@Override
     public boolean isJoinPositionEligible(long currentJoinPosition, int probePosition, Page allProbeChannelsPage)
     {
         return lookupSource.isJoinPositionEligible(currentJoinPosition, probePosition, allProbeChannelsPage);
     }
 
-    @Override
+	@Override
     public void appendTo(long position, PageBuilder pageBuilder, int outputChannelOffset)
     {
         lookupSource.appendTo(position, pageBuilder, outputChannelOffset);
         outerPositionTracker.positionVisited(position);
     }
 
-    @Override
+	@Override
     public void close()
     {
         lookupSource.close();
     }
 
-    @ThreadSafe
+	@ThreadSafe
     private static class SharedLookupOuterPositionIterator
             implements OuterPositionIterator
     {
@@ -163,7 +163,8 @@ public final class OuterLookupSource
             return new OuterLookupSource(lookupSourceSupplier.get(), outerPositionTracker);
         }
 
-        public OuterPositionIterator getOuterPositionIterator()
+        @Override
+		public OuterPositionIterator getOuterPositionIterator()
         {
             return outerPositionTracker.getOuterPositionIterator();
         }

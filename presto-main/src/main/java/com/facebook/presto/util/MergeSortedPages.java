@@ -154,12 +154,11 @@ public final class MergeSortedPages
                 @Override
                 public ProcessState<PageWithPosition> process()
                 {
-                    if (position >= page.getPositionCount()) {
-                        memoryContext.close();
-                        return ProcessState.finished();
-                    }
-
-                    return ProcessState.ofResult(new PageWithPosition(page, position++));
+                    if (position < page.getPositionCount()) {
+						return ProcessState.ofResult(new PageWithPosition(page, position++));
+					}
+					memoryContext.close();
+					return ProcessState.finished();
                 }
             });
         });

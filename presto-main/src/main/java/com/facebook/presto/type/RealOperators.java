@@ -247,7 +247,40 @@ public final class RealOperators
         return intBitsToFloat((int) value) != 0.0f;
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(SATURATED_FLOOR_CAST)
+    @SqlType(StandardTypes.SMALLINT)
+    public static long saturatedFloorCastToSmallint(@SqlType(StandardTypes.REAL) long value)
+    {
+        return saturatedFloorCastToLong(value, Short.MIN_VALUE, MIN_SHORT_AS_FLOAT, Short.MAX_VALUE, MAX_SHORT_PLUS_ONE_AS_FLOAT);
+    }
+
+	@ScalarOperator(SATURATED_FLOOR_CAST)
+    @SqlType(StandardTypes.TINYINT)
+    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.REAL) long value)
+    {
+        return saturatedFloorCastToLong(value, Byte.MIN_VALUE, MIN_BYTE_AS_FLOAT, Byte.MAX_VALUE, MAX_BYTE_PLUS_ONE_AS_FLOAT);
+    }
+
+	private static long saturatedFloorCastToLong(long valueBits, long minValue, float minValueAsDouble, long maxValue, float maxValuePlusOneAsDouble)
+    {
+        float value = intBitsToFloat((int) valueBits);
+        if (value <= minValueAsDouble) {
+            return minValue;
+        }
+        if (value + 1 >= maxValuePlusOneAsDouble) {
+            return maxValue;
+        }
+        return DoubleMath.roundToLong(value, FLOOR);
+    }
+
+	@ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.REAL) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class RealDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -286,38 +319,5 @@ public final class RealOperators
             }
             return notEqual(REAL.getLong(left, leftPosition), REAL.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(SATURATED_FLOOR_CAST)
-    @SqlType(StandardTypes.SMALLINT)
-    public static long saturatedFloorCastToSmallint(@SqlType(StandardTypes.REAL) long value)
-    {
-        return saturatedFloorCastToLong(value, Short.MIN_VALUE, MIN_SHORT_AS_FLOAT, Short.MAX_VALUE, MAX_SHORT_PLUS_ONE_AS_FLOAT);
-    }
-
-    @ScalarOperator(SATURATED_FLOOR_CAST)
-    @SqlType(StandardTypes.TINYINT)
-    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.REAL) long value)
-    {
-        return saturatedFloorCastToLong(value, Byte.MIN_VALUE, MIN_BYTE_AS_FLOAT, Byte.MAX_VALUE, MAX_BYTE_PLUS_ONE_AS_FLOAT);
-    }
-
-    private static long saturatedFloorCastToLong(long valueBits, long minValue, float minValueAsDouble, long maxValue, float maxValuePlusOneAsDouble)
-    {
-        float value = intBitsToFloat((int) valueBits);
-        if (value <= minValueAsDouble) {
-            return minValue;
-        }
-        if (value + 1 >= maxValuePlusOneAsDouble) {
-            return maxValue;
-        }
-        return DoubleMath.roundToLong(value, FLOOR);
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.REAL) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

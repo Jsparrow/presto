@@ -66,9 +66,7 @@ public class MaterializedRow
         }
         if (value instanceof Map) {
             Map<Object, Object> map = new HashMap<>();
-            for (Entry<Object, Object> entry : ((Map<Object, Object>) value).entrySet()) {
-                map.put(processValue(precision, entry.getKey()), processValue(precision, entry.getValue()));
-            }
+            ((Map<Object, Object>) value).entrySet().forEach(entry -> map.put(processValue(precision, entry.getKey()), processValue(precision, entry.getValue())));
             return map;
         }
         if (value instanceof byte[]) {
@@ -112,9 +110,7 @@ public class MaterializedRow
         }
         if (value instanceof Map) {
             Map<Object, Object> map = new HashMap<>();
-            for (Entry<Object, Object> entry : ((Map<Object, Object>) value).entrySet()) {
-                map.put(processField(entry.getKey()), processField(entry.getValue()));
-            }
+            ((Map<Object, Object>) value).entrySet().forEach(entry -> map.put(processField(entry.getKey()), processField(entry.getValue())));
             return map;
         }
         if (value instanceof ByteBuffer) {

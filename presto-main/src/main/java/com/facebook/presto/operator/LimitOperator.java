@@ -24,7 +24,71 @@ import static java.util.Objects.requireNonNull;
 public class LimitOperator
         implements Operator
 {
-    public static class LimitOperatorFactory
+    private final OperatorContext operatorContext;
+	private Page nextPage;
+	private long remainingLimit;
+
+	public LimitOperator(OperatorContext operatorContext, long limit)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+
+        checkArgument(limit >= 0, "limit must be at least zero");
+        this.remainingLimit = limit;
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        remainingLimit = 0;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return remainingLimit == 0 && nextPage == null;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return remainingLimit > 0 && nextPage == null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(needsInput());
+
+        if (page.getPositionCount() <= remainingLimit) {
+            remainingLimit -= page.getPositionCount();
+            nextPage = page;
+        }
+        else {
+            Block[] blocks = new Block[page.getChannelCount()];
+            for (int channel = 0; channel < page.getChannelCount(); channel++) {
+                Block block = page.getBlock(channel);
+                blocks[channel] = block.getRegion(0, (int) remainingLimit);
+            }
+            nextPage = new Page((int) remainingLimit, blocks);
+            remainingLimit = 0;
+        }
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        Page page = nextPage;
+        nextPage = null;
+        return page;
+    }
+
+	public static class LimitOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -58,69 +122,5 @@ public class LimitOperator
         {
             return new LimitOperatorFactory(operatorId, planNodeId, limit);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private Page nextPage;
-    private long remainingLimit;
-
-    public LimitOperator(OperatorContext operatorContext, long limit)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-
-        checkArgument(limit >= 0, "limit must be at least zero");
-        this.remainingLimit = limit;
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        remainingLimit = 0;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return remainingLimit == 0 && nextPage == null;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return remainingLimit > 0 && nextPage == null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(needsInput());
-
-        if (page.getPositionCount() <= remainingLimit) {
-            remainingLimit -= page.getPositionCount();
-            nextPage = page;
-        }
-        else {
-            Block[] blocks = new Block[page.getChannelCount()];
-            for (int channel = 0; channel < page.getChannelCount(); channel++) {
-                Block block = page.getBlock(channel);
-                blocks[channel] = block.getRegion(0, (int) remainingLimit);
-            }
-            nextPage = new Page((int) remainingLimit, blocks);
-            remainingLimit = 0;
-        }
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        Page page = nextPage;
-        nextPage = null;
-        return page;
     }
 }

@@ -190,18 +190,12 @@ public final class ThriftMetastoreUtil
     private static PrincipalPrivilegeSet toMetastoreApiPrincipalPrivilegeSet(PrincipalPrivileges privileges)
     {
         ImmutableMap.Builder<String, List<PrivilegeGrantInfo>> userPrivileges = ImmutableMap.builder();
-        for (Map.Entry<String, Collection<HivePrivilegeInfo>> entry : privileges.getUserPrivileges().asMap().entrySet()) {
-            userPrivileges.put(entry.getKey(), entry.getValue().stream()
-                    .map(ThriftMetastoreUtil::toMetastoreApiPrivilegeGrantInfo)
-                    .collect(toList()));
-        }
+        privileges.getUserPrivileges().asMap().entrySet().forEach(entry -> userPrivileges.put(entry.getKey(),
+				entry.getValue().stream().map(ThriftMetastoreUtil::toMetastoreApiPrivilegeGrantInfo).collect(toList())));
 
         ImmutableMap.Builder<String, List<PrivilegeGrantInfo>> rolePrivileges = ImmutableMap.builder();
-        for (Map.Entry<String, Collection<HivePrivilegeInfo>> entry : privileges.getRolePrivileges().asMap().entrySet()) {
-            rolePrivileges.put(entry.getKey(), entry.getValue().stream()
-                    .map(ThriftMetastoreUtil::toMetastoreApiPrivilegeGrantInfo)
-                    .collect(toList()));
-        }
+        privileges.getRolePrivileges().asMap().entrySet().forEach(entry -> rolePrivileges.put(entry.getKey(),
+				entry.getValue().stream().map(ThriftMetastoreUtil::toMetastoreApiPrivilegeGrantInfo).collect(toList())));
 
         return new PrincipalPrivilegeSet(userPrivileges.build(), ImmutableMap.of(), rolePrivileges.build());
     }
@@ -249,12 +243,10 @@ public final class ThriftMetastoreUtil
                 while (!queue.isEmpty()) {
                     Set<RoleGrant> grants = listRoleGrants.apply(queue.remove());
                     if (!grants.isEmpty()) {
-                        for (RoleGrant grant : grants) {
-                            if (seenRoles.add(grant)) {
-                                output.add(grant);
-                                queue.add(new PrestoPrincipal(ROLE, grant.getRoleName()));
-                            }
-                        }
+                        grants.stream().filter(seenRoles::add).forEach(grant -> {
+						    output.add(grant);
+						    queue.add(new PrestoPrincipal(ROLE, grant.getRoleName()));
+						});
                         break;
                     }
                 }
@@ -586,14 +578,14 @@ public final class ThriftMetastoreUtil
 
     public static OptionalLong getTotalSizeInBytes(OptionalDouble averageColumnLength, OptionalLong rowCount, OptionalLong nullsCount)
     {
-        if (averageColumnLength.isPresent() && rowCount.isPresent() && nullsCount.isPresent()) {
-            long nonNullsCount = rowCount.getAsLong() - nullsCount.getAsLong();
-            if (nonNullsCount < 0) {
-                return OptionalLong.empty();
-            }
-            return OptionalLong.of(round(averageColumnLength.getAsDouble() * nonNullsCount));
-        }
-        return OptionalLong.empty();
+        if (!(averageColumnLength.isPresent() && rowCount.isPresent() && nullsCount.isPresent())) {
+			return OptionalLong.empty();
+		}
+		long nonNullsCount = rowCount.getAsLong() - nullsCount.getAsLong();
+		if (nonNullsCount < 0) {
+		    return OptionalLong.empty();
+		}
+		return OptionalLong.of(round(averageColumnLength.getAsDouble() * nonNullsCount));
     }
 
     /**
@@ -709,15 +701,15 @@ public final class ThriftMetastoreUtil
         sd.setParameters(ImmutableMap.of());
 
         Optional<HiveBucketProperty> bucketProperty = storage.getBucketProperty();
-        if (bucketProperty.isPresent()) {
-            sd.setNumBuckets(bucketProperty.get().getBucketCount());
-            sd.setBucketCols(bucketProperty.get().getBucketedBy());
-            if (!bucketProperty.get().getSortedBy().isEmpty()) {
-                sd.setSortCols(bucketProperty.get().getSortedBy().stream()
+        bucketProperty.ifPresent(value -> {
+            sd.setNumBuckets(value.getBucketCount());
+            sd.setBucketCols(value.getBucketedBy());
+            if (!value.getSortedBy().isEmpty()) {
+                sd.setSortCols(value.getSortedBy().stream()
                         .map(column -> new Order(column.getColumnName(), column.getOrder().getHiveOrder()))
                         .collect(toList()));
             }
-        }
+        });
 
         return sd;
     }
@@ -917,14 +909,14 @@ public final class ThriftMetastoreUtil
 
     private static OptionalDouble getAverageColumnLength(OptionalLong totalSizeInBytes, OptionalLong rowCount, OptionalLong nullsCount)
     {
-        if (totalSizeInBytes.isPresent() && rowCount.isPresent() && nullsCount.isPresent()) {
-            long nonNullsCount = rowCount.getAsLong() - nullsCount.getAsLong();
-            if (nonNullsCount <= 0) {
-                return OptionalDouble.empty();
-            }
-            return OptionalDouble.of(((double) totalSizeInBytes.getAsLong()) / nonNullsCount);
-        }
-        return OptionalDouble.empty();
+        if (!(totalSizeInBytes.isPresent() && rowCount.isPresent() && nullsCount.isPresent())) {
+			return OptionalDouble.empty();
+		}
+		long nonNullsCount = rowCount.getAsLong() - nullsCount.getAsLong();
+		if (nonNullsCount <= 0) {
+		    return OptionalDouble.empty();
+		}
+		return OptionalDouble.of(((double) totalSizeInBytes.getAsLong()) / nonNullsCount);
     }
 
     public static Set<ColumnStatisticType> getSupportedColumnStatistics(Type type)

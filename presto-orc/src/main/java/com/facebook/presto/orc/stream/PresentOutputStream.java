@@ -66,10 +66,10 @@ public class PresentOutputStream
     {
         checkState(booleanOutputStream == null);
         booleanOutputStream = new BooleanOutputStream(buffer);
-        for (int groupsCount : groupsCounts) {
+        groupsCounts.stream().mapToInt(Integer::valueOf).forEach(groupsCount -> {
             booleanOutputStream.writeBooleans(groupsCount, true);
             booleanOutputStream.recordCheckpoint();
-        }
+        });
         booleanOutputStream.writeBooleans(currentGroupCount, true);
     }
 

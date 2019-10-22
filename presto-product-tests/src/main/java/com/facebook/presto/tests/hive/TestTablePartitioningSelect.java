@@ -36,12 +36,16 @@ import static io.prestodb.tempto.fulfillment.table.TableRequirements.mutableTabl
 import static io.prestodb.tempto.fulfillment.table.hive.InlineDataSource.createResourceDataSource;
 import static io.prestodb.tempto.fulfillment.table.hive.InlineDataSource.createStringDataSource;
 import static io.prestodb.tempto.query.QueryExecutor.query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 
 public class TestTablePartitioningSelect
         extends ProductTest
         implements RequirementsProvider
 {
-    private static final HiveTableDefinition SINGLE_INT_COLUMN_PARTITIONEND_TEXTFILE = singleIntColumnPartitionedTableDefinition("TEXTFILE", Optional.of("DELIMITED FIELDS TERMINATED BY '|'"));
+    private static final Logger logger = LoggerFactory.getLogger(TestTablePartitioningSelect.class);
+	private static final HiveTableDefinition SINGLE_INT_COLUMN_PARTITIONEND_TEXTFILE = singleIntColumnPartitionedTableDefinition("TEXTFILE", Optional.of("DELIMITED FIELDS TERMINATED BY '|'"));
     private static final HiveTableDefinition SINGLE_INT_COLUMN_PARTITIONED_ORC = singleIntColumnPartitionedTableDefinition("ORC", Optional.empty());
     private static final HiveTableDefinition SINGLE_INT_COLUMN_PARTITIONED_RCFILE = singleIntColumnPartitionedTableDefinition("RCFILE", Optional.of("SERDE 'org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe'"));
     private static final HiveTableDefinition SINGLE_INT_COLUMN_PARTITIONED_PARQUET = singleIntColumnPartitionedTableDefinition("PARQUET", Optional.empty());
@@ -53,8 +57,8 @@ public class TestTablePartitioningSelect
 
     private static HiveTableDefinition singleIntColumnPartitionedTableDefinition(String fileFormat, Optional<String> serde)
     {
-        String tableName = fileFormat.toLowerCase(Locale.ENGLISH) + "_single_int_column_partitioned";
-        HiveDataSource dataSource = createResourceDataSource(tableName, "com/facebook/presto/tests/hive/data/single_int_column/data." + fileFormat.toLowerCase(Locale.ENGLISH));
+        String tableName = StringUtils.lowerCase(fileFormat, Locale.ENGLISH) + "_single_int_column_partitioned";
+        HiveDataSource dataSource = createResourceDataSource(tableName, "com/facebook/presto/tests/hive/data/single_int_column/data." + StringUtils.lowerCase(fileFormat, Locale.ENGLISH));
         HiveDataSource invalidData = createStringDataSource(tableName, "INVALID DATA");
         return HiveTableDefinition.builder(tableName)
                 .setCreateTableDDLTemplate(buildSingleIntColumnPartitionedTableDDL(fileFormat, serde))
@@ -70,9 +74,7 @@ public class TestTablePartitioningSelect
         sb.append("   col INT");
         sb.append(") ");
         sb.append("PARTITIONED BY (part_col INT) ");
-        if (rowFormat.isPresent()) {
-            sb.append("ROW FORMAT ").append(rowFormat.get());
-        }
+        rowFormat.ifPresent(value -> sb.append("ROW FORMAT ").append(value));
         sb.append(" STORED AS " + fileFormat);
         return sb.toString();
     }
@@ -93,7 +95,7 @@ public class TestTablePartitioningSelect
     {
         String tableNameInDatabase = tablesState.get(TABLE_NAME).getNameInDatabase();
 
-        String selectFromOnePartitionsSql = "SELECT * FROM " + tableNameInDatabase + " WHERE part_col = 2";
+        String selectFromOnePartitionsSql = new StringBuilder().append("SELECT * FROM ").append(tableNameInDatabase).append(" WHERE part_col = 2").toString();
         QueryResult onePartitionQueryResult = query(selectFromOnePartitionsSql);
         assertThat(onePartitionQueryResult).containsOnly(row(42, 2));
 
@@ -102,6 +104,7 @@ public class TestTablePartitioningSelect
             assertThat(query("SELECT * FROM " + tableNameInDatabase)).containsOnly(row(42, 2), row(null, 1));
         }
         catch (QueryExecutionException expectedDueToInvalidPartitionData) {
+			logger.error(expectedDueToInvalidPartitionData.getMessage(), expectedDueToInvalidPartitionData);
         }
     }
 }

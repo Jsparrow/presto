@@ -30,7 +30,8 @@ import static com.facebook.presto.sql.gen.SpecialFormBytecodeGenerator.generateW
 public class IfCodeGenerator
         implements SpecialFormBytecodeGenerator
 {
-    public BytecodeNode generateExpression(BytecodeGeneratorContext context, Type returnType, List<RowExpression> arguments, Optional<Variable> outputBlockVariable)
+    @Override
+	public BytecodeNode generateExpression(BytecodeGeneratorContext context, Type returnType, List<RowExpression> arguments, Optional<Variable> outputBlockVariable)
     {
         Preconditions.checkArgument(arguments.size() == 3);
 

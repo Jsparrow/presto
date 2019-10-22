@@ -62,10 +62,11 @@ public class TestIterativeOptimizer
     @AfterClass(alwaysRun = true)
     public void tearDown()
     {
-        if (queryRunner != null) {
-            queryRunner.close();
-            queryRunner = null;
-        }
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.close();
+		queryRunner = null;
     }
 
     @Test(timeOut = 1000)

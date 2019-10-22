@@ -95,9 +95,9 @@ class NewArrayBytecodeExpression
     protected String formatOneLine()
     {
         if (elements == null) {
-            return "new " + elementType.getSimpleName() + "[" + length + "]";
+            return new StringBuilder().append("new ").append(elementType.getSimpleName()).append("[").append(length).append("]").toString();
         }
-        return "new " + elementType.getSimpleName() + "[] {" + Joiner.on(", ").join(elements) + "}";
+        return new StringBuilder().append("new ").append(elementType.getSimpleName()).append("[] {").append(Joiner.on(", ").join(elements)).append("}").toString();
     }
 
     @Override

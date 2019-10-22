@@ -97,7 +97,7 @@ public class PartitioningHandle
     public String toString()
     {
         if (connectorId.isPresent()) {
-            return connectorId.get() + ":" + connectorHandle;
+            return new StringBuilder().append(connectorId.get()).append(":").append(connectorHandle).toString();
         }
         return connectorHandle.toString();
     }

@@ -31,46 +31,46 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 public abstract class VariableInstruction
         implements InstructionNode
 {
-    public static InstructionNode loadVariable(Variable variable)
-    {
-        return new LoadVariableInstruction(variable);
-    }
-
-    public static InstructionNode storeVariable(Variable variable)
-    {
-        return new StoreVariableInstruction(variable);
-    }
-
-    public static InstructionNode incrementVariable(Variable variable, byte increment)
-    {
-        return new IncrementVariableInstruction(variable, increment);
-    }
-
     private final Variable variable;
 
-    private VariableInstruction(Variable variable)
+	private VariableInstruction(Variable variable)
     {
         this.variable = variable;
     }
 
-    public Variable getVariable()
+	public static InstructionNode loadVariable(Variable variable)
+    {
+        return new LoadVariableInstruction(variable);
+    }
+
+	public static InstructionNode storeVariable(Variable variable)
+    {
+        return new StoreVariableInstruction(variable);
+    }
+
+	public static InstructionNode incrementVariable(Variable variable, byte increment)
+    {
+        return new IncrementVariableInstruction(variable, increment);
+    }
+
+	public Variable getVariable()
     {
         return variable;
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
     {
         return visitor.visitVariableInstruction(parent, this);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -78,7 +78,7 @@ public abstract class VariableInstruction
                 .toString();
     }
 
-    public static class LoadVariableInstruction
+	public static class LoadVariableInstruction
             extends VariableInstruction
     {
         public LoadVariableInstruction(Variable variable)

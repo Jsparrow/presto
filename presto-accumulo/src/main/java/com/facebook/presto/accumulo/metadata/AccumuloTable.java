@@ -184,7 +184,7 @@ public class AccumuloTable
     @JsonIgnore
     public static String getFullTableName(String schema, String table)
     {
-        return schema.equals("default") ? table : schema + '.' + table;
+        return "default".equals(schema) ? table : new StringBuilder().append(schema).append('.').append(table).toString();
     }
 
     @JsonIgnore

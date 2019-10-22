@@ -220,53 +220,17 @@ public class TestQueryPlanDeterminism
     public void testTpchQ9deterministic()
     {
         //This uses a modified version of TPC-H Q9, because the tpch connector uses non-standard column names
-        determinismChecker.checkPlanIsDeterministic("SELECT\n" +
-                "  nation,\n" +
-                "  o_year,\n" +
-                "  sum(amount) AS sum_profit\n" +
-                "FROM (\n" +
-                "       SELECT\n" +
-                "         n.name                                                          AS nation,\n" +
-                "         extract(YEAR FROM o.orderdate)                                  AS o_year,\n" +
-                "         l.extendedprice * (1 - l.discount) - ps.supplycost * l.quantity AS amount\n" +
-                "       FROM\n" +
-                "         part p,\n" +
-                "         supplier s,\n" +
-                "         lineitem l,\n" +
-                "         partsupp ps,\n" +
-                "         orders o,\n" +
-                "         nation n\n" +
-                "       WHERE\n" +
-                "         s.suppkey = l.suppkey\n" +
-                "         AND ps.suppkey = l.suppkey\n" +
-                "         AND ps.partkey = l.partkey\n" +
-                "         AND p.partkey = l.partkey\n" +
-                "         AND o.orderkey = l.orderkey\n" +
-                "         AND s.nationkey = n.nationkey\n" +
-                "         AND p.name LIKE '%green%'\n" +
-                "     ) AS profit\n" +
-                "GROUP BY\n" +
-                "  nation,\n" +
-                "  o_year\n" +
-                "ORDER BY\n" +
-                "  nation,\n" +
-                "  o_year DESC\n");
+        determinismChecker.checkPlanIsDeterministic(new StringBuilder().append("SELECT\n").append("  nation,\n").append("  o_year,\n").append("  sum(amount) AS sum_profit\n").append("FROM (\n").append("       SELECT\n").append("         n.name                                                          AS nation,\n").append("         extract(YEAR FROM o.orderdate)                                  AS o_year,\n")
+				.append("         l.extendedprice * (1 - l.discount) - ps.supplycost * l.quantity AS amount\n").append("       FROM\n").append("         part p,\n").append("         supplier s,\n").append("         lineitem l,\n").append("         partsupp ps,\n").append("         orders o,\n").append("         nation n\n").append("       WHERE\n")
+				.append("         s.suppkey = l.suppkey\n").append("         AND ps.suppkey = l.suppkey\n").append("         AND ps.partkey = l.partkey\n").append("         AND p.partkey = l.partkey\n").append("         AND o.orderkey = l.orderkey\n").append("         AND s.nationkey = n.nationkey\n").append("         AND p.name LIKE '%green%'\n").append("     ) AS profit\n").append("GROUP BY\n")
+				.append("  nation,\n").append("  o_year\n").append("ORDER BY\n").append("  nation,\n").append("  o_year DESC\n").toString());
     }
 
     @Test
     public void testTpcdsQ6deterministic()
     {
         //This is a query inspired on TPC-DS Q6 that reproduces its plan nondeterminism problems
-        determinismChecker.checkPlanIsDeterministic("SELECT orderdate " +
-                "FROM orders o,\n" +
-                "     lineitem i\n" +
-                "WHERE o.orderdate =\n" +
-                "    (SELECT DISTINCT (orderdate)\n" +
-                "     FROM orders\n" +
-                "     WHERE totalprice > 2)\n" +
-                "  AND i.quantity > 1.2 *\n" +
-                "    (SELECT avg(j.quantity)\n" +
-                "     FROM lineitem j\n" +
-                "    )\n");
+        determinismChecker.checkPlanIsDeterministic(new StringBuilder().append("SELECT orderdate ").append("FROM orders o,\n").append("     lineitem i\n").append("WHERE o.orderdate =\n").append("    (SELECT DISTINCT (orderdate)\n").append("     FROM orders\n").append("     WHERE totalprice > 2)\n").append("  AND i.quantity > 1.2 *\n")
+				.append("    (SELECT avg(j.quantity)\n").append("     FROM lineitem j\n").append("    )\n").toString());
     }
 }

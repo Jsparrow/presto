@@ -686,14 +686,13 @@ public final class SystemSessionProperties
     {
         // distributed_join takes precedence until we remove it
         Boolean distributedJoin = session.getSystemProperty(DISTRIBUTED_JOIN, Boolean.class);
-        if (distributedJoin != null) {
-            if (!distributedJoin) {
-                return BROADCAST;
-            }
-            return PARTITIONED;
-        }
-
-        return session.getSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.class);
+        if (distributedJoin == null) {
+			return session.getSystemProperty(JOIN_DISTRIBUTION_TYPE, JoinDistributionType.class);
+		}
+		if (!distributedJoin) {
+		    return BROADCAST;
+		}
+		return PARTITIONED;
     }
 
     public static Optional<DataSize> getJoinMaxBroadcastTableSize(Session session)
@@ -848,13 +847,13 @@ public final class SystemSessionProperties
     public static JoinReorderingStrategy getJoinReorderingStrategy(Session session)
     {
         Boolean reorderJoins = session.getSystemProperty(REORDER_JOINS, Boolean.class);
-        if (reorderJoins != null) {
-            if (!reorderJoins) {
-                return NONE;
-            }
-            return ELIMINATE_CROSS_JOINS;
-        }
-        return session.getSystemProperty(JOIN_REORDERING_STRATEGY, JoinReorderingStrategy.class);
+        if (reorderJoins == null) {
+			return session.getSystemProperty(JOIN_REORDERING_STRATEGY, JoinReorderingStrategy.class);
+		}
+		if (!reorderJoins) {
+		    return NONE;
+		}
+		return ELIMINATE_CROSS_JOINS;
     }
 
     public static PartialMergePushdownStrategy getPartialMergePushdownStrategy(Session session)

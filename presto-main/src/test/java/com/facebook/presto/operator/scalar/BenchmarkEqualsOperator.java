@@ -136,7 +136,18 @@ public class BenchmarkEqualsOperator
         return output;
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkEqualsOperator.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         Page page;
@@ -161,16 +172,5 @@ public class BenchmarkEqualsOperator
             }
             page = pageBuilder.build();
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkEqualsOperator.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

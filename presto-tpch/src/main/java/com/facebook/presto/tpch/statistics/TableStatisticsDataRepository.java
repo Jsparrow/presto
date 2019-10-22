@@ -70,7 +70,7 @@ public class TableStatisticsDataRepository
     public Optional<TableStatisticsData> load(String schemaName, TpchTable<?> table, Optional<TpchColumn<?>> partitionColumn, Optional<String> partitionValue)
     {
         String filename = tableStatisticsDataFilename(table, partitionColumn, partitionValue);
-        String resourcePath = "/tpch/statistics/" + schemaName + "/" + filename + ".json";
+        String resourcePath = new StringBuilder().append("/tpch/statistics/").append(schemaName).append("/").append(filename).append(".json").toString();
         URL resource = getClass().getResource(resourcePath);
         if (resource == null) {
             return Optional.empty();
@@ -92,6 +92,6 @@ public class TableStatisticsDataRepository
     private Optional<String> getPartitionDescription(Optional<TpchColumn<?>> partitionColumn, Optional<String> partitionValue)
     {
         checkArgument(partitionColumn.isPresent() == partitionValue.isPresent());
-        return withBoth(partitionColumn, partitionValue, (column, value) -> column.getColumnName() + "." + value);
+        return withBoth(partitionColumn, partitionValue, (column, value) -> new StringBuilder().append(column.getColumnName()).append(".").append(value).toString());
     }
 }

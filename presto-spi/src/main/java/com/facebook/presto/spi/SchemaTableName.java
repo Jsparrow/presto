@@ -68,7 +68,7 @@ public class SchemaTableName
     @Override
     public String toString()
     {
-        return schemaName + '.' + tableName;
+        return new StringBuilder().append(schemaName).append('.').append(tableName).toString();
     }
 
     public SchemaTablePrefix toSchemaTablePrefix()

@@ -27,11 +27,15 @@ import java.util.List;
 
 import static java.lang.Integer.parseInt;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PrestoDatabaseMetaData
         implements DatabaseMetaData
 {
-    private static final String SEARCH_STRING_ESCAPE = "\\";
+    private static final Logger logger = LoggerFactory.getLogger(PrestoDatabaseMetaData.class);
+
+	private static final String SEARCH_STRING_ESCAPE = "\\";
 
     private final PrestoConnection connection;
 
@@ -885,36 +889,22 @@ public class PrestoDatabaseMetaData
     public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME,\n " +
-                "  null, null, null, REMARKS, PROCEDURE_TYPE, SPECIFIC_NAME\n" +
-                "FROM system.jdbc.procedures\n" +
-                "ORDER BY PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, SPECIFIC_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME,\n ").append("  null, null, null, REMARKS, PROCEDURE_TYPE, SPECIFIC_NAME\n").append("FROM system.jdbc.procedures\n").append("ORDER BY PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, SPECIFIC_NAME").toString());
     }
 
     @Override
     public ResultSet getProcedureColumns(String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, " +
-                "  COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, TYPE_NAME,\n" +
-                "  PRECISION, LENGTH, SCALE, RADIX,\n" +
-                "  NULLABLE, REMARKS, COLUMN_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB,\n" +
-                "  CHAR_OCTET_LENGTH, ORDINAL_POSITION, IS_NULLABLE, SPECIFIC_NAME\n" +
-                "FROM system.jdbc.procedure_columns\n" +
-                "ORDER BY PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, SPECIFIC_NAME, COLUMN_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, ").append("  COLUMN_NAME, COLUMN_TYPE, DATA_TYPE, TYPE_NAME,\n").append("  PRECISION, LENGTH, SCALE, RADIX,\n").append("  NULLABLE, REMARKS, COLUMN_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB,\n").append("  CHAR_OCTET_LENGTH, ORDINAL_POSITION, IS_NULLABLE, SPECIFIC_NAME\n").append("FROM system.jdbc.procedure_columns\n").append("ORDER BY PROCEDURE_CAT, PROCEDURE_SCHEM, PROCEDURE_NAME, SPECIFIC_NAME, COLUMN_NAME")
+				.toString());
     }
 
     @Override
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types)
             throws SQLException
     {
-        StringBuilder query = new StringBuilder("" +
-                "SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, TABLE_TYPE, REMARKS,\n" +
-                "  TYPE_CAT, TYPE_SCHEM, TYPE_NAME, " +
-                "  SELF_REFERENCING_COL_NAME, REF_GENERATION\n" +
-                "FROM system.jdbc.tables");
+        StringBuilder query = new StringBuilder(new StringBuilder().append("").append("SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, TABLE_TYPE, REMARKS,\n").append("  TYPE_CAT, TYPE_SCHEM, TYPE_NAME, ").append("  SELF_REFERENCING_COL_NAME, REF_GENERATION\n").append("FROM system.jdbc.tables").toString());
 
         List<String> filters = new ArrayList<>();
         emptyStringEqualsFilter(filters, "TABLE_CAT", catalog);
@@ -932,44 +922,29 @@ public class PrestoDatabaseMetaData
     public ResultSet getSchemas()
             throws SQLException
     {
-        return select("" +
-                "SELECT TABLE_SCHEM, TABLE_CATALOG\n" +
-                "FROM system.jdbc.schemas\n" +
-                "ORDER BY TABLE_CATALOG, TABLE_SCHEM");
+        return select(new StringBuilder().append("").append("SELECT TABLE_SCHEM, TABLE_CATALOG\n").append("FROM system.jdbc.schemas\n").append("ORDER BY TABLE_CATALOG, TABLE_SCHEM").toString());
     }
 
     @Override
     public ResultSet getCatalogs()
             throws SQLException
     {
-        return select("" +
-                "SELECT TABLE_CAT\n" +
-                "FROM system.jdbc.catalogs\n" +
-                "ORDER BY TABLE_CAT");
+        return select(new StringBuilder().append("").append("SELECT TABLE_CAT\n").append("FROM system.jdbc.catalogs\n").append("ORDER BY TABLE_CAT").toString());
     }
 
     @Override
     public ResultSet getTableTypes()
             throws SQLException
     {
-        return select("" +
-                "SELECT TABLE_TYPE\n" +
-                "FROM system.jdbc.table_types\n" +
-                "ORDER BY TABLE_TYPE");
+        return select(new StringBuilder().append("").append("SELECT TABLE_TYPE\n").append("FROM system.jdbc.table_types\n").append("ORDER BY TABLE_TYPE").toString());
     }
 
     @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
             throws SQLException
     {
-        StringBuilder query = new StringBuilder("" +
-                "SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, DATA_TYPE,\n" +
-                "  TYPE_NAME, COLUMN_SIZE, BUFFER_LENGTH, DECIMAL_DIGITS, NUM_PREC_RADIX,\n" +
-                "  NULLABLE, REMARKS, COLUMN_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB,\n" +
-                "  CHAR_OCTET_LENGTH, ORDINAL_POSITION, IS_NULLABLE,\n" +
-                "  SCOPE_CATALOG, SCOPE_SCHEMA, SCOPE_TABLE,\n" +
-                "  SOURCE_DATA_TYPE, IS_AUTOINCREMENT, IS_GENERATEDCOLUMN\n" +
-                "FROM system.jdbc.columns");
+        StringBuilder query = new StringBuilder(new StringBuilder().append("").append("SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, DATA_TYPE,\n").append("  TYPE_NAME, COLUMN_SIZE, BUFFER_LENGTH, DECIMAL_DIGITS, NUM_PREC_RADIX,\n").append("  NULLABLE, REMARKS, COLUMN_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB,\n").append("  CHAR_OCTET_LENGTH, ORDINAL_POSITION, IS_NULLABLE,\n").append("  SCOPE_CATALOG, SCOPE_SCHEMA, SCOPE_TABLE,\n").append("  SOURCE_DATA_TYPE, IS_AUTOINCREMENT, IS_GENERATEDCOLUMN\n").append("FROM system.jdbc.columns")
+				.toString());
 
         List<String> filters = new ArrayList<>();
         emptyStringEqualsFilter(filters, "TABLE_CAT", catalog);
@@ -1043,13 +1018,7 @@ public class PrestoDatabaseMetaData
     public ResultSet getTypeInfo()
             throws SQLException
     {
-        return select("" +
-                "SELECT TYPE_NAME, DATA_TYPE, PRECISION, LITERAL_PREFIX, LITERAL_SUFFIX,\n" +
-                "CREATE_PARAMS, NULLABLE, CASE_SENSITIVE, SEARCHABLE, UNSIGNED_ATTRIBUTE,\n" +
-                "FIXED_PREC_SCALE, AUTO_INCREMENT, LOCAL_TYPE_NAME, MINIMUM_SCALE, MAXIMUM_SCALE,\n" +
-                "SQL_DATA_TYPE, SQL_DATETIME_SUB, NUM_PREC_RADIX\n" +
-                "FROM system.jdbc.types\n" +
-                "ORDER BY DATA_TYPE");
+        return select(new StringBuilder().append("").append("SELECT TYPE_NAME, DATA_TYPE, PRECISION, LITERAL_PREFIX, LITERAL_SUFFIX,\n").append("CREATE_PARAMS, NULLABLE, CASE_SENSITIVE, SEARCHABLE, UNSIGNED_ATTRIBUTE,\n").append("FIXED_PREC_SCALE, AUTO_INCREMENT, LOCAL_TYPE_NAME, MINIMUM_SCALE, MAXIMUM_SCALE,\n").append("SQL_DATA_TYPE, SQL_DATETIME_SUB, NUM_PREC_RADIX\n").append("FROM system.jdbc.types\n").append("ORDER BY DATA_TYPE").toString());
     }
 
     @Override
@@ -1149,11 +1118,7 @@ public class PrestoDatabaseMetaData
     public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME,\n" +
-                "  CLASS_NAME, DATA_TYPE, REMARKS, BASE_TYPE\n" +
-                "FROM system.jdbc.udts\n" +
-                "ORDER BY DATA_TYPE, TYPE_CAT, TYPE_SCHEM, TYPE_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME,\n").append("  CLASS_NAME, DATA_TYPE, REMARKS, BASE_TYPE\n").append("FROM system.jdbc.udts\n").append("ORDER BY DATA_TYPE, TYPE_CAT, TYPE_SCHEM, TYPE_NAME").toString());
     }
 
     @Override
@@ -1195,35 +1160,22 @@ public class PrestoDatabaseMetaData
     public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME,\n" +
-                "  SUPERTYPE_CAT, SUPERTYPE_SCHEM, SUPERTYPE_NAME\n" +
-                "FROM system.jdbc.super_types\n" +
-                "ORDER BY TYPE_CAT, TYPE_SCHEM, TYPE_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME,\n").append("  SUPERTYPE_CAT, SUPERTYPE_SCHEM, SUPERTYPE_NAME\n").append("FROM system.jdbc.super_types\n").append("ORDER BY TYPE_CAT, TYPE_SCHEM, TYPE_NAME").toString());
     }
 
     @Override
     public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, SUPERTABLE_NAME\n" +
-                "FROM system.jdbc.super_tables\n" +
-                "ORDER BY TABLE_CAT, TABLE_SCHEM, TABLE_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, SUPERTABLE_NAME\n").append("FROM system.jdbc.super_tables\n").append("ORDER BY TABLE_CAT, TABLE_SCHEM, TABLE_NAME").toString());
     }
 
     @Override
     public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME, ATTR_NAME, DATA_TYPE,\n" +
-                "  ATTR_TYPE_NAME, ATTR_SIZE, DECIMAL_DIGITS, NUM_PREC_RADIX, NULLABLE,\n" +
-                "  REMARKS, ATTR_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB, CHAR_OCTET_LENGTH,\n" +
-                "  ORDINAL_POSITION, IS_NULLABLE, SCOPE_CATALOG, SCOPE_SCHEMA, SCOPE_TABLE,\n" +
-                "SOURCE_DATA_TYPE\n" +
-                "FROM system.jdbc.attributes\n" +
-                "ORDER BY TYPE_CAT, TYPE_SCHEM, TYPE_NAME, ORDINAL_POSITION");
+        return selectEmpty(new StringBuilder().append("").append("SELECT TYPE_CAT, TYPE_SCHEM, TYPE_NAME, ATTR_NAME, DATA_TYPE,\n").append("  ATTR_TYPE_NAME, ATTR_SIZE, DECIMAL_DIGITS, NUM_PREC_RADIX, NULLABLE,\n").append("  REMARKS, ATTR_DEF, SQL_DATA_TYPE, SQL_DATETIME_SUB, CHAR_OCTET_LENGTH,\n").append("  ORDINAL_POSITION, IS_NULLABLE, SCOPE_CATALOG, SCOPE_SCHEMA, SCOPE_TABLE,\n").append("SOURCE_DATA_TYPE\n").append("FROM system.jdbc.attributes\n").append("ORDER BY TYPE_CAT, TYPE_SCHEM, TYPE_NAME, ORDINAL_POSITION")
+				.toString());
     }
 
     @Override
@@ -1263,7 +1215,8 @@ public class PrestoDatabaseMetaData
             return parseInt(parts.get(part));
         }
         catch (IndexOutOfBoundsException | NumberFormatException e) {
-            return 0;
+            logger.error(e.getMessage(), e);
+			return 0;
         }
     }
 
@@ -1313,9 +1266,7 @@ public class PrestoDatabaseMetaData
     public ResultSet getSchemas(String catalog, String schemaPattern)
             throws SQLException
     {
-        StringBuilder query = new StringBuilder("" +
-                "SELECT TABLE_SCHEM, TABLE_CATALOG\n" +
-                "FROM system.jdbc.schemas");
+        StringBuilder query = new StringBuilder(new StringBuilder().append("").append("SELECT TABLE_SCHEM, TABLE_CATALOG\n").append("FROM system.jdbc.schemas").toString());
 
         List<String> filters = new ArrayList<>();
         emptyStringEqualsFilter(filters, "TABLE_CATALOG", catalog);
@@ -1369,12 +1320,7 @@ public class PrestoDatabaseMetaData
     public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
             throws SQLException
     {
-        return selectEmpty("" +
-                "SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, DATA_TYPE,\n" +
-                "  COLUMN_SIZE, DECIMAL_DIGITS, NUM_PREC_RADIX, COLUMN_USAGE, REMARKS,\n" +
-                "  CHAR_OCTET_LENGTH, IS_NULLABLE\n" +
-                "FROM system.jdbc.pseudo_columns\n" +
-                "ORDER BY TABLE_CAT, table_SCHEM, TABLE_NAME, COLUMN_NAME");
+        return selectEmpty(new StringBuilder().append("").append("SELECT TABLE_CAT, TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, DATA_TYPE,\n").append("  COLUMN_SIZE, DECIMAL_DIGITS, NUM_PREC_RADIX, COLUMN_USAGE, REMARKS,\n").append("  CHAR_OCTET_LENGTH, IS_NULLABLE\n").append("FROM system.jdbc.pseudo_columns\n").append("ORDER BY TABLE_CAT, table_SCHEM, TABLE_NAME, COLUMN_NAME").toString());
     }
 
     @Override
@@ -1416,10 +1362,11 @@ public class PrestoDatabaseMetaData
 
     private static void buildFilters(StringBuilder out, List<String> filters)
     {
-        if (!filters.isEmpty()) {
-            out.append("\nWHERE ");
-            Joiner.on(" AND ").appendTo(out, filters);
-        }
+        if (filters.isEmpty()) {
+			return;
+		}
+		out.append("\nWHERE ");
+		Joiner.on(" AND ").appendTo(out, filters);
     }
 
     private static void optionalStringInFilter(List<String> filters, String columnName, String[] values)

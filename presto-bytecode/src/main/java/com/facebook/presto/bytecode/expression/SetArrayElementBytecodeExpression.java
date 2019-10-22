@@ -63,7 +63,7 @@ class SetArrayElementBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return instance + "[" + index + "] = " + value;
+        return new StringBuilder().append(instance).append("[").append(index).append("] = ").append(value).toString();
     }
 
     @Override

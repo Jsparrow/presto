@@ -163,7 +163,12 @@ public class TestSmileSupport
         return objectMapper.readValue(objectMapper.writeValueAsBytes(CAR), new TypeReference<Object>() {});
     }
 
-    /**
+    public static SuperDuperNameList superDuper(String superDuperNameList)
+    {
+        return new SuperDuperNameList(superDuperNameList, null);
+    }
+
+	/**
      * Classes below are copied from airlift as is. Once smile support is released in airlift
      * smile support in Presto should be entirely removed.
      */
@@ -365,18 +370,18 @@ public class TestSmileSupport
     {
         private final String value;
 
-        @JsonCreator
-        public static JsonValueAndStaticFactoryMethod valueOf(String value)
-        {
-            return new JsonValueAndStaticFactoryMethod(value);
-        }
-
         private JsonValueAndStaticFactoryMethod(String value)
         {
             this.value = requireNonNull(value, "value is null");
         }
 
-        @JsonValue
+		@JsonCreator
+        public static JsonValueAndStaticFactoryMethod valueOf(String value)
+        {
+            return new JsonValueAndStaticFactoryMethod(value);
+        }
+
+		@JsonValue
         public String getValue()
         {
             return value;
@@ -453,10 +458,5 @@ public class TestSmileSupport
             context.handleUnexpectedToken(handledType(), jp);
             throw JsonMappingException.from(jp, null);
         }
-    }
-
-    public static SuperDuperNameList superDuper(String superDuperNameList)
-    {
-        return new SuperDuperNameList(superDuperNameList, null);
     }
 }

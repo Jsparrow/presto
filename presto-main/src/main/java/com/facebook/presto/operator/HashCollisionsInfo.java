@@ -28,15 +28,6 @@ public class HashCollisionsInfo
     private final double weightedSumSquaredHashCollisions;
     private final double weightedExpectedHashCollisions;
 
-    public static HashCollisionsInfo createHashCollisionsInfo(
-            long inputPositionsCount, double hashCollisionsCount, double expectedHashCollisions)
-    {
-        return new HashCollisionsInfo(
-                hashCollisionsCount * inputPositionsCount,
-                hashCollisionsCount * hashCollisionsCount * inputPositionsCount,
-                expectedHashCollisions * inputPositionsCount);
-    }
-
     @JsonCreator
     public HashCollisionsInfo(
             @JsonProperty(WEIGHTED_HASH_COLLISIONS_PROPERTY) double weightedHashCollisions,
@@ -48,25 +39,34 @@ public class HashCollisionsInfo
         this.weightedExpectedHashCollisions = weightedExpectedHashCollisions;
     }
 
-    @JsonProperty
+	public static HashCollisionsInfo createHashCollisionsInfo(
+            long inputPositionsCount, double hashCollisionsCount, double expectedHashCollisions)
+    {
+        return new HashCollisionsInfo(
+                hashCollisionsCount * inputPositionsCount,
+                hashCollisionsCount * hashCollisionsCount * inputPositionsCount,
+                expectedHashCollisions * inputPositionsCount);
+    }
+
+	@JsonProperty
     public double getWeightedSumSquaredHashCollisions()
     {
         return weightedSumSquaredHashCollisions;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getWeightedHashCollisions()
     {
         return weightedHashCollisions;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getWeightedExpectedHashCollisions()
     {
         return weightedExpectedHashCollisions;
     }
 
-    @Override
+	@Override
     public HashCollisionsInfo mergeWith(HashCollisionsInfo other)
     {
         return new HashCollisionsInfo(

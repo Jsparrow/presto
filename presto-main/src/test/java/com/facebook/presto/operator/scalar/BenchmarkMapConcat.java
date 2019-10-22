@@ -85,7 +85,23 @@ public class BenchmarkMapConcat
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkMapConcat().mapConcat(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.INDI)
+                .include(new StringBuilder().append(".*").append(BenchmarkMapConcat.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -198,21 +214,5 @@ public class BenchmarkMapConcat
             }
             return createSlicesBlock(sliceArray);
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkMapConcat().mapConcat(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.INDI)
-                .include(".*" + BenchmarkMapConcat.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

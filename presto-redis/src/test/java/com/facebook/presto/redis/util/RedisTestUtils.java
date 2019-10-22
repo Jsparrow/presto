@@ -42,7 +42,7 @@ public final class RedisTestUtils
         queryRunner.installPlugin(redisPlugin);
 
         Map<String, String> redisConfig = ImmutableMap.of(
-                "redis.nodes", embeddedRedis.getConnectString() + ":" + embeddedRedis.getPort(),
+                "redis.nodes", new StringBuilder().append(embeddedRedis.getConnectString()).append(":").append(embeddedRedis.getPort()).toString(),
                 "redis.table-names", Joiner.on(",").join(tableDescriptions.keySet()),
                 "redis.default-schema", "default",
                 "redis.hide-internal-columns", "true",

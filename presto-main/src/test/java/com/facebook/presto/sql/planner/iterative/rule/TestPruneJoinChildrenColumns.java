@@ -42,7 +42,7 @@ public class TestPruneJoinChildrenColumns
     public void testNotAllInputsRereferenced()
     {
         tester().assertThat(new PruneJoinChildrenColumns())
-                .on(p -> buildJoin(p, variable -> variable.getName().equals("leftValue")))
+                .on(p -> buildJoin(p, variable -> "leftValue".equals(variable.getName())))
                 .matches(
                         join(
                                 JoinNode.Type.INNER,

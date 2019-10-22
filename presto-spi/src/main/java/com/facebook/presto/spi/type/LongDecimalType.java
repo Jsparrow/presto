@@ -128,7 +128,7 @@ final class LongDecimalType
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         if (length != INT128_BYTES) {
-            throw new IllegalStateException("Expected entry size to be exactly " + INT128_BYTES + " but was " + length);
+            throw new IllegalStateException(new StringBuilder().append("Expected entry size to be exactly ").append(INT128_BYTES).append(" but was ").append(length).toString());
         }
         blockBuilder.writeLong(value.getLong(offset));
         blockBuilder.writeLong(value.getLong(offset + SIZE_OF_LONG));

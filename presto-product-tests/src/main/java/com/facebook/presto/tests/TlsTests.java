@@ -36,10 +36,14 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TlsTests
 {
-    @Inject(optional = true)
+    private static final Logger logger = LoggerFactory.getLogger(TlsTests.class);
+
+	@Inject(optional = true)
     @Named("databases.presto.http_port")
     private Integer httpPort;
 
@@ -62,10 +66,10 @@ public class TlsTests
                 .map((uri) -> URI.create(uri).getHost())
                 .collect(toList());
 
-        for (String host : hosts) {
+        hosts.forEach(host -> {
             assertPortIsOpen(host, httpsPort);
             assertPortIsClosed(host, httpPort);
-        }
+        });
     }
 
     private void waitForNodeRefresh()
@@ -112,7 +116,8 @@ public class TlsTests
             return true;
         }
         catch (ConnectException | SocketTimeoutException e) {
-            return false;
+            logger.error(e.getMessage(), e);
+			return false;
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);

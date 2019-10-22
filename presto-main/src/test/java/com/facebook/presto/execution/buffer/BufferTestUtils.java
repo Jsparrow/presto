@@ -41,21 +41,21 @@ import static org.testng.Assert.assertTrue;
 
 public final class BufferTestUtils
 {
-    private BufferTestUtils() {}
-
     static final PagesSerde PAGES_SERDE = testingPagesSerde();
-    static final Duration NO_WAIT = new Duration(0, MILLISECONDS);
-    static final Duration MAX_WAIT = new Duration(1, SECONDS);
-    private static final DataSize BUFFERED_PAGE_SIZE = new DataSize(PAGES_SERDE.serialize(createPage(42)).getRetainedSizeInBytes(), BYTE);
+	static final Duration NO_WAIT = new Duration(0, MILLISECONDS);
+	static final Duration MAX_WAIT = new Duration(1, SECONDS);
+	private static final DataSize BUFFERED_PAGE_SIZE = new DataSize(PAGES_SERDE.serialize(createPage(42)).getRetainedSizeInBytes(), BYTE);
 
-    static BufferResult getFuture(ListenableFuture<BufferResult> future, Duration maxWait)
+	private BufferTestUtils() {}
+
+	static BufferResult getFuture(ListenableFuture<BufferResult> future, Duration maxWait)
     {
         Optional<BufferResult> bufferResult = tryGetFutureValue(future, (int) maxWait.toMillis(), MILLISECONDS);
         checkArgument(bufferResult.isPresent(), "bufferResult is empty");
         return bufferResult.get();
     }
 
-    static void assertBufferResultEquals(List<? extends Type> types, BufferResult actual, BufferResult expected)
+	static void assertBufferResultEquals(List<? extends Type> types, BufferResult actual, BufferResult expected)
     {
         assertEquals(actual.getSerializedPages().size(), expected.getSerializedPages().size(), "page count");
         assertEquals(actual.getToken(), expected.getToken(), "token");
@@ -68,7 +68,7 @@ public final class BufferTestUtils
         assertEquals(actual.isBufferComplete(), expected.isBufferComplete(), "buffer complete");
     }
 
-    static BufferResult createBufferResult(String bufferId, long token, List<Page> pages)
+	static BufferResult createBufferResult(String bufferId, long token, List<Page> pages)
     {
         checkArgument(!pages.isEmpty(), "pages is empty");
         return new BufferResult(
@@ -81,29 +81,29 @@ public final class BufferTestUtils
                         .collect(Collectors.toList()));
     }
 
-    public static Page createPage(int i)
+	public static Page createPage(int i)
     {
         return new Page(BlockAssertions.createLongsBlock(i));
     }
 
-    static DataSize sizeOfPages(int count)
+	static DataSize sizeOfPages(int count)
     {
         return new DataSize(BUFFERED_PAGE_SIZE.toBytes() * count, BYTE);
     }
 
-    static BufferResult getBufferResult(OutputBuffer buffer, OutputBufferId bufferId, long sequenceId, DataSize maxSize, Duration maxWait)
+	static BufferResult getBufferResult(OutputBuffer buffer, OutputBufferId bufferId, long sequenceId, DataSize maxSize, Duration maxWait)
     {
         ListenableFuture<BufferResult> future = buffer.get(bufferId, sequenceId, maxSize);
         return getFuture(future, maxWait);
     }
 
-    // TODO: remove this after PR #7987 is landed
+	// TODO: remove this after PR #7987 is landed
     static void acknowledgeBufferResult(OutputBuffer buffer, OutputBuffers.OutputBufferId bufferId, long sequenceId)
     {
         buffer.acknowledge(bufferId, sequenceId);
     }
 
-    static ListenableFuture<?> enqueuePage(OutputBuffer buffer, Page page)
+	static ListenableFuture<?> enqueuePage(OutputBuffer buffer, Page page)
     {
         buffer.enqueue(Lifespan.taskWide(), ImmutableList.of(PAGES_SERDE.serialize(page)));
         ListenableFuture<?> future = buffer.isFull();
@@ -111,7 +111,7 @@ public final class BufferTestUtils
         return future;
     }
 
-    static ListenableFuture<?> enqueuePage(OutputBuffer buffer, Page page, int partition)
+	static ListenableFuture<?> enqueuePage(OutputBuffer buffer, Page page, int partition)
     {
         buffer.enqueue(Lifespan.taskWide(), partition, ImmutableList.of(PAGES_SERDE.serialize(page)));
         ListenableFuture<?> future = buffer.isFull();
@@ -119,19 +119,19 @@ public final class BufferTestUtils
         return future;
     }
 
-    public static void addPage(OutputBuffer buffer, Page page)
+	public static void addPage(OutputBuffer buffer, Page page)
     {
         buffer.enqueue(Lifespan.taskWide(), ImmutableList.of(PAGES_SERDE.serialize(page)));
         assertTrue(buffer.isFull().isDone(), "Expected add page to not block");
     }
 
-    public static void addPage(OutputBuffer buffer, Page page, int partition)
+	public static void addPage(OutputBuffer buffer, Page page, int partition)
     {
         buffer.enqueue(Lifespan.taskWide(), partition, ImmutableList.of(PAGES_SERDE.serialize(page)));
         assertTrue(buffer.isFull().isDone(), "Expected add page to not block");
     }
 
-    static void assertQueueState(
+	static void assertQueueState(
             OutputBuffer buffer,
             OutputBuffers.OutputBufferId bufferId,
             int bufferedPages,
@@ -152,7 +152,7 @@ public final class BufferTestUtils
                                 bufferedPages + pagesSent)));
     }
 
-    static void assertQueueState(
+	static void assertQueueState(
             OutputBuffer buffer,
             int unassignedPages,
             OutputBuffers.OutputBufferId bufferId,
@@ -188,7 +188,7 @@ public final class BufferTestUtils
                                 bufferedPages + pagesSent)));
     }
 
-    @SuppressWarnings("ConstantConditions")
+	@SuppressWarnings("ConstantConditions")
     static void assertQueueClosed(OutputBuffer buffer, OutputBuffers.OutputBufferId bufferId, int pagesSent)
     {
         BufferInfo bufferInfo = getBufferInfo(buffer, bufferId);
@@ -197,7 +197,7 @@ public final class BufferTestUtils
         assertEquals(bufferInfo.isFinished(), true);
     }
 
-    @SuppressWarnings("ConstantConditions")
+	@SuppressWarnings("ConstantConditions")
     static void assertQueueClosed(OutputBuffer buffer, int unassignedPages, OutputBuffers.OutputBufferId bufferId, int pagesSent)
     {
         OutputBufferInfo outputBufferInfo = buffer.getInfo();
@@ -218,28 +218,23 @@ public final class BufferTestUtils
         assertEquals(bufferInfo.isFinished(), true);
     }
 
-    static void assertFinished(OutputBuffer buffer)
+	static void assertFinished(OutputBuffer buffer)
     {
         assertTrue(buffer.isFinished());
-        for (BufferInfo bufferInfo : buffer.getInfo().getBuffers()) {
+        buffer.getInfo().getBuffers().forEach(bufferInfo -> {
             assertTrue(bufferInfo.isFinished());
             assertEquals(bufferInfo.getBufferedPages(), 0);
-        }
+        });
     }
 
-    static void assertFutureIsDone(Future<?> future)
+	static void assertFutureIsDone(Future<?> future)
     {
         tryGetFutureValue(future, 5, SECONDS);
         assertTrue(future.isDone());
     }
 
-    private static BufferInfo getBufferInfo(OutputBuffer buffer, OutputBuffers.OutputBufferId bufferId)
+	private static BufferInfo getBufferInfo(OutputBuffer buffer, OutputBuffers.OutputBufferId bufferId)
     {
-        for (BufferInfo bufferInfo : buffer.getInfo().getBuffers()) {
-            if (bufferInfo.getBufferId().equals(bufferId)) {
-                return bufferInfo;
-            }
-        }
-        return null;
+        return buffer.getInfo().getBuffers().stream().filter(bufferInfo -> bufferInfo.getBufferId().equals(bufferId)).findFirst().orElse(null);
     }
 }

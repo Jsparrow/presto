@@ -138,10 +138,11 @@ public class TestMemoryPools
     @AfterMethod(alwaysRun = true)
     public void tearDown()
     {
-        if (localQueryRunner != null) {
-            localQueryRunner.close();
-            localQueryRunner = null;
-        }
+        if (localQueryRunner == null) {
+			return;
+		}
+		localQueryRunner.close();
+		localQueryRunner = null;
     }
 
     @Test
@@ -287,16 +288,12 @@ public class TestMemoryPools
 
         // run driver, until it blocks
         while (!isOperatorBlocked(drivers, reason)) {
-            for (Driver driver : drivers) {
-                driver.process();
-            }
+            drivers.forEach(Driver::process);
             iterationsCount++;
         }
 
         // driver should be blocked waiting for memory
-        for (Driver driver : drivers) {
-            assertFalse(driver.isFinished());
-        }
+		drivers.forEach(driver -> assertFalse(driver.isFinished()));
         return iterationsCount;
     }
 

@@ -148,9 +148,7 @@ public class HiveMetadataFactory
         this.prestoVersion = requireNonNull(prestoVersion, "prestoVersion is null");
 
         if (!allowCorruptWritesForTesting && !timeZone.equals(DateTimeZone.getDefault())) {
-            log.warn("Hive writes are disabled. " +
-                            "To write data to Hive, your JVM timezone must match the Hive storage timezone. " +
-                            "Add -Duser.timezone=%s to your JVM arguments",
+            log.warn(new StringBuilder().append("Hive writes are disabled. ").append("To write data to Hive, your JVM timezone must match the Hive storage timezone. ").append("Add -Duser.timezone=%s to your JVM arguments").toString(),
                     timeZone.getID());
         }
     }

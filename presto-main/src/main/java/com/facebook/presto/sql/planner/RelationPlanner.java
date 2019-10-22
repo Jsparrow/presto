@@ -160,11 +160,11 @@ class RelationPlanner
 
         ImmutableList.Builder<VariableReferenceExpression> outputVariablesBuilder = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> columns = ImmutableMap.builder();
-        for (Field field : scope.getRelationType().getAllFields()) {
+        scope.getRelationType().getAllFields().forEach(field -> {
             VariableReferenceExpression variable = variableAllocator.newVariable(field.getName().get(), field.getType());
             outputVariablesBuilder.add(variable);
             columns.put(variable, analysis.getColumn(field));
-        }
+        });
 
         List<VariableReferenceExpression> outputVariables = outputVariablesBuilder.build();
         PlanNode root = new TableScanNode(idAllocator.getNextId(), handle, outputVariables, columns.build(), TupleDomain.all(), TupleDomain.all());
@@ -490,25 +490,25 @@ class RelationPlanner
         Assignments.Builder assignments = Assignments.builder();
 
         ImmutableList.Builder<VariableReferenceExpression> outputs = ImmutableList.builder();
-        for (Identifier column : joinColumns) {
+        joinColumns.forEach(column -> {
             VariableReferenceExpression output = variableAllocator.newVariable(column, analysis.getType(column));
             outputs.add(output);
             assignments.put(output, castToRowExpression(new CoalesceExpression(
                     new SymbolReference(leftJoinColumns.get(column).getName()),
                     new SymbolReference(rightJoinColumns.get(column).getName()))));
-        }
+        });
 
-        for (int field : joinAnalysis.getOtherLeftFields()) {
+        joinAnalysis.getOtherLeftFields().stream().mapToInt(Integer::valueOf).forEach(field -> {
             VariableReferenceExpression variable = left.getFieldMappings().get(field);
             outputs.add(variable);
             assignments.put(variable, castToRowExpression(new SymbolReference(variable.getName())));
-        }
+        });
 
-        for (int field : joinAnalysis.getOtherRightFields()) {
+        joinAnalysis.getOtherRightFields().stream().mapToInt(Integer::valueOf).forEach(field -> {
             VariableReferenceExpression variable = right.getFieldMappings().get(field);
             outputs.add(variable);
             assignments.put(variable, castToRowExpression(new SymbolReference(variable.getName())));
-        }
+        });
 
         return new RelationPlan(
                 new ProjectNode(idAllocator.getNextId(), join, assignments.build()),
@@ -563,10 +563,7 @@ class RelationPlanner
         RelationType unnestOutputDescriptor = analysis.getOutputDescriptor(node);
         // Create variables for the result of unnesting
         ImmutableList.Builder<VariableReferenceExpression> unnestedVariablesBuilder = ImmutableList.builder();
-        for (Field field : unnestOutputDescriptor.getVisibleFields()) {
-            VariableReferenceExpression variable = variableAllocator.newVariable(field);
-            unnestedVariablesBuilder.add(variable);
-        }
+        unnestOutputDescriptor.getVisibleFields().stream().map(variableAllocator::newVariable).forEach(unnestedVariablesBuilder::add);
         ImmutableList<VariableReferenceExpression> unnestedVariables = unnestedVariablesBuilder.build();
 
         // Add a projection for all the unnest arguments
@@ -632,18 +629,13 @@ class RelationPlanner
     {
         Scope scope = analysis.getScope(node);
         ImmutableList.Builder<VariableReferenceExpression> outputVariablesBuilder = ImmutableList.builder();
-        for (Field field : scope.getRelationType().getVisibleFields()) {
-            outputVariablesBuilder.add(variableAllocator.newVariable(field));
-        }
+        scope.getRelationType().getVisibleFields().forEach(field -> outputVariablesBuilder.add(variableAllocator.newVariable(field)));
 
         ImmutableList.Builder<List<RowExpression>> rowsBuilder = ImmutableList.builder();
-        for (Expression row : node.getRows()) {
+        node.getRows().forEach(row -> {
             ImmutableList.Builder<RowExpression> values = ImmutableList.builder();
             if (row instanceof Row) {
-                for (Expression item : ((Row) row).getItems()) {
-                    Expression expression = Coercer.addCoercions(item, analysis);
-                    values.add(castToRowExpression(ExpressionTreeRewriter.rewriteWith(new ParameterRewriter(analysis.getParameters(), analysis), expression)));
-                }
+                ((Row) row).getItems().stream().map(item -> Coercer.addCoercions(item, analysis)).forEach(expression -> values.add(castToRowExpression(ExpressionTreeRewriter.rewriteWith(new ParameterRewriter(analysis.getParameters(), analysis), expression))));
             }
             else {
                 Expression expression = Coercer.addCoercions(row, analysis);
@@ -651,7 +643,7 @@ class RelationPlanner
             }
 
             rowsBuilder.add(values.build());
-        }
+        });
 
         ValuesNode valuesNode = new ValuesNode(idAllocator.getNextId(), outputVariablesBuilder.build(), rowsBuilder.build());
         return new RelationPlan(valuesNode, scope, outputVariablesBuilder.build());
@@ -662,10 +654,7 @@ class RelationPlanner
     {
         Scope scope = analysis.getScope(node);
         ImmutableList.Builder<VariableReferenceExpression> outputVariablesBuilder = ImmutableList.builder();
-        for (Field field : scope.getRelationType().getVisibleFields()) {
-            VariableReferenceExpression variable = variableAllocator.newVariable(field);
-            outputVariablesBuilder.add(variable);
-        }
+        scope.getRelationType().getVisibleFields().stream().map(variableAllocator::newVariable).forEach(outputVariablesBuilder::add);
         List<VariableReferenceExpression> unnestedVariables = outputVariablesBuilder.build();
 
         // If we got here, then we must be unnesting a constant, and not be in a join (where there could be column references)
@@ -812,11 +801,10 @@ class RelationPlanner
                 // Use the first Relation to derive output variable names
                 RelationType descriptor = relationPlan.getDescriptor();
                 ImmutableList.Builder<VariableReferenceExpression> outputVariableBuilder = ImmutableList.builder();
-                for (Field field : descriptor.getVisibleFields()) {
-                    int fieldIndex = descriptor.indexOf(field);
-                    VariableReferenceExpression variable = childOutputVariables.get(fieldIndex);
-                    outputVariableBuilder.add(variableAllocator.newVariable(variable));
-                }
+                descriptor.getVisibleFields().stream().mapToInt(descriptor::indexOf).forEach(fieldIndex -> {
+					VariableReferenceExpression variable = childOutputVariables.get(fieldIndex);
+					outputVariableBuilder.add(variableAllocator.newVariable(variable));
+				});
                 outputs = outputVariableBuilder.build();
             }
 

@@ -139,11 +139,11 @@ public class Memo
     {
         getGroup(group).stats = null;
         getGroup(group).cost = null;
-        for (int parentGroup : getGroup(group).incomingReferences.elementSet()) {
+        getGroup(group).incomingReferences.elementSet().stream().mapToInt(Integer::valueOf).forEach(parentGroup -> {
             if (parentGroup != ROOT_GROUP_REF) {
                 evictStatisticsAndCost(parentGroup);
             }
-        }
+        });
     }
 
     public Optional<PlanNodeStatsEstimate> getStats(int group)
@@ -174,23 +174,21 @@ public class Memo
     {
         Set<Integer> references = getAllReferences(fromNode);
 
-        for (int group : references) {
-            groups.get(group).incomingReferences.add(fromGroup);
-        }
+        references.stream().mapToInt(Integer::valueOf).forEach(group -> groups.get(group).incomingReferences.add(fromGroup));
     }
 
     private void decrementReferenceCounts(PlanNode fromNode, int fromGroup)
     {
         Set<Integer> references = getAllReferences(fromNode);
 
-        for (int group : references) {
+        references.stream().mapToInt(Integer::valueOf).forEach(group -> {
             Group childGroup = groups.get(group);
             checkState(childGroup.incomingReferences.remove(fromGroup), "Reference to remove not found");
 
             if (childGroup.incomingReferences.isEmpty()) {
                 deleteGroup(group);
             }
-        }
+        });
     }
 
     private Set<Integer> getAllReferences(PlanNode node)
@@ -246,21 +244,21 @@ public class Memo
 
     private static final class Group
     {
-        static Group withMember(PlanNode member)
-        {
-            return new Group(member);
-        }
-
         private PlanNode membership;
-        private final Multiset<Integer> incomingReferences = HashMultiset.create();
-        @Nullable
+		private final Multiset<Integer> incomingReferences = HashMultiset.create();
+		@Nullable
         private PlanNodeStatsEstimate stats;
-        @Nullable
+		@Nullable
         private PlanCostEstimate cost;
 
-        private Group(PlanNode member)
+		private Group(PlanNode member)
         {
             this.membership = requireNonNull(member, "member is null");
+        }
+
+		static Group withMember(PlanNode member)
+        {
+            return new Group(member);
         }
     }
 }

@@ -26,12 +26,6 @@ public class Symbol
 {
     private final String name;
 
-    public static Symbol from(Expression expression)
-    {
-        checkArgument(expression instanceof SymbolReference, "Unexpected expression: %s", expression);
-        return new Symbol(((SymbolReference) expression).getName());
-    }
-
     @JsonCreator
     public Symbol(String name)
     {
@@ -39,24 +33,30 @@ public class Symbol
         this.name = name;
     }
 
-    @JsonValue
+	public static Symbol from(Expression expression)
+    {
+        checkArgument(expression instanceof SymbolReference, "Unexpected expression: %s", expression);
+        return new Symbol(((SymbolReference) expression).getName());
+    }
+
+	@JsonValue
     public String getName()
     {
         return name;
     }
 
-    public SymbolReference toSymbolReference()
+	public SymbolReference toSymbolReference()
     {
         return new SymbolReference(name);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return name;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -75,13 +75,13 @@ public class Symbol
         return true;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return name.hashCode();
     }
 
-    @Override
+	@Override
     public int compareTo(Symbol o)
     {
         return name.compareTo(o.name);

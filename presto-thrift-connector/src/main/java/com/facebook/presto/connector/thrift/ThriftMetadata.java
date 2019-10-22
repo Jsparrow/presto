@@ -62,11 +62,14 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ThriftMetadata
         implements ConnectorMetadata
 {
-    private static final Duration EXPIRE_AFTER_WRITE = new Duration(10, MINUTES);
+    private static final Logger logger = LoggerFactory.getLogger(ThriftMetadata.class);
+	private static final Duration EXPIRE_AFTER_WRITE = new Duration(10, MINUTES);
     private static final Duration REFRESH_AFTER_WRITE = new Duration(2, MINUTES);
 
     private final DriftClient<PrestoThriftService> client;
@@ -217,7 +220,8 @@ public class ThriftMetadata
             name = new PrestoThriftSchemaTableName(schemaTableName);
         }
         catch (IllegalArgumentException e) {
-            return new PrestoThriftNullableTableMetadata(null);
+            logger.error(e.getMessage(), e);
+			return new PrestoThriftNullableTableMetadata(null);
         }
 
         try {

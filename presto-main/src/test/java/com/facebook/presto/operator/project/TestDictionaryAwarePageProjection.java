@@ -313,7 +313,15 @@ public class TestDictionaryAwarePageProjection
             return new TestPageProjectionWork(yieldSignal, page, selectedPositions);
         }
 
-        private class TestPageProjectionWork
+        private static long verifyPositive(long value)
+        {
+            if (value < 0) {
+                throw new NegativeValueException(value);
+            }
+            return value;
+        }
+
+		private class TestPageProjectionWork
                 implements Work<Block>
         {
             private final DriverYieldSignal yieldSignal;
@@ -368,14 +376,6 @@ public class TestDictionaryAwarePageProjection
                 assertNotNull(result);
                 return result;
             }
-        }
-
-        private static long verifyPositive(long value)
-        {
-            if (value < 0) {
-                throw new NegativeValueException(value);
-            }
-            return value;
         }
     }
 

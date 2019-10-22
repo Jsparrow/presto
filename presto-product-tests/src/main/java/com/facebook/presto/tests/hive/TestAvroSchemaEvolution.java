@@ -31,12 +31,7 @@ public class TestAvroSchemaEvolution
 {
     private static final String TABLE_NAME = "product_tests_avro_table";
     private static final String ORIGINAL_SCHEMA = "file:///docker/volumes/presto-product-tests/avro/original_schema.avsc";
-    private static final String CREATE_TABLE = format("" +
-                    "CREATE TABLE %s (dummy_col VARCHAR)" +
-                    "WITH (" +
-                    "format='AVRO', " +
-                    "avro_schema_url='%s'" +
-                    ")",
+    private static final String CREATE_TABLE = format(new StringBuilder().append("").append("CREATE TABLE %s (dummy_col VARCHAR)").append("WITH (").append("format='AVRO', ").append("avro_schema_url='%s'").append(")").toString(),
             TABLE_NAME,
             ORIGINAL_SCHEMA);
     private static final String RENAMED_COLUMN_SCHEMA = "file:///docker/volumes/presto-product-tests/avro/rename_column_schema.avsc";

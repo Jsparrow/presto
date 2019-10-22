@@ -17,13 +17,13 @@ import static java.lang.String.format;
 
 final class UnnestOperatorBlockUtil
 {
-    private UnnestOperatorBlockUtil() {}
-
     private static final int DEFAULT_CAPACITY = 64;
-    // See java.util.ArrayList for an explanation
+	// See java.util.ArrayList for an explanation
     static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-    // Copied from io.prestosql.spi.block.BlockUtil#calculateNewArraySize
+	private UnnestOperatorBlockUtil() {}
+
+	// Copied from io.prestosql.spi.block.BlockUtil#calculateNewArraySize
     static int calculateNewArraySize(int currentSize)
     {
         // grow array by 50%

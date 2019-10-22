@@ -64,7 +64,33 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 @BenchmarkMode(Mode.AverageTime)
 public class BenchmarkInformationSchema
 {
-    @SuppressWarnings("FieldMayBeFinal")
+    @Benchmark
+    public MaterializedResult queryInformationSchema(BenchmarkData benchmarkData)
+    {
+        return benchmarkData.queryRunner.execute(benchmarkData.query);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        try {
+            new BenchmarkInformationSchema().queryInformationSchema(data);
+        }
+        finally {
+            data.tearDown();
+        }
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkInformationSchema.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Benchmark)
     public static class BenchmarkData
     {
@@ -147,31 +173,5 @@ public class BenchmarkInformationSchema
             queryRunner.close();
             queryRunner = null;
         }
-    }
-
-    @Benchmark
-    public MaterializedResult queryInformationSchema(BenchmarkData benchmarkData)
-    {
-        return benchmarkData.queryRunner.execute(benchmarkData.query);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        try {
-            new BenchmarkInformationSchema().queryInformationSchema(data);
-        }
-        finally {
-            data.tearDown();
-        }
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkInformationSchema.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

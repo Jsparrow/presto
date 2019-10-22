@@ -55,13 +55,13 @@ public class PageBuffer
     {
         checkState(!isFull(), "PageBuffer is full!");
         pages.offer(page);
-        if (isFull()) {
-            if (settableFuture == null) {
-                settableFuture = SettableFuture.create();
-            }
-            return settableFuture;
-        }
-        return NOT_FULL;
+        if (!isFull()) {
+			return NOT_FULL;
+		}
+		if (settableFuture == null) {
+		    settableFuture = SettableFuture.create();
+		}
+		return settableFuture;
     }
 
     /**

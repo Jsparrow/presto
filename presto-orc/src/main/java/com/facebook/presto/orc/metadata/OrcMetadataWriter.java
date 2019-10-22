@@ -135,15 +135,9 @@ public class OrcMetadataWriter
                 .addAllSubtypes(type.getFieldTypeIndexes())
                 .addAllFieldNames(type.getFieldNames());
 
-        if (type.getLength().isPresent()) {
-            builder.setMaximumLength(type.getLength().get());
-        }
-        if (type.getPrecision().isPresent()) {
-            builder.setPrecision(type.getPrecision().get());
-        }
-        if (type.getScale().isPresent()) {
-            builder.setScale(type.getScale().get());
-        }
+        type.getLength().ifPresent(builder::setMaximumLength);
+        type.getPrecision().ifPresent(builder::setPrecision);
+        type.getScale().ifPresent(builder::setScale);
         return builder.build();
     }
 

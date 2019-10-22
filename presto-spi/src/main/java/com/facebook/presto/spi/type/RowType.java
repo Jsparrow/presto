@@ -120,7 +120,7 @@ public class RowType
         // Convert to standard sql name
         StringBuilder result = new StringBuilder();
         result.append(ROW).append('(');
-        for (Field field : fields) {
+        fields.forEach(field -> {
             String typeDisplayName = field.getType().getDisplayName();
             if (field.getName().isPresent()) {
                 result.append(field.getName().get()).append(' ').append(typeDisplayName);
@@ -129,7 +129,7 @@ public class RowType
                 result.append(typeDisplayName);
             }
             result.append(", ");
-        }
+        });
         result.setLength(result.length() - 2);
         result.append(')');
         return result.toString();
@@ -192,41 +192,19 @@ public class RowType
         return fields;
     }
 
-    public static class Field
-    {
-        private final Type type;
-        private final Optional<String> name;
-
-        public Field(Optional<String> name, Type type)
-        {
-            this.type = requireNonNull(type, "type is null");
-            this.name = requireNonNull(name, "name is null");
-        }
-
-        public Type getType()
-        {
-            return type;
-        }
-
-        public Optional<String> getName()
-        {
-            return name;
-        }
-    }
-
     @Override
     public boolean isComparable()
     {
         return fields.stream().allMatch(field -> field.getType().isComparable());
     }
 
-    @Override
+	@Override
     public boolean isOrderable()
     {
         return fields.stream().allMatch(field -> field.getType().isOrderable());
     }
 
-    @Override
+	@Override
     public boolean equalTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         Block leftRow = leftBlock.getBlock(leftPosition);
@@ -244,7 +222,7 @@ public class RowType
         return true;
     }
 
-    @Override
+	@Override
     public int compareTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         Block leftRow = leftBlock.getBlock(leftPosition);
@@ -266,7 +244,7 @@ public class RowType
         return 0;
     }
 
-    @Override
+	@Override
     public long hash(Block block, int position)
     {
         Block arrayBlock = block.getBlock(position);
@@ -278,10 +256,32 @@ public class RowType
         return result;
     }
 
-    private static void checkElementNotNull(boolean isNull)
+	private static void checkElementNotNull(boolean isNull)
     {
         if (isNull) {
             throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "ROW comparison not supported for fields with null elements");
+        }
+    }
+
+	public static class Field
+    {
+        private final Type type;
+        private final Optional<String> name;
+
+        public Field(Optional<String> name, Type type)
+        {
+            this.type = requireNonNull(type, "type is null");
+            this.name = requireNonNull(name, "name is null");
+        }
+
+        public Type getType()
+        {
+            return type;
+        }
+
+        public Optional<String> getName()
+        {
+            return name;
         }
     }
 }

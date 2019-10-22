@@ -27,19 +27,9 @@ import static org.testng.Assert.assertEquals;
 
 public class TestRowExpressionVariableInliner
 {
-    private static class TestFunctionHandle
-            implements FunctionHandle
-    {
-        @Override
-        public FullyQualifiedName.Prefix getFunctionNamespace()
-        {
-            return FullyQualifiedName.of("a.b.c").getPrefix();
-        }
-    }
-
     private static final FunctionHandle TEST_FUNCTION = new TestFunctionHandle();
 
-    @Test
+	@Test
     public void testInlineVariable()
     {
         assertEquals(RowExpressionVariableInliner.inlineVariables(
@@ -50,7 +40,7 @@ public class TestRowExpressionVariableInliner
                 variable("b"));
     }
 
-    @Test
+	@Test
     public void testInlineLambda()
     {
         assertEquals(RowExpressionVariableInliner.inlineVariables(
@@ -73,13 +63,23 @@ public class TestRowExpressionVariableInliner
                                 new CallExpression("add", TEST_FUNCTION, BIGINT, ImmutableList.of(variable("lambda_argument"), variable("b")))))));
     }
 
-    private Symbol symbol(String name)
+	private Symbol symbol(String name)
     {
         return new Symbol(name);
     }
 
-    private VariableReferenceExpression variable(String name)
+	private VariableReferenceExpression variable(String name)
     {
         return new VariableReferenceExpression(name, BIGINT);
+    }
+
+	private static class TestFunctionHandle
+            implements FunctionHandle
+    {
+        @Override
+        public FullyQualifiedName.Prefix getFunctionNamespace()
+        {
+            return FullyQualifiedName.of("a.b.c").getPrefix();
+        }
     }
 }

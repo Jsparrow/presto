@@ -353,8 +353,8 @@ public final class ChunkedSliceOutput
 
         public ChunkSupplier(int minChunkSize, int maxChunkSize)
         {
-            checkArgument(minChunkSize >= MINIMUM_CHUNK_SIZE, "minimum chunk size of " + MINIMUM_CHUNK_SIZE + " required");
-            checkArgument(maxChunkSize <= MAXIMUM_CHUNK_SIZE, "maximum chunk size of " + MAXIMUM_CHUNK_SIZE + " required");
+            checkArgument(minChunkSize >= MINIMUM_CHUNK_SIZE, new StringBuilder().append("minimum chunk size of ").append(MINIMUM_CHUNK_SIZE).append(" required").toString());
+            checkArgument(maxChunkSize <= MAXIMUM_CHUNK_SIZE, new StringBuilder().append("maximum chunk size of ").append(MAXIMUM_CHUNK_SIZE).append(" required").toString());
             checkArgument(minChunkSize <= maxChunkSize, "minimum chunk size must be less than maximum chunk size");
 
             this.currentSize = minChunkSize;

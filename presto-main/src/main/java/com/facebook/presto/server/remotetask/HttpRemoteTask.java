@@ -245,10 +245,10 @@ public final class HttpRemoteTask
                     .map(PlanNode::getId)
                     .collect(toImmutableSet());
 
-            for (Entry<PlanNodeId, Split> entry : requireNonNull(initialSplits, "initialSplits is null").entries()) {
+            requireNonNull(initialSplits, "initialSplits is null").entries().forEach(entry -> {
                 ScheduledSplit scheduledSplit = new ScheduledSplit(nextSplitId.getAndIncrement(), entry.getKey(), entry.getValue());
                 pendingSplits.put(entry.getKey(), scheduledSplit);
-            }
+            });
             pendingSourceSplitCount = planFragment.getTableScanSchedulingOrder().stream()
                     .filter(initialSplits::containsKey)
                     .mapToInt(partitionedSource -> initialSplits.get(partitionedSource).size())
@@ -370,10 +370,11 @@ public final class HttpRemoteTask
         }
         updateSplitQueueSpace();
 
-        if (needsUpdate) {
-            this.needsUpdate.set(true);
-            scheduleUpdate();
-        }
+        if (!needsUpdate) {
+			return;
+		}
+		this.needsUpdate.set(true);
+		scheduleUpdate();
     }
 
     @Override
@@ -391,10 +392,11 @@ public final class HttpRemoteTask
     @Override
     public synchronized void noMoreSplits(PlanNodeId sourceId, Lifespan lifespan)
     {
-        if (pendingNoMoreSplitsForLifespan.put(sourceId, lifespan)) {
-            needsUpdate.set(true);
-            scheduleUpdate();
-        }
+        if (!pendingNoMoreSplitsForLifespan.put(sourceId, lifespan)) {
+			return;
+		}
+		needsUpdate.set(true);
+		scheduleUpdate();
     }
 
     @Override
@@ -404,11 +406,12 @@ public final class HttpRemoteTask
             return;
         }
 
-        if (newOutputBuffers.getVersion() > outputBuffers.get().getVersion()) {
-            outputBuffers.set(newOutputBuffers);
-            needsUpdate.set(true);
-            scheduleUpdate();
-        }
+        if (newOutputBuffers.getVersion() <= outputBuffers.get().getVersion()) {
+			return;
+		}
+		outputBuffers.set(newOutputBuffers);
+		needsUpdate.set(true);
+		scheduleUpdate();
     }
 
     @Override
@@ -554,7 +557,7 @@ public final class HttpRemoteTask
         updateTaskInfo(newValue);
 
         // remove acknowledged splits, which frees memory
-        for (TaskSource source : sources) {
+		sources.forEach(source -> {
             PlanNodeId planNodeId = source.getPlanNodeId();
             int removed = 0;
             for (ScheduledSplit split : source.getSplits()) {
@@ -565,13 +568,11 @@ public final class HttpRemoteTask
             if (source.isNoMoreSplits()) {
                 noMoreSplits.put(planNodeId, false);
             }
-            for (Lifespan lifespan : source.getNoMoreSplitsForLifespan()) {
-                pendingNoMoreSplitsForLifespan.remove(planNodeId, lifespan);
-            }
+            source.getNoMoreSplitsForLifespan().forEach(lifespan -> pendingNoMoreSplitsForLifespan.remove(planNodeId, lifespan));
             if (tableScanPlanNodeIds.contains(planNodeId)) {
                 pendingSourceSplitCount -= removed;
             }
-        }
+        });
         updateSplitQueueSpace();
 
         partitionedSplitCountTracker.setPartitionedSplitCount(getPartitionedSplitCount());

@@ -200,10 +200,11 @@ public class TimestampEncoding
             writeVInt(output, value);
         }
 
-        if (hasSecondsHigh32) {
-            int secondsHigh32 = (int) (seconds >> 31);
-            writeVInt(output, secondsHigh32);
-        }
+        if (!hasSecondsHigh32) {
+			return;
+		}
+		int secondsHigh32 = (int) (seconds >> 31);
+		writeVInt(output, secondsHigh32);
     }
 
     private static int reverseDecimal(int nanos)

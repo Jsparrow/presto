@@ -28,7 +28,26 @@ import static java.util.Objects.requireNonNull;
 public class ArithmeticBytecodeExpression
         extends BytecodeExpression
 {
-    public static BytecodeExpression createArithmeticBytecodeExpression(OpCode baseOpCode, BytecodeExpression left, BytecodeExpression right)
+    private final String infixSymbol;
+	private final OpCode opCode;
+	private final BytecodeExpression left;
+	private final BytecodeExpression right;
+
+	private ArithmeticBytecodeExpression(
+            String infixSymbol,
+            ParameterizedType type,
+            OpCode opCode,
+            BytecodeExpression left,
+            BytecodeExpression right)
+    {
+        super(type);
+        this.infixSymbol = infixSymbol;
+        this.opCode = opCode;
+        this.left = left;
+        this.right = right;
+    }
+
+	public static BytecodeExpression createArithmeticBytecodeExpression(OpCode baseOpCode, BytecodeExpression left, BytecodeExpression right)
     {
         requireNonNull(baseOpCode, "baseOpCode is null");
         String name = getName(baseOpCode);
@@ -40,7 +59,7 @@ public class ArithmeticBytecodeExpression
         return new ArithmeticBytecodeExpression(infixSymbol, left.getType(), opCode, left, right);
     }
 
-    private static String getName(OpCode baseOpCode)
+	private static String getName(OpCode baseOpCode)
     {
         switch (baseOpCode) {
             case IAND:
@@ -70,7 +89,7 @@ public class ArithmeticBytecodeExpression
         }
     }
 
-    private static String getInfixSymbol(OpCode baseOpCode)
+	private static String getInfixSymbol(OpCode baseOpCode)
     {
         switch (baseOpCode) {
             case IAND:
@@ -100,7 +119,7 @@ public class ArithmeticBytecodeExpression
         }
     }
 
-    private static void checkArgumentTypes(OpCode baseOpCode, String name, BytecodeExpression left, BytecodeExpression right)
+	private static void checkArgumentTypes(OpCode baseOpCode, String name, BytecodeExpression left, BytecodeExpression right)
     {
         Class<?> leftType = getPrimitiveType(left, "left");
         Class<?> rightType = getPrimitiveType(right, "right");
@@ -133,7 +152,7 @@ public class ArithmeticBytecodeExpression
         }
     }
 
-    static OpCode getNumericOpCode(String name, OpCode baseOpCode, Class<?> type)
+	static OpCode getNumericOpCode(String name, OpCode baseOpCode, Class<?> type)
     {
         // Arithmetic OpCodes are laid out int, long, float and then double
         if (type == int.class) {
@@ -149,11 +168,11 @@ public class ArithmeticBytecodeExpression
             return OpCode.getOpCode(baseOpCode.getOpCode() + 3);
         }
         else {
-            throw new IllegalArgumentException(name + " does not support " + type);
+            throw new IllegalArgumentException(new StringBuilder().append(name).append(" does not support ").append(type).toString());
         }
     }
 
-    private static Class<?> getPrimitiveType(BytecodeExpression expression, String name)
+	private static Class<?> getPrimitiveType(BytecodeExpression expression, String name)
     {
         requireNonNull(expression, name + " is null");
         Class<?> leftType = expression.getType().getPrimitiveType();
@@ -162,26 +181,7 @@ public class ArithmeticBytecodeExpression
         return leftType;
     }
 
-    private final String infixSymbol;
-    private final OpCode opCode;
-    private final BytecodeExpression left;
-    private final BytecodeExpression right;
-
-    private ArithmeticBytecodeExpression(
-            String infixSymbol,
-            ParameterizedType type,
-            OpCode opCode,
-            BytecodeExpression left,
-            BytecodeExpression right)
-    {
-        super(type);
-        this.infixSymbol = infixSymbol;
-        this.opCode = opCode;
-        this.left = left;
-        this.right = right;
-    }
-
-    @Override
+	@Override
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         return new BytecodeBlock()
@@ -190,15 +190,16 @@ public class ArithmeticBytecodeExpression
                 .append(opCode);
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of(left, right);
     }
 
-    @Override
+	@Override
     protected String formatOneLine()
     {
-        return "(" + left + " " + infixSymbol + " " + right + ")";
+        return new StringBuilder().append("(").append(left).append(" ").append(infixSymbol).append(" ").append(right).append(")")
+				.toString();
     }
 }

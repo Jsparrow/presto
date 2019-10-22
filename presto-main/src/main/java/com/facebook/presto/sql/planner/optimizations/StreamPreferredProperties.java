@@ -186,14 +186,13 @@ class StreamPreferredProperties
         }
 
         // is there a preference for a specific partitioning scheme?
-        if (partitioningColumns.isPresent()) {
-            if (exactColumnOrder) {
-                return actualProperties.isExactlyPartitionedOn(partitioningColumns.get());
-            }
-            return actualProperties.isPartitionedOn(partitioningColumns.get());
-        }
-
-        return true;
+		if (!partitioningColumns.isPresent()) {
+			return true;
+		}
+		if (exactColumnOrder) {
+		    return actualProperties.isExactlyPartitionedOn(partitioningColumns.get());
+		}
+		return actualProperties.isPartitionedOn(partitioningColumns.get());
     }
 
     public boolean isSingleStreamPreferred()

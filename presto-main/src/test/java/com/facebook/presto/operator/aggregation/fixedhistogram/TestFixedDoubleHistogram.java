@@ -57,7 +57,7 @@ public class TestFixedDoubleHistogram
         histogram.add(3.1, 100.0);
         histogram.add(3.8, 200.0);
         assertEquals(
-                Streams.stream(histogram.iterator()).mapToDouble(c -> c.getWeight()).sum(),
+                Streams.stream(histogram.iterator()).mapToDouble(FixedDoubleHistogram.Bucket::getWeight).sum(),
                 300.0);
     }
 
@@ -81,7 +81,7 @@ public class TestFixedDoubleHistogram
         Streams.stream(histogram.iterator()).forEach(b -> {
             double weight = IntStream.range(0, values.size())
                     .filter(i -> b.getLeft() < values.get(i) && values.get(i) <= b.getRight())
-                    .mapToDouble(i -> weights.get(i))
+                    .mapToDouble(weights::get)
                     .sum();
             assertEquals(b.getWeight(), weight, 0.0001);
         });
@@ -122,14 +122,14 @@ public class TestFixedDoubleHistogram
         Streams.stream(left.iterator()).forEach(b -> {
             double weight = IntStream.range(0, values.size())
                     .filter(i -> b.getLeft() < values.get(i) && values.get(i) <= b.getRight())
-                    .mapToDouble(i -> weights.get(i))
+                    .mapToDouble(weights::get)
                     .sum();
             assertEquals(b.getWeight(), weight, 0.0001);
         });
         Streams.stream(right.iterator()).forEach(b -> {
             double weight = IntStream.range(0, rightValues.size())
                     .filter(i -> b.getLeft() < rightValues.get(i) && rightValues.get(i) <= b.getRight())
-                    .mapToDouble(i -> rightWeights.get(i))
+                    .mapToDouble(rightWeights::get)
                     .sum();
             assertEquals(b.getWeight(), weight, 0.0001);
         });

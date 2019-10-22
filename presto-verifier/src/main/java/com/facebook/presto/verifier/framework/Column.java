@@ -36,20 +36,15 @@ import static java.util.Objects.requireNonNull;
 
 public class Column
 {
-    public enum Category
-    {
-        SIMPLE,
-        FLOATING_POINT,
-        ORDERABLE_ARRAY,
-    }
-
     private static final Set<Type> FLOATING_POINT_TYPES = ImmutableSet.of(DOUBLE, REAL);
 
-    private final String name;
-    private final Category category;
-    private final Type type;
+	private final String name;
 
-    @VisibleForTesting
+	private final Category category;
+
+	private final Type type;
+
+	@VisibleForTesting
     public Column(String name, Category category, Type type)
     {
         this.name = requireNonNull(name, "name is null");
@@ -57,27 +52,27 @@ public class Column
         this.type = requireNonNull(type, "type is null");
     }
 
-    public String getName()
+	public String getName()
     {
         return name;
     }
 
-    public Identifier getIdentifier()
+	public Identifier getIdentifier()
     {
         return delimitedIdentifier(name);
     }
 
-    public Category getCategory()
+	public Category getCategory()
     {
         return category;
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public static Column fromResultSet(TypeManager typeManager, ResultSet resultSet)
+	public static Column fromResultSet(TypeManager typeManager, ResultSet resultSet)
             throws SQLException
     {
         Type type = typeManager.getType(parseTypeSignature(resultSet.getString("Type")));
@@ -95,7 +90,7 @@ public class Column
         return new Column(resultSet.getString("Column"), category, type);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -110,9 +105,16 @@ public class Column
                 Objects.equals(type, o.type);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(name, category, type);
+    }
+
+	public enum Category
+    {
+        SIMPLE,
+        FLOATING_POINT,
+        ORDERABLE_ARRAY,
     }
 }

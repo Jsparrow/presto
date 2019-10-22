@@ -116,7 +116,15 @@ public final class CharOperators
         return XxHash64.hash(slice);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @LiteralParameters("x")
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType("char(x)") Slice value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class CharDistinctFromOperator
     {
         @LiteralParameters("x")
@@ -158,13 +166,5 @@ public final class CharOperators
             }
             return !left.equals(leftPosition, 0, right, rightPosition, 0, leftLength);
         }
-    }
-
-    @LiteralParameters("x")
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType("char(x)") Slice value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

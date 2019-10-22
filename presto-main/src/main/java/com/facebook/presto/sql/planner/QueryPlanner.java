@@ -210,12 +210,12 @@ class QueryPlanner
         ImmutableList.Builder<VariableReferenceExpression> outputVariablesBuilder = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> columns = ImmutableMap.builder();
         ImmutableList.Builder<Field> fields = ImmutableList.builder();
-        for (Field field : descriptor.getAllFields()) {
+        descriptor.getAllFields().forEach(field -> {
             VariableReferenceExpression variable = variableAllocator.newVariable(field.getName().get(), field.getType());
             outputVariablesBuilder.add(variable);
             columns.put(variable, analysis.getColumn(field));
             fields.add(field);
-        }
+        });
 
         // add rowId column
         Field rowIdField = Field.newUnqualified(Optional.empty(), rowIdType);
@@ -251,9 +251,7 @@ class QueryPlanner
     private static List<VariableReferenceExpression> computeOutputs(PlanBuilder builder, List<Expression> outputExpressions)
     {
         ImmutableList.Builder<VariableReferenceExpression> outputs = ImmutableList.builder();
-        for (Expression expression : outputExpressions) {
-            outputs.add(builder.translate(expression));
-        }
+        outputExpressions.forEach(expression -> outputs.add(builder.translate(expression)));
         return outputs.build();
     }
 
@@ -513,7 +511,7 @@ class QueryPlanner
 
             // add in the complex expressions an turn materialize the grouping sets in terms of plan columns
             ImmutableList.Builder<List<VariableReferenceExpression>> groupingSetBuilder = ImmutableList.builder();
-            for (Set<FieldId> groupingSet : columnOnlyGroupingSets) {
+            columnOnlyGroupingSets.forEach(groupingSet -> {
                 ImmutableList.Builder<VariableReferenceExpression> columns = ImmutableList.builder();
                 groupingSetAnalysis.getComplexExpressions().stream()
                         .map(groupingTranslations::get)
@@ -524,7 +522,7 @@ class QueryPlanner
                         .forEach(columns::add);
 
                 groupingSetBuilder.add(columns.build());
-            }
+            });
 
             groupingSets = groupingSetBuilder.build();
         }
@@ -626,17 +624,15 @@ class QueryPlanner
     {
         List<List<Set<FieldId>>> partialSets = new ArrayList<>();
 
-        for (Set<FieldId> cube : groupingSetAnalysis.getCubes()) {
-            partialSets.add(ImmutableList.copyOf(Sets.powerSet(cube)));
-        }
+        groupingSetAnalysis.getCubes().forEach(cube -> partialSets.add(ImmutableList.copyOf(Sets.powerSet(cube))));
 
-        for (List<FieldId> rollup : groupingSetAnalysis.getRollups()) {
+        groupingSetAnalysis.getRollups().forEach(rollup -> {
             List<Set<FieldId>> sets = IntStream.rangeClosed(0, rollup.size())
                     .mapToObj(i -> ImmutableSet.copyOf(rollup.subList(0, i)))
                     .collect(toImmutableList());
 
             partialSets.add(sets);
-        }
+        });
 
         partialSets.addAll(groupingSetAnalysis.getOrdinarySets());
 
@@ -655,15 +651,11 @@ class QueryPlanner
             List<Set<FieldId>> groupingSets = partialSets.get(i);
             List<Set<FieldId>> oldGroupingSetsCrossProduct = ImmutableList.copyOf(allSets);
             allSets.clear();
-            for (Set<FieldId> existingSet : oldGroupingSetsCrossProduct) {
-                for (Set<FieldId> groupingSet : groupingSets) {
-                    Set<FieldId> concatenatedSet = ImmutableSet.<FieldId>builder()
-                            .addAll(existingSet)
-                            .addAll(groupingSet)
-                            .build();
-                    allSets.add(concatenatedSet);
-                }
-            }
+            oldGroupingSetsCrossProduct.forEach(existingSet -> groupingSets.forEach(groupingSet -> {
+				Set<FieldId> concatenatedSet = ImmutableSet.<FieldId>builder().addAll(existingSet).addAll(groupingSet)
+						.build();
+				allSets.add(concatenatedSet);
+			}));
         }
 
         return allSets;
@@ -686,7 +678,7 @@ class QueryPlanner
                         .collect(toImmutableSet()))
                 .collect(toImmutableList());
 
-        for (GroupingOperation groupingOperation : analysis.getGroupingOperations(node)) {
+        analysis.getGroupingOperations(node).forEach(groupingOperation -> {
             Expression rewritten = GroupingOperationRewriter.rewriteGroupingOperation(groupingOperation, descriptor, analysis.getColumnReferenceFields(), groupIdVariable);
             Type coercion = analysis.getCoercion(groupingOperation);
             VariableReferenceExpression variable = variableAllocator.newVariable(rewritten, analysis.getTypeWithCoercions(groupingOperation));
@@ -699,7 +691,7 @@ class QueryPlanner
             }
             projections.put(variable, castToRowExpression(rewritten));
             newTranslations.put(groupingOperation, variable);
-        }
+        });
 
         return new PlanBuilder(newTranslations, new ProjectNode(idAllocator.getNextId(), subPlan.getRoot(), projections.build()), analysis.getParameters());
     }
@@ -924,7 +916,7 @@ class QueryPlanner
             return subPlan;
         }
 
-        if (!limit.get().equalsIgnoreCase("all")) {
+        if (!"all".equalsIgnoreCase(limit.get())) {
             long limitValue = Long.parseLong(limit.get());
             subPlan = subPlan.withNewRoot(new LimitNode(idAllocator.getNextId(), subPlan.getRoot(), limitValue, FINAL));
         }

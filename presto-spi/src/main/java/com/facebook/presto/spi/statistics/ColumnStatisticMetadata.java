@@ -69,9 +69,7 @@ public class ColumnStatisticMetadata
     @Override
     public String toString()
     {
-        return "ColumnStatisticMetadata{" +
-                "columnName='" + columnName + '\'' +
-                ", statisticType=" + statisticType +
-                '}';
+        return new StringBuilder().append("ColumnStatisticMetadata{").append("columnName='").append(columnName).append('\'').append(", statisticType=").append(statisticType).append('}')
+				.toString();
     }
 }

@@ -60,10 +60,9 @@ public class LowMemoryKillerTestingUtils
         }
 
         ImmutableList.Builder<MemoryInfo> result = ImmutableList.builder();
-        for (Map.Entry<InternalNode, NodeReservation> entry : nodeReservations.entrySet()) {
-            NodeReservation nodeReservation = entry.getValue();
-            ImmutableMap.Builder<MemoryPoolId, MemoryPoolInfo> pools = ImmutableMap.builder();
-            if (nodeReservation.getGeneral().getTotalReservedBytes() > 0) {
+        nodeReservations.entrySet().stream().map(Map.Entry::getValue).forEach(nodeReservation -> {
+			ImmutableMap.Builder<MemoryPoolId, MemoryPoolInfo> pools = ImmutableMap.builder();
+			if (nodeReservation.getGeneral().getTotalReservedBytes() > 0) {
                 pools.put(
                         GENERAL_POOL,
                         new MemoryPoolInfo(
@@ -74,7 +73,7 @@ public class LowMemoryKillerTestingUtils
                                 ImmutableMap.of(),
                                 ImmutableMap.of()));
             }
-            if (nodeReservation.getReserved().getTotalReservedBytes() > 0) {
+			if (nodeReservation.getReserved().getTotalReservedBytes() > 0) {
                 pools.put(
                         RESERVED_POOL,
                         new MemoryPoolInfo(
@@ -85,21 +84,21 @@ public class LowMemoryKillerTestingUtils
                                 ImmutableMap.of(),
                                 ImmutableMap.of()));
             }
-            result.add(new MemoryInfo(new DataSize(maxReservedPoolBytes + maxGeneralPoolBytes, BYTE), pools.build()));
-        }
+			result.add(new MemoryInfo(new DataSize(maxReservedPoolBytes + maxGeneralPoolBytes, BYTE), pools.build()));
+		});
         return result.build();
     }
 
     static List<LowMemoryKiller.QueryMemoryInfo> toQueryMemoryInfoList(String reservedQuery, Map<String, Map<String, Long>> queries)
     {
         ImmutableList.Builder<LowMemoryKiller.QueryMemoryInfo> result = ImmutableList.builder();
-        for (Map.Entry<String, Map<String, Long>> entry : queries.entrySet()) {
+        queries.entrySet().forEach(entry -> {
             String queryId = entry.getKey();
             long totalReservation = entry.getValue().values().stream()
                     .mapToLong(x -> x)
                     .sum();
             result.add(new LowMemoryKiller.QueryMemoryInfo(new QueryId(queryId), queryId.equals(reservedQuery) ? RESERVED_POOL : GENERAL_POOL, totalReservation));
-        }
+        });
         return result.build();
     }
 

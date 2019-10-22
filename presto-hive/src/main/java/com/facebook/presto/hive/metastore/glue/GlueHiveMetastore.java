@@ -487,7 +487,7 @@ public class GlueHiveMetastore
 
     private static boolean isManagedTable(Table table)
     {
-        return table.getTableType().equals(MANAGED_TABLE);
+        return table.getTableType() == MANAGED_TABLE;
     }
 
     private static void deleteDir(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path path, boolean recursive)
@@ -544,7 +544,7 @@ public class GlueHiveMetastore
             throw new PrestoException(NOT_SUPPORTED, "Renaming partition columns is not supported");
         }
         ImmutableList.Builder<com.amazonaws.services.glue.model.Column> newDataColumns = ImmutableList.builder();
-        for (com.amazonaws.services.glue.model.Column column : table.getStorageDescriptor().getColumns()) {
+        table.getStorageDescriptor().getColumns().forEach(column -> {
             if (column.getName().equals(oldColumnName)) {
                 newDataColumns.add(new com.amazonaws.services.glue.model.Column()
                         .withName(newColumnName)
@@ -554,7 +554,7 @@ public class GlueHiveMetastore
             else {
                 newDataColumns.add(column);
             }
-        }
+        });
         table.getStorageDescriptor().setColumns(newDataColumns.build());
         replaceGlueTable(databaseName, tableName, table);
     }
@@ -706,10 +706,10 @@ public class GlueHiveMetastore
                 .collect(toMap(Partition::getValues, identity()));
 
         ImmutableMap.Builder<String, Optional<Partition>> resultBuilder = ImmutableMap.builder();
-        for (Entry<String, List<String>> entry : partitionNameToPartitionValuesMap.entrySet()) {
+        partitionNameToPartitionValuesMap.entrySet().forEach(entry -> {
             Partition partition = partitionValuesToPartitionMap.get(entry.getValue());
             resultBuilder.put(entry.getKey(), Optional.ofNullable(partition));
-        }
+        });
         return resultBuilder.build();
     }
 
@@ -723,13 +723,9 @@ public class GlueHiveMetastore
             List<Future<BatchGetPartitionResult>> batchGetPartitionFutures = new ArrayList<>();
             List<Partition> result = new ArrayList<>();
 
-            for (List<PartitionValueList> partitions : batchedPartitionValueLists) {
-                batchGetPartitionFutures.add(glueClient.batchGetPartitionAsync(new BatchGetPartitionRequest()
-                        .withCatalogId(catalogId)
-                        .withDatabaseName(databaseName)
-                        .withTableName(tableName)
-                        .withPartitionsToGet(partitions)));
-            }
+            batchedPartitionValueLists.forEach(partitions -> batchGetPartitionFutures
+					.add(glueClient.batchGetPartitionAsync(new BatchGetPartitionRequest().withCatalogId(catalogId)
+							.withDatabaseName(databaseName).withTableName(tableName).withPartitionsToGet(partitions))));
 
             for (Future<BatchGetPartitionResult> future : batchGetPartitionFutures) {
                 future.get().getPartitions()
@@ -753,14 +749,14 @@ public class GlueHiveMetastore
             List<List<PartitionWithStatistics>> batchedPartitions = Lists.partition(partitions, BATCH_CREATE_PARTITION_MAX_PAGE_SIZE);
             List<Future<BatchCreatePartitionResult>> futures = new ArrayList<>();
 
-            for (List<PartitionWithStatistics> partitionBatch : batchedPartitions) {
+            batchedPartitions.forEach(partitionBatch -> {
                 List<PartitionInput> partitionInputs = partitionBatch.stream().map(GlueInputConverter::convertPartition).collect(toList());
                 futures.add(glueClient.batchCreatePartitionAsync(new BatchCreatePartitionRequest()
                         .withCatalogId(catalogId)
                         .withDatabaseName(databaseName)
                         .withTableName(tableName)
                         .withPartitionInputList(partitionInputs)));
-            }
+            });
 
             for (Future<BatchCreatePartitionResult> future : futures) {
                 BatchCreatePartitionResult result = future.get();
@@ -777,19 +773,19 @@ public class GlueHiveMetastore
 
     private static void propagatePartitionErrorToPrestoException(String databaseName, String tableName, List<PartitionError> partitionErrors)
     {
-        if (partitionErrors != null && !partitionErrors.isEmpty()) {
-            ErrorDetail errorDetail = partitionErrors.get(0).getErrorDetail();
-            String glueExceptionCode = errorDetail.getErrorCode();
-
-            switch (glueExceptionCode) {
-                case "AlreadyExistsException":
-                    throw new PrestoException(ALREADY_EXISTS, errorDetail.getErrorMessage());
-                case "EntityNotFoundException":
-                    throw new TableNotFoundException(new SchemaTableName(databaseName, tableName), errorDetail.getErrorMessage());
-                default:
-                    throw new PrestoException(HIVE_METASTORE_ERROR, errorDetail.getErrorCode() + ": " + errorDetail.getErrorMessage());
-            }
-        }
+        if (!(partitionErrors != null && !partitionErrors.isEmpty())) {
+			return;
+		}
+		ErrorDetail errorDetail = partitionErrors.get(0).getErrorDetail();
+		String glueExceptionCode = errorDetail.getErrorCode();
+		switch (glueExceptionCode) {
+		    case "AlreadyExistsException":
+		        throw new PrestoException(ALREADY_EXISTS, errorDetail.getErrorMessage());
+		    case "EntityNotFoundException":
+		        throw new TableNotFoundException(new SchemaTableName(databaseName, tableName), errorDetail.getErrorMessage());
+		    default:
+		        throw new PrestoException(HIVE_METASTORE_ERROR, new StringBuilder().append(errorDetail.getErrorCode()).append(": ").append(errorDetail.getErrorMessage()).toString());
+		}
     }
 
     @Override

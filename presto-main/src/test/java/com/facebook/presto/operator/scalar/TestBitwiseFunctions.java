@@ -29,20 +29,20 @@ public class TestBitwiseFunctions
         assertFunction("bit_count(7, 64)", BIGINT, 3L);
         assertFunction("bit_count(24, 64)", BIGINT, 2L);
         assertFunction("bit_count(-8, 64)", BIGINT, 61L);
-        assertFunction("bit_count(" + Integer.MAX_VALUE + ", 64)", BIGINT, 31L);
-        assertFunction("bit_count(" + Integer.MIN_VALUE + ", 64)", BIGINT, 33L);
-        assertFunction("bit_count(" + Long.MAX_VALUE + ", 64)", BIGINT, 63L);
-        assertFunction("bit_count(-" + Long.MAX_VALUE + "-1, 64)", BIGINT, 1L); // bit_count(MIN_VALUE, 64)
+        assertFunction(new StringBuilder().append("bit_count(").append(Integer.MAX_VALUE).append(", 64)").toString(), BIGINT, 31L);
+        assertFunction(new StringBuilder().append("bit_count(").append(Integer.MIN_VALUE).append(", 64)").toString(), BIGINT, 33L);
+        assertFunction(new StringBuilder().append("bit_count(").append(Long.MAX_VALUE).append(", 64)").toString(), BIGINT, 63L);
+        assertFunction(new StringBuilder().append("bit_count(-").append(Long.MAX_VALUE).append("-1, 64)").toString(), BIGINT, 1L); // bit_count(MIN_VALUE, 64)
 
         assertFunction("bit_count(0, 32)", BIGINT, 0L);
         assertFunction("bit_count(CAST (-8 AS SMALLINT), 6)", BIGINT, 3L);
         assertFunction("bit_count(7, 32)", BIGINT, 3L);
         assertFunction("bit_count(24, 32)", BIGINT, 2L);
         assertFunction("bit_count(-8, 32)", BIGINT, 29L);
-        assertFunction("bit_count(" + Integer.MAX_VALUE + ", 32)", BIGINT, 31L);
-        assertFunction("bit_count(" + Integer.MIN_VALUE + ", 32)", BIGINT, 1L);
-        assertInvalidFunction("bit_count(" + (Integer.MAX_VALUE + 1L) + ", 32)", "Number must be representable with the bits specified. 2147483648 can not be represented with 32 bits");
-        assertInvalidFunction("bit_count(" + (Integer.MIN_VALUE - 1L) + ", 32)", "Number must be representable with the bits specified. -2147483649 can not be represented with 32 bits");
+        assertFunction(new StringBuilder().append("bit_count(").append(Integer.MAX_VALUE).append(", 32)").toString(), BIGINT, 31L);
+        assertFunction(new StringBuilder().append("bit_count(").append(Integer.MIN_VALUE).append(", 32)").toString(), BIGINT, 1L);
+        assertInvalidFunction(new StringBuilder().append("bit_count(").append(Integer.MAX_VALUE + 1L).append(", 32)").toString(), "Number must be representable with the bits specified. 2147483648 can not be represented with 32 bits");
+        assertInvalidFunction(new StringBuilder().append("bit_count(").append(Integer.MIN_VALUE - 1L).append(", 32)").toString(), "Number must be representable with the bits specified. -2147483649 can not be represented with 32 bits");
 
         assertFunction("bit_count(1152921504598458367, 62)", BIGINT, 59L);
         assertFunction("bit_count(-1, 62)", BIGINT, 62L);
@@ -63,8 +63,8 @@ public class TestBitwiseFunctions
         assertFunction("bitwise_not(-1)", BIGINT, ~-1L);
         assertFunction("bitwise_not(8)", BIGINT, ~8L);
         assertFunction("bitwise_not(-8)", BIGINT, ~-8L);
-        assertFunction("bitwise_not(" + Long.MAX_VALUE + ")", BIGINT, ~Long.MAX_VALUE);
-        assertFunction("bitwise_not(-" + Long.MAX_VALUE + "-1)", BIGINT, ~Long.MIN_VALUE); // bitwise_not(MIN_VALUE)
+        assertFunction(new StringBuilder().append("bitwise_not(").append(Long.MAX_VALUE).append(")").toString(), BIGINT, ~Long.MAX_VALUE);
+        assertFunction(new StringBuilder().append("bitwise_not(-").append(Long.MAX_VALUE).append("-1)").toString(), BIGINT, ~Long.MIN_VALUE); // bitwise_not(MIN_VALUE)
     }
 
     @Test

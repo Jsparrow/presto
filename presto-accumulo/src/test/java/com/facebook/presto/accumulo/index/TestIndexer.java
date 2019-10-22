@@ -49,33 +49,29 @@ import static org.testng.Assert.assertFalse;
 public class TestIndexer
 {
     private static final LexicoderRowSerializer SERIALIZER = new LexicoderRowSerializer();
+	private static final byte[] AGE = bytes("age");
+	private static final byte[] CF = bytes("cf");
+	private static final byte[] FIRSTNAME = bytes("firstname");
+	private static final byte[] SENDERS = bytes("arr");
+	private static final byte[] M1_ROWID = encode(VARCHAR, "row1");
+	private static final byte[] AGE_VALUE = encode(BIGINT, 27L);
+	private static final byte[] M1_FNAME_VALUE = encode(VARCHAR, "alice");
+	private static final byte[] M1_ARR_VALUE = encode(new ArrayType(VARCHAR), AccumuloRowSerializer.getBlockFromArray(VARCHAR, ImmutableList.of("abc", "def", "ghi")));
+	private static final byte[] M2_ROWID = encode(VARCHAR, "row2");
+	private static final byte[] M2_FNAME_VALUE = encode(VARCHAR, "bob");
+	private static final byte[] M2_ARR_VALUE = encode(new ArrayType(VARCHAR), AccumuloRowSerializer.getBlockFromArray(VARCHAR, ImmutableList.of("ghi", "mno", "abc")));
+	private Mutation m1;
+	private Mutation m2;
+	private Mutation m1v;
+	private Mutation m2v;
+	private AccumuloTable table;
 
-    private static byte[] encode(Type type, Object v)
+	private static byte[] encode(Type type, Object v)
     {
         return SERIALIZER.encode(type, v);
     }
 
-    private static final byte[] AGE = bytes("age");
-    private static final byte[] CF = bytes("cf");
-    private static final byte[] FIRSTNAME = bytes("firstname");
-    private static final byte[] SENDERS = bytes("arr");
-
-    private static final byte[] M1_ROWID = encode(VARCHAR, "row1");
-    private static final byte[] AGE_VALUE = encode(BIGINT, 27L);
-    private static final byte[] M1_FNAME_VALUE = encode(VARCHAR, "alice");
-    private static final byte[] M1_ARR_VALUE = encode(new ArrayType(VARCHAR), AccumuloRowSerializer.getBlockFromArray(VARCHAR, ImmutableList.of("abc", "def", "ghi")));
-
-    private static final byte[] M2_ROWID = encode(VARCHAR, "row2");
-    private static final byte[] M2_FNAME_VALUE = encode(VARCHAR, "bob");
-    private static final byte[] M2_ARR_VALUE = encode(new ArrayType(VARCHAR), AccumuloRowSerializer.getBlockFromArray(VARCHAR, ImmutableList.of("ghi", "mno", "abc")));
-
-    private Mutation m1;
-    private Mutation m2;
-    private Mutation m1v;
-    private Mutation m2v;
-    private AccumuloTable table;
-
-    @BeforeClass
+	@BeforeClass
     public void setupClass()
     {
         AccumuloColumnHandle c1 = new AccumuloColumnHandle("id", Optional.empty(), Optional.empty(), VARCHAR, 0, "", false);
@@ -108,7 +104,7 @@ public class TestIndexer
         m2v.put(CF, SENDERS, visibility2, M2_ARR_VALUE);
     }
 
-    @Test
+	@Test
     public void testMutationIndex()
             throws Exception
     {
@@ -194,7 +190,7 @@ public class TestIndexer
         scan.close();
     }
 
-    @Test
+	@Test
     public void testMutationIndexWithVisibilities()
             throws Exception
     {
@@ -309,7 +305,7 @@ public class TestIndexer
         scan.close();
     }
 
-    private static void assertKeyValuePair(Entry<Key, Value> e, byte[] row, String cf, String cq, String value)
+	private static void assertKeyValuePair(Entry<Key, Value> e, byte[] row, String cf, String cq, String value)
     {
         assertEquals(row, e.getKey().getRow().copyBytes());
         assertEquals(cf, e.getKey().getColumnFamily().toString());
@@ -317,7 +313,7 @@ public class TestIndexer
         assertEquals(value, e.getValue().toString());
     }
 
-    private static void assertKeyValuePair(Entry<Key, Value> e, byte[] row, String cf, String cq, String cv, String value)
+	private static void assertKeyValuePair(Entry<Key, Value> e, byte[] row, String cf, String cq, String cv, String value)
     {
         assertEquals(row, e.getKey().getRow().copyBytes());
         assertEquals(cf, e.getKey().getColumnFamily().toString());
@@ -326,7 +322,7 @@ public class TestIndexer
         assertEquals(value, e.getValue().toString());
     }
 
-    private static byte[] bytes(String s)
+	private static byte[] bytes(String s)
     {
         return s.getBytes(UTF_8);
     }

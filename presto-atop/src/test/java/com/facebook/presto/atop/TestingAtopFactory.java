@@ -29,6 +29,8 @@ import java.util.NoSuchElementException;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestingAtopFactory
         implements AtopFactory
@@ -44,7 +46,8 @@ public class TestingAtopFactory
     private static final class TestingAtop
             implements Atop
     {
-        private final BufferedReader reader;
+        private final Logger logger = LoggerFactory.getLogger(TestingAtop.class);
+		private final BufferedReader reader;
         private final ZonedDateTime date;
         private String line;
 
@@ -56,7 +59,8 @@ public class TestingAtopFactory
                 line = reader.readLine();
             }
             catch (IOException e) {
-                line = null;
+                logger.error(e.getMessage(), e);
+				line = null;
             }
         }
 
@@ -77,10 +81,11 @@ public class TestingAtopFactory
                 line = reader.readLine();
             }
             catch (IOException e) {
-                line = null;
+                logger.error(e.getMessage(), e);
+				line = null;
             }
 
-            if (currentLine.equals("SEP") || currentLine.equals("RESET")) {
+            if ("SEP".equals(currentLine) || "RESET".equals(currentLine)) {
                 return currentLine;
             }
 

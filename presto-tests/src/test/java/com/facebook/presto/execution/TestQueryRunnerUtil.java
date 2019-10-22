@@ -57,11 +57,7 @@ public final class TestQueryRunnerUtil
         QueryManager queryManager = queryRunner.getCoordinator().getQueryManager();
         do {
             // Heartbeat all the running queries, so they don't die while we're waiting
-            for (BasicQueryInfo queryInfo : queryManager.getQueries()) {
-                if (queryInfo.getState() == RUNNING) {
-                    queryManager.recordHeartbeat(queryInfo.getQueryId());
-                }
-            }
+			queryManager.getQueries().stream().filter(queryInfo -> queryInfo.getState() == RUNNING).forEach(queryInfo -> queryManager.recordHeartbeat(queryInfo.getQueryId()));
             MILLISECONDS.sleep(500);
         }
         while (!expectedQueryStates.contains(queryManager.getQueryState(queryId)));

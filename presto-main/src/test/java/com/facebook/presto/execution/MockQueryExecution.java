@@ -346,8 +346,6 @@ public class MockQueryExecution
 
     private void fireStateChange()
     {
-        for (StateChangeListener<QueryState> listener : listeners) {
-            listener.stateChanged(state);
-        }
+        listeners.forEach(listener -> listener.stateChanged(state));
     }
 }

@@ -53,10 +53,13 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.IntStream.range;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestPlannerWarnings
 {
-    private LocalQueryRunner queryRunner;
+    private static final Logger logger = LoggerFactory.getLogger(TestPlannerWarnings.class);
+	private LocalQueryRunner queryRunner;
 
     @BeforeClass
     public void setUp()
@@ -107,16 +110,13 @@ public class TestPlannerWarnings
             });
         }
         catch (SemanticException e) {
+			logger.error(e.getMessage(), e);
             // ignore
         }
         Set<WarningCode> warnings = warningCollector.getWarnings().stream()
                 .map(PrestoWarning::getWarningCode)
                 .collect(toImmutableSet());
-        for (WarningCode expectedWarning : expectedWarnings) {
-            if (!warnings.contains(expectedWarning)) {
-                fail("Expected warning: " + expectedWarning);
-            }
-        }
+        expectedWarnings.stream().filter(expectedWarning -> !warnings.contains(expectedWarning)).forEach(expectedWarning -> fail("Expected warning: " + expectedWarning));
     }
 
     private static Plan createPlan(LocalQueryRunner queryRunner, Session session, String sql, WarningCollector warningCollector, List<Rule<?>> rules)

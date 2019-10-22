@@ -192,9 +192,7 @@ public class AsyncQueue<T>
                             checkArgument(borrowResult.getElementsToInsert().isEmpty(), "Function must not insert anything when no element is borrowed");
                             return borrowResult.getResult();
                         }
-                        for (T element : borrowResult.getElementsToInsert()) {
-                            offer(element);
-                        }
+                        borrowResult.getElementsToInsert().forEach(element -> offer(element));
                         return borrowResult.getResult();
                     }
                     finally {

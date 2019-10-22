@@ -64,11 +64,15 @@ import static com.facebook.presto.util.Reflection.methodHandle;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Math.addExact;
 import static java.util.Collections.nCopies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ConcatFunction
         extends SqlScalarFunction
 {
-    // TODO design new variadic functions binding mechanism that will allow to produce VARCHAR(x) where x < MAX_LENGTH.
+    private static final Logger logger = LoggerFactory.getLogger(ConcatFunction.class);
+
+	// TODO design new variadic functions binding mechanism that will allow to produce VARCHAR(x) where x < MAX_LENGTH.
     public static final ConcatFunction VARCHAR_CONCAT = new ConcatFunction(createUnboundedVarcharType().getTypeSignature(), "concatenates given strings");
 
     public static final ConcatFunction VARBINARY_CONCAT = new ConcatFunction(VARBINARY.getTypeSignature(), "concatenates given varbinary values");
@@ -127,7 +131,7 @@ public final class ConcatFunction
         checkCondition(arity <= 254, NOT_SUPPORTED, "Too many arguments for string concatenation");
         ClassDefinition definition = new ClassDefinition(
                 a(PUBLIC, FINAL),
-                makeClassName(type.getBase() + "_concat" + arity + "ScalarFunction"),
+                makeClassName(new StringBuilder().append(type.getBase()).append("_concat").append(arity).append("ScalarFunction").toString()),
                 type(Object.class));
 
         // Generate constructor
@@ -178,7 +182,8 @@ public final class ConcatFunction
             return addExact(x, y);
         }
         catch (ArithmeticException e) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Concatenated string is too large");
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Concatenated string is too large");
         }
     }
 }

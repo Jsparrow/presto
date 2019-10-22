@@ -91,7 +91,41 @@ public class BenchmarkArraySort
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArraySort().arraySort(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkArraySort.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@ScalarFunction
+    @SqlType("array(varchar)")
+    public static Block oldArraySort(@SqlType("array(varchar)") Block block)
+    {
+        List<Integer> positions = Ints.asList(new int[block.getPositionCount()]);
+        for (int i = 0; i < block.getPositionCount(); i++) {
+            positions.set(i, i);
+        }
+
+        //TODO: This could be quite slow, it should use parametric equals
+		positions.sort((p1, p2) -> VARCHAR.compareTo(block, p1, block, p2));
+
+        BlockBuilder blockBuilder = VARCHAR.createBlockBuilder(null, block.getPositionCount());
+
+        positions.stream().mapToInt(Integer::valueOf).forEach(position -> VARCHAR.appendTo(block, position, blockBuilder));
+
+        return blockBuilder.build();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -152,43 +186,5 @@ public class BenchmarkArraySort
         {
             return page;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArraySort().arraySort(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkArraySort.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
-    }
-
-    @ScalarFunction
-    @SqlType("array(varchar)")
-    public static Block oldArraySort(@SqlType("array(varchar)") Block block)
-    {
-        List<Integer> positions = Ints.asList(new int[block.getPositionCount()]);
-        for (int i = 0; i < block.getPositionCount(); i++) {
-            positions.set(i, i);
-        }
-
-        positions.sort((p1, p2) -> {
-            //TODO: This could be quite slow, it should use parametric equals
-            return VARCHAR.compareTo(block, p1, block, p2);
-        });
-
-        BlockBuilder blockBuilder = VARCHAR.createBlockBuilder(null, block.getPositionCount());
-
-        for (int position : positions) {
-            VARCHAR.appendTo(block, position, blockBuilder);
-        }
-
-        return blockBuilder.build();
     }
 }

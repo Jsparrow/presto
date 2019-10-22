@@ -30,50 +30,51 @@ public class Lifespan
     private final boolean grouped;
     private final int groupId;
 
-    public static Lifespan taskWide()
-    {
-        return TASK_WIDE;
-    }
-
-    public static Lifespan driverGroup(int id)
-    {
-        return new Lifespan(true, id);
-    }
-
     private Lifespan(boolean grouped, int groupId)
     {
         this.grouped = grouped;
         this.groupId = groupId;
     }
 
-    public boolean isTaskWide()
+	public static Lifespan taskWide()
+    {
+        return TASK_WIDE;
+    }
+
+	public static Lifespan driverGroup(int id)
+    {
+        return new Lifespan(true, id);
+    }
+
+	public boolean isTaskWide()
     {
         return !grouped;
     }
 
-    public int getId()
+	public int getId()
     {
         checkState(grouped);
         return groupId;
     }
 
-    @JsonCreator
+	@JsonCreator
     public static Lifespan jsonCreator(String value)
     {
-        if (value.equals("TaskWide")) {
+        if ("TaskWide".equals(value)) {
             return Lifespan.taskWide();
         }
         checkArgument(value.startsWith("Group"));
         return Lifespan.driverGroup(parseInt(value.substring("Group".length())));
     }
 
-    @JsonValue
+	@Override
+	@JsonValue
     public String toString()
     {
         return grouped ? "Group" + groupId : "TaskWide";
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -87,7 +88,7 @@ public class Lifespan
                 groupId == that.groupId;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(grouped, groupId);

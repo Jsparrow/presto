@@ -61,6 +61,8 @@ import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 import static java.util.zip.GZIPInputStream.GZIP_MAGIC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LocalFileRecordCursor
         implements RecordCursor
@@ -112,12 +114,7 @@ public class LocalFileRecordCursor
             return true;
         }
 
-        for (Domain domain : serverAddressDomain) {
-            if (domain.includesNullableValue(Slices.utf8Slice(address.toString()))) {
-                return true;
-            }
-        }
-        return false;
+        return serverAddressDomain.stream().anyMatch(domain -> domain.includesNullableValue(Slices.utf8Slice(address.toString())));
     }
 
     private static FilesReader getFilesReader(LocalFileTables localFileTables, TupleDomain<LocalFileColumnHandle> predicate, SchemaTableName tableName)
@@ -248,7 +245,8 @@ public class LocalFileRecordCursor
 
     private static class FilesReader
     {
-        private final Iterator<File> files;
+        private final Logger logger = LoggerFactory.getLogger(FilesReader.class);
+		private final Iterator<File> files;
         private final Optional<Domain> domain;
         private final OptionalInt timestampOrdinalPosition;
 
@@ -350,6 +348,7 @@ public class LocalFileRecordCursor
                     reader.close();
                 }
                 catch (IOException ignored) {
+					logger.error(ignored.getMessage(), ignored);
                 }
             }
         }

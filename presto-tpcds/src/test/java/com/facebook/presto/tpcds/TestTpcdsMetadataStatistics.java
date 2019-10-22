@@ -72,10 +72,10 @@ public class TestTpcdsMetadataStatistics
                             List<ColumnHandle> columnHandles = ImmutableList.copyOf(metadata.getColumnHandles(session, tableHandle).values());
                             TableStatistics tableStatistics = metadata.getTableStatistics(session, tableHandle, columnHandles, alwaysTrue());
                             assertFalse(tableStatistics.getRowCount().isUnknown());
-                            for (ColumnHandle column : metadata.getColumnHandles(session, tableHandle).values()) {
+                            metadata.getColumnHandles(session, tableHandle).values().forEach(column -> {
                                 assertTrue(tableStatistics.getColumnStatistics().containsKey(column));
                                 assertNotNull(tableStatistics.getColumnStatistics().get(column));
-                            }
+                            });
                         }));
     }
 
@@ -90,10 +90,10 @@ public class TestTpcdsMetadataStatistics
         estimateAssertion.assertClose(tableStatistics.getRowCount(), Estimate.of(6), "Row count does not match");
 
         // all columns have stats
-        for (ColumnHandle column : columnHandles.values()) {
+		columnHandles.values().forEach(column -> {
             assertTrue(tableStatistics.getColumnStatistics().containsKey(column));
             assertNotNull(tableStatistics.getColumnStatistics().get(column));
-        }
+        });
 
         // identifier
         assertColumnStatistics(
@@ -184,28 +184,9 @@ public class TestTpcdsMetadataStatistics
 
         JsonCodec<TableStatistics> codec = JsonCodec.jsonCodec(TableStatistics.class);
         String json = codec.toJson(expectedTableStatictics);
-        assertEquals(json, "{\n" +
-                "  \"rowCount\" : {\n" +
-                "    \"value\" : 30.0\n" +
-                "  },\n" +
-                "  \"columnStatistics\" : {\n" +
-                "    \"tpcds:web_site_sk\" : {\n" +
-                "      \"nullsFraction\" : {\n" +
-                "        \"value\" : 0.0\n" +
-                "      },\n" +
-                "      \"distinctValuesCount\" : {\n" +
-                "        \"value\" : 30.0\n" +
-                "      },\n" +
-                "      \"dataSize\" : {\n" +
-                "        \"value\" : \"NaN\"\n" +
-                "      },\n" +
-                "      \"range\" : {\n" +
-                "        \"min\" : 1.0,\n" +
-                "        \"max\" : 30.0\n" +
-                "      }\n" +
-                "    }\n" +
-                "  }\n" +
-                "}");
+        assertEquals(json, new StringBuilder().append("{\n").append("  \"rowCount\" : {\n").append("    \"value\" : 30.0\n").append("  },\n").append("  \"columnStatistics\" : {\n").append("    \"tpcds:web_site_sk\" : {\n").append("      \"nullsFraction\" : {\n").append("        \"value\" : 0.0\n")
+				.append("      },\n").append("      \"distinctValuesCount\" : {\n").append("        \"value\" : 30.0\n").append("      },\n").append("      \"dataSize\" : {\n").append("        \"value\" : \"NaN\"\n").append("      },\n").append("      \"range\" : {\n").append("        \"min\" : 1.0,\n")
+				.append("        \"max\" : 30.0\n").append("      }\n").append("    }\n").append("  }\n").append("}").toString());
     }
 
     private void assertColumnStatistics(ColumnStatistics actual, ColumnStatistics expected)

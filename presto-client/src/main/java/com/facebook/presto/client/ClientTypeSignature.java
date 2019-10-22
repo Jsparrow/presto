@@ -90,9 +90,7 @@ public class ClientTypeSignature
             }
             else {
                 checkArgument(literalArguments.isEmpty(), "Unexpected literal arguments from legacy server");
-                for (ClientTypeSignature typeArgument : typeArguments) {
-                    convertedArguments.add(new ClientTypeSignatureParameter(ParameterKind.TYPE, typeArgument));
-                }
+                typeArguments.forEach(typeArgument -> convertedArguments.add(new ClientTypeSignatureParameter(ParameterKind.TYPE, typeArgument)));
             }
             this.arguments = convertedArguments.build();
         }

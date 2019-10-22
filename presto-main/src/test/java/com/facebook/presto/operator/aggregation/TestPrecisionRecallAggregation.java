@@ -48,7 +48,12 @@ public abstract class TestPrecisionRecallAggregation
     private final String functionName;
     private InternalAggregationFunction precisionRecallFunction;
 
-    @BeforeClass
+    protected TestPrecisionRecallAggregation(String functionName)
+    {
+        this.functionName = functionName;
+    }
+
+	@BeforeClass
     public void setUp()
     {
         FunctionManager functionManager = MetadataManager.createTestMetadataManager().getFunctionManager();
@@ -58,7 +63,7 @@ public abstract class TestPrecisionRecallAggregation
                         fromTypes(BIGINT, BOOLEAN, DOUBLE, DOUBLE)));
     }
 
-    @Test
+	@Test
     public void testNegativeWeight()
     {
         try {
@@ -77,7 +82,7 @@ public abstract class TestPrecisionRecallAggregation
         }
     }
 
-    @Test
+	@Test
     public void testTooHighPrediction()
     {
         try {
@@ -95,7 +100,7 @@ public abstract class TestPrecisionRecallAggregation
         }
     }
 
-    @Test
+	@Test
     public void testTooLowPrediction()
     {
         try {
@@ -113,7 +118,7 @@ public abstract class TestPrecisionRecallAggregation
         }
     }
 
-    @Test
+	@Test
     public void testNonConstantBuckets()
     {
         try {
@@ -131,7 +136,7 @@ public abstract class TestPrecisionRecallAggregation
         }
     }
 
-    @Override
+	@Override
     public Block[] getSequenceBlocks(int start, int length)
     {
         start = Math.abs(start);
@@ -154,45 +159,7 @@ public abstract class TestPrecisionRecallAggregation
         };
     }
 
-    private static class Result
-    {
-        public final Boolean outcome;
-        public final Double prediction;
-
-        public Result(Boolean outcome, Double prediction)
-        {
-            this.outcome = outcome;
-            this.prediction = prediction;
-        }
-    }
-
-    protected static class BucketResult
-    {
-        public final Double left;
-        public final Double right;
-        public final Double totalTrueWeight;
-        public final Double totalFalseWeight;
-        public final Double remainingTrueWeight;
-        public final Double remainingFalseWeight;
-
-        public BucketResult(
-                Double left,
-                Double right,
-                Double totalTrueWeight,
-                Double totalFalseWeight,
-                Double remainingTrueWeight,
-                Double remainingFalseWeight)
-        {
-            this.left = left;
-            this.right = right;
-            this.totalTrueWeight = totalTrueWeight;
-            this.totalFalseWeight = totalFalseWeight;
-            this.remainingTrueWeight = remainingTrueWeight;
-            this.remainingFalseWeight = remainingFalseWeight;
-        }
-    }
-
-    protected static Iterator<BucketResult> getResultsIterator(int start, int length)
+	protected static Iterator<BucketResult> getResultsIterator(int start, int length)
     {
         final int effectiveStart = Math.abs(start);
 
@@ -251,18 +218,13 @@ public abstract class TestPrecisionRecallAggregation
         };
     }
 
-    protected TestPrecisionRecallAggregation(String functionName)
-    {
-        this.functionName = functionName;
-    }
-
-    @Override
+	@Override
     protected String getFunctionName()
     {
         return functionName;
     }
 
-    @Override
+	@Override
     protected List<String> getFunctionParameterTypes()
     {
         return ImmutableList.of(
@@ -271,11 +233,49 @@ public abstract class TestPrecisionRecallAggregation
                 StandardTypes.DOUBLE);
     }
 
-    protected static Result getResult(int start, int length, int i)
+	protected static Result getResult(int start, int length, int i)
     {
         final Double prediction = Double.valueOf(i - start) / (length + 1);
         final Boolean outcome = prediction < TestPrecisionRecallAggregation.MIN_FALSE_PRED ||
                 prediction > TestPrecisionRecallAggregation.MAX_FALSE_PRED;
         return new Result(outcome, prediction);
+    }
+
+	private static class Result
+    {
+        public final Boolean outcome;
+        public final Double prediction;
+
+        public Result(Boolean outcome, Double prediction)
+        {
+            this.outcome = outcome;
+            this.prediction = prediction;
+        }
+    }
+
+    protected static class BucketResult
+    {
+        public final Double left;
+        public final Double right;
+        public final Double totalTrueWeight;
+        public final Double totalFalseWeight;
+        public final Double remainingTrueWeight;
+        public final Double remainingFalseWeight;
+
+        public BucketResult(
+                Double left,
+                Double right,
+                Double totalTrueWeight,
+                Double totalFalseWeight,
+                Double remainingTrueWeight,
+                Double remainingFalseWeight)
+        {
+            this.left = left;
+            this.right = right;
+            this.totalTrueWeight = totalTrueWeight;
+            this.totalFalseWeight = totalFalseWeight;
+            this.remainingTrueWeight = remainingTrueWeight;
+            this.remainingFalseWeight = remainingFalseWeight;
+        }
     }
 }

@@ -105,7 +105,34 @@ public class TaskContext
 
     private final MemoryTrackingContext taskMemoryContext;
 
-    public static TaskContext createTaskContext(
+    private TaskContext(QueryContext queryContext,
+            TaskStateMachine taskStateMachine,
+            GcMonitor gcMonitor,
+            Executor notificationExecutor,
+            ScheduledExecutorService yieldExecutor,
+            Session session,
+            MemoryTrackingContext taskMemoryContext,
+            boolean perOperatorCpuTimerEnabled,
+            boolean cpuTimerEnabled,
+            OptionalInt totalPartitions,
+            boolean legacyLifespanCompletionCondition)
+    {
+        this.taskStateMachine = requireNonNull(taskStateMachine, "taskStateMachine is null");
+        this.gcMonitor = requireNonNull(gcMonitor, "gcMonitor is null");
+        this.queryContext = requireNonNull(queryContext, "queryContext is null");
+        this.notificationExecutor = requireNonNull(notificationExecutor, "notificationExecutor is null");
+        this.yieldExecutor = requireNonNull(yieldExecutor, "yieldExecutor is null");
+        this.session = session;
+        this.taskMemoryContext = requireNonNull(taskMemoryContext, "taskMemoryContext is null");
+        // Initialize the local memory contexts with the LazyOutputBuffer tag as LazyOutputBuffer will do the local memory allocations
+        taskMemoryContext.initializeLocalMemoryContexts(LazyOutputBuffer.class.getSimpleName());
+        this.perOperatorCpuTimerEnabled = perOperatorCpuTimerEnabled;
+        this.cpuTimerEnabled = cpuTimerEnabled;
+        this.totalPartitions = requireNonNull(totalPartitions, "totalPartitions is null");
+        this.legacyLifespanCompletionCondition = legacyLifespanCompletionCondition;
+    }
+
+	public static TaskContext createTaskContext(
             QueryContext queryContext,
             TaskStateMachine taskStateMachine,
             GcMonitor gcMonitor,
@@ -134,34 +161,7 @@ public class TaskContext
         return taskContext;
     }
 
-    private TaskContext(QueryContext queryContext,
-            TaskStateMachine taskStateMachine,
-            GcMonitor gcMonitor,
-            Executor notificationExecutor,
-            ScheduledExecutorService yieldExecutor,
-            Session session,
-            MemoryTrackingContext taskMemoryContext,
-            boolean perOperatorCpuTimerEnabled,
-            boolean cpuTimerEnabled,
-            OptionalInt totalPartitions,
-            boolean legacyLifespanCompletionCondition)
-    {
-        this.taskStateMachine = requireNonNull(taskStateMachine, "taskStateMachine is null");
-        this.gcMonitor = requireNonNull(gcMonitor, "gcMonitor is null");
-        this.queryContext = requireNonNull(queryContext, "queryContext is null");
-        this.notificationExecutor = requireNonNull(notificationExecutor, "notificationExecutor is null");
-        this.yieldExecutor = requireNonNull(yieldExecutor, "yieldExecutor is null");
-        this.session = session;
-        this.taskMemoryContext = requireNonNull(taskMemoryContext, "taskMemoryContext is null");
-        // Initialize the local memory contexts with the LazyOutputBuffer tag as LazyOutputBuffer will do the local memory allocations
-        taskMemoryContext.initializeLocalMemoryContexts(LazyOutputBuffer.class.getSimpleName());
-        this.perOperatorCpuTimerEnabled = perOperatorCpuTimerEnabled;
-        this.cpuTimerEnabled = cpuTimerEnabled;
-        this.totalPartitions = requireNonNull(totalPartitions, "totalPartitions is null");
-        this.legacyLifespanCompletionCondition = legacyLifespanCompletionCondition;
-    }
-
-    // the state change listener is added here in a separate initialize() method
+	// the state change listener is added here in a separate initialize() method
     // instead of the constructor to prevent leaking the "this" reference to
     // another thread, which will cause unsafe publication of this instance.
     private void initialize()
@@ -169,17 +169,17 @@ public class TaskContext
         taskStateMachine.addStateChangeListener(this::updateStatsIfDone);
     }
 
-    public TaskId getTaskId()
+	public TaskId getTaskId()
     {
         return taskStateMachine.getTaskId();
     }
 
-    public OptionalInt getTotalPartitions()
+	public OptionalInt getTotalPartitions()
     {
         return totalPartitions;
     }
 
-    public PipelineContext addPipelineContext(int pipelineId, boolean inputPipeline, boolean outputPipeline, boolean partitioned)
+	public PipelineContext addPipelineContext(int pipelineId, boolean inputPipeline, boolean outputPipeline, boolean partitioned)
     {
         PipelineContext pipelineContext = new PipelineContext(
                 pipelineId,
@@ -194,12 +194,12 @@ public class TaskContext
         return pipelineContext;
     }
 
-    public Session getSession()
+	public Session getSession()
     {
         return session;
     }
 
-    public void start()
+	public void start()
     {
         DateTime now = DateTime.now();
         executionStartTime.compareAndSet(null, now);
@@ -211,57 +211,55 @@ public class TaskContext
         lastExecutionStartTime.set(now);
     }
 
-    private void updateStatsIfDone(TaskState newState)
+	private void updateStatsIfDone(TaskState newState)
     {
-        if (newState.isDone()) {
-            DateTime now = DateTime.now();
-            long majorGcCount = gcMonitor.getMajorGcCount();
-            long majorGcTime = gcMonitor.getMajorGcTime().roundTo(NANOSECONDS);
-
-            // before setting the end times, make sure a start has been recorded
-            executionStartTime.compareAndSet(null, now);
-            startNanos.compareAndSet(0, System.nanoTime());
-            startFullGcCount.compareAndSet(-1, majorGcCount);
-            startFullGcTimeNanos.compareAndSet(-1, majorGcTime);
-
-            // Only update last start time, if the nothing was started
-            lastExecutionStartTime.compareAndSet(null, now);
-
-            // use compare and set from initial value to avoid overwriting if there
-            // were a duplicate notification, which shouldn't happen
-            executionEndTime.compareAndSet(null, now);
-            endNanos.compareAndSet(0, System.nanoTime());
-            endFullGcCount.compareAndSet(-1, majorGcCount);
-            endFullGcTimeNanos.compareAndSet(-1, majorGcTime);
-        }
+        if (!newState.isDone()) {
+			return;
+		}
+		DateTime now = DateTime.now();
+		long majorGcCount = gcMonitor.getMajorGcCount();
+		long majorGcTime = gcMonitor.getMajorGcTime().roundTo(NANOSECONDS);
+		// before setting the end times, make sure a start has been recorded
+		executionStartTime.compareAndSet(null, now);
+		startNanos.compareAndSet(0, System.nanoTime());
+		startFullGcCount.compareAndSet(-1, majorGcCount);
+		startFullGcTimeNanos.compareAndSet(-1, majorGcTime);
+		// Only update last start time, if the nothing was started
+		lastExecutionStartTime.compareAndSet(null, now);
+		// use compare and set from initial value to avoid overwriting if there
+		// were a duplicate notification, which shouldn't happen
+		executionEndTime.compareAndSet(null, now);
+		endNanos.compareAndSet(0, System.nanoTime());
+		endFullGcCount.compareAndSet(-1, majorGcCount);
+		endFullGcTimeNanos.compareAndSet(-1, majorGcTime);
     }
 
-    public void failed(Throwable cause)
+	public void failed(Throwable cause)
     {
         taskStateMachine.failed(cause);
     }
 
-    public boolean isDone()
+	public boolean isDone()
     {
         return taskStateMachine.getState().isDone();
     }
 
-    public TaskState getState()
+	public TaskState getState()
     {
         return taskStateMachine.getState();
     }
 
-    public DataSize getMemoryReservation()
+	public DataSize getMemoryReservation()
     {
         return new DataSize(taskMemoryContext.getUserMemory(), BYTE);
     }
 
-    public DataSize getSystemMemoryReservation()
+	public DataSize getSystemMemoryReservation()
     {
         return new DataSize(taskMemoryContext.getSystemMemory(), BYTE);
     }
 
-    /**
+	/**
      * Returns the completed driver groups (excluding taskWide).
      * A driver group is considered complete if all drivers associated with it
      * has completed, and no new drivers associated with it will be created.
@@ -271,99 +269,83 @@ public class TaskContext
         return completedDriverGroups;
     }
 
-    public void addCompletedDriverGroup(Lifespan driverGroup)
+	public void addCompletedDriverGroup(Lifespan driverGroup)
     {
         checkArgument(!driverGroup.isTaskWide(), "driverGroup is task-wide, not a driver group.");
         completedDriverGroups.add(driverGroup);
     }
 
-    public List<PipelineContext> getPipelineContexts()
+	public List<PipelineContext> getPipelineContexts()
     {
         return pipelineContexts;
     }
 
-    public synchronized ListenableFuture<?> reserveSpill(long bytes)
+	public synchronized ListenableFuture<?> reserveSpill(long bytes)
     {
         checkArgument(bytes >= 0, "bytes is negative");
         return queryContext.reserveSpill(bytes);
     }
 
-    public synchronized void freeSpill(long bytes)
+	public synchronized void freeSpill(long bytes)
     {
         checkArgument(bytes >= 0, "bytes is negative");
         queryContext.freeSpill(bytes);
     }
 
-    public LocalMemoryContext localSystemMemoryContext()
+	public LocalMemoryContext localSystemMemoryContext()
     {
         return taskMemoryContext.localSystemMemoryContext();
     }
 
-    public void moreMemoryAvailable()
+	public void moreMemoryAvailable()
     {
         pipelineContexts.forEach(PipelineContext::moreMemoryAvailable);
     }
 
-    public boolean isPerOperatorCpuTimerEnabled()
+	public boolean isPerOperatorCpuTimerEnabled()
     {
         return perOperatorCpuTimerEnabled;
     }
 
-    public boolean isCpuTimerEnabled()
+	public boolean isCpuTimerEnabled()
     {
         return cpuTimerEnabled;
     }
 
-    public boolean isLegacyLifespanCompletionCondition()
+	public boolean isLegacyLifespanCompletionCondition()
     {
         return legacyLifespanCompletionCondition;
     }
 
-    public CounterStat getInputDataSize()
+	public CounterStat getInputDataSize()
     {
         CounterStat stat = new CounterStat();
-        for (PipelineContext pipelineContext : pipelineContexts) {
-            if (pipelineContext.isInputPipeline()) {
-                stat.merge(pipelineContext.getInputDataSize());
-            }
-        }
+        pipelineContexts.stream().filter(PipelineContext::isInputPipeline).forEach(pipelineContext -> stat.merge(pipelineContext.getInputDataSize()));
         return stat;
     }
 
-    public CounterStat getInputPositions()
+	public CounterStat getInputPositions()
     {
         CounterStat stat = new CounterStat();
-        for (PipelineContext pipelineContext : pipelineContexts) {
-            if (pipelineContext.isInputPipeline()) {
-                stat.merge(pipelineContext.getInputPositions());
-            }
-        }
+        pipelineContexts.stream().filter(PipelineContext::isInputPipeline).forEach(pipelineContext -> stat.merge(pipelineContext.getInputPositions()));
         return stat;
     }
 
-    public CounterStat getOutputDataSize()
+	public CounterStat getOutputDataSize()
     {
         CounterStat stat = new CounterStat();
-        for (PipelineContext pipelineContext : pipelineContexts) {
-            if (pipelineContext.isOutputPipeline()) {
-                stat.merge(pipelineContext.getOutputDataSize());
-            }
-        }
+        pipelineContexts.stream().filter(PipelineContext::isOutputPipeline).forEach(pipelineContext -> stat.merge(pipelineContext.getOutputDataSize()));
         return stat;
     }
 
-    public CounterStat getOutputPositions()
+	public CounterStat getOutputPositions()
     {
         CounterStat stat = new CounterStat();
-        for (PipelineContext pipelineContext : pipelineContexts) {
-            if (pipelineContext.isOutputPipeline()) {
-                stat.merge(pipelineContext.getOutputPositions());
-            }
-        }
+        pipelineContexts.stream().filter(PipelineContext::isOutputPipeline).forEach(pipelineContext -> stat.merge(pipelineContext.getOutputPositions()));
         return stat;
     }
 
-    public Duration getFullGcTime()
+	public Duration getFullGcTime()
     {
         long startFullGcTimeNanos = this.startFullGcTimeNanos.get();
         if (startFullGcTimeNanos < 0) {
@@ -377,7 +359,7 @@ public class TaskContext
         return new Duration(max(0, endFullGcTimeNanos - startFullGcTimeNanos), NANOSECONDS);
     }
 
-    public int getFullGcCount()
+	public int getFullGcCount()
     {
         long startFullGcCount = this.startFullGcCount.get();
         if (startFullGcCount < 0) {
@@ -391,7 +373,7 @@ public class TaskContext
         return toIntExact(max(0, endFullGcCount - startFullGcCount));
     }
 
-    public TaskStats getTaskStats()
+	public TaskStats getTaskStats()
     {
         // check for end state to avoid callback ordering problems
         updateStatsIfDone(taskStateMachine.getState());
@@ -530,25 +512,25 @@ public class TaskContext
                 pipelineStats);
     }
 
-    public <C, R> R accept(QueryContextVisitor<C, R> visitor, C context)
+	public <C, R> R accept(QueryContextVisitor<C, R> visitor, C context)
     {
         return visitor.visitTaskContext(this, context);
     }
 
-    public <C, R> List<R> acceptChildren(QueryContextVisitor<C, R> visitor, C context)
+	public <C, R> List<R> acceptChildren(QueryContextVisitor<C, R> visitor, C context)
     {
         return pipelineContexts.stream()
                 .map(pipelineContext -> pipelineContext.accept(visitor, context))
                 .collect(toList());
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     public synchronized MemoryTrackingContext getTaskMemoryContext()
     {
         return taskMemoryContext;
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     public QueryContext getQueryContext()
     {
         return queryContext;

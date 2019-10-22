@@ -273,7 +273,7 @@ public class Field
         if (Types.isArrayType(type)) {
             Type elementType = Types.getElementType(type);
             StringBuilder builder = new StringBuilder("ARRAY [");
-            for (Object element : AccumuloRowSerializer.getArrayFromBlock(elementType, this.getArray())) {
+            AccumuloRowSerializer.getArrayFromBlock(elementType, this.getArray()).forEach(element -> {
                 if (Types.isArrayType(elementType)) {
                     Type elementElementType = Types.getElementType(elementType);
                     builder.append(
@@ -293,7 +293,7 @@ public class Field
                     builder.append(new Field(element, elementType))
                             .append(',');
                 }
-            }
+            });
 
             return builder.deleteCharAt(builder.length() - 1).append("]").toString();
         }
@@ -302,46 +302,46 @@ public class Field
             StringBuilder builder = new StringBuilder("MAP(");
             StringBuilder keys = new StringBuilder("ARRAY [");
             StringBuilder values = new StringBuilder("ARRAY [");
-            for (Entry<Object, Object> entry : AccumuloRowSerializer
-                    .getMapFromBlock(type, this.getMap()).entrySet()) {
-                Type keyType = Types.getKeyType(type);
-                if (Types.isArrayType(keyType)) {
-                    keys.append(
-                            new Field(
-                                    AccumuloRowSerializer.getBlockFromArray(Types.getElementType(keyType), (List<?>) entry.getKey()),
-                                    keyType))
-                            .append(',');
-                }
-                else if (Types.isMapType(keyType)) {
-                    keys.append(
-                            new Field(
-                                    AccumuloRowSerializer.getBlockFromMap(keyType, (Map<?, ?>) entry.getKey()),
-                                    keyType))
-                            .append(',');
-                }
-                else {
-                    keys.append(new Field(entry.getKey(), keyType))
-                            .append(',');
-                }
-
-                Type valueType = Types.getValueType(type);
-                if (Types.isArrayType(valueType)) {
-                    values.append(
-                            new Field(AccumuloRowSerializer.getBlockFromArray(Types.getElementType(valueType),
-                                    (List<?>) entry.getValue()), valueType))
-                            .append(',');
-                }
-                else if (Types.isMapType(valueType)) {
-                    values.append(
-                            new Field(
-                                    AccumuloRowSerializer.getBlockFromMap(valueType, (Map<?, ?>) entry.getValue()),
-                                    valueType))
-                            .append(',');
-                }
-                else {
-                    values.append(new Field(entry.getValue(), valueType)).append(',');
-                }
+            AccumuloRowSerializer
+                    .getMapFromBlock(type, this.getMap()).entrySet().forEach(entry -> {
+            Type keyType = Types.getKeyType(type);
+            if (Types.isArrayType(keyType)) {
+			keys.append(
+			        new Field(
+			                AccumuloRowSerializer.getBlockFromArray(Types.getElementType(keyType), (List<?>) entry.getKey()),
+			                keyType))
+			        .append(',');
             }
+            else if (Types.isMapType(keyType)) {
+			keys.append(
+			        new Field(
+			                AccumuloRowSerializer.getBlockFromMap(keyType, (Map<?, ?>) entry.getKey()),
+			                keyType))
+			        .append(',');
+            }
+            else {
+			keys.append(new Field(entry.getKey(), keyType))
+			        .append(',');
+            }
+
+            Type valueType = Types.getValueType(type);
+            if (Types.isArrayType(valueType)) {
+			values.append(
+			        new Field(AccumuloRowSerializer.getBlockFromArray(Types.getElementType(valueType),
+			                (List<?>) entry.getValue()), valueType))
+			        .append(',');
+            }
+            else if (Types.isMapType(valueType)) {
+			values.append(
+			        new Field(
+			                AccumuloRowSerializer.getBlockFromMap(valueType, (Map<?, ?>) entry.getValue()),
+			                valueType))
+			        .append(',');
+            }
+            else {
+			values.append(new Field(entry.getValue(), valueType)).append(',');
+            }
+         });
 
             keys.deleteCharAt(keys.length() - 1).append(']');
             values.deleteCharAt(values.length() - 1).append(']');
@@ -353,19 +353,19 @@ public class Field
             return value.toString();
         }
         else if (type.equals(DATE)) {
-            return "DATE '" + value.toString() + "'";
+            return new StringBuilder().append("DATE '").append(value.toString()).append("'").toString();
         }
         else if (type.equals(TIME)) {
-            return "TIME '" + value.toString() + "'";
+            return new StringBuilder().append("TIME '").append(value.toString()).append("'").toString();
         }
         else if (type.equals(TIMESTAMP)) {
-            return "TIMESTAMP '" + value.toString() + "'";
+            return new StringBuilder().append("TIMESTAMP '").append(value.toString()).append("'").toString();
         }
         else if (type.equals(VARBINARY)) {
-            return "CAST('" + new String((byte[]) value, UTF_8).replaceAll("'", "''") + "' AS VARBINARY)";
+            return new StringBuilder().append("CAST('").append(new String((byte[]) value, UTF_8).replaceAll("'", "''")).append("' AS VARBINARY)").toString();
         }
         else if (type instanceof VarcharType) {
-            return "'" + value.toString().replaceAll("'", "''") + "'";
+            return new StringBuilder().append("'").append(value.toString().replaceAll("'", "''")).append("'").toString();
         }
         else {
             throw new PrestoException(NOT_SUPPORTED, "Unsupported PrestoType " + type);

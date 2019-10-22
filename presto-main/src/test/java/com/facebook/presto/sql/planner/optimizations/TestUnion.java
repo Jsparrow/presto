@@ -40,7 +40,6 @@ public class TestUnion
 {
     public TestUnion()
     {
-        super();
     }
 
     public TestUnion(Map<String, String> sessionProperties)
@@ -69,12 +68,7 @@ public class TestUnion
     public void testUnionUnderTopN()
     {
         Plan plan = plan(
-                "SELECT * FROM (" +
-                        "   SELECT regionkey FROM nation " +
-                        "   UNION ALL " +
-                        "   SELECT nationkey FROM nation" +
-                        ") t(a) " +
-                        "ORDER BY a LIMIT 1",
+                new StringBuilder().append("SELECT * FROM (").append("   SELECT regionkey FROM nation ").append("   UNION ALL ").append("   SELECT nationkey FROM nation").append(") t(a) ").append("ORDER BY a LIMIT 1").toString(),
                 LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED,
                 false);
 
@@ -96,12 +90,7 @@ public class TestUnion
     public void testUnionOverSingleNodeAggregationAndUnion()
     {
         Plan plan = plan(
-                "SELECT count(*) FROM (" +
-                        "SELECT 1 FROM nation GROUP BY regionkey " +
-                        "UNION ALL (" +
-                        "   SELECT 1 FROM nation " +
-                        "   UNION ALL " +
-                        "   SELECT 1 FROM nation))",
+                new StringBuilder().append("SELECT count(*) FROM (").append("SELECT 1 FROM nation GROUP BY regionkey ").append("UNION ALL (").append("   SELECT 1 FROM nation ").append("   UNION ALL ").append("   SELECT 1 FROM nation))").toString(),
                 LogicalPlanner.Stage.OPTIMIZED_AND_VALIDATED,
                 false);
 
@@ -206,14 +195,14 @@ public class TestUnion
                 .flatMap(exchangeNode -> exchangeNode.getSources().stream())
                 .collect(toList());
 
-        for (PlanNode fragment : fragments) {
+        fragments.forEach(fragment -> {
             List<PlanNode> aggregations = searchFrom(fragment)
                     .where(AggregationNode.class::isInstance)
                     .recurseOnlyWhen(TestUnion::isNotRemoteExchange)
                     .findAll();
 
             assertFalse(aggregations.size() > 1, "More than a single AggregationNode between remote exchanges");
-        }
+        });
     }
 
     private static boolean isNotRemoteGatheringExchange(PlanNode planNode)
@@ -223,7 +212,7 @@ public class TestUnion
 
     private static boolean isRemoteGatheringExchange(PlanNode planNode)
     {
-        return isRemoteExchange(planNode) && ((ExchangeNode) planNode).getType().equals(GATHER);
+        return isRemoteExchange(planNode) && ((ExchangeNode) planNode).getType() == GATHER;
     }
 
     private static boolean isNotRemoteExchange(PlanNode planNode)

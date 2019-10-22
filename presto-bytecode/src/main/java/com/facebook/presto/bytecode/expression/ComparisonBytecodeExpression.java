@@ -49,7 +49,28 @@ import static java.util.Objects.requireNonNull;
 class ComparisonBytecodeExpression
         extends BytecodeExpression
 {
-    static BytecodeExpression lessThan(BytecodeExpression left, BytecodeExpression right)
+    private final String infixSymbol;
+	private final OpCode comparisonInstruction;
+	private final OpCode noMatchJumpInstruction;
+	private final BytecodeExpression left;
+	private final BytecodeExpression right;
+
+	private ComparisonBytecodeExpression(
+            String infixSymbol,
+            OpCode comparisonInstruction,
+            OpCode noMatchJumpInstruction,
+            BytecodeExpression left,
+            BytecodeExpression right)
+    {
+        super(type(boolean.class));
+        this.infixSymbol = infixSymbol;
+        this.comparisonInstruction = comparisonInstruction;
+        this.noMatchJumpInstruction = noMatchJumpInstruction;
+        this.left = left;
+        this.right = right;
+    }
+
+	static BytecodeExpression lessThan(BytecodeExpression left, BytecodeExpression right)
     {
         checkArgumentTypes(left, right);
 
@@ -80,7 +101,7 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression("<", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    static BytecodeExpression greaterThan(BytecodeExpression left, BytecodeExpression right)
+	static BytecodeExpression greaterThan(BytecodeExpression left, BytecodeExpression right)
     {
         checkArgumentTypes(left, right);
 
@@ -110,7 +131,7 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression(">", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    static BytecodeExpression lessThanOrEqual(BytecodeExpression left, BytecodeExpression right)
+	static BytecodeExpression lessThanOrEqual(BytecodeExpression left, BytecodeExpression right)
     {
         checkArgumentTypes(left, right);
 
@@ -140,7 +161,7 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression("<=", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    static BytecodeExpression greaterThanOrEqual(BytecodeExpression left, BytecodeExpression right)
+	static BytecodeExpression greaterThanOrEqual(BytecodeExpression left, BytecodeExpression right)
     {
         checkArgumentTypes(left, right);
 
@@ -170,7 +191,7 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression(">=", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    static BytecodeExpression equal(BytecodeExpression left, BytecodeExpression right)
+	static BytecodeExpression equal(BytecodeExpression left, BytecodeExpression right)
     {
         requireNonNull(left, "left is null");
         requireNonNull(right, "right is null");
@@ -206,7 +227,7 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression("==", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    static BytecodeExpression notEqual(BytecodeExpression left, BytecodeExpression right)
+	static BytecodeExpression notEqual(BytecodeExpression left, BytecodeExpression right)
     {
         requireNonNull(left, "left is null");
         requireNonNull(right, "right is null");
@@ -242,14 +263,14 @@ class ComparisonBytecodeExpression
         return new ComparisonBytecodeExpression("!=", comparisonInstruction, noMatchJumpInstruction, left, right);
     }
 
-    private static void checkArgumentTypes(BytecodeExpression left, BytecodeExpression right)
+	private static void checkArgumentTypes(BytecodeExpression left, BytecodeExpression right)
     {
         Class<?> leftType = getPrimitiveType(left, "left");
         Class<?> rightType = getPrimitiveType(right, "right");
         checkArgument(leftType == rightType, "left and right must be the same type");
     }
 
-    private static Class<?> getPrimitiveType(BytecodeExpression expression, String name)
+	private static Class<?> getPrimitiveType(BytecodeExpression expression, String name)
     {
         requireNonNull(expression, name + " is null");
         Class<?> leftType = expression.getType().getPrimitiveType();
@@ -258,28 +279,7 @@ class ComparisonBytecodeExpression
         return leftType;
     }
 
-    private final String infixSymbol;
-    private final OpCode comparisonInstruction;
-    private final OpCode noMatchJumpInstruction;
-    private final BytecodeExpression left;
-    private final BytecodeExpression right;
-
-    private ComparisonBytecodeExpression(
-            String infixSymbol,
-            OpCode comparisonInstruction,
-            OpCode noMatchJumpInstruction,
-            BytecodeExpression left,
-            BytecodeExpression right)
-    {
-        super(type(boolean.class));
-        this.infixSymbol = infixSymbol;
-        this.comparisonInstruction = comparisonInstruction;
-        this.noMatchJumpInstruction = noMatchJumpInstruction;
-        this.left = left;
-        this.right = right;
-    }
-
-    @Override
+	@Override
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         BytecodeBlock block = new BytecodeBlock()
@@ -301,15 +301,16 @@ class ComparisonBytecodeExpression
                 .append(end);
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of(left, right);
     }
 
-    @Override
+	@Override
     protected String formatOneLine()
     {
-        return "(" + left + " " + infixSymbol + " " + right + ")";
+        return new StringBuilder().append("(").append(left).append(" ").append(infixSymbol).append(" ").append(right).append(")")
+				.toString();
     }
 }

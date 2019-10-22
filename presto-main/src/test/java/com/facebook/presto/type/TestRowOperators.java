@@ -67,15 +67,16 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.testng.Assert.assertEquals;
+import java.util.Collections;
 
 public class TestRowOperators
         extends AbstractTestFunctions
 {
-    public TestRowOperators() {}
-
     private static FunctionAssertions legacyRowFieldOrdinalAccess;
 
-    @BeforeClass
+	public TestRowOperators() {}
+
+	@BeforeClass
     public void setUp()
     {
         registerScalar(getClass());
@@ -86,14 +87,14 @@ public class TestRowOperators
                 new FeaturesConfig());
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public final void tearDown()
     {
         legacyRowFieldOrdinalAccess.close();
         legacyRowFieldOrdinalAccess = null;
     }
 
-    @ScalarFunction
+	@ScalarFunction
     @LiteralParameters("x")
     @SqlType(StandardTypes.JSON)
     public static Slice uncheckedToJson(@SqlType("varchar(x)") Slice slice)
@@ -101,7 +102,7 @@ public class TestRowOperators
         return slice;
     }
 
-    @Test
+	@Test
     public void testRowTypeLookup()
     {
         functionAssertions.getMetadata().getType(parseTypeSignature("row(a bigint)"));
@@ -110,7 +111,7 @@ public class TestRowOperators
         assertEquals(type.getTypeSignature().getParameters().get(0).getNamedTypeSignature().getName().get(), "b");
     }
 
-    @Test
+	@Test
     public void testRowToJson()
     {
         assertFunction("cast(cast (null as ROW(BIGINT, VARCHAR)) AS JSON)", JSON, null);
@@ -168,7 +169,7 @@ public class TestRowOperators
         assertFunction("CAST(row(1.0, 123123123456.6549876543) AS JSON)", JSON, "[1.0,123123123456.6549876543]");
     }
 
-    @Test
+	@Test
     public void testJsonToRow()
     {
         // special values
@@ -257,12 +258,7 @@ public class TestRowOperators
                 asList((byte) 12, (short) 12345, 123456789, 1234567890123456789L, null, null, null, null));
 
         assertFunction(
-                "CAST(JSON '{\"tinyint_value\": 12, \"tinyint_null\":null, " +
-                        "\"smallint_value\":12345, \"smallint_null\":null, " +
-                        " \"integer_value\":123456789, \"integer_null\": null, " +
-                        "\"bigint_value\":1234567890123456789, \"bigint_null\": null}' " +
-                        "AS ROW(tinyint_value TINYINT, smallint_value SMALLINT, integer_value INTEGER, bigint_value BIGINT, " +
-                        "tinyint_null TINYINT, smallint_null SMALLINT, integer_null INTEGER, bigint_null BIGINT))",
+                new StringBuilder().append("CAST(JSON '{\"tinyint_value\": 12, \"tinyint_null\":null, ").append("\"smallint_value\":12345, \"smallint_null\":null, ").append(" \"integer_value\":123456789, \"integer_null\": null, ").append("\"bigint_value\":1234567890123456789, \"bigint_null\": null}' ").append("AS ROW(tinyint_value TINYINT, smallint_value SMALLINT, integer_value INTEGER, bigint_value BIGINT, ").append("tinyint_null TINYINT, smallint_null SMALLINT, integer_null INTEGER, bigint_null BIGINT))").toString(),
                 RowType.from(ImmutableList.of(
                         RowType.field("tinyint_value", TINYINT),
                         RowType.field("smallint_value", SMALLINT),
@@ -281,12 +277,7 @@ public class TestRowOperators
                 asList(12345.67f, 1234567890.1, decimal("123.45600"), decimal("12345678.12345678"), null, null, null));
 
         assertFunction(
-                "CAST(JSON '{" +
-                        "\"real_value\": 12345.67, \"real_null\": null, " +
-                        "\"double_value\": 1234567890.1, \"double_null\": null, " +
-                        "\"decimal_value1\": 123.456, \"decimal_value2\": 12345678.12345678, \"decimal_null\": null}' " +
-                        "AS ROW(real_value REAL, double_value DOUBLE, decimal_value1 DECIMAL(10, 5), decimal_value2 DECIMAL(38, 8), " +
-                        "real_null REAL, double_null DOUBLE, decimal_null DECIMAL(7, 7)))",
+                new StringBuilder().append("CAST(JSON '{").append("\"real_value\": 12345.67, \"real_null\": null, ").append("\"double_value\": 1234567890.1, \"double_null\": null, ").append("\"decimal_value1\": 123.456, \"decimal_value2\": 12345678.12345678, \"decimal_null\": null}' ").append("AS ROW(real_value REAL, double_value DOUBLE, decimal_value1 DECIMAL(10, 5), decimal_value2 DECIMAL(38, 8), ").append("real_null REAL, double_null DOUBLE, decimal_null DECIMAL(7, 7)))").toString(),
                 RowType.from(ImmutableList.of(
                         RowType.field("real_value", REAL),
                         RowType.field("double_value", DOUBLE),
@@ -314,15 +305,8 @@ public class TestRowOperators
                 asList("puppies", "[1,2,3]", null, "null"));
 
         // nested array/map/row
-        assertFunction("CAST(JSON '[" +
-                        "[1, 2, null, 3], [], null, " +
-                        "{\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, {}, null, " +
-                        "[1, 2, null, 3], null, " +
-                        "{\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, null]' " +
-                        "AS ROW(ARRAY<BIGINT>, ARRAY<BIGINT>, ARRAY<BIGINT>, " +
-                        "MAP<VARCHAR, BIGINT>, MAP<VARCHAR, BIGINT>, MAP<VARCHAR, BIGINT>, " +
-                        "ROW(BIGINT, BIGINT, BIGINT, BIGINT), ROW(BIGINT)," +
-                        "ROW(a BIGINT, b BIGINT, three BIGINT, none BIGINT), ROW(nothing BIGINT)))",
+        assertFunction(new StringBuilder().append("CAST(JSON '[").append("[1, 2, null, 3], [], null, ").append("{\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, {}, null, ").append("[1, 2, null, 3], null, ").append("{\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, null]' ").append("AS ROW(ARRAY<BIGINT>, ARRAY<BIGINT>, ARRAY<BIGINT>, ").append("MAP<VARCHAR, BIGINT>, MAP<VARCHAR, BIGINT>, MAP<VARCHAR, BIGINT>, ").append("ROW(BIGINT, BIGINT, BIGINT, BIGINT), ROW(BIGINT),")
+				.append("ROW(a BIGINT, b BIGINT, three BIGINT, none BIGINT), ROW(nothing BIGINT)))").toString(),
                 RowType.anonymous(
                         ImmutableList.of(
                                 new ArrayType(BIGINT), new ArrayType(BIGINT), new ArrayType(BIGINT),
@@ -340,21 +324,8 @@ public class TestRowOperators
                         asList(1L, 2L, null, 3L), null,
                         asList(1L, 2L, 3L, null), null));
 
-        assertFunction("CAST(JSON '{" +
-                        "\"array2\": [1, 2, null, 3], " +
-                        "\"array1\": [], " +
-                        "\"array3\": null, " +
-                        "\"map3\": {\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, " +
-                        "\"map1\": {}, " +
-                        "\"map2\": null, " +
-                        "\"rowAsJsonArray1\": [1, 2, null, 3], " +
-                        "\"rowAsJsonArray2\": null, " +
-                        "\"rowAsJsonObject2\": {\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, " +
-                        "\"rowAsJsonObject1\": null}' " +
-                        "AS ROW(array1 ARRAY<BIGINT>, array2 ARRAY<BIGINT>, array3 ARRAY<BIGINT>, " +
-                        "map1 MAP<VARCHAR, BIGINT>, map2 MAP<VARCHAR, BIGINT>, map3 MAP<VARCHAR, BIGINT>, " +
-                        "rowAsJsonArray1 ROW(BIGINT, BIGINT, BIGINT, BIGINT), rowAsJsonArray2 ROW(BIGINT)," +
-                        "rowAsJsonObject1 ROW(nothing BIGINT), rowAsJsonObject2 ROW(a BIGINT, b BIGINT, three BIGINT, none BIGINT)))",
+        assertFunction(new StringBuilder().append("CAST(JSON '{").append("\"array2\": [1, 2, null, 3], ").append("\"array1\": [], ").append("\"array3\": null, ").append("\"map3\": {\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, ").append("\"map1\": {}, ").append("\"map2\": null, ").append("\"rowAsJsonArray1\": [1, 2, null, 3], ")
+				.append("\"rowAsJsonArray2\": null, ").append("\"rowAsJsonObject2\": {\"a\": 1, \"b\": 2, \"none\": null, \"three\": 3}, ").append("\"rowAsJsonObject1\": null}' ").append("AS ROW(array1 ARRAY<BIGINT>, array2 ARRAY<BIGINT>, array3 ARRAY<BIGINT>, ").append("map1 MAP<VARCHAR, BIGINT>, map2 MAP<VARCHAR, BIGINT>, map3 MAP<VARCHAR, BIGINT>, ").append("rowAsJsonArray1 ROW(BIGINT, BIGINT, BIGINT, BIGINT), rowAsJsonArray2 ROW(BIGINT),").append("rowAsJsonObject1 ROW(nothing BIGINT), rowAsJsonObject2 ROW(a BIGINT, b BIGINT, three BIGINT, none BIGINT)))").toString(),
                 RowType.from(ImmutableList.of(
                         RowType.field("array1", new ArrayType(BIGINT)),
                         RowType.field("array2", new ArrayType(BIGINT)),
@@ -381,7 +352,7 @@ public class TestRowOperators
         assertInvalidCast("CAST(unchecked_to_json('[{\"a\":1,\"b\":2,\"a\":3}]') AS ARRAY<ROW(a BIGINT, b BIGINT)>)", "Cannot cast to array(row(a bigint,b bigint)). Duplicate field: a\n[{\"a\":1,\"b\":2,\"a\":3}]");
     }
 
-    @Test
+	@Test
     public void testFieldAccessor()
     {
         assertFunction("CAST(row(1, CAST(NULL AS DOUBLE)) AS ROW(col0 integer, col1 double)).col1", DOUBLE, null);
@@ -401,7 +372,7 @@ public class TestRowOperators
         assertFunction("CAST(ROW(1, 2) AS ROW(a BIGINT, b DOUBLE)).b", DOUBLE, 2.0);
         assertFunction("CAST(ROW(CAST(ROW('aa') AS ROW(a VARCHAR))) AS ROW(a ROW(a VARCHAR))).a.a", createUnboundedVarcharType(), "aa");
         assertFunction("CAST(ROW(ROW('ab')) AS ROW(a ROW(b VARCHAR))).a.b", VARCHAR, "ab");
-        assertFunction("CAST(ROW(ARRAY[NULL]) AS ROW(a ARRAY(BIGINT))).a", new ArrayType(BIGINT), asList((Integer) null));
+        assertFunction("CAST(ROW(ARRAY[NULL]) AS ROW(a ARRAY(BIGINT))).a", new ArrayType(BIGINT), Collections.singletonList((Integer) null));
 
         // Row type is not case sensitive
         assertFunction("CAST(ROW(1) AS ROW(A BIGINT)).A", BIGINT, 1L);
@@ -425,7 +396,7 @@ public class TestRowOperators
         legacyRowFieldOrdinalAccess.assertInvalidFunction("CAST(row(1, 2) as ROW(col0 integer, col1 integer)).field1", MISSING_ATTRIBUTE);
     }
 
-    @Test
+	@Test
     public void testRowCast()
     {
         assertFunction("cast(row(2, 3) as row(aa bigint, bb bigint)).aa", BIGINT, 2L);
@@ -463,7 +434,7 @@ public class TestRowOperators
                 asList(2L, 1.5, true, "abc", ImmutableList.of(1L, 2L)));
     }
 
-    @Test
+	@Test
     public void testIsDistinctFrom()
     {
         assertFunction("CAST(NULL AS ROW(UNKNOWN)) IS DISTINCT FROM CAST(NULL AS ROW(UNKNOWN))", BOOLEAN, false);
@@ -480,7 +451,7 @@ public class TestRowOperators
         assertFunction("ARRAY[ROW(1)] IS DISTINCT FROM ARRAY[ROW(1)]", BOOLEAN, false);
     }
 
-    @Test
+	@Test
     public void testRowComparison()
     {
         assertFunction("row(TIMESTAMP '2002-01-02 03:04:05.321 +08:10', TIMESTAMP '2002-01-02 03:04:05.321 +08:10') = " +
@@ -532,14 +503,14 @@ public class TestRowOperators
         assertFunction("ROW(1.0, 123123123456.6549876543) != ROW(1.0, 123123123456.6549876542)", BOOLEAN, true);
     }
 
-    @Test
+	@Test
     public void testRowHashOperator()
     {
         assertRowHashOperator("ROW(1, 2)", ImmutableList.of(INTEGER, INTEGER), ImmutableList.of(1, 2));
         assertRowHashOperator("ROW(true, 2)", ImmutableList.of(BOOLEAN, INTEGER), ImmutableList.of(true, 2));
     }
 
-    @Test
+	@Test
     public void testIndeterminate()
     {
         assertOperator(INDETERMINATE, "cast(null as row(col0 bigint))", BOOLEAN, true);
@@ -572,7 +543,7 @@ public class TestRowOperators
         assertOperator(INDETERMINATE, "row(true,null)", BOOLEAN, true);
     }
 
-    private void assertRowHashOperator(String inputString, List<Type> types, List<Object> elements)
+	private void assertRowHashOperator(String inputString, List<Type> types, List<Object> elements)
     {
         checkArgument(types.size() == elements.size(), "types and elements must have the same size");
         RowType rowType = RowType.anonymous(types);
@@ -586,15 +557,15 @@ public class TestRowOperators
         assertOperator(HASH_CODE, inputString, BIGINT, rowType.hash(blockBuilder.build(), 0));
     }
 
-    private void assertComparisonCombination(String base, String greater)
+	private void assertComparisonCombination(String base, String greater)
     {
         Set<String> equalOperators = new HashSet<>(ImmutableSet.of("=", ">=", "<="));
         Set<String> greaterOrInequalityOperators = new HashSet<>(ImmutableSet.of(">=", ">", "!="));
         Set<String> lessOrInequalityOperators = new HashSet<>(ImmutableSet.of("<=", "<", "!="));
-        for (String operator : ImmutableList.of(">", "=", "<", ">=", "<=", "!=")) {
-            assertFunction(base + operator + base, BOOLEAN, equalOperators.contains(operator));
-            assertFunction(base + operator + greater, BOOLEAN, lessOrInequalityOperators.contains(operator));
-            assertFunction(greater + operator + base, BOOLEAN, greaterOrInequalityOperators.contains(operator));
-        }
+        ImmutableList.of(">", "=", "<", ">=", "<=", "!=").forEach(operator -> {
+            assertFunction(new StringBuilder().append(base).append(operator).append(base).toString(), BOOLEAN, equalOperators.contains(operator));
+            assertFunction(new StringBuilder().append(base).append(operator).append(greater).toString(), BOOLEAN, lessOrInequalityOperators.contains(operator));
+            assertFunction(new StringBuilder().append(greater).append(operator).append(base).toString(), BOOLEAN, greaterOrInequalityOperators.contains(operator));
+        });
     }
 }

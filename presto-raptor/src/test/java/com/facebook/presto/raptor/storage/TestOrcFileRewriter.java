@@ -89,11 +89,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestOrcFileRewriter
 {
-    private static final ReaderAttributes READER_ATTRIBUTES = new ReaderAttributes(new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), true);
+    private static final Logger logger = LoggerFactory.getLogger(TestOrcFileRewriter.class);
+	private static final ReaderAttributes READER_ATTRIBUTES = new ReaderAttributes(new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), new DataSize(1, MEGABYTE), true);
     private static final JsonCodec<OrcFileMetadata> METADATA_CODEC = jsonCodec(OrcFileMetadata.class);
 
     private File temporary;
@@ -659,7 +662,8 @@ public class TestOrcFileRewriter
             deleteRecursively(dataDir.toPath(), ALLOW_INSECURE);
         }
         catch (UnsupportedOperationException e) {
-            // Optimized ORC rewriter will respect the schema
+            logger.error(e.getMessage(), e);
+			// Optimized ORC rewriter will respect the schema
             fail();
         }
     }

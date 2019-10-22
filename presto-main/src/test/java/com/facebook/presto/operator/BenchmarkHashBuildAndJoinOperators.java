@@ -81,7 +81,110 @@ public class BenchmarkHashBuildAndJoinOperators
     private static final PlanNodeId TEST_PLAN_NODE_ID = new PlanNodeId("test");
     private static final LookupJoinOperators LOOKUP_JOIN_OPERATORS = new LookupJoinOperators();
 
-    @State(Thread)
+    @Benchmark
+    public JoinBridgeManager<PartitionedLookupSourceFactory> benchmarkBuildHash(BuildContext buildContext)
+    {
+        return benchmarkBuildHash(buildContext, ImmutableList.of(0, 1, 2));
+    }
+
+	private JoinBridgeManager<PartitionedLookupSourceFactory> benchmarkBuildHash(BuildContext buildContext, List<Integer> outputChannels)
+    {
+        DriverContext driverContext = buildContext.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+
+        JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager = JoinBridgeManager.lookupAllAtOnce(new PartitionedLookupSourceFactory(
+                buildContext.getTypes(),
+                outputChannels.stream()
+                        .map(buildContext.getTypes()::get)
+                        .collect(toImmutableList()),
+                buildContext.getHashChannels().stream()
+                        .map(buildContext.getTypes()::get)
+                        .collect(toImmutableList()),
+                1,
+                requireNonNull(ImmutableMap.of(), "layout is null"),
+                false));
+        HashBuilderOperatorFactory hashBuilderOperatorFactory = new HashBuilderOperatorFactory(
+                HASH_BUILD_OPERATOR_ID,
+                TEST_PLAN_NODE_ID,
+                lookupSourceFactoryManager,
+                outputChannels,
+                buildContext.getHashChannels(),
+                buildContext.getHashChannel(),
+                Optional.empty(),
+                Optional.empty(),
+                ImmutableList.of(),
+                10_000,
+                new PagesIndex.TestingFactory(false),
+                false,
+                SingleStreamSpillerFactory.unsupportedSingleStreamSpillerFactory());
+
+        Operator operator = hashBuilderOperatorFactory.createOperator(driverContext);
+        buildContext.getBuildPages().forEach(operator::addInput);
+        operator.finish();
+
+        LookupSourceFactory lookupSourceFactory = lookupSourceFactoryManager.getJoinBridge(Lifespan.taskWide());
+        ListenableFuture<LookupSourceProvider> lookupSourceProvider = lookupSourceFactory.createLookupSourceProvider();
+        if (!lookupSourceProvider.isDone()) {
+            throw new AssertionError("Expected lookup source provider to be ready");
+        }
+        getFutureValue(lookupSourceProvider).close();
+
+        return lookupSourceFactoryManager;
+    }
+
+	@Benchmark
+    public List<Page> benchmarkJoinHash(JoinContext joinContext)
+    {
+        OperatorFactory joinOperatorFactory = LOOKUP_JOIN_OPERATORS.innerJoin(
+                HASH_JOIN_OPERATOR_ID,
+                TEST_PLAN_NODE_ID,
+                joinContext.getLookupSourceFactory(),
+                joinContext.getTypes(),
+                joinContext.getHashChannels(),
+                joinContext.getHashChannel(),
+                Optional.of(joinContext.getOutputChannels()),
+                OptionalInt.empty(),
+                unsupportedPartitioningSpillerFactory());
+
+        DriverContext driverContext = joinContext.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+        Operator joinOperator = joinOperatorFactory.createOperator(driverContext);
+
+        Iterator<Page> input = joinContext.getProbePages().iterator();
+        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
+
+        boolean finishing = false;
+        for (int loops = 0; !joinOperator.isFinished() && loops < 1_000_000; loops++) {
+            if (joinOperator.needsInput()) {
+                if (input.hasNext()) {
+                    Page inputPage = input.next();
+                    joinOperator.addInput(inputPage);
+                }
+                else if (!finishing) {
+                    joinOperator.finish();
+                    finishing = true;
+                }
+            }
+
+            Page outputPage = joinOperator.getOutput();
+            if (outputPage != null) {
+                outputPages.add(outputPage);
+            }
+        }
+
+        return outputPages.build();
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkHashBuildAndJoinOperators.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class BuildContext
     {
         protected static final int ROWS_PER_PAGE = 1024;
@@ -272,110 +375,5 @@ public class BenchmarkHashBuildAndJoinOperators
             }
             probePages = probePagesBuilder.build();
         }
-    }
-
-    @Benchmark
-    public JoinBridgeManager<PartitionedLookupSourceFactory> benchmarkBuildHash(BuildContext buildContext)
-    {
-        return benchmarkBuildHash(buildContext, ImmutableList.of(0, 1, 2));
-    }
-
-    private JoinBridgeManager<PartitionedLookupSourceFactory> benchmarkBuildHash(BuildContext buildContext, List<Integer> outputChannels)
-    {
-        DriverContext driverContext = buildContext.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
-
-        JoinBridgeManager<PartitionedLookupSourceFactory> lookupSourceFactoryManager = JoinBridgeManager.lookupAllAtOnce(new PartitionedLookupSourceFactory(
-                buildContext.getTypes(),
-                outputChannels.stream()
-                        .map(buildContext.getTypes()::get)
-                        .collect(toImmutableList()),
-                buildContext.getHashChannels().stream()
-                        .map(buildContext.getTypes()::get)
-                        .collect(toImmutableList()),
-                1,
-                requireNonNull(ImmutableMap.of(), "layout is null"),
-                false));
-        HashBuilderOperatorFactory hashBuilderOperatorFactory = new HashBuilderOperatorFactory(
-                HASH_BUILD_OPERATOR_ID,
-                TEST_PLAN_NODE_ID,
-                lookupSourceFactoryManager,
-                outputChannels,
-                buildContext.getHashChannels(),
-                buildContext.getHashChannel(),
-                Optional.empty(),
-                Optional.empty(),
-                ImmutableList.of(),
-                10_000,
-                new PagesIndex.TestingFactory(false),
-                false,
-                SingleStreamSpillerFactory.unsupportedSingleStreamSpillerFactory());
-
-        Operator operator = hashBuilderOperatorFactory.createOperator(driverContext);
-        for (Page page : buildContext.getBuildPages()) {
-            operator.addInput(page);
-        }
-        operator.finish();
-
-        LookupSourceFactory lookupSourceFactory = lookupSourceFactoryManager.getJoinBridge(Lifespan.taskWide());
-        ListenableFuture<LookupSourceProvider> lookupSourceProvider = lookupSourceFactory.createLookupSourceProvider();
-        if (!lookupSourceProvider.isDone()) {
-            throw new AssertionError("Expected lookup source provider to be ready");
-        }
-        getFutureValue(lookupSourceProvider).close();
-
-        return lookupSourceFactoryManager;
-    }
-
-    @Benchmark
-    public List<Page> benchmarkJoinHash(JoinContext joinContext)
-    {
-        OperatorFactory joinOperatorFactory = LOOKUP_JOIN_OPERATORS.innerJoin(
-                HASH_JOIN_OPERATOR_ID,
-                TEST_PLAN_NODE_ID,
-                joinContext.getLookupSourceFactory(),
-                joinContext.getTypes(),
-                joinContext.getHashChannels(),
-                joinContext.getHashChannel(),
-                Optional.of(joinContext.getOutputChannels()),
-                OptionalInt.empty(),
-                unsupportedPartitioningSpillerFactory());
-
-        DriverContext driverContext = joinContext.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
-        Operator joinOperator = joinOperatorFactory.createOperator(driverContext);
-
-        Iterator<Page> input = joinContext.getProbePages().iterator();
-        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
-
-        boolean finishing = false;
-        for (int loops = 0; !joinOperator.isFinished() && loops < 1_000_000; loops++) {
-            if (joinOperator.needsInput()) {
-                if (input.hasNext()) {
-                    Page inputPage = input.next();
-                    joinOperator.addInput(inputPage);
-                }
-                else if (!finishing) {
-                    joinOperator.finish();
-                    finishing = true;
-                }
-            }
-
-            Page outputPage = joinOperator.getOutput();
-            if (outputPage != null) {
-                outputPages.add(outputPage);
-            }
-        }
-
-        return outputPages.build();
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkHashBuildAndJoinOperators.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

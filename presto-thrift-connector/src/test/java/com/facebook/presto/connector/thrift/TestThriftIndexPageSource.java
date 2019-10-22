@@ -225,7 +225,24 @@ public class TestThriftIndexPageSource
         pageSource.close();
     }
 
-    private static class TestingThriftService
+    private static ThriftColumnHandle column(String name, Type type)
+    {
+        return new ThriftColumnHandle(name, type, null, false);
+    }
+
+	private static List<List<Integer>> generateKeys(int beginInclusive, int endExclusive)
+    {
+        return IntStream.range(beginInclusive, endExclusive)
+                .mapToObj(ImmutableList::of)
+                .collect(toImmutableList());
+    }
+
+	private static PrestoThriftPageResult pageResult(int value, PrestoThriftId nextToken)
+    {
+        return new PrestoThriftPageResult(ImmutableList.of(integerData(new PrestoThriftInteger(null, new int[] {value}))), 1, nextToken);
+    }
+
+	private static class TestingThriftService
             implements PrestoThriftService
     {
         private final int rowsPerSplit;
@@ -315,22 +332,5 @@ public class TestThriftIndexPageSource
         {
             throw new UnsupportedOperationException();
         }
-    }
-
-    private static ThriftColumnHandle column(String name, Type type)
-    {
-        return new ThriftColumnHandle(name, type, null, false);
-    }
-
-    private static List<List<Integer>> generateKeys(int beginInclusive, int endExclusive)
-    {
-        return IntStream.range(beginInclusive, endExclusive)
-                .mapToObj(ImmutableList::of)
-                .collect(toImmutableList());
-    }
-
-    private static PrestoThriftPageResult pageResult(int value, PrestoThriftId nextToken)
-    {
-        return new PrestoThriftPageResult(ImmutableList.of(integerData(new PrestoThriftInteger(null, new int[] {value}))), 1, nextToken);
     }
 }

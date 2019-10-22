@@ -31,6 +31,95 @@ public class AssignUniqueIdOperator
 {
     private static final long ROW_IDS_PER_REQUEST = 1L << 20L;
     private static final long MAX_ROW_ID = 1L << 40L;
+	private final OperatorContext operatorContext;
+	private boolean finishing;
+	private final AtomicLong rowIdPool;
+	private final long uniqueValueMask;
+	private Page inputPage;
+	private long rowIdCounter;
+	private long maxRowIdCounterValue;
+
+	public AssignUniqueIdOperator(OperatorContext operatorContext, AtomicLong rowIdPool)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.rowIdPool = requireNonNull(rowIdPool, "rowIdPool is null");
+
+        TaskId fullTaskId = operatorContext.getDriverContext().getTaskId();
+        uniqueValueMask = (((long) fullTaskId.getStageExecutionId().getStageId().getId()) << 54) | (((long) fullTaskId.getId()) << 40);
+
+        requestValues();
+    }
+
+	private void requestValues()
+    {
+        rowIdCounter = rowIdPool.getAndAdd(ROW_IDS_PER_REQUEST);
+        maxRowIdCounterValue = Math.min(rowIdCounter + ROW_IDS_PER_REQUEST, MAX_ROW_ID);
+        checkState(rowIdCounter < MAX_ROW_ID, "Unique row id exceeds a limit: %s", MAX_ROW_ID);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && inputPage == null;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finishing && inputPage == null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(!finishing, "Operator is already finishing");
+        requireNonNull(page, "page is null");
+        checkState(inputPage == null);
+        inputPage = page;
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (inputPage == null) {
+            return null;
+        }
+
+        Page outputPage = processPage();
+        inputPage = null;
+        return outputPage;
+    }
+
+	private Page processPage()
+    {
+        return inputPage.appendColumn(generateIdColumn());
+    }
+
+	private Block generateIdColumn()
+    {
+        BlockBuilder block = BIGINT.createFixedSizeBlockBuilder(inputPage.getPositionCount());
+        for (int currentPosition = 0; currentPosition < inputPage.getPositionCount(); currentPosition++) {
+            if (rowIdCounter >= maxRowIdCounterValue) {
+                requestValues();
+            }
+            long rowId = rowIdCounter++;
+            verify((rowId & uniqueValueMask) == 0, "RowId and uniqueValue mask overlaps");
+            BIGINT.writeLong(block, uniqueValueMask | rowId);
+        }
+        return block.build();
+    }
 
     public static class AssignUniqueIdOperatorFactory
             implements OperatorFactory
@@ -71,96 +160,5 @@ public class AssignUniqueIdOperator
         {
             return new AssignUniqueIdOperatorFactory(operatorId, planNodeId);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private boolean finishing;
-    private final AtomicLong rowIdPool;
-    private final long uniqueValueMask;
-
-    private Page inputPage;
-    private long rowIdCounter;
-    private long maxRowIdCounterValue;
-
-    public AssignUniqueIdOperator(OperatorContext operatorContext, AtomicLong rowIdPool)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.rowIdPool = requireNonNull(rowIdPool, "rowIdPool is null");
-
-        TaskId fullTaskId = operatorContext.getDriverContext().getTaskId();
-        uniqueValueMask = (((long) fullTaskId.getStageExecutionId().getStageId().getId()) << 54) | (((long) fullTaskId.getId()) << 40);
-
-        requestValues();
-    }
-
-    private void requestValues()
-    {
-        rowIdCounter = rowIdPool.getAndAdd(ROW_IDS_PER_REQUEST);
-        maxRowIdCounterValue = Math.min(rowIdCounter + ROW_IDS_PER_REQUEST, MAX_ROW_ID);
-        checkState(rowIdCounter < MAX_ROW_ID, "Unique row id exceeds a limit: %s", MAX_ROW_ID);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && inputPage == null;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finishing && inputPage == null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(!finishing, "Operator is already finishing");
-        requireNonNull(page, "page is null");
-        checkState(inputPage == null);
-        inputPage = page;
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (inputPage == null) {
-            return null;
-        }
-
-        Page outputPage = processPage();
-        inputPage = null;
-        return outputPage;
-    }
-
-    private Page processPage()
-    {
-        return inputPage.appendColumn(generateIdColumn());
-    }
-
-    private Block generateIdColumn()
-    {
-        BlockBuilder block = BIGINT.createFixedSizeBlockBuilder(inputPage.getPositionCount());
-        for (int currentPosition = 0; currentPosition < inputPage.getPositionCount(); currentPosition++) {
-            if (rowIdCounter >= maxRowIdCounterValue) {
-                requestValues();
-            }
-            long rowId = rowIdCounter++;
-            verify((rowId & uniqueValueMask) == 0, "RowId and uniqueValue mask overlaps");
-            BIGINT.writeLong(block, uniqueValueMask | rowId);
-        }
-        return block.build();
     }
 }

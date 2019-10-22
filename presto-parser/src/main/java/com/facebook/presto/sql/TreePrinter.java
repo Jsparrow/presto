@@ -174,11 +174,10 @@ public class TreePrinter
                 return null;
             }
 
-            protected Void visitOrderBy(OrderBy node, Integer indentLevel)
+            @Override
+			protected Void visitOrderBy(OrderBy node, Integer indentLevel)
             {
-                for (SortItem sortItem : node.getSortItems()) {
-                    process(sortItem, indentLevel);
-                }
+                node.getSortItems().forEach(sortItem -> process(sortItem, indentLevel));
 
                 return null;
             }
@@ -213,9 +212,7 @@ public class TreePrinter
             @Override
             protected Void visitSingleColumn(SingleColumn node, Integer indent)
             {
-                if (node.getAlias().isPresent()) {
-                    print(indent, "Alias: " + node.getAlias().get());
-                }
+                node.getAlias().ifPresent(value -> print(indent, "Alias: " + value));
 
                 super.visitSingleColumn(node, indent + 1); // visit children
 
@@ -255,28 +252,28 @@ public class TreePrinter
             @Override
             protected Void visitStringLiteral(StringLiteral node, Integer indentLevel)
             {
-                print(indentLevel, "String[" + node.getValue() + "]");
+                print(indentLevel, new StringBuilder().append("String[").append(node.getValue()).append("]").toString());
                 return null;
             }
 
             @Override
             protected Void visitBinaryLiteral(BinaryLiteral node, Integer indentLevel)
             {
-                print(indentLevel, "Binary[" + node.toHexString() + "]");
+                print(indentLevel, new StringBuilder().append("Binary[").append(node.toHexString()).append("]").toString());
                 return null;
             }
 
             @Override
             protected Void visitBooleanLiteral(BooleanLiteral node, Integer indentLevel)
             {
-                print(indentLevel, "Boolean[" + node.getValue() + "]");
+                print(indentLevel, new StringBuilder().append("Boolean[").append(node.getValue()).append("]").toString());
                 return null;
             }
 
             @Override
             protected Void visitLongLiteral(LongLiteral node, Integer indentLevel)
             {
-                print(indentLevel, "Long[" + node.getValue() + "]");
+                print(indentLevel, new StringBuilder().append("Long[").append(node.getValue()).append("]").toString());
                 return null;
             }
 
@@ -298,7 +295,7 @@ public class TreePrinter
                 if (resolved != null) {
                     resolvedName = "=>" + resolved.toString();
                 }
-                print(indentLevel, "Identifier[" + node.getValue() + resolvedName + "]");
+                print(indentLevel, new StringBuilder().append("Identifier[").append(node.getValue()).append(resolvedName).append("]").toString());
                 return null;
             }
 
@@ -310,7 +307,7 @@ public class TreePrinter
                 if (resolved != null) {
                     resolvedName = "=>" + resolved.toString();
                 }
-                print(indentLevel, "DereferenceExpression[" + node + resolvedName + "]");
+                print(indentLevel, new StringBuilder().append("DereferenceExpression[").append(node).append(resolvedName).append("]").toString());
                 return null;
             }
 
@@ -318,7 +315,7 @@ public class TreePrinter
             protected Void visitFunctionCall(FunctionCall node, Integer indentLevel)
             {
                 String name = Joiner.on('.').join(node.getName().getParts());
-                print(indentLevel, "FunctionCall[" + name + "]");
+                print(indentLevel, new StringBuilder().append("FunctionCall[").append(name).append("]").toString());
 
                 super.visitFunctionCall(node, indentLevel + 1);
 
@@ -329,7 +326,7 @@ public class TreePrinter
             protected Void visitTable(Table node, Integer indentLevel)
             {
                 String name = Joiner.on('.').join(node.getName().getParts());
-                print(indentLevel, "Table[" + name + "]");
+                print(indentLevel, new StringBuilder().append("Table[").append(name).append("]").toString());
 
                 return null;
             }
@@ -357,7 +354,7 @@ public class TreePrinter
             @Override
             protected Void visitAliasedRelation(AliasedRelation node, Integer indentLevel)
             {
-                print(indentLevel, "Alias[" + node.getAlias() + "]");
+                print(indentLevel, new StringBuilder().append("Alias[").append(node.getAlias()).append("]").toString());
 
                 super.visitAliasedRelation(node, indentLevel + 1);
 
@@ -367,7 +364,7 @@ public class TreePrinter
             @Override
             protected Void visitSampledRelation(SampledRelation node, Integer indentLevel)
             {
-                print(indentLevel, "TABLESAMPLE[" + node.getType() + " (" + node.getSamplePercentage() + ")]");
+                print(indentLevel, new StringBuilder().append("TABLESAMPLE[").append(node.getType()).append(" (").append(node.getSamplePercentage()).append(")]").toString());
 
                 super.visitSampledRelation(node, indentLevel + 1);
 

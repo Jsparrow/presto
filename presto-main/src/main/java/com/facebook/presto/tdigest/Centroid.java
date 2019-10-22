@@ -99,10 +99,7 @@ public class Centroid
     @Override
     public String toString()
     {
-        return "Centroid{" +
-                "mean=" + centroid +
-                ", count=" + count +
-                '}';
+        return new StringBuilder().append("Centroid{").append("mean=").append(centroid).append(", count=").append(count).append('}').toString();
     }
 
     @Override

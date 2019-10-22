@@ -254,7 +254,17 @@ public class BenchmarkReadBlock
         return index;
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkReadBlock.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private static final int POSITIONS_PER_PAGE = 10000;
@@ -283,15 +293,5 @@ public class BenchmarkReadBlock
                 nulls[i] = i % 7 == 0;
             }
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkReadBlock.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

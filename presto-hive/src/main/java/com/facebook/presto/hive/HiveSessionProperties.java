@@ -94,24 +94,6 @@ public final class HiveSessionProperties
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
-    public enum InsertExistingPartitionsBehavior
-    {
-        ERROR,
-        APPEND,
-        OVERWRITE,
-        /**/;
-
-        public static InsertExistingPartitionsBehavior valueOf(String value, boolean immutablePartition)
-        {
-            InsertExistingPartitionsBehavior enumValue = valueOf(value.toUpperCase(ENGLISH));
-            if (immutablePartition) {
-                checkArgument(enumValue != APPEND, format("Presto is configured to treat Hive partitions as immutable. %s is not allowed to be set to %s", INSERT_EXISTING_PARTITIONS_BEHAVIOR, APPEND));
-            }
-
-            return enumValue;
-        }
-    }
-
     @Inject
     public HiveSessionProperties(HiveClientConfig hiveClientConfig, OrcFileWriterConfig orcFileWriterConfig, ParquetFileWriterConfig parquetFileWriterConfig)
     {
@@ -401,82 +383,82 @@ public final class HiveSessionProperties
                         true));
     }
 
-    public List<PropertyMetadata<?>> getSessionProperties()
+	public List<PropertyMetadata<?>> getSessionProperties()
     {
         return sessionProperties;
     }
 
-    public static boolean isBucketExecutionEnabled(ConnectorSession session)
+	public static boolean isBucketExecutionEnabled(ConnectorSession session)
     {
         return session.getProperty(BUCKET_EXECUTION_ENABLED, Boolean.class);
     }
 
-    public static boolean shouldIgnoreTableBucketing(ConnectorSession session)
+	public static boolean shouldIgnoreTableBucketing(ConnectorSession session)
     {
         return session.getProperty(IGNORE_TABLE_BUCKETING, Boolean.class);
     }
 
-    public static int getMaxBucketsForGroupedExecution(ConnectorSession session)
+	public static int getMaxBucketsForGroupedExecution(ConnectorSession session)
     {
         return session.getProperty(MAX_BUCKETS_FOR_GROUPED_EXECUTION, Integer.class);
     }
 
-    public static boolean isForceLocalScheduling(ConnectorSession session)
+	public static boolean isForceLocalScheduling(ConnectorSession session)
     {
         return session.getProperty(FORCE_LOCAL_SCHEDULING, Boolean.class);
     }
 
-    public static InsertExistingPartitionsBehavior getInsertExistingPartitionsBehavior(ConnectorSession session)
+	public static InsertExistingPartitionsBehavior getInsertExistingPartitionsBehavior(ConnectorSession session)
     {
         return session.getProperty(INSERT_EXISTING_PARTITIONS_BEHAVIOR, InsertExistingPartitionsBehavior.class);
     }
 
-    public static boolean isOrcBloomFiltersEnabled(ConnectorSession session)
+	public static boolean isOrcBloomFiltersEnabled(ConnectorSession session)
     {
         return session.getProperty(ORC_BLOOM_FILTERS_ENABLED, Boolean.class);
     }
 
-    public static DataSize getOrcMaxMergeDistance(ConnectorSession session)
+	public static DataSize getOrcMaxMergeDistance(ConnectorSession session)
     {
         return session.getProperty(ORC_MAX_MERGE_DISTANCE, DataSize.class);
     }
 
-    public static DataSize getOrcMaxBufferSize(ConnectorSession session)
+	public static DataSize getOrcMaxBufferSize(ConnectorSession session)
     {
         return session.getProperty(ORC_MAX_BUFFER_SIZE, DataSize.class);
     }
 
-    public static DataSize getOrcStreamBufferSize(ConnectorSession session)
+	public static DataSize getOrcStreamBufferSize(ConnectorSession session)
     {
         return session.getProperty(ORC_STREAM_BUFFER_SIZE, DataSize.class);
     }
 
-    public static DataSize getOrcTinyStripeThreshold(ConnectorSession session)
+	public static DataSize getOrcTinyStripeThreshold(ConnectorSession session)
     {
         return session.getProperty(ORC_TINY_STRIPE_THRESHOLD, DataSize.class);
     }
 
-    public static DataSize getOrcMaxReadBlockSize(ConnectorSession session)
+	public static DataSize getOrcMaxReadBlockSize(ConnectorSession session)
     {
         return session.getProperty(ORC_MAX_READ_BLOCK_SIZE, DataSize.class);
     }
 
-    public static boolean getOrcLazyReadSmallRanges(ConnectorSession session)
+	public static boolean getOrcLazyReadSmallRanges(ConnectorSession session)
     {
         return session.getProperty(ORC_LAZY_READ_SMALL_RANGES, Boolean.class);
     }
 
-    public static DataSize getOrcStringStatisticsLimit(ConnectorSession session)
+	public static DataSize getOrcStringStatisticsLimit(ConnectorSession session)
     {
         return session.getProperty(ORC_STRING_STATISTICS_LIMIT, DataSize.class);
     }
 
-    public static boolean isOrcOptimizedWriterEnabled(ConnectorSession session)
+	public static boolean isOrcOptimizedWriterEnabled(ConnectorSession session)
     {
         return session.getProperty(ORC_OPTIMIZED_WRITER_ENABLED, Boolean.class);
     }
 
-    public static boolean isOrcOptimizedWriterValidate(ConnectorSession session)
+	public static boolean isOrcOptimizedWriterValidate(ConnectorSession session)
     {
         boolean validate = session.getProperty(ORC_OPTIMIZED_WRITER_VALIDATE, Boolean.class);
         double percentage = session.getProperty(ORC_OPTIMIZED_WRITER_VALIDATE_PERCENTAGE, Double.class);
@@ -493,117 +475,117 @@ public final class HiveSessionProperties
         return ThreadLocalRandom.current().nextDouble(100) < percentage;
     }
 
-    public static OrcWriteValidationMode getOrcOptimizedWriterValidateMode(ConnectorSession session)
+	public static OrcWriteValidationMode getOrcOptimizedWriterValidateMode(ConnectorSession session)
     {
         return OrcWriteValidationMode.valueOf(session.getProperty(ORC_OPTIMIZED_WRITER_VALIDATE_MODE, String.class).toUpperCase(ENGLISH));
     }
 
-    public static DataSize getOrcOptimizedWriterMinStripeSize(ConnectorSession session)
+	public static DataSize getOrcOptimizedWriterMinStripeSize(ConnectorSession session)
     {
         return session.getProperty(ORC_OPTIMIZED_WRITER_MIN_STRIPE_SIZE, DataSize.class);
     }
 
-    public static DataSize getOrcOptimizedWriterMaxStripeSize(ConnectorSession session)
+	public static DataSize getOrcOptimizedWriterMaxStripeSize(ConnectorSession session)
     {
         return session.getProperty(ORC_OPTIMIZED_WRITER_MAX_STRIPE_SIZE, DataSize.class);
     }
 
-    public static int getOrcOptimizedWriterMaxStripeRows(ConnectorSession session)
+	public static int getOrcOptimizedWriterMaxStripeRows(ConnectorSession session)
     {
         return session.getProperty(ORC_OPTIMIZED_WRITER_MAX_STRIPE_ROWS, Integer.class);
     }
 
-    public static DataSize getOrcOptimizedWriterMaxDictionaryMemory(ConnectorSession session)
+	public static DataSize getOrcOptimizedWriterMaxDictionaryMemory(ConnectorSession session)
     {
         return session.getProperty(ORC_OPTIMIZED_WRITER_MAX_DICTIONARY_MEMORY, DataSize.class);
     }
 
-    public static HiveStorageFormat getHiveStorageFormat(ConnectorSession session)
+	public static HiveStorageFormat getHiveStorageFormat(ConnectorSession session)
     {
         return HiveStorageFormat.valueOf(session.getProperty(HIVE_STORAGE_FORMAT, String.class).toUpperCase(ENGLISH));
     }
 
-    public static HiveCompressionCodec getCompressionCodec(ConnectorSession session)
+	public static HiveCompressionCodec getCompressionCodec(ConnectorSession session)
     {
         return session.getProperty(COMPRESSION_CODEC, HiveCompressionCodec.class);
     }
 
-    public static boolean isRespectTableFormat(ConnectorSession session)
+	public static boolean isRespectTableFormat(ConnectorSession session)
     {
         return session.getProperty(RESPECT_TABLE_FORMAT, Boolean.class);
     }
 
-    public static boolean isUseParquetColumnNames(ConnectorSession session)
+	public static boolean isUseParquetColumnNames(ConnectorSession session)
     {
         return session.getProperty(PARQUET_USE_COLUMN_NAME, Boolean.class);
     }
 
-    public static boolean isFailOnCorruptedParquetStatistics(ConnectorSession session)
+	public static boolean isFailOnCorruptedParquetStatistics(ConnectorSession session)
     {
         return session.getProperty(PARQUET_FAIL_WITH_CORRUPTED_STATISTICS, Boolean.class);
     }
 
-    public static DataSize getParquetMaxReadBlockSize(ConnectorSession session)
+	public static DataSize getParquetMaxReadBlockSize(ConnectorSession session)
     {
         return session.getProperty(PARQUET_MAX_READ_BLOCK_SIZE, DataSize.class);
     }
 
-    public static DataSize getParquetWriterBlockSize(ConnectorSession session)
+	public static DataSize getParquetWriterBlockSize(ConnectorSession session)
     {
         return session.getProperty(PARQUET_WRITER_BLOCK_SIZE, DataSize.class);
     }
 
-    public static DataSize getParquetWriterPageSize(ConnectorSession session)
+	public static DataSize getParquetWriterPageSize(ConnectorSession session)
     {
         return session.getProperty(PARQUET_WRITER_PAGE_SIZE, DataSize.class);
     }
 
-    public static DataSize getMaxSplitSize(ConnectorSession session)
+	public static DataSize getMaxSplitSize(ConnectorSession session)
     {
         return session.getProperty(MAX_SPLIT_SIZE, DataSize.class);
     }
 
-    public static DataSize getMaxInitialSplitSize(ConnectorSession session)
+	public static DataSize getMaxInitialSplitSize(ConnectorSession session)
     {
         return session.getProperty(MAX_INITIAL_SPLIT_SIZE, DataSize.class);
     }
 
-    public static boolean isRcfileOptimizedWriterEnabled(ConnectorSession session)
+	public static boolean isRcfileOptimizedWriterEnabled(ConnectorSession session)
     {
         return session.getProperty(RCFILE_OPTIMIZED_WRITER_ENABLED, Boolean.class);
     }
 
-    public static boolean isRcfileOptimizedWriterValidate(ConnectorSession session)
+	public static boolean isRcfileOptimizedWriterValidate(ConnectorSession session)
     {
         return session.getProperty(RCFILE_OPTIMIZED_WRITER_VALIDATE, Boolean.class);
     }
 
-    public static boolean isSortedWritingEnabled(ConnectorSession session)
+	public static boolean isSortedWritingEnabled(ConnectorSession session)
     {
         return session.getProperty(SORTED_WRITING_ENABLED, Boolean.class);
     }
 
-    public static boolean isSortedWriteToTempPathEnabled(ConnectorSession session)
+	public static boolean isSortedWriteToTempPathEnabled(ConnectorSession session)
     {
         return session.getProperty(SORTED_WRITE_TO_TEMP_PATH_ENABLED, Boolean.class);
     }
 
-    public static int getSortedWriteTempPathSubdirectoryCount(ConnectorSession session)
+	public static int getSortedWriteTempPathSubdirectoryCount(ConnectorSession session)
     {
         return session.getProperty(SORTED_WRITE_TEMP_PATH_SUBDIRECTORY_COUNT, Integer.class);
     }
 
-    public static boolean isS3SelectPushdownEnabled(ConnectorSession session)
+	public static boolean isS3SelectPushdownEnabled(ConnectorSession session)
     {
         return session.getProperty(S3_SELECT_PUSHDOWN_ENABLED, Boolean.class);
     }
 
-    public static boolean isStatisticsEnabled(ConnectorSession session)
+	public static boolean isStatisticsEnabled(ConnectorSession session)
     {
         return session.getProperty(STATISTICS_ENABLED, Boolean.class);
     }
 
-    public static int getPartitionStatisticsSampleSize(ConnectorSession session)
+	public static int getPartitionStatisticsSampleSize(ConnectorSession session)
     {
         int size = session.getProperty(PARTITION_STATISTICS_SAMPLE_SIZE, Integer.class);
         if (size < 1) {
@@ -612,58 +594,58 @@ public final class HiveSessionProperties
         return size;
     }
 
-    public static boolean isIgnoreCorruptedStatistics(ConnectorSession session)
+	public static boolean isIgnoreCorruptedStatistics(ConnectorSession session)
     {
         return session.getProperty(IGNORE_CORRUPTED_STATISTICS, Boolean.class);
     }
 
-    public static boolean isCollectColumnStatisticsOnWrite(ConnectorSession session)
+	public static boolean isCollectColumnStatisticsOnWrite(ConnectorSession session)
     {
         return session.getProperty(COLLECT_COLUMN_STATISTICS_ON_WRITE, Boolean.class);
     }
 
-    @Deprecated
+	@Deprecated
     public static boolean isOptimizedMismatchedBucketCount(ConnectorSession session)
     {
         return session.getProperty(OPTIMIZE_MISMATCHED_BUCKET_COUNT, Boolean.class);
     }
 
-    public static boolean isTemporaryStagingDirectoryEnabled(ConnectorSession session)
+	public static boolean isTemporaryStagingDirectoryEnabled(ConnectorSession session)
     {
         return session.getProperty(TEMPORARY_STAGING_DIRECTORY_ENABLED, Boolean.class);
     }
 
-    public static String getTemporaryStagingDirectoryPath(ConnectorSession session)
+	public static String getTemporaryStagingDirectoryPath(ConnectorSession session)
     {
         return session.getProperty(TEMPORARY_STAGING_DIRECTORY_PATH, String.class);
     }
 
-    public static String getTemporaryTableSchema(ConnectorSession session)
+	public static String getTemporaryTableSchema(ConnectorSession session)
     {
         return session.getProperty(TEMPORARY_TABLE_SCHEMA, String.class);
     }
 
-    public static HiveStorageFormat getTemporaryTableStorageFormat(ConnectorSession session)
+	public static HiveStorageFormat getTemporaryTableStorageFormat(ConnectorSession session)
     {
         return session.getProperty(TEMPORARY_TABLE_STORAGE_FORMAT, HiveStorageFormat.class);
     }
 
-    public static HiveCompressionCodec getTemporaryTableCompressionCodec(ConnectorSession session)
+	public static HiveCompressionCodec getTemporaryTableCompressionCodec(ConnectorSession session)
     {
         return session.getProperty(TEMPORARY_TABLE_COMPRESSION_CODEC, HiveCompressionCodec.class);
     }
 
-    public static boolean isPushdownFilterEnabled(ConnectorSession session)
+	public static boolean isPushdownFilterEnabled(ConnectorSession session)
     {
         return session.getProperty(PUSHDOWN_FILTER_ENABLED, Boolean.class);
     }
 
-    public static boolean isNestedColumnsFilterEnabled(ConnectorSession session)
+	public static boolean isNestedColumnsFilterEnabled(ConnectorSession session)
     {
         return session.getProperty(NESTED_COLUMNS_FILTER_ENABLED, Boolean.class);
     }
 
-    public static int getVirtualBucketCount(ConnectorSession session)
+	public static int getVirtualBucketCount(ConnectorSession session)
     {
         int virtualBucketCount = session.getProperty(VIRTUAL_BUCKET_COUNT, Integer.class);
         if (virtualBucketCount < 0) {
@@ -672,12 +654,12 @@ public final class HiveSessionProperties
         return virtualBucketCount;
     }
 
-    public static boolean isOfflineDataDebugModeEnabled(ConnectorSession session)
+	public static boolean isOfflineDataDebugModeEnabled(ConnectorSession session)
     {
         return session.getProperty(OFFLINE_DATA_DEBUG_MODE_ENABLED, Boolean.class);
     }
 
-    public static PropertyMetadata<DataSize> dataSizeSessionProperty(String name, String description, DataSize defaultValue, boolean hidden)
+	public static PropertyMetadata<DataSize> dataSizeSessionProperty(String name, String description, DataSize defaultValue, boolean hidden)
     {
         return new PropertyMetadata<>(
                 name,
@@ -688,5 +670,23 @@ public final class HiveSessionProperties
                 hidden,
                 value -> DataSize.valueOf((String) value),
                 DataSize::toString);
+    }
+
+	public enum InsertExistingPartitionsBehavior
+    {
+        ERROR,
+        APPEND,
+        OVERWRITE,
+        /**/;
+
+        public static InsertExistingPartitionsBehavior valueOf(String value, boolean immutablePartition)
+        {
+            InsertExistingPartitionsBehavior enumValue = valueOf(value.toUpperCase(ENGLISH));
+            if (immutablePartition) {
+                checkArgument(enumValue != APPEND, format("Presto is configured to treat Hive partitions as immutable. %s is not allowed to be set to %s", INSERT_EXISTING_PARTITIONS_BEHAVIOR, APPEND));
+            }
+
+            return enumValue;
+        }
     }
 }

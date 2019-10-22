@@ -240,15 +240,16 @@ class ClientBuffer
 
         boolean dataAddedOrNoMorePages = loadPagesIfNecessary(pagesSupplier, maxSize);
 
-        if (dataAddedOrNoMorePages) {
-            PendingRead pendingRead;
-            synchronized (this) {
-                pendingRead = this.pendingRead;
-            }
-            if (pendingRead != null) {
-                processRead(pendingRead);
-            }
-        }
+        if (!dataAddedOrNoMorePages) {
+			return;
+		}
+		PendingRead pendingRead;
+		synchronized (this) {
+		    pendingRead = this.pendingRead;
+		}
+		if (pendingRead != null) {
+		    processRead(pendingRead);
+		}
     }
 
     /**

@@ -24,31 +24,31 @@ import static java.util.Objects.requireNonNull;
 
 public class JdbcIdentity
 {
-    public static JdbcIdentity from(ConnectorSession session)
-    {
-        return new JdbcIdentity(session.getIdentity().getUser(), session.getIdentity().getExtraCredentials());
-    }
-
     private final String user;
-    private final Map<String, String> extraCredentials;
+	private final Map<String, String> extraCredentials;
 
-    public JdbcIdentity(String user, Map<String, String> extraCredentials)
+	public JdbcIdentity(String user, Map<String, String> extraCredentials)
     {
         this.user = requireNonNull(user, "user is null");
         this.extraCredentials = ImmutableMap.copyOf(requireNonNull(extraCredentials, "extraCredentials is null"));
     }
 
-    public String getUser()
+	public static JdbcIdentity from(ConnectorSession session)
+    {
+        return new JdbcIdentity(session.getIdentity().getUser(), session.getIdentity().getExtraCredentials());
+    }
+
+	public String getUser()
     {
         return user;
     }
 
-    public Map<String, String> getExtraCredentials()
+	public Map<String, String> getExtraCredentials()
     {
         return extraCredentials;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -62,13 +62,13 @@ public class JdbcIdentity
                 Objects.equals(extraCredentials, that.extraCredentials);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(user, extraCredentials);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

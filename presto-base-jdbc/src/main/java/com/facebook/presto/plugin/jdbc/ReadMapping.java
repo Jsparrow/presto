@@ -21,30 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 public final class ReadMapping
 {
-    public static ReadMapping booleanReadMapping(Type prestoType, BooleanReadFunction readFunction)
-    {
-        return new ReadMapping(prestoType, readFunction);
-    }
-
-    public static ReadMapping longReadMapping(Type prestoType, LongReadFunction readFunction)
-    {
-        return new ReadMapping(prestoType, readFunction);
-    }
-
-    public static ReadMapping doubleReadMapping(Type prestoType, DoubleReadFunction readFunction)
-    {
-        return new ReadMapping(prestoType, readFunction);
-    }
-
-    public static ReadMapping sliceReadMapping(Type prestoType, SliceReadFunction readFunction)
-    {
-        return new ReadMapping(prestoType, readFunction);
-    }
-
     private final Type type;
-    private final ReadFunction readFunction;
+	private final ReadFunction readFunction;
 
-    private ReadMapping(Type type, ReadFunction readFunction)
+	private ReadMapping(Type type, ReadFunction readFunction)
     {
         this.type = requireNonNull(type, "type is null");
         this.readFunction = requireNonNull(readFunction, "readFunction is null");
@@ -56,17 +36,37 @@ public final class ReadMapping
                 readFunction.getJavaType());
     }
 
-    public Type getType()
+	public static ReadMapping booleanReadMapping(Type prestoType, BooleanReadFunction readFunction)
+    {
+        return new ReadMapping(prestoType, readFunction);
+    }
+
+	public static ReadMapping longReadMapping(Type prestoType, LongReadFunction readFunction)
+    {
+        return new ReadMapping(prestoType, readFunction);
+    }
+
+	public static ReadMapping doubleReadMapping(Type prestoType, DoubleReadFunction readFunction)
+    {
+        return new ReadMapping(prestoType, readFunction);
+    }
+
+	public static ReadMapping sliceReadMapping(Type prestoType, SliceReadFunction readFunction)
+    {
+        return new ReadMapping(prestoType, readFunction);
+    }
+
+	public Type getType()
     {
         return type;
     }
 
-    public ReadFunction getReadFunction()
+	public ReadFunction getReadFunction()
     {
         return readFunction;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

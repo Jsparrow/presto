@@ -60,19 +60,18 @@ public class DumpBytecodeVisitor
 {
     private final PrintWriter out;
     private int indentLevel;
+	private int lineNumber = -1;
 
-    public DumpBytecodeVisitor(Writer out)
+	public DumpBytecodeVisitor(Writer out)
     {
         this.out = new PrintWriter(out);
     }
 
-    @Override
+	@Override
     public Void visitClass(ClassDefinition classDefinition)
     {
         // print annotations first
-        for (AnnotationDefinition annotationDefinition : classDefinition.getAnnotations()) {
-            visitAnnotation(classDefinition, annotationDefinition);
-        }
+		classDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(classDefinition, annotationDefinition));
 
         // print class declaration
         Line classDeclaration = line().addAll(classDefinition.getAccess());
@@ -85,9 +84,7 @@ public class DumpBytecodeVisitor
         }
         if (!classDefinition.getInterfaces().isEmpty()) {
             classDeclaration.add("implements");
-            for (ParameterizedType interfaceType : classDefinition.getInterfaces()) {
-                classDeclaration.add(interfaceType.getJavaClassName());
-            }
+            classDefinition.getInterfaces().forEach(interfaceType -> classDeclaration.add(interfaceType.getJavaClassName()));
         }
         classDeclaration.print();
 
@@ -96,14 +93,10 @@ public class DumpBytecodeVisitor
         indentLevel++;
 
         // print fields
-        for (FieldDefinition fieldDefinition : classDefinition.getFields()) {
-            visitField(classDefinition, fieldDefinition);
-        }
+		classDefinition.getFields().forEach(fieldDefinition -> visitField(classDefinition, fieldDefinition));
 
         // print methods
-        for (MethodDefinition methodDefinition : classDefinition.getMethods()) {
-            visitMethod(classDefinition, methodDefinition);
-        }
+		classDefinition.getMethods().forEach(methodDefinition -> visitMethod(classDefinition, methodDefinition));
 
         // print class initializer
         visitMethod(classDefinition, classDefinition.getClassInitializer());
@@ -114,20 +107,18 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitAnnotation(Object parent, AnnotationDefinition annotationDefinition)
     {
         printLine("@%s", annotationDefinition.getType().getJavaClassName(), annotationDefinition.getValues());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitField(ClassDefinition classDefinition, FieldDefinition fieldDefinition)
     {
         // print annotations first
-        for (AnnotationDefinition annotationDefinition : fieldDefinition.getAnnotations()) {
-            visitAnnotation(fieldDefinition, annotationDefinition);
-        }
+		fieldDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(fieldDefinition, annotationDefinition));
 
         // print field declaration
         line().addAll(fieldDefinition.getAccess()).add(fieldDefinition.getType().getJavaClassName()).add(fieldDefinition.getName()).add(";").print();
@@ -136,16 +127,14 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitMethod(ClassDefinition classDefinition, MethodDefinition methodDefinition)
     {
         if (methodDefinition.getComment() != null) {
             printLine("// %s", methodDefinition.getComment());
         }
         // print annotations first
-        for (AnnotationDefinition annotationDefinition : methodDefinition.getAnnotations()) {
-            visitAnnotation(methodDefinition, annotationDefinition);
-        }
+		methodDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(methodDefinition, annotationDefinition));
 
         // print method declaration
         printLine(methodDefinition.toSourceString());
@@ -157,7 +146,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitComment(BytecodeNode parent, Comment node)
     {
         printLine();
@@ -165,7 +154,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBlock(BytecodeNode parent, BytecodeBlock block)
     {
         // only indent if we have a block description or more than one child node
@@ -193,9 +182,9 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    private void visitBlockContents(BytecodeBlock block)
+	private void visitBlockContents(BytecodeBlock block)
     {
-        for (BytecodeNode node : block.getChildNodes()) {
+        block.getChildNodes().forEach(node -> {
             if (node instanceof BytecodeBlock) {
                 BytecodeBlock childBlock = (BytecodeBlock) node;
                 if (childBlock.getDescription() != null) {
@@ -208,17 +197,17 @@ public class DumpBytecodeVisitor
             else {
                 node.accept(node, this);
             }
-        }
+        });
     }
 
-    @Override
+	@Override
     public Void visitBytecodeExpression(BytecodeNode parent, BytecodeExpression expression)
     {
         printLine(expression.toString());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitNode(BytecodeNode parent, BytecodeNode node)
     {
         printLine(node.toString());
@@ -226,25 +215,21 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitLabel(BytecodeNode parent, LabelNode labelNode)
     {
         printLine("%s:", labelNode.getName());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitJumpInstruction(BytecodeNode parent, JumpInstruction jumpInstruction)
     {
         printLine("%s %s", jumpInstruction.getOpCode(), jumpInstruction.getLabel().getName());
         return null;
     }
 
-    //
-    // Variable
-    //
-
-    @Override
+	@Override
     public Void visitLoadVariable(BytecodeNode parent, LoadVariableInstruction loadVariableInstruction)
     {
         Variable variable = loadVariableInstruction.getVariable();
@@ -252,7 +237,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitStoreVariable(BytecodeNode parent, StoreVariableInstruction storeVariableInstruction)
     {
         Variable variable = storeVariableInstruction.getVariable();
@@ -260,7 +245,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitIncrementVariable(BytecodeNode parent, IncrementVariableInstruction incrementVariableInstruction)
     {
         Variable variable = incrementVariableInstruction.getVariable();
@@ -269,11 +254,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    //
-    // Invoke
-    //
-
-    @Override
+	@Override
     public Void visitInvoke(BytecodeNode parent, InvokeInstruction invokeInstruction)
     {
         printLine("invoke %s.%s%s",
@@ -283,7 +264,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitInvokeDynamic(BytecodeNode parent, InvokeDynamicInstruction invokeDynamicInstruction)
     {
         printLine("invokeDynamic %s%s %s",
@@ -293,11 +274,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    //
-    // Control Flow
-    //
-
-    @Override
+	@Override
     public Void visitTryCatch(BytecodeNode parent, TryCatch tryCatch)
     {
         if (tryCatch.getComment() != null) {
@@ -320,7 +297,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitIf(BytecodeNode parent, IfStatement ifStatement)
     {
         if (ifStatement.getComment() != null) {
@@ -341,7 +318,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitFor(BytecodeNode parent, ForLoop forLoop)
     {
         if (forLoop.getComment() != null) {
@@ -359,7 +336,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitWhile(BytecodeNode parent, WhileLoop whileLoop)
     {
         if (whileLoop.getComment() != null) {
@@ -375,7 +352,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitDoWhile(BytecodeNode parent, DoWhileLoop doWhileLoop)
     {
         if (doWhileLoop.getComment() != null) {
@@ -391,7 +368,7 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    @Override
+	@Override
     public Void visitSwitch(BytecodeNode parent, SwitchStatement switchStatement)
     {
         if (switchStatement.getComment() != null) {
@@ -401,9 +378,7 @@ public class DumpBytecodeVisitor
         printLine("switch {");
         indentLevel++;
         visitNestedNode("expression", switchStatement.expression(), switchStatement);
-        for (CaseStatement caseStatement : switchStatement.cases()) {
-            visitNestedNode(format("case %s:", caseStatement.getKey()), caseStatement.getBody(), switchStatement);
-        }
+        switchStatement.cases().forEach(caseStatement -> visitNestedNode(format("case %s:", caseStatement.getKey()), caseStatement.getBody(), switchStatement));
         if (switchStatement.getDefaultBody() != null) {
             visitNestedNode("default:", switchStatement.getDefaultBody(), switchStatement);
         }
@@ -412,109 +387,97 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    //
-    // Instructions
-    //
-
-    @Override
+	@Override
     public Void visitInstruction(BytecodeNode parent, InstructionNode node)
     {
         return super.visitInstruction(parent, node);
     }
 
-    //
-    // Constants
-    //
-
-    @Override
+	@Override
     public Void visitBoxedBooleanConstant(BytecodeNode parent, BoxedBooleanConstant boxedBooleanConstant)
     {
         printLine("load constant %s", boxedBooleanConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBooleanConstant(BytecodeNode parent, BooleanConstant booleanConstant)
     {
         printLine("load constant %s", booleanConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitIntConstant(BytecodeNode parent, IntConstant intConstant)
     {
         printLine("load constant %s", intConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBoxedIntegerConstant(BytecodeNode parent, BoxedIntegerConstant boxedIntegerConstant)
     {
         printLine("load constant new Integer(%s)", boxedIntegerConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitFloatConstant(BytecodeNode parent, FloatConstant floatConstant)
     {
         printLine("load constant %sf", floatConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBoxedFloatConstant(BytecodeNode parent, BoxedFloatConstant boxedFloatConstant)
     {
         printLine("load constant new Float(%sf)", boxedFloatConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitLongConstant(BytecodeNode parent, LongConstant longConstant)
     {
         printLine("load constant %sL", longConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBoxedLongConstant(BytecodeNode parent, BoxedLongConstant boxedLongConstant)
     {
         printLine("load constant new Long(%sL)", boxedLongConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitDoubleConstant(BytecodeNode parent, DoubleConstant doubleConstant)
     {
         printLine("load constant %s", doubleConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitBoxedDoubleConstant(BytecodeNode parent, BoxedDoubleConstant boxedDoubleConstant)
     {
         printLine("load constant new Double(%s)", boxedDoubleConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitStringConstant(BytecodeNode parent, StringConstant stringConstant)
     {
         printLine("load constant \"%s\"", stringConstant.getValue());
         return null;
     }
 
-    @Override
+	@Override
     public Void visitClassConstant(BytecodeNode parent, ClassConstant classConstant)
     {
         printLine("load constant %s.class", classConstant.getValue().getJavaClassName());
         return null;
     }
 
-    //
-    // Line Number
-    //
-
-    @Override
+	@Override
     public Void visitLineNumber(BytecodeNode parent, LineNumberNode lineNumberNode)
     {
         lineNumber = lineNumberNode.getLineNumber();
@@ -522,40 +485,34 @@ public class DumpBytecodeVisitor
         return null;
     }
 
-    //
-    // Print
-    //
-
-    private int lineNumber = -1;
-
-    public void printLine()
+	public void printLine()
     {
         out.println(indent(indentLevel));
     }
 
-    public void printLine(String line)
+	public void printLine(String line)
     {
         out.println(format("%s%s", indent(indentLevel), line));
     }
 
-    public void printLine(String format, Object... args)
+	public void printLine(String format, Object... args)
     {
         String line = format(format, args);
         out.println(format("%s%s", indent(indentLevel), line));
     }
 
-    public void printWords(String... words)
+	public void printWords(String... words)
     {
         String line = Joiner.on(" ").join(words);
         out.println(format("%s%s", indent(indentLevel), line));
     }
 
-    private String indent(int level)
+	private String indent(int level)
     {
         return Strings.repeat("    ", level);
     }
 
-    private void visitNestedNode(String description, BytecodeNode node, BytecodeNode parent)
+	private void visitNestedNode(String description, BytecodeNode node, BytecodeNode parent)
     {
         printLine(description + " {");
         indentLevel++;
@@ -564,15 +521,57 @@ public class DumpBytecodeVisitor
         printLine("}");
     }
 
-    private Line line()
+	private Line line()
     {
         return new Line();
     }
 
-    private Line line(String separator)
+	private Line line(String separator)
     {
         return new Line(separator);
     }
+
+    
+
+    //
+    // Variable
+    //
+
+    
+
+    //
+    // Invoke
+    //
+
+    
+
+    //
+    // Control Flow
+    //
+
+    
+
+    //
+    // Instructions
+    //
+
+    
+
+    //
+    // Constants
+    //
+
+    
+
+    //
+    // Line Number
+    //
+
+    
+
+    //
+    // Print
+    //
 
     private class Line
     {

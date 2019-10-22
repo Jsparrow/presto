@@ -39,8 +39,16 @@ import static java.lang.String.format;
 public class TpchStatisticsRecorder
 {
     private static final ImmutableList<String> SUPPORTED_SCHEMAS = ImmutableList.of("sf0.01", "sf1.0");
+	private final TableStatisticsRecorder tableStatisticsRecorder;
+	private final TableStatisticsDataRepository tableStatisticsDataRepository;
 
-    public static void main(String[] args)
+	private TpchStatisticsRecorder(TableStatisticsRecorder tableStatisticsRecorder, TableStatisticsDataRepository tableStatisticsDataRepository)
+    {
+        this.tableStatisticsRecorder = tableStatisticsRecorder;
+        this.tableStatisticsDataRepository = tableStatisticsDataRepository;
+    }
+
+	public static void main(String[] args)
     {
         TpchStatisticsRecorder tool = new TpchStatisticsRecorder(new TableStatisticsRecorder(), new TableStatisticsDataRepository(createObjectMapper()));
 
@@ -52,33 +60,24 @@ public class TpchStatisticsRecorder
         });
     }
 
-    private final TableStatisticsRecorder tableStatisticsRecorder;
-    private final TableStatisticsDataRepository tableStatisticsDataRepository;
-
-    private TpchStatisticsRecorder(TableStatisticsRecorder tableStatisticsRecorder, TableStatisticsDataRepository tableStatisticsDataRepository)
-    {
-        this.tableStatisticsRecorder = tableStatisticsRecorder;
-        this.tableStatisticsDataRepository = tableStatisticsDataRepository;
-    }
-
-    private static ObjectMapper createObjectMapper()
+	private static ObjectMapper createObjectMapper()
     {
         return new ObjectMapper()
                 .registerModule(new Jdk8Module());
     }
 
-    private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table)
+	private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table)
     {
         computeAndOutputStatsFor(schemaName, table, row -> true, Optional.empty(), Optional.empty());
     }
 
-    private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table, TpchColumn<E> partitionColumn, String partitionValue)
+	private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table, TpchColumn<E> partitionColumn, String partitionValue)
     {
         Predicate<E> predicate = row -> partitionColumn.getString(row).equals(partitionValue);
         computeAndOutputStatsFor(schemaName, table, predicate, Optional.of(partitionColumn), Optional.of(partitionValue));
     }
 
-    private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table, Predicate<E> predicate, Optional<TpchColumn<?>> partitionColumn, Optional<String> partitionValue)
+	private <E extends TpchEntity> void computeAndOutputStatsFor(String schemaName, TpchTable<E> table, Predicate<E> predicate, Optional<TpchColumn<?>> partitionColumn, Optional<String> partitionValue)
     {
         double scaleFactor = schemaNameToScaleFactor(schemaName);
 

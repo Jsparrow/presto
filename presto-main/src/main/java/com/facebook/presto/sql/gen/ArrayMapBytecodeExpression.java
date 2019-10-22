@@ -97,7 +97,7 @@ public class ArrayMapBytecodeExpression
         body.append(blockBuilder.invoke("build", Block.class));
 
         // pretty print
-        oneLineDescription = "arrayMap(" + array + ", element -> " + mapperDescription + ")";
+        oneLineDescription = new StringBuilder().append("arrayMap(").append(array).append(", element -> ").append(mapperDescription).append(")").toString();
     }
 
     @Override

@@ -43,7 +43,8 @@ public final class StatsRecordingPlanOptimizer
         return delegate;
     }
 
-    public final PlanNode optimize(
+    @Override
+	public final PlanNode optimize(
             PlanNode plan,
             Session session,
             TypeProvider types,

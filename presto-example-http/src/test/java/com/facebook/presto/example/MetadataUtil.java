@@ -35,15 +35,11 @@ import static java.util.Locale.ENGLISH;
 
 public final class MetadataUtil
 {
-    private MetadataUtil()
-    {
-    }
-
     public static final JsonCodec<Map<String, List<ExampleTable>>> CATALOG_CODEC;
-    public static final JsonCodec<ExampleTable> TABLE_CODEC;
-    public static final JsonCodec<ExampleColumnHandle> COLUMN_CODEC;
+	public static final JsonCodec<ExampleTable> TABLE_CODEC;
+	public static final JsonCodec<ExampleColumnHandle> COLUMN_CODEC;
 
-    static {
+	static {
         ObjectMapperProvider objectMapperProvider = new ObjectMapperProvider();
         objectMapperProvider.setJsonDeserializers(ImmutableMap.of(Type.class, new TestingTypeDeserializer()));
         JsonCodecFactory codecFactory = new JsonCodecFactory(objectMapperProvider);
@@ -52,7 +48,11 @@ public final class MetadataUtil
         COLUMN_CODEC = codecFactory.jsonCodec(ExampleColumnHandle.class);
     }
 
-    public static final class TestingTypeDeserializer
+	private MetadataUtil()
+    {
+    }
+
+	public static final class TestingTypeDeserializer
             extends FromStringDeserializer<Type>
     {
         private final Map<String, Type> types = ImmutableMap.of(

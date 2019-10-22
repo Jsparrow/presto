@@ -533,9 +533,7 @@ public interface AccumuloRowSerializer
     static Block getBlockFromArray(Type elementType, List<?> array)
     {
         BlockBuilder builder = elementType.createBlockBuilder(null, array.size());
-        for (Object item : array) {
-            writeObject(builder, elementType, item);
-        }
+        array.forEach(item -> writeObject(builder, elementType, item));
         return builder.build();
     }
 
@@ -577,9 +575,7 @@ public interface AccumuloRowSerializer
         if (Types.isArrayType(type)) {
             BlockBuilder arrayBldr = builder.beginBlockEntry();
             Type elementType = Types.getElementType(type);
-            for (Object item : (List<?>) obj) {
-                writeObject(arrayBldr, elementType, item);
-            }
+            ((List<?>) obj).forEach(item -> writeObject(arrayBldr, elementType, item));
             builder.closeEntry();
         }
         else if (Types.isMapType(type)) {

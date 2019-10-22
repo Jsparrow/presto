@@ -49,7 +49,70 @@ import static org.testng.Assert.assertEquals;
 
 public class TestVerificationManager
 {
-    private static class MockPrestoAction
+    private static final String SUITE = "test-suite";
+	private static final String NAME = "test-query";
+	private static final QualifiedName TABLE_PREFIX = QualifiedName.of("tmp_verifier");
+	private static final SqlParser SQL_PARSER = new SqlParser(new SqlParserOptions().allowIdentifierSymbol(AT_SIGN, COLON));
+	private static final QueryConfiguration QUERY_CONFIGURATION = new QueryConfiguration("test", "di", Optional.of("user"), Optional.empty(), Optional.empty());
+	private static final SourceQuery SOURCE_QUERY = new SourceQuery(
+            SUITE,
+            NAME,
+            "SELECT 1",
+            "SELECT 2",
+            QUERY_CONFIGURATION,
+            QUERY_CONFIGURATION);
+	private static final VerifierConfig VERIFIER_CONFIG = new VerifierConfig().setTestId("test");
+
+	@Test
+    public void testFailureRequeued()
+    {
+        VerificationManager manager = getVerificationManager(ImmutableList.of(SOURCE_QUERY), new MockPrestoAction(HIVE_PARTITION_DROPPED_DURING_QUERY), VERIFIER_CONFIG);
+        manager.start();
+        assertEquals(manager.getQueriesSubmitted().get(), 3);
+    }
+
+	@Test
+    public void testFailureNotRequeued()
+    {
+        VerificationManager manager = getVerificationManager(ImmutableList.of(SOURCE_QUERY), new MockPrestoAction(GENERIC_INTERNAL_ERROR), VERIFIER_CONFIG);
+        manager.start();
+        assertEquals(manager.getQueriesSubmitted().get(), 1);
+    }
+
+	@Test
+    public void testFailureRequeueDisabled()
+    {
+        VerificationManager manager = getVerificationManager(
+                ImmutableList.of(SOURCE_QUERY),
+                new MockPrestoAction(HIVE_PARTITION_DROPPED_DURING_QUERY),
+                new VerifierConfig().setTestId("test").setVerificationResubmissionLimit(0));
+        manager.start();
+        assertEquals(manager.getQueriesSubmitted().get(), 1);
+    }
+
+	private static VerificationManager getVerificationManager(List<SourceQuery> sourceQueries, PrestoAction prestoAction, VerifierConfig verifierConfig)
+    {
+        return new VerificationManager(
+                () -> sourceQueries,
+                new VerificationFactory(
+                        SQL_PARSER,
+                        (sourceQuery, verificationContext) -> prestoAction,
+                        presto -> new QueryRewriter(SQL_PARSER, presto, ImmutableList.of(), ImmutableMap.of(CONTROL, TABLE_PREFIX, TEST, TABLE_PREFIX)),
+                        new FailureResolverManagerFactory(ImmutableList.of(), new FailureResolverConfig().setEnabled(false)),
+                        new MockPrestoResourceClient(),
+                        new ChecksumValidator(new SimpleColumnValidator(), new FloatingPointColumnValidator(verifierConfig), new OrderableArrayColumnValidator()),
+                        verifierConfig,
+                        new TypeRegistry(),
+                        new FailureResolverConfig().setEnabled(false)),
+                SQL_PARSER,
+                ImmutableSet.of(),
+                ImmutableList.of(),
+                new QueryConfigurationOverridesConfig(),
+                new QueryConfigurationOverridesConfig(),
+                verifierConfig);
+    }
+
+	private static class MockPrestoAction
             implements PrestoAction
     {
         private final ErrorCodeSupplier errorCode;
@@ -83,68 +146,5 @@ public class TestVerificationManager
         {
             throw new UnsupportedOperationException();
         }
-    }
-
-    private static final String SUITE = "test-suite";
-    private static final String NAME = "test-query";
-    private static final QualifiedName TABLE_PREFIX = QualifiedName.of("tmp_verifier");
-    private static final SqlParser SQL_PARSER = new SqlParser(new SqlParserOptions().allowIdentifierSymbol(AT_SIGN, COLON));
-    private static final QueryConfiguration QUERY_CONFIGURATION = new QueryConfiguration("test", "di", Optional.of("user"), Optional.empty(), Optional.empty());
-    private static final SourceQuery SOURCE_QUERY = new SourceQuery(
-            SUITE,
-            NAME,
-            "SELECT 1",
-            "SELECT 2",
-            QUERY_CONFIGURATION,
-            QUERY_CONFIGURATION);
-    private static final VerifierConfig VERIFIER_CONFIG = new VerifierConfig().setTestId("test");
-
-    @Test
-    public void testFailureRequeued()
-    {
-        VerificationManager manager = getVerificationManager(ImmutableList.of(SOURCE_QUERY), new MockPrestoAction(HIVE_PARTITION_DROPPED_DURING_QUERY), VERIFIER_CONFIG);
-        manager.start();
-        assertEquals(manager.getQueriesSubmitted().get(), 3);
-    }
-
-    @Test
-    public void testFailureNotRequeued()
-    {
-        VerificationManager manager = getVerificationManager(ImmutableList.of(SOURCE_QUERY), new MockPrestoAction(GENERIC_INTERNAL_ERROR), VERIFIER_CONFIG);
-        manager.start();
-        assertEquals(manager.getQueriesSubmitted().get(), 1);
-    }
-
-    @Test
-    public void testFailureRequeueDisabled()
-    {
-        VerificationManager manager = getVerificationManager(
-                ImmutableList.of(SOURCE_QUERY),
-                new MockPrestoAction(HIVE_PARTITION_DROPPED_DURING_QUERY),
-                new VerifierConfig().setTestId("test").setVerificationResubmissionLimit(0));
-        manager.start();
-        assertEquals(manager.getQueriesSubmitted().get(), 1);
-    }
-
-    private static VerificationManager getVerificationManager(List<SourceQuery> sourceQueries, PrestoAction prestoAction, VerifierConfig verifierConfig)
-    {
-        return new VerificationManager(
-                () -> sourceQueries,
-                new VerificationFactory(
-                        SQL_PARSER,
-                        (sourceQuery, verificationContext) -> prestoAction,
-                        presto -> new QueryRewriter(SQL_PARSER, presto, ImmutableList.of(), ImmutableMap.of(CONTROL, TABLE_PREFIX, TEST, TABLE_PREFIX)),
-                        new FailureResolverManagerFactory(ImmutableList.of(), new FailureResolverConfig().setEnabled(false)),
-                        new MockPrestoResourceClient(),
-                        new ChecksumValidator(new SimpleColumnValidator(), new FloatingPointColumnValidator(verifierConfig), new OrderableArrayColumnValidator()),
-                        verifierConfig,
-                        new TypeRegistry(),
-                        new FailureResolverConfig().setEnabled(false)),
-                SQL_PARSER,
-                ImmutableSet.of(),
-                ImmutableList.of(),
-                new QueryConfigurationOverridesConfig(),
-                new QueryConfigurationOverridesConfig(),
-                verifierConfig);
     }
 }

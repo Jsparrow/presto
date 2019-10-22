@@ -153,7 +153,7 @@ public class HiveClientModule
     @Provides
     public ExecutorService createHiveClientExecutor(HiveConnectorId hiveClientId)
     {
-        return newCachedThreadPool(daemonThreadsNamed("hive-" + hiveClientId + "-%s"));
+        return newCachedThreadPool(daemonThreadsNamed(new StringBuilder().append("hive-").append(hiveClientId).append("-%s").toString()));
     }
 
     @ForCachingHiveMetastore
@@ -163,7 +163,7 @@ public class HiveClientModule
     {
         return newFixedThreadPool(
                 hiveClientConfig.getMaxMetastoreRefreshThreads(),
-                daemonThreadsNamed("hive-metastore-" + hiveClientId + "-%s"));
+                daemonThreadsNamed(new StringBuilder().append("hive-metastore-").append(hiveClientId).append("-%s").toString()));
     }
 
     @ForFileRename
@@ -174,7 +174,7 @@ public class HiveClientModule
         return listeningDecorator(
                 new ExecutorServiceAdapter(
                         new BoundedExecutor(
-                                newCachedThreadPool(daemonThreadsNamed("hive-rename-" + hiveClientId + "-%s")),
+                                newCachedThreadPool(daemonThreadsNamed(new StringBuilder().append("hive-rename-").append(hiveClientId).append("-%s").toString())),
                                 hiveClientConfig.getMaxConcurrentFileRenames())));
     }
 
@@ -186,7 +186,7 @@ public class HiveClientModule
         return listeningDecorator(
                 new ExecutorServiceAdapter(
                         new BoundedExecutor(
-                                newCachedThreadPool(daemonThreadsNamed("hive-create-zero-row-file-" + hiveClientId + "-%s")),
+                                newCachedThreadPool(daemonThreadsNamed(new StringBuilder().append("hive-create-zero-row-file-").append(hiveClientId).append("-%s").toString())),
                                 hiveClientConfig.getMaxConcurrentZeroRowFileCreations())));
     }
 

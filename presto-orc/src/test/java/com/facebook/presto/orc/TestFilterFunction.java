@@ -95,11 +95,6 @@ public class TestFilterFunction
         assertEquals(numHits, hitCounter);
     }
 
-    private static class UnluckyError
-            extends RuntimeException
-    {
-    }
-
     private static int[] makePositions(int from, int count, int step)
     {
         int[] array = new int[count];
@@ -109,7 +104,7 @@ public class TestFilterFunction
         return array;
     }
 
-    private static Block makeNumbers(int from, int to)
+	private static Block makeNumbers(int from, int to)
     {
         int count = to - from;
         long[] array = new long[count];
@@ -117,6 +112,11 @@ public class TestFilterFunction
             array[i] = from + i;
         }
         return new LongArrayBlock(count, Optional.empty(), array);
+    }
+
+	private static class UnluckyError
+            extends RuntimeException
+    {
     }
 
     private static class IsOddPredicate

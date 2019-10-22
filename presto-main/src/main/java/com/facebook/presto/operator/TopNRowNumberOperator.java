@@ -38,7 +38,165 @@ import static java.util.Objects.requireNonNull;
 public class TopNRowNumberOperator
         implements Operator
 {
-    public static class TopNRowNumberOperatorFactory
+    private final OperatorContext operatorContext;
+	private final LocalMemoryContext localUserMemoryContext;
+	private final List<Integer> outputChannels;
+	private final GroupByHash groupByHash;
+	private final GroupedTopNBuilder groupedTopNBuilder;
+	private boolean finishing;
+	private Work<?> unfinishedWork;
+	private Iterator<Page> outputIterator;
+
+	public TopNRowNumberOperator(
+            OperatorContext operatorContext,
+            List<? extends Type> sourceTypes,
+            List<Integer> outputChannels,
+            List<Integer> partitionChannels,
+            List<Type> partitionTypes,
+            List<Integer> sortChannels,
+            List<SortOrder> sortOrders,
+            int maxRowCountPerPartition,
+            boolean generateRowNumber,
+            Optional<Integer> hashChannel,
+            int expectedPositions,
+            JoinCompiler joinCompiler)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
+
+        ImmutableList.Builder<Integer> outputChannelsBuilder = ImmutableList.builder();
+        requireNonNull(outputChannels, "outputChannels is null").stream().mapToInt(Integer::valueOf).forEach(outputChannelsBuilder::add);
+        if (generateRowNumber) {
+            outputChannelsBuilder.add(outputChannels.size());
+        }
+        this.outputChannels = outputChannelsBuilder.build();
+
+        checkArgument(maxRowCountPerPartition > 0, "maxRowCountPerPartition must be > 0");
+
+        if (!partitionChannels.isEmpty()) {
+            checkArgument(expectedPositions > 0, "expectedPositions must be > 0");
+            groupByHash = createGroupByHash(
+                    partitionTypes,
+                    Ints.toArray(partitionChannels),
+                    hashChannel,
+                    expectedPositions,
+                    isDictionaryAggregationEnabled(operatorContext.getSession()),
+                    joinCompiler,
+                    this::updateMemoryReservation);
+        }
+        else {
+            groupByHash = new NoChannelGroupByHash();
+        }
+
+        List<Type> types = toTypes(sourceTypes, outputChannels, generateRowNumber);
+        this.groupedTopNBuilder = new GroupedTopNBuilder(
+                ImmutableList.copyOf(sourceTypes),
+                new SimplePageWithPositionComparator(types, sortChannels, sortOrders),
+                maxRowCountPerPartition,
+                generateRowNumber,
+                groupByHash);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        // has no more input, has finished flushing, and has no unfinished work
+        return finishing && outputIterator != null && !outputIterator.hasNext() && unfinishedWork == null;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        // still has more input, has not started flushing yet, and has no unfinished work
+        return !finishing && outputIterator == null && unfinishedWork == null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(!finishing, "Operator is already finishing");
+        checkState(unfinishedWork == null, "Cannot add input with the operator when unfinished work is not empty");
+        checkState(outputIterator == null, "Cannot add input with the operator when flushing");
+        requireNonNull(page, "page is null");
+        unfinishedWork = groupedTopNBuilder.processPage(page);
+        if (unfinishedWork.process()) {
+            unfinishedWork = null;
+        }
+        updateMemoryReservation();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (unfinishedWork != null) {
+            boolean finished = unfinishedWork.process();
+            updateMemoryReservation();
+            if (!finished) {
+                return null;
+            }
+            unfinishedWork = null;
+        }
+
+        if (!finishing) {
+            return null;
+        }
+
+        if (outputIterator == null) {
+            // start flushing
+            outputIterator = groupedTopNBuilder.buildResult();
+        }
+
+        Page output = null;
+        if (outputIterator.hasNext()) {
+            Page page = outputIterator.next();
+            // rewrite to expected column ordering
+            Block[] blocks = new Block[page.getChannelCount()];
+            for (int i = 0; i < outputChannels.size(); i++) {
+                blocks[i] = page.getBlock(outputChannels.get(i));
+            }
+            output = new Page(blocks);
+        }
+        updateMemoryReservation();
+        return output;
+    }
+
+	@VisibleForTesting
+    public int getCapacity()
+    {
+        checkState(groupByHash != null);
+        return groupByHash.getCapacity();
+    }
+
+	private boolean updateMemoryReservation()
+    {
+        // TODO: may need to use trySetMemoryReservation with a compaction to free memory (but that may cause GC pressure)
+        localUserMemoryContext.setBytes(groupedTopNBuilder.getEstimatedSizeInBytes());
+        return operatorContext.isWaitingForMemory().isDone();
+    }
+
+	private static List<Type> toTypes(List<? extends Type> sourceTypes, List<Integer> outputChannels, boolean generateRowNumber)
+    {
+        ImmutableList.Builder<Type> types = ImmutableList.builder();
+        outputChannels.stream().mapToInt(Integer::valueOf).forEach(channel -> types.add(sourceTypes.get(channel)));
+        if (generateRowNumber) {
+            types.add(BIGINT);
+        }
+        return types.build();
+    }
+
+	public static class TopNRowNumberOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -124,170 +282,5 @@ public class TopNRowNumberOperator
         {
             return new TopNRowNumberOperatorFactory(operatorId, planNodeId, sourceTypes, outputChannels, partitionChannels, partitionTypes, sortChannels, sortOrder, maxRowCountPerPartition, partial, hashChannel, expectedPositions, joinCompiler);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalMemoryContext localUserMemoryContext;
-
-    private final List<Integer> outputChannels;
-
-    private final GroupByHash groupByHash;
-    private final GroupedTopNBuilder groupedTopNBuilder;
-
-    private boolean finishing;
-    private Work<?> unfinishedWork;
-    private Iterator<Page> outputIterator;
-
-    public TopNRowNumberOperator(
-            OperatorContext operatorContext,
-            List<? extends Type> sourceTypes,
-            List<Integer> outputChannels,
-            List<Integer> partitionChannels,
-            List<Type> partitionTypes,
-            List<Integer> sortChannels,
-            List<SortOrder> sortOrders,
-            int maxRowCountPerPartition,
-            boolean generateRowNumber,
-            Optional<Integer> hashChannel,
-            int expectedPositions,
-            JoinCompiler joinCompiler)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-
-        ImmutableList.Builder<Integer> outputChannelsBuilder = ImmutableList.builder();
-        for (int channel : requireNonNull(outputChannels, "outputChannels is null")) {
-            outputChannelsBuilder.add(channel);
-        }
-        if (generateRowNumber) {
-            outputChannelsBuilder.add(outputChannels.size());
-        }
-        this.outputChannels = outputChannelsBuilder.build();
-
-        checkArgument(maxRowCountPerPartition > 0, "maxRowCountPerPartition must be > 0");
-
-        if (!partitionChannels.isEmpty()) {
-            checkArgument(expectedPositions > 0, "expectedPositions must be > 0");
-            groupByHash = createGroupByHash(
-                    partitionTypes,
-                    Ints.toArray(partitionChannels),
-                    hashChannel,
-                    expectedPositions,
-                    isDictionaryAggregationEnabled(operatorContext.getSession()),
-                    joinCompiler,
-                    this::updateMemoryReservation);
-        }
-        else {
-            groupByHash = new NoChannelGroupByHash();
-        }
-
-        List<Type> types = toTypes(sourceTypes, outputChannels, generateRowNumber);
-        this.groupedTopNBuilder = new GroupedTopNBuilder(
-                ImmutableList.copyOf(sourceTypes),
-                new SimplePageWithPositionComparator(types, sortChannels, sortOrders),
-                maxRowCountPerPartition,
-                generateRowNumber,
-                groupByHash);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        // has no more input, has finished flushing, and has no unfinished work
-        return finishing && outputIterator != null && !outputIterator.hasNext() && unfinishedWork == null;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        // still has more input, has not started flushing yet, and has no unfinished work
-        return !finishing && outputIterator == null && unfinishedWork == null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(!finishing, "Operator is already finishing");
-        checkState(unfinishedWork == null, "Cannot add input with the operator when unfinished work is not empty");
-        checkState(outputIterator == null, "Cannot add input with the operator when flushing");
-        requireNonNull(page, "page is null");
-        unfinishedWork = groupedTopNBuilder.processPage(page);
-        if (unfinishedWork.process()) {
-            unfinishedWork = null;
-        }
-        updateMemoryReservation();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (unfinishedWork != null) {
-            boolean finished = unfinishedWork.process();
-            updateMemoryReservation();
-            if (!finished) {
-                return null;
-            }
-            unfinishedWork = null;
-        }
-
-        if (!finishing) {
-            return null;
-        }
-
-        if (outputIterator == null) {
-            // start flushing
-            outputIterator = groupedTopNBuilder.buildResult();
-        }
-
-        Page output = null;
-        if (outputIterator.hasNext()) {
-            Page page = outputIterator.next();
-            // rewrite to expected column ordering
-            Block[] blocks = new Block[page.getChannelCount()];
-            for (int i = 0; i < outputChannels.size(); i++) {
-                blocks[i] = page.getBlock(outputChannels.get(i));
-            }
-            output = new Page(blocks);
-        }
-        updateMemoryReservation();
-        return output;
-    }
-
-    @VisibleForTesting
-    public int getCapacity()
-    {
-        checkState(groupByHash != null);
-        return groupByHash.getCapacity();
-    }
-
-    private boolean updateMemoryReservation()
-    {
-        // TODO: may need to use trySetMemoryReservation with a compaction to free memory (but that may cause GC pressure)
-        localUserMemoryContext.setBytes(groupedTopNBuilder.getEstimatedSizeInBytes());
-        return operatorContext.isWaitingForMemory().isDone();
-    }
-
-    private static List<Type> toTypes(List<? extends Type> sourceTypes, List<Integer> outputChannels, boolean generateRowNumber)
-    {
-        ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (int channel : outputChannels) {
-            types.add(sourceTypes.get(channel));
-        }
-        if (generateRowNumber) {
-            types.add(BIGINT);
-        }
-        return types.build();
     }
 }

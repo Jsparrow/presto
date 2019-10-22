@@ -24,10 +24,13 @@ import java.util.TreeMap;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class Histogram<K extends Comparable<K>>
 {
-    private final List<K> buckets;
+    private static final Logger logger = LoggerFactory.getLogger(Histogram.class);
+	private final List<K> buckets;
     private final boolean discrete;
 
     private Histogram(Collection<K> buckets, boolean discrete)
@@ -92,12 +95,12 @@ class Histogram<K extends Comparable<K>>
             Function<K, F> keyFormatter)
     {
         if (buckets.isEmpty()) {
-            System.out.println("No buckets");
+            logger.info("No buckets");
             return;
         }
 
         if (data.isEmpty()) {
-            System.out.println("No data");
+            logger.info("No data");
             return;
         }
 
@@ -116,17 +119,12 @@ class Histogram<K extends Comparable<K>>
 
         if (!discrete) {
             for (int i = 0; i < bucketData.length - 1; i++) {
-                System.out.printf("%8s - %8s : (%5s values)\n",
-                        keyFormatter.apply(buckets.get(i)),
-                        keyFormatter.apply(buckets.get(i + 1)),
-                        bucketData[i]);
+                logger.info("%8s - %8s : (%5s values)\n", keyFormatter.apply(buckets.get(i)), keyFormatter.apply(buckets.get(i + 1)), bucketData[i]);
             }
         }
         else {
             for (int i = 0; i < bucketData.length; i++) {
-                System.out.printf("%8s : (%5s values)\n",
-                        keyFormatter.apply(buckets.get(i)),
-                        bucketData[i]);
+                logger.info("%8s : (%5s values)\n", keyFormatter.apply(buckets.get(i)), bucketData[i]);
             }
         }
     }
@@ -139,12 +137,12 @@ class Histogram<K extends Comparable<K>>
             Function<List<V>, G> valueFormatter)
     {
         if (buckets.isEmpty()) {
-            System.out.println("No buckets");
+            logger.info("No buckets");
             return;
         }
 
         if (data.isEmpty()) {
-            System.out.println("No data");
+            logger.info("No data");
             return;
         }
 
@@ -167,19 +165,12 @@ class Histogram<K extends Comparable<K>>
 
         if (!discrete) {
             for (int i = 0; i < bucketData.size() - 1; i++) {
-                System.out.printf("%8s - %8s : (%5s values) %s\n",
-                        keyFormatter.apply(buckets.get(i)),
-                        keyFormatter.apply(buckets.get(i + 1)),
-                        bucketData.get(i).size(),
-                        valueFormatter.apply(bucketData.get(i)));
+                logger.info("%8s - %8s : (%5s values) %s\n", keyFormatter.apply(buckets.get(i)), keyFormatter.apply(buckets.get(i + 1)), bucketData.get(i).size(), valueFormatter.apply(bucketData.get(i)));
             }
         }
         else {
             for (int i = 0; i < bucketData.size(); i++) {
-                System.out.printf("%19s : (%5s values) %s\n",
-                        keyFormatter.apply(buckets.get(i)),
-                        bucketData.get(i).size(),
-                        valueFormatter.apply(bucketData.get(i)));
+                logger.info("%19s : (%5s values) %s\n", keyFormatter.apply(buckets.get(i)), bucketData.get(i).size(), valueFormatter.apply(bucketData.get(i)));
             }
         }
     }

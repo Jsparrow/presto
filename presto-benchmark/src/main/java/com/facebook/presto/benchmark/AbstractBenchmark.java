@@ -29,10 +29,13 @@ import static io.airlift.units.DataSize.Unit.BYTE;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractBenchmark
 {
-    private final String benchmarkName;
+    private static final Logger logger = LoggerFactory.getLogger(AbstractBenchmark.class);
+	private final String benchmarkName;
     private final int warmupIterations;
     private final int measuredIterations;
 
@@ -124,20 +127,6 @@ public abstract class AbstractBenchmark
         DataSize outputBytes = new DataSize(resultsAvg.get("output_bytes"), BYTE);
 
         DataSize memory = new DataSize(resultsAvg.get("peak_memory"), BYTE);
-        System.out.printf("%35s :: %8.3f cpu ms :: %5s peak memory :: in %5s,  %6s,  %8s,  %8s :: out %5s,  %6s,  %8s,  %8s%n",
-                getBenchmarkName(),
-                cpuNanos.getValue(MILLISECONDS),
-
-                formatDataSize(memory, true),
-
-                formatCount(inputRows),
-                formatDataSize(inputBytes, true),
-                formatCountRate(inputRows, cpuNanos, true),
-                formatDataRate(inputBytes, cpuNanos, true),
-
-                formatCount(outputRows),
-                formatDataSize(outputBytes, true),
-                formatCountRate(outputRows, cpuNanos, true),
-                formatDataRate(outputBytes, cpuNanos, true));
+        logger.info("%35s :: %8.3f cpu ms :: %5s peak memory :: in %5s,  %6s,  %8s,  %8s :: out %5s,  %6s,  %8s,  %8s%n", getBenchmarkName(), cpuNanos.getValue(MILLISECONDS), formatDataSize(memory, true), formatCount(inputRows), formatDataSize(inputBytes, true), formatCountRate(inputRows, cpuNanos, true), formatDataRate(inputBytes, cpuNanos, true), formatCount(outputRows), formatDataSize(outputBytes, true), formatCountRate(outputRows, cpuNanos, true), formatDataRate(outputBytes, cpuNanos, true));
     }
 }

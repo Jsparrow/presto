@@ -36,7 +36,8 @@ public class HiveGcsConfigurationInitializer
         this.jsonKeyFilePath = config.getJsonKeyFilePath();
     }
 
-    public void updateConfiguration(Configuration config)
+    @Override
+	public void updateConfiguration(Configuration config)
     {
         config.set("fs.gs.impl", GoogleHadoopFileSystem.class.getName());
 

@@ -458,12 +458,10 @@ class SubqueryPlanner
     {
         Set<Expression> missingReferences = extractOuterColumnReferences(subquery);
         ImmutableMap.Builder<Expression, Expression> correlation = ImmutableMap.builder();
-        for (Expression missingReference : missingReferences) {
-            // missing reference expression can be solved within current subPlan,
-            // or within outer plans in case of multiple nesting levels of subqueries.
-            tryResolveMissingExpression(subPlan, missingReference)
-                    .ifPresent(symbolReference -> correlation.put(missingReference, symbolReference));
-        }
+        // missing reference expression can be solved within current subPlan,
+		// or within outer plans in case of multiple nesting levels of subqueries.
+		missingReferences.forEach(missingReference -> tryResolveMissingExpression(subPlan, missingReference)
+				.ifPresent(symbolReference -> correlation.put(missingReference, symbolReference)));
         return correlation.build();
     }
 

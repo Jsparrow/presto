@@ -47,16 +47,14 @@ class NewInstanceBytecodeExpression
                 .newObject(getType())
                 .dup();
 
-        for (BytecodeExpression parameter : parameters) {
-            block.append(parameter);
-        }
+        parameters.forEach(block::append);
         return block.invokeConstructor(getType(), parameterTypes);
     }
 
     @Override
     protected String formatOneLine()
     {
-        return "new " + getType().getSimpleName() + "(" + Joiner.on(", ").join(parameters) + ")";
+        return new StringBuilder().append("new ").append(getType().getSimpleName()).append("(").append(Joiner.on(", ").join(parameters)).append(")").toString();
     }
 
     @Override

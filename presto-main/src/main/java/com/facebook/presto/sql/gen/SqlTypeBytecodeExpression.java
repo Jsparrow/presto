@@ -31,20 +31,11 @@ import static java.util.Objects.requireNonNull;
 public class SqlTypeBytecodeExpression
         extends BytecodeExpression
 {
-    public static SqlTypeBytecodeExpression constantType(CallSiteBinder callSiteBinder, Type type)
-    {
-        requireNonNull(callSiteBinder, "callSiteBinder is null");
-        requireNonNull(type, "type is null");
-
-        Binding binding = callSiteBinder.bind(type, Type.class);
-        return new SqlTypeBytecodeExpression(type, binding, BOOTSTRAP_METHOD);
-    }
-
     private final Type type;
-    private final Binding binding;
-    private final Method bootstrapMethod;
+	private final Binding binding;
+	private final Method bootstrapMethod;
 
-    private SqlTypeBytecodeExpression(Type type, Binding binding, Method bootstrapMethod)
+	private SqlTypeBytecodeExpression(Type type, Binding binding, Method bootstrapMethod)
     {
         super(type(Type.class));
 
@@ -53,25 +44,34 @@ public class SqlTypeBytecodeExpression
         this.bootstrapMethod = requireNonNull(bootstrapMethod, "bootstrapMethod is null");
     }
 
-    @Override
+	public static SqlTypeBytecodeExpression constantType(CallSiteBinder callSiteBinder, Type type)
+    {
+        requireNonNull(callSiteBinder, "callSiteBinder is null");
+        requireNonNull(type, "type is null");
+
+        Binding binding = callSiteBinder.bind(type, Type.class);
+        return new SqlTypeBytecodeExpression(type, binding, BOOTSTRAP_METHOD);
+    }
+
+	@Override
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         return InvokeInstruction.invokeDynamic(type.getTypeSignature().toString().replaceAll("\\W+", "_"), binding.getType(), bootstrapMethod, binding.getBindingId());
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     protected String formatOneLine()
     {
         return type.getTypeSignature().toString();
     }
 
-    public BytecodeExpression getValue(BytecodeExpression block, BytecodeExpression position)
+	public BytecodeExpression getValue(BytecodeExpression block, BytecodeExpression position)
     {
         Class<?> fromJavaElementType = type.getJavaType();
 
@@ -90,7 +90,7 @@ public class SqlTypeBytecodeExpression
         return invoke("getObject", Object.class, block, position).cast(fromJavaElementType);
     }
 
-    public BytecodeExpression writeValue(BytecodeExpression blockBuilder, BytecodeExpression value)
+	public BytecodeExpression writeValue(BytecodeExpression blockBuilder, BytecodeExpression value)
     {
         Class<?> fromJavaElementType = type.getJavaType();
 

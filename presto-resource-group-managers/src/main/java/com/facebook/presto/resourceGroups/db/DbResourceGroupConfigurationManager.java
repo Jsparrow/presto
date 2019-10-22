@@ -198,11 +198,7 @@ public class DbResourceGroupConfigurationManager
             Set<ResourceGroupIdTemplate> changedSpecs = new HashSet<>();
             Set<ResourceGroupIdTemplate> deletedSpecs = Sets.difference(this.resourceGroupSpecs.keySet(), resourceGroupSpecs.keySet());
 
-            for (Map.Entry<ResourceGroupIdTemplate, ResourceGroupSpec> entry : resourceGroupSpecs.entrySet()) {
-                if (!entry.getValue().sameConfig(this.resourceGroupSpecs.get(entry.getKey()))) {
-                    changedSpecs.add(entry.getKey());
-                }
-            }
+            resourceGroupSpecs.entrySet().stream().filter(entry -> !entry.getValue().sameConfig(this.resourceGroupSpecs.get(entry.getKey()))).forEach(entry -> changedSpecs.add(entry.getKey()));
 
             this.resourceGroupSpecs = resourceGroupSpecs;
             this.cpuQuotaPeriod.set(managerSpec.getCpuQuotaPeriod());
@@ -222,12 +218,8 @@ public class DbResourceGroupConfigurationManager
             disableDeletedGroups(deletedSpecs);
 
             if (lastRefresh.get() > 0) {
-                for (ResourceGroupIdTemplate deleted : deletedSpecs) {
-                    log.info("Resource group spec deleted %s", deleted);
-                }
-                for (ResourceGroupIdTemplate changed : changedSpecs) {
-                    log.info("Resource group spec %s changed to %s", changed, resourceGroupSpecs.get(changed));
-                }
+                deletedSpecs.forEach(deleted -> log.info("Resource group spec deleted %s", deleted));
+                changedSpecs.forEach(changed -> log.info("Resource group spec %s changed to %s", changed, resourceGroupSpecs.get(changed)));
             }
             else {
                 log.info("Loaded %s selectors and %s resource groups from database", this.selectors.get().size(), this.resourceGroupSpecs.size());
@@ -251,7 +243,7 @@ public class DbResourceGroupConfigurationManager
             Map<Long, Set<Long>> subGroupIdsToBuild)
     {
         List<ResourceGroupSpecBuilder> records = dao.getResourceGroups(environment);
-        for (ResourceGroupSpecBuilder record : records) {
+        records.forEach(record -> {
             recordMap.put(record.getId(), record);
             if (!record.getParentId().isPresent()) {
                 rootGroupIds.add(record.getId());
@@ -260,7 +252,7 @@ public class DbResourceGroupConfigurationManager
             else {
                 subGroupIdsToBuild.computeIfAbsent(record.getParentId().get(), k -> new HashSet<>()).add(record.getId());
             }
-        }
+        });
     }
 
     private synchronized Map.Entry<ManagerSpec, Map<ResourceGroupIdTemplate, ResourceGroupSpec>> buildSpecsFromDb()
@@ -330,22 +322,17 @@ public class DbResourceGroupConfigurationManager
 
     private synchronized void configureChangedGroups(Set<ResourceGroupIdTemplate> changedSpecs)
     {
-        for (ResourceGroupIdTemplate resourceGroupIdTemplate : changedSpecs) {
-            for (ResourceGroupId resourceGroupId : configuredGroups.getOrDefault(resourceGroupIdTemplate, ImmutableList.of())) {
-                synchronized (getRootGroup(resourceGroupId)) {
-                    configureGroup(groups.get(resourceGroupId), resourceGroupSpecs.get(resourceGroupIdTemplate));
-                }
-            }
-        }
+        changedSpecs.forEach(resourceGroupIdTemplate -> configuredGroups.getOrDefault(resourceGroupIdTemplate, ImmutableList.of()).forEach(resourceGroupId -> {
+			synchronized (getRootGroup(resourceGroupId)) {
+				configureGroup(groups.get(resourceGroupId), resourceGroupSpecs.get(resourceGroupIdTemplate));
+			}
+		}));
     }
 
     private synchronized void disableDeletedGroups(Set<ResourceGroupIdTemplate> deletedSpecs)
     {
-        for (ResourceGroupIdTemplate resourceGroupIdTemplate : deletedSpecs) {
-            for (ResourceGroupId resourceGroupId : configuredGroups.getOrDefault(resourceGroupIdTemplate, ImmutableList.of())) {
-                disableGroup(groups.get(resourceGroupId));
-            }
-        }
+        deletedSpecs.forEach(resourceGroupIdTemplate -> configuredGroups.getOrDefault(resourceGroupIdTemplate, ImmutableList.of())
+				.forEach(resourceGroupId -> disableGroup(groups.get(resourceGroupId))));
     }
 
     private synchronized void disableGroup(ResourceGroup group)
@@ -368,14 +355,14 @@ public class DbResourceGroupConfigurationManager
 
     private void checkMaxRefreshInterval()
     {
-        if (System.nanoTime() - lastRefresh.get() > maxRefreshInterval.toMillis() * MILLISECONDS.toNanos(1)) {
-            String message = "Resource group configuration cannot be fetched from database.";
-            if (lastRefresh.get() != 0) {
-                message += format(" Current resource group configuration is loaded %s ago", succinctNanos(System.nanoTime() - lastRefresh.get()).toString());
-            }
-
-            throw new PrestoException(CONFIGURATION_UNAVAILABLE, message);
-        }
+        if (!(System.nanoTime() - lastRefresh.get() > maxRefreshInterval.toMillis() * MILLISECONDS.toNanos(1))) {
+			return;
+		}
+		String message = "Resource group configuration cannot be fetched from database.";
+		if (lastRefresh.get() != 0) {
+		    message += format(" Current resource group configuration is loaded %s ago", succinctNanos(System.nanoTime() - lastRefresh.get()).toString());
+		}
+		throw new PrestoException(CONFIGURATION_UNAVAILABLE, message);
     }
 
     @Managed

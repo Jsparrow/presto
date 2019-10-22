@@ -28,6 +28,8 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * JSON specific row decoder.
@@ -35,7 +37,9 @@ import static java.util.Objects.requireNonNull;
 public class JsonRowDecoder
         implements RowDecoder
 {
-    public static final String NAME = "json";
+    private static final Logger logger = LoggerFactory.getLogger(JsonRowDecoder.class);
+
+	public static final String NAME = "json";
 
     private final ObjectMapper objectMapper;
     private final Map<DecoderColumnHandle, JsonFieldDecoder> fieldDecoders;
@@ -55,17 +59,18 @@ public class JsonRowDecoder
             tree = objectMapper.readTree(data);
         }
         catch (Exception e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
 
         Map<DecoderColumnHandle, FieldValueProvider> decodedRow = new HashMap<>();
 
-        for (Map.Entry<DecoderColumnHandle, JsonFieldDecoder> entry : fieldDecoders.entrySet()) {
+        fieldDecoders.entrySet().forEach(entry -> {
             DecoderColumnHandle columnHandle = entry.getKey();
             JsonFieldDecoder decoder = entry.getValue();
             JsonNode node = locateNode(tree, columnHandle);
             decodedRow.put(columnHandle, decoder.decode(node));
-        }
+        });
 
         return Optional.of(decodedRow);
     }

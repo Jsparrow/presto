@@ -38,39 +38,19 @@ import static java.util.Objects.requireNonNull;
 public class LateralJoinNode
         extends InternalPlanNode
 {
-    public enum Type
-    {
-        INNER(JoinNode.Type.INNER),
-        LEFT(JoinNode.Type.LEFT);
-
-        Type(JoinNode.Type joinNodeType)
-        {
-            this.joinNodeType = joinNodeType;
-        }
-
-        private final JoinNode.Type joinNodeType;
-
-        public JoinNode.Type toJoinNodeType()
-        {
-            return joinNodeType;
-        }
-    }
-
     private final PlanNode input;
-    private final PlanNode subquery;
-
-    /**
+	private final PlanNode subquery;
+	/**
      * Correlation variables, returned from input (outer plan) used in subquery (inner plan)
      */
     private final List<VariableReferenceExpression> correlation;
-    private final Type type;
-
-    /**
+	private final Type type;
+	/**
      * This information is only used for sanity check.
      */
     private final String originSubqueryError;
 
-    @JsonCreator
+	@JsonCreator
     public LateralJoinNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("input") PlanNode input,
@@ -94,43 +74,43 @@ public class LateralJoinNode
         this.originSubqueryError = originSubqueryError;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getInput()
     {
         return input;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getSubquery()
     {
         return subquery;
     }
 
-    @JsonProperty
+	@JsonProperty
     public List<VariableReferenceExpression> getCorrelation()
     {
         return correlation;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public String getOriginSubqueryError()
     {
         return originSubqueryError;
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return ImmutableList.of(input, subquery);
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return ImmutableList.<VariableReferenceExpression>builder()
@@ -139,16 +119,34 @@ public class LateralJoinNode
                 .build();
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
         return new LateralJoinNode(getId(), newChildren.get(0), newChildren.get(1), correlation, type, originSubqueryError);
     }
 
-    @Override
+	@Override
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitLateralJoin(this, context);
+    }
+
+	public enum Type
+    {
+        INNER(JoinNode.Type.INNER),
+        LEFT(JoinNode.Type.LEFT);
+
+        Type(JoinNode.Type joinNodeType)
+        {
+            this.joinNodeType = joinNodeType;
+        }
+
+        private final JoinNode.Type joinNodeType;
+
+        public JoinNode.Type toJoinNodeType()
+        {
+            return joinNodeType;
+        }
     }
 }

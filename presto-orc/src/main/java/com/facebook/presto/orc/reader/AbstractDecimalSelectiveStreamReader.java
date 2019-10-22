@@ -311,11 +311,10 @@ public abstract class AbstractDecimalSelectiveStreamReader
             values = new long[valuesCapacity];
         }
 
-        if (nullAllowed) {
-            if (nulls == null || nulls.length < capacity) {
-                nulls = new boolean[capacity];
-            }
-        }
+        boolean condition = nullAllowed && (nulls == null || nulls.length < capacity);
+		if (condition) {
+		    nulls = new boolean[capacity];
+		}
     }
 
     abstract void copyValues(int[] positions, int positionsCount, long[] valuesCopy, boolean[] nullsCopy);

@@ -39,14 +39,8 @@ public class TestFullOuterJoinWithCoalesce
     @Test
     public void testFullOuterJoinWithCoalesce()
     {
-        assertDistributedPlan("SELECT coalesce(r.a, ts.a) " +
-                        "FROM (" +
-                        "   SELECT coalesce(t.a, s.a) AS a " +
-                        "   FROM (VALUES (1), (2), (3)) t(a) " +
-                        "   FULL OUTER JOIN (VALUES (1), (4)) s(a)" +
-                        "   ON t.a = s.a) ts " +
-                        "FULL OUTER JOIN (VALUES (2), (5)) r(a) " +
-                        "ON ts.a = r.a",
+        assertDistributedPlan(new StringBuilder().append("SELECT coalesce(r.a, ts.a) ").append("FROM (").append("   SELECT coalesce(t.a, s.a) AS a ").append("   FROM (VALUES (1), (2), (3)) t(a) ").append("   FULL OUTER JOIN (VALUES (1), (4)) s(a)").append("   ON t.a = s.a) ts ").append("FULL OUTER JOIN (VALUES (2), (5)) r(a) ").append("ON ts.a = r.a")
+				.toString(),
                 anyTree(
                         project(
                                 ImmutableMap.of("expr", expression("coalesce(r, ts)")),
@@ -67,14 +61,8 @@ public class TestFullOuterJoinWithCoalesce
     @Test
     public void testDuplicateJoinClause()
     {
-        assertDistributedPlan("SELECT coalesce(r.a, ts.a) " +
-                        "FROM (" +
-                        "   SELECT coalesce(t.a, s.a) AS a " +
-                        "   FROM (VALUES (1), (2), (3)) t(a) " +
-                        "   FULL OUTER JOIN (VALUES (1), (4)) s(a)" +
-                        "   ON t.a = s.a AND t.a = s.a) ts " +
-                        "FULL OUTER JOIN (VALUES (2), (5)) r(a) " +
-                        "ON ts.a = r.a",
+        assertDistributedPlan(new StringBuilder().append("SELECT coalesce(r.a, ts.a) ").append("FROM (").append("   SELECT coalesce(t.a, s.a) AS a ").append("   FROM (VALUES (1), (2), (3)) t(a) ").append("   FULL OUTER JOIN (VALUES (1), (4)) s(a)").append("   ON t.a = s.a AND t.a = s.a) ts ").append("FULL OUTER JOIN (VALUES (2), (5)) r(a) ").append("ON ts.a = r.a")
+				.toString(),
                 anyTree(
                         project(
                                 ImmutableMap.of("expr", expression("coalesce(r, ts)")),
@@ -95,14 +83,8 @@ public class TestFullOuterJoinWithCoalesce
     @Test
     public void testDuplicatePartitionColumn()
     {
-        assertDistributedPlan("SELECT coalesce(r.a, ts.a), coalesce(ts.b, r.b) " +
-                        "FROM (" +
-                        "   SELECT coalesce(t.a, s.a) AS a, coalesce(t.a, s.b) AS b" +
-                        "   FROM (VALUES (1), (2), (3)) t(a) " +
-                        "   FULL OUTER JOIN (VALUES (1, 1), (4, 4)) s(a, b)" +
-                        "   ON t.a = s.a AND t.a = s.b) ts " +
-                        "FULL OUTER JOIN (VALUES (2, 2), (5, 5)) r(a, b) " +
-                        "ON ts.a = r.a and ts.b = r.b",
+        assertDistributedPlan(new StringBuilder().append("SELECT coalesce(r.a, ts.a), coalesce(ts.b, r.b) ").append("FROM (").append("   SELECT coalesce(t.a, s.a) AS a, coalesce(t.a, s.b) AS b").append("   FROM (VALUES (1), (2), (3)) t(a) ").append("   FULL OUTER JOIN (VALUES (1, 1), (4, 4)) s(a, b)").append("   ON t.a = s.a AND t.a = s.b) ts ").append("FULL OUTER JOIN (VALUES (2, 2), (5, 5)) r(a, b) ").append("ON ts.a = r.a and ts.b = r.b")
+				.toString(),
                 anyTree(
                         project(
                                 ImmutableMap.of("tsra", expression("coalesce(ra, tsa)"), "tsrb", expression("coalesce(tsb, rb)")),
@@ -123,13 +105,7 @@ public class TestFullOuterJoinWithCoalesce
     @Test
     public void testCoalesceWithManyArgumentsAndGroupBy()
     {
-        assertDistributedPlan("SELECT coalesce(t.a, s.a, r.a) " +
-                        "FROM (VALUES (1), (2), (3)) t(a) " +
-                        "FULL OUTER JOIN (VALUES (1), (4)) s(a) " +
-                        "ON t.a = s.a " +
-                        "FULL OUTER JOIN (VALUES (2), (5)) r(a) " +
-                        "ON t.a = r.a " +
-                        "GROUP BY 1",
+        assertDistributedPlan(new StringBuilder().append("SELECT coalesce(t.a, s.a, r.a) ").append("FROM (VALUES (1), (2), (3)) t(a) ").append("FULL OUTER JOIN (VALUES (1), (4)) s(a) ").append("ON t.a = s.a ").append("FULL OUTER JOIN (VALUES (2), (5)) r(a) ").append("ON t.a = r.a ").append("GROUP BY 1").toString(),
                 anyTree(exchange(
                         REMOTE_STREAMING,
                         REPARTITION,
@@ -154,13 +130,7 @@ public class TestFullOuterJoinWithCoalesce
     @Test
     public void testCoalesceWithNonSymbolArguments()
     {
-        assertDistributedPlan("SELECT coalesce(t.a, s.a + 1, r.a) " +
-                        "FROM (VALUES (1), (2), (3)) t(a) " +
-                        "FULL OUTER JOIN (VALUES (1), (4)) s(a) " +
-                        "ON t.a = s.a " +
-                        "FULL OUTER JOIN (VALUES (2), (5)) r(a) " +
-                        "ON t.a = r.a " +
-                        "GROUP BY 1",
+        assertDistributedPlan(new StringBuilder().append("SELECT coalesce(t.a, s.a + 1, r.a) ").append("FROM (VALUES (1), (2), (3)) t(a) ").append("FULL OUTER JOIN (VALUES (1), (4)) s(a) ").append("ON t.a = s.a ").append("FULL OUTER JOIN (VALUES (2), (5)) r(a) ").append("ON t.a = r.a ").append("GROUP BY 1").toString(),
                 anyTree(exchange(
                         REMOTE_STREAMING,
                         REPARTITION,

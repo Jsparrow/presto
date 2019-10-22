@@ -58,11 +58,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ShardMetadataRecordCursor
         implements RecordCursor
 {
-    private static final String SHARD_UUID = "shard_uuid";
+    private static final Logger logger = LoggerFactory.getLogger(ShardMetadataRecordCursor.class);
+	private static final String SHARD_UUID = "shard_uuid";
     private static final String XXHASH64 = "xxhash64";
     private static final String SCHEMA_NAME = "table_schema";
     private static final String TABLE_NAME = "table_name";
@@ -119,9 +122,7 @@ public class ShardMetadataRecordCursor
 
     private static String constructSqlTemplate(List<String> columnNames, long tableId)
     {
-        return format("SELECT %s\nFROM %s x\n" +
-                        "JOIN shards ON (x.shard_id = shards.shard_id AND shards.table_id = %s)\n" +
-                        "JOIN tables ON (tables.table_id = %s)\n",
+        return format(new StringBuilder().append("SELECT %s\nFROM %s x\n").append("JOIN shards ON (x.shard_id = shards.shard_id AND shards.table_id = %s)\n").append("JOIN tables ON (tables.table_id = %s)\n").toString(),
                 Joiner.on(", ").join(columnNames),
                 shardIndexTable(tableId),
                 tableId,
@@ -133,12 +134,12 @@ public class ShardMetadataRecordCursor
         return ImmutableList.<String>builder()
                 .add("tables.schema_name")
                 .add("tables.table_name")
-                .add("shards" + "." + COLUMNS.get(2).getName())
-                .add("shards" + "." + COLUMNS.get(3).getName())
-                .add("shards" + "." + COLUMNS.get(4).getName())
-                .add("shards" + "." + COLUMNS.get(5).getName())
-                .add("shards" + "." + COLUMNS.get(6).getName())
-                .add("shards" + "." + COLUMNS.get(7).getName())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(2).getName()).toString())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(3).getName()).toString())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(4).getName()).toString())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(5).getName()).toString())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(6).getName()).toString())
+                .add(new StringBuilder().append("shards").append(".").append(COLUMNS.get(7).getName()).toString())
                 .add(MIN_TIMESTAMP)
                 .add(MAX_TIMESTAMP)
                 .add(MIN_DATE)
@@ -255,6 +256,7 @@ public class ShardMetadataRecordCursor
             // do nothing
         }
         catch (SQLException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 

@@ -87,7 +87,7 @@ public class FunctionType
         List<String> names = getTypeParameters().stream()
                 .map(Type::getDisplayName)
                 .collect(toList());
-        return "function<" + String.join(",", names) + ">";
+        return new StringBuilder().append("function<").append(String.join(",", names)).append(">").toString();
     }
 
     @Override

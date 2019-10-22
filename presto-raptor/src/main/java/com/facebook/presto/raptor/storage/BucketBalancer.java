@@ -303,17 +303,17 @@ public class BucketBalancer
         ImmutableMultimap.Builder<Distribution, BucketAssignment> distributionAssignments = ImmutableMultimap.builder();
         ImmutableMap.Builder<Distribution, Long> distributionBucketSize = ImmutableMap.builder();
 
-        for (Distribution distribution : shardManager.getDistributions()) {
+        shardManager.getDistributions().forEach(distribution -> {
             long distributionSize = shardManager.getDistributionSizeInBytes(distribution.getId());
             long bucketSize = (long) (1.0 * distributionSize) / distribution.getBucketCount();
             distributionBucketSize.put(distribution, bucketSize);
 
-            for (BucketNode bucketNode : shardManager.getBucketNodes(distribution.getId())) {
+            shardManager.getBucketNodes(distribution.getId()).forEach(bucketNode -> {
                 String node = bucketNode.getNodeIdentifier();
                 distributionAssignments.put(distribution, new BucketAssignment(distribution.getId(), bucketNode.getBucketNumber(), node));
                 assignedNodeSize.merge(node, bucketSize, Math::addExact);
-            }
-        }
+            });
+        });
 
         return new ClusterState(activeNodes, assignedNodeSize, distributionAssignments.build(), distributionBucketSize.build());
     }

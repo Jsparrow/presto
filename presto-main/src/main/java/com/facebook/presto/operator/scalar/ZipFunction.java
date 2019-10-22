@@ -73,8 +73,8 @@ public final class ZipFunction
                 FunctionKind.SCALAR,
                 typeParameters.stream().map(Signature::typeVariable).collect(toImmutableList()),
                 ImmutableList.of(),
-                parseTypeSignature("array(row(" + join(",", typeParameters) + "))"),
-                typeParameters.stream().map(name -> "array(" + name + ")").map(TypeSignature::parseTypeSignature).collect(toImmutableList()),
+                parseTypeSignature(new StringBuilder().append("array(row(").append(join(",", typeParameters)).append("))").toString()),
+                typeParameters.stream().map(name -> new StringBuilder().append("array(").append(name).append(")").toString()).map(TypeSignature::parseTypeSignature).collect(toImmutableList()),
                 false));
         this.typeParameters = typeParameters;
     }

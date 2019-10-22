@@ -134,16 +134,14 @@ public class VerificationManager
     @PreDestroy
     public void close()
     {
-        for (EventClient eventClient : eventClients) {
-            if (eventClient instanceof Closeable) {
-                try {
-                    ((Closeable) eventClient).close();
-                }
-                catch (IOException e) {
-                    log.error(e);
-                }
-            }
-        }
+        eventClients.stream().filter(eventClient -> eventClient instanceof Closeable).forEach(eventClient -> {
+		    try {
+		        ((Closeable) eventClient).close();
+		    }
+		    catch (IOException e) {
+		        log.error(e);
+		    }
+		});
         executor.shutdownNow();
     }
 
@@ -215,7 +213,7 @@ public class VerificationManager
     private List<SourceQuery> filterQueryType(List<SourceQuery> sourceQueries)
     {
         ImmutableList.Builder<SourceQuery> selected = ImmutableList.builder();
-        for (SourceQuery sourceQuery : sourceQueries) {
+        sourceQueries.forEach(sourceQuery -> {
             try {
                 QueryType controlQueryType = QueryType.of(sqlParser.createStatement(sourceQuery.getControlQuery(), PARSING_OPTIONS));
                 QueryType testQueryType = QueryType.of(sqlParser.createStatement(sourceQuery.getTestQuery(), PARSING_OPTIONS));
@@ -228,7 +226,7 @@ public class VerificationManager
             }
             catch (UnsupportedQueryTypeException ignored) {
             }
-        }
+        });
         List<SourceQuery> selectQueries = selected.build();
         log.info("Filtering query type... Remaining queries: %s", selectQueries.size());
         return selectQueries;
@@ -253,12 +251,12 @@ public class VerificationManager
     private void submit(List<SourceQuery> sourceQueries)
     {
         for (int i = 0; i < suiteRepetitions; i++) {
-            for (SourceQuery sourceQuery : sourceQueries) {
+            sourceQueries.forEach(sourceQuery -> {
                 for (int j = 0; j < queryRepetitions; j++) {
                     Verification verification = verificationFactory.get(this, sourceQuery);
                     completionService.submit(verification::run);
                 }
-            }
+            });
         }
         int queriesSubmitted = sourceQueries.size() * suiteRepetitions * queryRepetitions;
         log.info("Queries submitted: %s", queriesSubmitted);

@@ -36,6 +36,110 @@ public class ExchangeOperator
         implements SourceOperator, Closeable
 {
     public static final ConnectorId REMOTE_CONNECTOR_ID = new ConnectorId("$remote");
+	private final OperatorContext operatorContext;
+	private final PlanNodeId sourceId;
+	private final ExchangeClient exchangeClient;
+	private final PagesSerde serde;
+
+	public ExchangeOperator(
+            OperatorContext operatorContext,
+            PlanNodeId sourceId,
+            PagesSerde serde,
+            ExchangeClient exchangeClient)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.sourceId = requireNonNull(sourceId, "sourceId is null");
+        this.exchangeClient = requireNonNull(exchangeClient, "exchangeClient is null");
+        this.serde = requireNonNull(serde, "serde is null");
+
+        operatorContext.setInfoSupplier(exchangeClient::getStatus);
+    }
+
+	@Override
+    public PlanNodeId getSourceId()
+    {
+        return sourceId;
+    }
+
+	@Override
+    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
+    {
+        requireNonNull(split, "split is null");
+        checkArgument(split.getConnectorId().equals(REMOTE_CONNECTOR_ID), "split is not a remote split");
+
+        RemoteSplit remoteSplit = (RemoteSplit) split.getConnectorSplit();
+        exchangeClient.addLocation(remoteSplit.getLocation(), remoteSplit.getRemoteSourceTaskId());
+
+        return Optional::empty;
+    }
+
+	@Override
+    public void noMoreSplits()
+    {
+        exchangeClient.noMoreLocations();
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        close();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return exchangeClient.isFinished();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        ListenableFuture<?> blocked = exchangeClient.isBlocked();
+        if (blocked.isDone()) {
+            return NOT_BLOCKED;
+        }
+        return blocked;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        SerializedPage page = exchangeClient.pollPage();
+        if (page == null) {
+            return null;
+        }
+
+        operatorContext.recordRawInput(page.getSizeInBytes(), page.getPositionCount());
+
+        Page deserializedPage = serde.deserialize(page);
+        operatorContext.recordProcessedInput(deserializedPage.getSizeInBytes(), page.getPositionCount());
+
+        return deserializedPage;
+    }
+
+	@Override
+    public void close()
+    {
+        exchangeClient.close();
+    }
 
     public static class ExchangeOperatorFactory
             implements SourceOperatorFactory
@@ -86,110 +190,5 @@ public class ExchangeOperator
         {
             closed = true;
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final PlanNodeId sourceId;
-    private final ExchangeClient exchangeClient;
-    private final PagesSerde serde;
-
-    public ExchangeOperator(
-            OperatorContext operatorContext,
-            PlanNodeId sourceId,
-            PagesSerde serde,
-            ExchangeClient exchangeClient)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.sourceId = requireNonNull(sourceId, "sourceId is null");
-        this.exchangeClient = requireNonNull(exchangeClient, "exchangeClient is null");
-        this.serde = requireNonNull(serde, "serde is null");
-
-        operatorContext.setInfoSupplier(exchangeClient::getStatus);
-    }
-
-    @Override
-    public PlanNodeId getSourceId()
-    {
-        return sourceId;
-    }
-
-    @Override
-    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
-    {
-        requireNonNull(split, "split is null");
-        checkArgument(split.getConnectorId().equals(REMOTE_CONNECTOR_ID), "split is not a remote split");
-
-        RemoteSplit remoteSplit = (RemoteSplit) split.getConnectorSplit();
-        exchangeClient.addLocation(remoteSplit.getLocation(), remoteSplit.getRemoteSourceTaskId());
-
-        return Optional::empty;
-    }
-
-    @Override
-    public void noMoreSplits()
-    {
-        exchangeClient.noMoreLocations();
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        close();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return exchangeClient.isFinished();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        ListenableFuture<?> blocked = exchangeClient.isBlocked();
-        if (blocked.isDone()) {
-            return NOT_BLOCKED;
-        }
-        return blocked;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        SerializedPage page = exchangeClient.pollPage();
-        if (page == null) {
-            return null;
-        }
-
-        operatorContext.recordRawInput(page.getSizeInBytes(), page.getPositionCount());
-
-        Page deserializedPage = serde.deserialize(page);
-        operatorContext.recordProcessedInput(deserializedPage.getSizeInBytes(), page.getPositionCount());
-
-        return deserializedPage;
-    }
-
-    @Override
-    public void close()
-    {
-        exchangeClient.close();
     }
 }

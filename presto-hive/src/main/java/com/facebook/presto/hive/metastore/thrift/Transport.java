@@ -31,7 +31,9 @@ import static java.net.Proxy.Type.SOCKS;
 
 public final class Transport
 {
-    public static TTransport create(
+    private Transport() {}
+
+	public static TTransport create(
             HostAndPort address,
             Optional<SSLContext> sslContext,
             Optional<HostAndPort> socksProxy,
@@ -52,9 +54,7 @@ public final class Transport
         }
     }
 
-    private Transport() {}
-
-    private static TTransport createRaw(HostAndPort address, Optional<SSLContext> sslContext, Optional<HostAndPort> socksProxy, int timeoutMillis)
+	private static TTransport createRaw(HostAndPort address, Optional<SSLContext> sslContext, Optional<HostAndPort> socksProxy, int timeoutMillis)
             throws TTransportException
     {
         Proxy proxy = socksProxy
@@ -86,12 +86,12 @@ public final class Transport
         }
     }
 
-    private static TTransportException rewriteException(TTransportException e, HostAndPort address)
+	private static TTransportException rewriteException(TTransportException e, HostAndPort address)
     {
         return new TTransportException(e.getType(), String.format("%s: %s", address, e.getMessage()), e);
     }
 
-    private static class TTransportWrapper
+	private static class TTransportWrapper
             extends TTransport
     {
         private final TTransport transport;

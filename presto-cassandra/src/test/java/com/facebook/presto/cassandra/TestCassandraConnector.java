@@ -70,6 +70,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.apache.commons.lang3.StringUtils;
 
 @Test(singleThreaded = true)
 public class TestCassandraConnector
@@ -122,7 +123,7 @@ public class TestCassandraConnector
         assertInstanceOf(recordSetProvider, CassandraRecordSetProvider.class);
 
         database = keyspace;
-        table = new SchemaTableName(database, TABLE_ALL_TYPES.toLowerCase(ENGLISH));
+        table = new SchemaTableName(database, StringUtils.lowerCase(TABLE_ALL_TYPES, ENGLISH));
         tableUnpartitioned = new SchemaTableName(database, "presto_test_unpartitioned");
         invalidTable = new SchemaTableName(database, "totally_invalid_table_name");
     }
@@ -141,7 +142,7 @@ public class TestCassandraConnector
     public void testGetDatabaseNames()
     {
         List<String> databases = metadata.listSchemaNames(SESSION);
-        assertTrue(databases.contains(database.toLowerCase(ENGLISH)));
+        assertTrue(databases.contains(StringUtils.lowerCase(database, ENGLISH)));
     }
 
     @Test
@@ -197,8 +198,8 @@ public class TestCassandraConnector
                     rowNumber++;
 
                     String keyValue = cursor.getSlice(columnIndex.get("key")).toStringUtf8();
-                    assertTrue(keyValue.startsWith("key "));
-                    int rowId = Integer.parseInt(keyValue.substring(4));
+                    assertTrue(StringUtils.startsWith(keyValue, "key "));
+                    int rowId = Integer.parseInt(StringUtils.substring(keyValue, 4));
 
                     assertEquals(keyValue, String.format("key %d", rowId));
 
@@ -211,7 +212,7 @@ public class TestCassandraConnector
 
                     assertEquals(cursor.getSlice(columnIndex.get("typeuuid")).toStringUtf8(), String.format("00000000-0000-0000-0000-%012d", rowId));
 
-                    assertEquals(cursor.getSlice(columnIndex.get("typetimestamp")).toStringUtf8(), Long.valueOf(DATE.getTime()).toString());
+                    assertEquals(cursor.getSlice(columnIndex.get("typetimestamp")).toStringUtf8(), Long.toString(DATE.getTime()));
 
                     long newCompletedBytes = cursor.getCompletedBytes();
                     assertTrue(newCompletedBytes >= completedBytes);

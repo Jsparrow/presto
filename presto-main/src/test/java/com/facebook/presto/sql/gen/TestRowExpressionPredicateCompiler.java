@@ -42,6 +42,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
+import java.util.Collections;
 
 public class TestRowExpressionPredicateCompiler
 {
@@ -86,7 +87,7 @@ public class TestRowExpressionPredicateCompiler
                 constant(10L, BIGINT));
         Predicate compiledTimesTwo = compiler.compilePredicate(timesTwo).get();
 
-        assertEquals(Arrays.asList(1), Ints.asList(compiledTimesTwo.getInputChannels()));
+        assertEquals(Collections.singletonList(1), Ints.asList(compiledTimesTwo.getInputChannels()));
 
         page = new Page(bBlock);
         assertTrue(compiledTimesTwo.evaluate(SESSION, page, 0));

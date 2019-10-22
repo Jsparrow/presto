@@ -18,7 +18,9 @@ import io.prestodb.tempto.runner.TemptoRunnerCommandLineParser;
 
 public class TemptoProductTestRunner
 {
-    public static void main(String[] args)
+    private TemptoProductTestRunner() {}
+
+	public static void main(String[] args)
     {
         TemptoRunnerCommandLineParser parser = TemptoRunnerCommandLineParser.builder("Presto product tests")
                 .setTestsPackage("com.facebook.presto.tests.*", false)
@@ -26,6 +28,4 @@ public class TemptoProductTestRunner
                 .build();
         TemptoRunner.runTempto(parser, args);
     }
-
-    private TemptoProductTestRunner() {}
 }

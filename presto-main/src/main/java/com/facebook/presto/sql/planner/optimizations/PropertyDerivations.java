@@ -151,7 +151,58 @@ public class PropertyDerivations
         return node.accept(new Visitor(metadata, session, types, parser), inputProperties);
     }
 
-    private static class Visitor
+    static boolean spillPossible(Session session, JoinNode.Type joinType)
+    {
+        if (!SystemSessionProperties.isSpillEnabled(session)) {
+            return false;
+        }
+        switch (joinType) {
+            case INNER:
+            case LEFT:
+                return true;
+            case RIGHT:
+            case FULL:
+                // Currently there is no spill support for outer on the build side.
+                return false;
+            default:
+                throw new IllegalStateException("Unknown join type: " + joinType);
+        }
+    }
+
+	public static Optional<VariableReferenceExpression> filterIfMissing(Collection<VariableReferenceExpression> columns, VariableReferenceExpression column)
+    {
+        if (columns.contains(column)) {
+            return Optional.of(column);
+        }
+
+        return Optional.empty();
+    }
+
+	// Used to filter columns that are not exposed by join node
+    // Or, if they are part of the equalities, to translate them
+    // to the other symbol if that's exposed, instead.
+    public static Optional<VariableReferenceExpression> filterOrRewrite(Collection<VariableReferenceExpression> columns, List<JoinNode.EquiJoinClause> equalities, VariableReferenceExpression column)
+    {
+        // symbol is exposed directly, so no translation needed
+        if (columns.contains(column)) {
+            return Optional.of(column);
+        }
+
+        // if the column is part of the equality conditions and its counterpart
+        // is exposed, use that, instead
+        for (JoinNode.EquiJoinClause equality : equalities) {
+            if (equality.getLeft().equals(column) && columns.contains(equality.getRight())) {
+                return Optional.of(equality.getRight());
+            }
+            else if (equality.getRight().equals(column) && columns.contains(equality.getLeft())) {
+                return Optional.of(equality.getLeft());
+            }
+        }
+
+        return Optional.empty();
+    }
+
+	private static class Visitor
             extends InternalPlanVisitor<ActualProperties, List<ActualProperties>>
     {
         private final Metadata metadata;
@@ -281,19 +332,13 @@ public class PropertyDerivations
         public ActualProperties visitGroupId(GroupIdNode node, List<ActualProperties> inputProperties)
         {
             Map<VariableReferenceExpression, VariableReferenceExpression> inputToOutputMappings = new HashMap<>();
-            for (Map.Entry<VariableReferenceExpression, VariableReferenceExpression> setMapping : node.getGroupingColumns().entrySet()) {
-                if (node.getCommonGroupingColumns().contains(setMapping.getKey())) {
-                    // TODO: Add support for translating a property on a single column to multiple columns
-                    // when GroupIdNode is copying a single input grouping column into multiple output grouping columns (i.e. aliases), this is basically picking one arbitrarily
-                    inputToOutputMappings.putIfAbsent(setMapping.getValue(), setMapping.getKey());
-                }
-            }
+            // TODO: Add support for translating a property on a single column to multiple columns
+			// when GroupIdNode is copying a single input grouping column into multiple output grouping columns (i.e. aliases), this is basically picking one arbitrarily
+			node.getGroupingColumns().entrySet().stream().filter(setMapping -> node.getCommonGroupingColumns().contains(setMapping.getKey())).forEach(setMapping -> inputToOutputMappings.putIfAbsent(setMapping.getValue(), setMapping.getKey()));
 
             // TODO: Add support for translating a property on a single column to multiple columns
-            // this is deliberately placed after the grouping columns, because preserving properties has a bigger perf impact
-            for (VariableReferenceExpression argument : node.getAggregationArguments()) {
-                inputToOutputMappings.putIfAbsent(argument, argument);
-            }
+			// this is deliberately placed after the grouping columns, because preserving properties has a bigger perf impact
+			node.getAggregationArguments().forEach(argument -> inputToOutputMappings.putIfAbsent(argument, argument));
 
             return Iterables.getOnlyElement(inputProperties).translateVariable(column -> Optional.ofNullable(inputToOutputMappings.get(column)));
         }
@@ -323,9 +368,7 @@ public class PropertyDerivations
 
             ImmutableList.Builder<LocalProperty<VariableReferenceExpression>> localProperties = ImmutableList.builder();
             localProperties.add(new GroupingProperty<>(node.getPartitionBy()));
-            for (VariableReferenceExpression column : node.getOrderingScheme().getOrderByVariables()) {
-                localProperties.add(new SortingProperty<>(column, node.getOrderingScheme().getOrdering(column)));
-            }
+            node.getOrderingScheme().getOrderByVariables().forEach(column -> localProperties.add(new SortingProperty<>(column, node.getOrderingScheme().getOrdering(column))));
 
             return ActualProperties.builderFrom(properties)
                     .local(localProperties.build())
@@ -551,11 +594,9 @@ public class PropertyDerivations
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             ImmutableList.Builder<SortingProperty<VariableReferenceExpression>> localProperties = ImmutableList.builder();
-            if (node.getOrderingScheme().isPresent()) {
-                node.getOrderingScheme().get().getOrderByVariables().stream()
-                        .map(column -> new SortingProperty<>(column, node.getOrderingScheme().get().getOrdering(column)))
-                        .forEach(localProperties::add);
-            }
+            node.getOrderingScheme().ifPresent(value -> value.getOrderByVariables().stream()
+			        .map(column -> new SortingProperty<>(column, value.getOrdering(column)))
+			        .forEach(localProperties::add));
 
             // Local exchanges are only created in AddLocalExchanges, at the end of optimization, and
             // local exchanges do not produce all global properties as represented by ActualProperties.
@@ -639,7 +680,7 @@ public class PropertyDerivations
 
             // Extract additional constants
             Map<VariableReferenceExpression, ConstantExpression> constants = new HashMap<>();
-            for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : node.getAssignments().entrySet()) {
+            node.getAssignments().entrySet().forEach(assignment -> {
                 RowExpression expression = assignment.getValue();
                 VariableReferenceExpression output = assignment.getKey();
 
@@ -678,7 +719,7 @@ public class PropertyDerivations
                         constants.put(output, new ConstantExpression(value, expression.getType()));
                     }
                 }
-            }
+            });
             constants.putAll(translatedProperties.getConstants());
 
             return ActualProperties.builderFrom(translatedProperties)
@@ -810,56 +851,5 @@ public class PropertyDerivations
 
             return Optional.of(ImmutableList.copyOf(builder.build()));
         }
-    }
-
-    static boolean spillPossible(Session session, JoinNode.Type joinType)
-    {
-        if (!SystemSessionProperties.isSpillEnabled(session)) {
-            return false;
-        }
-        switch (joinType) {
-            case INNER:
-            case LEFT:
-                return true;
-            case RIGHT:
-            case FULL:
-                // Currently there is no spill support for outer on the build side.
-                return false;
-            default:
-                throw new IllegalStateException("Unknown join type: " + joinType);
-        }
-    }
-
-    public static Optional<VariableReferenceExpression> filterIfMissing(Collection<VariableReferenceExpression> columns, VariableReferenceExpression column)
-    {
-        if (columns.contains(column)) {
-            return Optional.of(column);
-        }
-
-        return Optional.empty();
-    }
-
-    // Used to filter columns that are not exposed by join node
-    // Or, if they are part of the equalities, to translate them
-    // to the other symbol if that's exposed, instead.
-    public static Optional<VariableReferenceExpression> filterOrRewrite(Collection<VariableReferenceExpression> columns, List<JoinNode.EquiJoinClause> equalities, VariableReferenceExpression column)
-    {
-        // symbol is exposed directly, so no translation needed
-        if (columns.contains(column)) {
-            return Optional.of(column);
-        }
-
-        // if the column is part of the equality conditions and its counterpart
-        // is exposed, use that, instead
-        for (JoinNode.EquiJoinClause equality : equalities) {
-            if (equality.getLeft().equals(column) && columns.contains(equality.getRight())) {
-                return Optional.of(equality.getRight());
-            }
-            else if (equality.getRight().equals(column) && columns.contains(equality.getLeft())) {
-                return Optional.of(equality.getLeft());
-            }
-        }
-
-        return Optional.empty();
     }
 }

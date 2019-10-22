@@ -74,15 +74,15 @@ public class AggregationFromAnnotationsParser
         for (Class<?> stateClass : getStateClasses(aggregationDefinition)) {
             Method combineFunction = getCombineFunction(aggregationDefinition, stateClass);
             Optional<Method> aggregationStateSerializerFactory = getAggregationStateSerializerFactory(aggregationDefinition, stateClass);
-            for (Method outputFunction : getOutputFunctions(aggregationDefinition, stateClass)) {
-                for (Method inputFunction : getInputFunctions(aggregationDefinition, stateClass)) {
-                    for (AggregationHeader header : parseHeaders(aggregationDefinition, outputFunction)) {
-                        AggregationImplementation onlyImplementation = parseImplementation(aggregationDefinition, header, stateClass, inputFunction, outputFunction, combineFunction, aggregationStateSerializerFactory);
-                        ParametricImplementationsGroup<AggregationImplementation> implementations = ParametricImplementationsGroup.of(onlyImplementation);
-                        builder.add(new ParametricAggregation(implementations.getSignature(), header, implementations));
-                    }
-                }
-            }
+            getOutputFunctions(aggregationDefinition, stateClass).forEach(outputFunction -> getInputFunctions(aggregationDefinition, stateClass)
+					.forEach(inputFunction -> parseHeaders(aggregationDefinition, outputFunction).forEach(header -> {
+						AggregationImplementation onlyImplementation = parseImplementation(aggregationDefinition,
+								header, stateClass, inputFunction, outputFunction, combineFunction,
+								aggregationStateSerializerFactory);
+						ParametricImplementationsGroup<AggregationImplementation> implementations = ParametricImplementationsGroup
+								.of(onlyImplementation);
+						builder.add(new ParametricAggregation(implementations.getSignature(), header, implementations));
+					})));
         }
 
         return builder.build();
@@ -97,10 +97,7 @@ public class AggregationFromAnnotationsParser
             Method combineFunction = getCombineFunction(aggregationDefinition, stateClass);
             Optional<Method> aggregationStateSerializerFactory = getAggregationStateSerializerFactory(aggregationDefinition, stateClass);
             Method outputFunction = getOnlyElement(getOutputFunctions(aggregationDefinition, stateClass));
-            for (Method inputFunction : getInputFunctions(aggregationDefinition, stateClass)) {
-                AggregationImplementation implementation = parseImplementation(aggregationDefinition, header, stateClass, inputFunction, outputFunction, combineFunction, aggregationStateSerializerFactory);
-                implementationsBuilder.addImplementation(implementation);
-            }
+            getInputFunctions(aggregationDefinition, stateClass).stream().map(inputFunction -> parseImplementation(aggregationDefinition, header, stateClass, inputFunction, outputFunction, combineFunction, aggregationStateSerializerFactory)).forEach(implementationsBuilder::addImplementation);
         }
 
         ParametricImplementationsGroup<AggregationImplementation> implementations = implementationsBuilder.build();
@@ -208,13 +205,13 @@ public class AggregationFromAnnotationsParser
     private static Set<Class<?>> getStateClasses(Class<?> clazz)
     {
         ImmutableSet.Builder<Class<?>> builder = ImmutableSet.builder();
-        for (Method inputFunction : FunctionsParserHelper.findPublicStaticMethodsWithAnnotation(clazz, InputFunction.class)) {
+        FunctionsParserHelper.findPublicStaticMethodsWithAnnotation(clazz, InputFunction.class).forEach(inputFunction -> {
             checkArgument(inputFunction.getParameterTypes().length > 0, "Input function has no parameters");
             Class<?> stateClass = AggregationImplementation.Parser.findAggregationStateParamType(inputFunction);
 
             checkArgument(AccumulatorState.class.isAssignableFrom(stateClass), "stateClass is not a subclass of AccumulatorState");
             builder.add(stateClass);
-        }
+        });
         ImmutableSet<Class<?>> stateClasses = builder.build();
         checkArgument(!stateClasses.isEmpty(), "No input functions found");
 

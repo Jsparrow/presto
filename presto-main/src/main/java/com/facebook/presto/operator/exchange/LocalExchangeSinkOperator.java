@@ -34,7 +34,69 @@ import static java.util.Objects.requireNonNull;
 public class LocalExchangeSinkOperator
         implements Operator
 {
-    public static class LocalExchangeSinkOperatorFactory
+    private final OperatorContext operatorContext;
+	private final LocalExchangeSink sink;
+	private final Function<Page, Page> pagePreprocessor;
+
+	LocalExchangeSinkOperator(OperatorContext operatorContext, LocalExchangeSink sink, Function<Page, Page> pagePreprocessor)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.sink = requireNonNull(sink, "sink is null");
+        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        sink.finish();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return sink.isFinished();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return sink.waitForWriting();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !isFinished() && isBlocked().isDone();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        page = pagePreprocessor.apply(page);
+        sink.addPage(page);
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	@Override
+    public void close()
+    {
+        finish();
+    }
+
+	public static class LocalExchangeSinkOperatorFactory
             implements OperatorFactory, LocalPlannerAware
     {
         private final LocalExchangeFactory localExchangeFactory;
@@ -71,10 +133,11 @@ public class LocalExchangeSinkOperator
         @Override
         public void noMoreOperators()
         {
-            if (!closed) {
-                closed = true;
-                localExchangeFactory.closeSinks(sinkFactoryId);
-            }
+            if (closed) {
+				return;
+			}
+			closed = true;
+			localExchangeFactory.closeSinks(sinkFactoryId);
         }
 
         @Override
@@ -94,67 +157,5 @@ public class LocalExchangeSinkOperator
         {
             localExchangeFactory.noMoreSinkFactories();
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalExchangeSink sink;
-    private final Function<Page, Page> pagePreprocessor;
-
-    LocalExchangeSinkOperator(OperatorContext operatorContext, LocalExchangeSink sink, Function<Page, Page> pagePreprocessor)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.sink = requireNonNull(sink, "sink is null");
-        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        sink.finish();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return sink.isFinished();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return sink.waitForWriting();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !isFinished() && isBlocked().isDone();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        page = pagePreprocessor.apply(page);
-        sink.addPage(page);
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
-    }
-
-    @Override
-    public void close()
-    {
-        finish();
     }
 }

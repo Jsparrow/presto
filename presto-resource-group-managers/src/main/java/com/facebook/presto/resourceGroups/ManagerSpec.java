@@ -42,10 +42,10 @@ public class ManagerSpec
         this.selectors = ImmutableList.copyOf(requireNonNull(selectors, "selectors is null"));
         this.cpuQuotaPeriod = requireNonNull(cpuQuotaPeriod, "cpuQuotaPeriod is null");
         Set<ResourceGroupNameTemplate> names = new HashSet<>();
-        for (ResourceGroupSpec group : rootGroups) {
+        rootGroups.forEach(group -> {
             checkArgument(!names.contains(group.getName()), "Duplicated root group: %s", group.getName());
             names.add(group.getName());
-        }
+        });
     }
 
     public List<ResourceGroupSpec> getRootGroups()

@@ -44,9 +44,7 @@ public class MongoPageSourceProvider
         MongoSplit mongodbSplit = (MongoSplit) split;
 
         ImmutableList.Builder<MongoColumnHandle> handles = ImmutableList.builder();
-        for (ColumnHandle handle : requireNonNull(columns, "columns is null")) {
-            handles.add((MongoColumnHandle) handle);
-        }
+        requireNonNull(columns, "columns is null").forEach(handle -> handles.add((MongoColumnHandle) handle));
 
         return new MongoPageSource(mongoSession, mongodbSplit, handles.build());
     }

@@ -136,11 +136,11 @@ public class SymbolMapper
         // SymbolMapper inlines symbol with multiple level reference (SymbolInliner only inline single level).
         ImmutableList.Builder<VariableReferenceExpression> orderBy = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, SortOrder> ordering = ImmutableMap.builder();
-        for (VariableReferenceExpression variable : orderingScheme.getOrderByVariables()) {
+        orderingScheme.getOrderByVariables().forEach(variable -> {
             VariableReferenceExpression translated = map(variable);
             orderBy.add(translated);
             ordering.put(translated, orderingScheme.getOrdering(variable));
-        }
+        });
 
         ImmutableMap<VariableReferenceExpression, SortOrder> orderingMap = ordering.build();
         return new OrderingScheme(orderBy.build().stream().map(variable -> new Ordering(variable, orderingMap.get(variable))).collect(toImmutableList()));
@@ -159,9 +159,7 @@ public class SymbolMapper
     private AggregationNode map(AggregationNode node, PlanNode source, PlanNodeId newNodeId)
     {
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> aggregations = ImmutableMap.builder();
-        for (Entry<VariableReferenceExpression, Aggregation> entry : node.getAggregations().entrySet()) {
-            aggregations.put(map(entry.getKey()), map(entry.getValue()));
-        }
+        node.getAggregations().entrySet().forEach(entry -> aggregations.put(map(entry.getKey()), map(entry.getValue())));
 
         return new AggregationNode(
                 newNodeId,
@@ -196,14 +194,14 @@ public class SymbolMapper
         ImmutableList.Builder<VariableReferenceExpression> variables = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, SortOrder> orderings = ImmutableMap.builder();
         Set<VariableReferenceExpression> seenCanonicals = new HashSet<>(node.getOrderingScheme().getOrderByVariables().size());
-        for (VariableReferenceExpression variable : node.getOrderingScheme().getOrderByVariables()) {
+        node.getOrderingScheme().getOrderByVariables().forEach(variable -> {
             VariableReferenceExpression canonical = map(variable);
             if (seenCanonicals.add(canonical)) {
                 seenCanonicals.add(canonical);
                 variables.add(canonical);
                 orderings.put(canonical, node.getOrderingScheme().getOrdering(variable));
             }
-        }
+        });
 
         ImmutableMap<VariableReferenceExpression, SortOrder> orderingMap = orderings.build();
         return new TopNNode(
@@ -298,12 +296,11 @@ public class SymbolMapper
     {
         Set<Symbol> added = new HashSet<>();
         ImmutableList.Builder<Symbol> builder = ImmutableList.builder();
-        for (Symbol symbol : outputs) {
-            Symbol canonical = map(symbol);
-            if (added.add(canonical)) {
+        outputs.stream().map(this::map).forEach(canonical -> {
+			if (added.add(canonical)) {
                 builder.add(canonical);
             }
-        }
+		});
         return builder.build();
     }
 
@@ -311,12 +308,11 @@ public class SymbolMapper
     {
         Set<VariableReferenceExpression> added = new HashSet<>();
         ImmutableList.Builder<VariableReferenceExpression> builder = ImmutableList.builder();
-        for (VariableReferenceExpression variable : outputs) {
-            VariableReferenceExpression canonical = map(variable);
-            if (added.add(canonical)) {
+        outputs.stream().map(this::map).forEach(canonical -> {
+			if (added.add(canonical)) {
                 builder.add(canonical);
             }
-        }
+		});
         return builder.build();
     }
 

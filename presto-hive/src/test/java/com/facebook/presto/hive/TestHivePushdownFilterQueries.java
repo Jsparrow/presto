@@ -37,40 +37,10 @@ public class TestHivePushdownFilterQueries
 {
     private static final Pattern ARRAY_SUBSCRIPT_PATTERN = Pattern.compile("([a-z_+]+)((\\[[0-9]+\\])+)");
 
-    private static final String WITH_LINEITEM_EX = "WITH lineitem_ex AS (\n" +
-            "SELECT linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, \n" +
-            "   CASE WHEN linenumber % 5 = 0 THEN null ELSE shipmode = 'AIR' END AS ship_by_air, \n" +
-            "   CASE WHEN linenumber % 7 = 0 THEN null ELSE returnflag = 'R' END AS is_returned, \n" +
-            "   CASE WHEN linenumber % 4 = 0 THEN null ELSE CAST(day(shipdate) AS TINYINT) END AS ship_day, " +
-            "   CASE WHEN linenumber % 6 = 0 THEN null ELSE CAST(month(shipdate) AS TINYINT) END AS ship_month, " +
-            "   CASE WHEN linenumber % 3 = 0 THEN null ELSE CAST(shipdate AS TIMESTAMP) END AS ship_timestamp, \n" +
-            "   CASE WHEN orderkey % 3 = 0 THEN null ELSE CAST(commitdate AS TIMESTAMP) END AS commit_timestamp, \n" +
-            "   CASE WHEN orderkey % 5 = 0 THEN null ELSE CAST(discount AS REAL) END AS discount_real, \n" +
-            "   CASE WHEN orderkey % 43  = 0 THEN null ELSE discount END as discount, \n" +
-            "   CASE WHEN orderkey % 7 = 0 THEN null ELSE CAST(tax AS REAL) END AS tax_real, \n" +
-            "   CASE WHEN linenumber % 2 = 0 THEN null ELSE (CAST(day(shipdate) AS TINYINT) , CAST(month(shipdate) AS TINYINT)) END AS ship_day_month, " +
-            "   CASE WHEN orderkey % 37 = 0 THEN null ELSE CAST(discount AS DECIMAL(20, 8)) END AS discount_long_decimal, " +
-            "   CASE WHEN orderkey % 41 = 0 THEN null ELSE CAST(tax AS DECIMAL(3, 2)) END AS tax_short_decimal, " +
-            "   CASE WHEN orderkey % 43 = 0 THEN null ELSE (CAST(discount AS DECIMAL(20, 8)), CAST(tax AS DECIMAL(20, 8))) END AS long_decimals, " +
-            "   CASE WHEN orderkey % 11 = 0 THEN null ELSE (orderkey, partkey, suppkey) END AS keys, \n" +
-            "   CASE WHEN orderkey % 41 = 0 THEN null ELSE (extendedprice, discount, tax) END AS doubles, \n" +
-            "   CASE WHEN orderkey % 13 = 0 THEN null ELSE ((orderkey, partkey), (suppkey,), CASE WHEN orderkey % 17 = 0 THEN null ELSE (orderkey, partkey) END) END AS nested_keys, \n" +
-            "   CASE WHEN orderkey % 17 = 0 THEN null ELSE (shipmode = 'AIR', returnflag = 'R') END as flags, \n" +
-            "   CASE WHEN orderkey % 19 = 0 THEN null ELSE (CAST(discount AS REAL), CAST(tax AS REAL)) END as reals, \n" +
-            "   CASE WHEN orderkey % 23 = 0 THEN null ELSE (orderkey, linenumber, (CAST(day(shipdate) as TINYINT), CAST(month(shipdate) AS TINYINT), CAST(year(shipdate) AS INTEGER))) END AS info, \n" +
-            "   CASE WHEN orderkey % 31 = 0 THEN null ELSE (" +
-            "       (CAST(day(shipdate) AS TINYINT), CAST(month(shipdate) AS TINYINT), CAST(year(shipdate) AS INTEGER)), " +
-            "       (CAST(day(commitdate) AS TINYINT), CAST(month(commitdate) AS TINYINT), CAST(year(commitdate) AS INTEGER)), " +
-            "       (CAST(day(receiptdate) AS TINYINT), CAST(month(receiptdate) AS TINYINT), CAST(year(receiptdate) AS INTEGER))) END AS dates, \n" +
-            "   CASE WHEN orderkey % 37 = 0 THEN null ELSE (CAST(shipdate AS TIMESTAMP), CAST(commitdate AS TIMESTAMP)) END AS timestamps, \n" +
-            "   CASE WHEN orderkey % 43 = 0 THEN null ELSE comment END AS comment, \n" +
-            "   CASE WHEN orderkey % 43 = 0 THEN null ELSE upper(comment) END AS uppercase_comment, \n" +
-            "   CAST('' as VARBINARY) AS empty_comment, \n" +
-            "   CASE WHEN orderkey % 47 = 0 THEN null ELSE CAST(comment AS CHAR(5)) END AS fixed_comment, \n" +
-            "   CASE WHEN orderkey % 49 = 0 THEN null ELSE (CAST(comment AS CHAR(4)), CAST(comment AS CHAR(3)), CAST(SUBSTR(comment,length(comment) - 4) AS CHAR(4))) END AS char_array, \n" +
-            "   CASE WHEN orderkey % 49 = 0 THEN null ELSE (comment, comment) END AS varchar_array \n" +
-
-            "FROM lineitem)\n";
+    private static final String WITH_LINEITEM_EX = new StringBuilder().append("WITH lineitem_ex AS (\n").append("SELECT linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, \n").append("   CASE WHEN linenumber % 5 = 0 THEN null ELSE shipmode = 'AIR' END AS ship_by_air, \n").append("   CASE WHEN linenumber % 7 = 0 THEN null ELSE returnflag = 'R' END AS is_returned, \n").append("   CASE WHEN linenumber % 4 = 0 THEN null ELSE CAST(day(shipdate) AS TINYINT) END AS ship_day, ").append("   CASE WHEN linenumber % 6 = 0 THEN null ELSE CAST(month(shipdate) AS TINYINT) END AS ship_month, ").append("   CASE WHEN linenumber % 3 = 0 THEN null ELSE CAST(shipdate AS TIMESTAMP) END AS ship_timestamp, \n").append("   CASE WHEN orderkey % 3 = 0 THEN null ELSE CAST(commitdate AS TIMESTAMP) END AS commit_timestamp, \n")
+			.append("   CASE WHEN orderkey % 5 = 0 THEN null ELSE CAST(discount AS REAL) END AS discount_real, \n").append("   CASE WHEN orderkey % 43  = 0 THEN null ELSE discount END as discount, \n").append("   CASE WHEN orderkey % 7 = 0 THEN null ELSE CAST(tax AS REAL) END AS tax_real, \n").append("   CASE WHEN linenumber % 2 = 0 THEN null ELSE (CAST(day(shipdate) AS TINYINT) , CAST(month(shipdate) AS TINYINT)) END AS ship_day_month, ").append("   CASE WHEN orderkey % 37 = 0 THEN null ELSE CAST(discount AS DECIMAL(20, 8)) END AS discount_long_decimal, ").append("   CASE WHEN orderkey % 41 = 0 THEN null ELSE CAST(tax AS DECIMAL(3, 2)) END AS tax_short_decimal, ").append("   CASE WHEN orderkey % 43 = 0 THEN null ELSE (CAST(discount AS DECIMAL(20, 8)), CAST(tax AS DECIMAL(20, 8))) END AS long_decimals, ").append("   CASE WHEN orderkey % 11 = 0 THEN null ELSE (orderkey, partkey, suppkey) END AS keys, \n").append("   CASE WHEN orderkey % 41 = 0 THEN null ELSE (extendedprice, discount, tax) END AS doubles, \n")
+			.append("   CASE WHEN orderkey % 13 = 0 THEN null ELSE ((orderkey, partkey), (suppkey,), CASE WHEN orderkey % 17 = 0 THEN null ELSE (orderkey, partkey) END) END AS nested_keys, \n").append("   CASE WHEN orderkey % 17 = 0 THEN null ELSE (shipmode = 'AIR', returnflag = 'R') END as flags, \n").append("   CASE WHEN orderkey % 19 = 0 THEN null ELSE (CAST(discount AS REAL), CAST(tax AS REAL)) END as reals, \n").append("   CASE WHEN orderkey % 23 = 0 THEN null ELSE (orderkey, linenumber, (CAST(day(shipdate) as TINYINT), CAST(month(shipdate) AS TINYINT), CAST(year(shipdate) AS INTEGER))) END AS info, \n").append("   CASE WHEN orderkey % 31 = 0 THEN null ELSE (").append("       (CAST(day(shipdate) AS TINYINT), CAST(month(shipdate) AS TINYINT), CAST(year(shipdate) AS INTEGER)), ").append("       (CAST(day(commitdate) AS TINYINT), CAST(month(commitdate) AS TINYINT), CAST(year(commitdate) AS INTEGER)), ").append("       (CAST(day(receiptdate) AS TINYINT), CAST(month(receiptdate) AS TINYINT), CAST(year(receiptdate) AS INTEGER))) END AS dates, \n").append("   CASE WHEN orderkey % 37 = 0 THEN null ELSE (CAST(shipdate AS TIMESTAMP), CAST(commitdate AS TIMESTAMP)) END AS timestamps, \n")
+			.append("   CASE WHEN orderkey % 43 = 0 THEN null ELSE comment END AS comment, \n").append("   CASE WHEN orderkey % 43 = 0 THEN null ELSE upper(comment) END AS uppercase_comment, \n").append("   CAST('' as VARBINARY) AS empty_comment, \n").append("   CASE WHEN orderkey % 47 = 0 THEN null ELSE CAST(comment AS CHAR(5)) END AS fixed_comment, \n").append("   CASE WHEN orderkey % 49 = 0 THEN null ELSE (CAST(comment AS CHAR(4)), CAST(comment AS CHAR(3)), CAST(SUBSTR(comment,length(comment) - 4) AS CHAR(4))) END AS char_array, \n").append("   CASE WHEN orderkey % 49 = 0 THEN null ELSE (comment, comment) END AS varchar_array \n").append("FROM lineitem)\n").toString();
 
     protected TestHivePushdownFilterQueries()
     {
@@ -87,39 +57,11 @@ public class TestHivePushdownFilterQueries
                 Optional.empty());
 
         queryRunner.execute(noPushdownFilter(queryRunner.getDefaultSession()),
-                "CREATE TABLE lineitem_ex (linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, ship_by_air, is_returned, ship_day, ship_month, ship_timestamp, commit_timestamp, discount_real, discount, tax_real, ship_day_month, discount_long_decimal, tax_short_decimal, long_decimals, keys, doubles, nested_keys, flags, reals, info, dates, timestamps, comment, uppercase_comment, empty_comment, fixed_comment, char_array, varchar_array) AS " +
-                        "SELECT linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, " +
-                        "   IF (linenumber % 5 = 0, null, shipmode = 'AIR') AS ship_by_air, " +
-                        "   IF (linenumber % 7 = 0, null, returnflag = 'R') AS is_returned, " +
-                        "   IF (linenumber % 4 = 0, null, CAST(day(shipdate) AS TINYINT)) AS ship_day, " +
-                        "   IF (linenumber % 6 = 0, null, CAST(month(shipdate) AS TINYINT)) AS ship_month, " +
-                        "   IF (linenumber % 3 = 0, null, CAST(shipdate AS TIMESTAMP)) AS ship_timestamp, " +
-                        "   IF (orderkey % 3 = 0, null, CAST(commitdate AS TIMESTAMP)) AS commit_timestamp, " +
-                        "   IF (orderkey % 5 = 0, null, CAST(discount AS REAL)) AS discount_real, " +
-                        "   IF (orderkey % 43 = 0, null, discount) AS discount, " +
-                        "   IF (orderkey % 7 = 0, null, CAST(tax AS REAL)) AS tax_real, " +
-                        "   IF (linenumber % 2 = 0, null, ARRAY[CAST(day(shipdate) AS TINYINT), CAST(month(shipdate) AS TINYINT)]) AS ship_day_month, " +
-                        "   IF (orderkey % 37 = 0, null, CAST(discount AS DECIMAL(20, 8))) AS discount_long_decimal, " +
-                        "   IF (orderkey % 41 = 0, null, CAST(tax AS DECIMAL(3, 2))) AS tax_short_decimal, " +
-                        "   IF (orderkey % 43 = 0, null, ARRAY[CAST(discount AS DECIMAL(20, 8)), CAST(tax AS DECIMAL(20, 8))]) AS long_decimals, " +
-                        "   IF (orderkey % 11 = 0, null, ARRAY[orderkey, partkey, suppkey]) AS keys, " +
-                        "   IF (orderkey % 41 = 0, null, ARRAY[extendedprice, discount, tax]) AS doubles, " +
-                        "   IF (orderkey % 13 = 0, null, ARRAY[ARRAY[orderkey, partkey], ARRAY[suppkey], IF (orderkey % 17 = 0, null, ARRAY[orderkey, partkey])]) AS nested_keys, " +
-                        "   IF (orderkey % 17 = 0, null, ARRAY[shipmode = 'AIR', returnflag = 'R']) AS flags, " +
-                        "   IF (orderkey % 19 = 0, null, ARRAY[CAST(discount AS REAL), CAST(tax AS REAL)]), " +
-                        "   IF (orderkey % 23 = 0, null, CAST(ROW(orderkey, linenumber, ROW(day(shipdate), month(shipdate), year(shipdate))) AS ROW(orderkey BIGINT, linenumber INTEGER, shipdate ROW(ship_day TINYINT, ship_month TINYINT, ship_year INTEGER)))), " +
-                        "   IF (orderkey % 31 = 0, NULL, ARRAY[" +
-                        "       CAST(ROW(day(shipdate), month(shipdate), year(shipdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER)), " +
-                        "       CAST(ROW(day(commitdate), month(commitdate), year(commitdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER)), " +
-                        "       CAST(ROW(day(receiptdate), month(receiptdate), year(receiptdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER))]), " +
-                        "   IF (orderkey % 37 = 0, NULL, ARRAY[CAST(shipdate AS TIMESTAMP), CAST(commitdate AS TIMESTAMP)]) AS timestamps, " +
-                        "   IF (orderkey % 43 = 0, NULL, comment) AS comment, " +
-                        "   IF (orderkey % 43 = 0, NULL, upper(comment)) AS uppercase_comment, " +
-                        "   CAST('' as VARBINARY) AS empty_comment, \n" +
-                        "   IF (orderkey % 47 = 0, NULL, CAST(comment AS CHAR(5))) AS fixed_comment, " +
-                        "   IF (orderkey % 49 = 0, NULL, ARRAY[CAST(comment AS CHAR(4)), CAST(comment AS CHAR(3)), CAST(SUBSTR(comment,length(comment) - 4) AS CHAR(4))]) AS char_array, " +
-                        "   IF (orderkey % 49 = 0, NULL, ARRAY[comment, comment]) AS varchar_array " +
-                        "FROM lineitem");
+                new StringBuilder().append("CREATE TABLE lineitem_ex (linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, ship_by_air, is_returned, ship_day, ship_month, ship_timestamp, commit_timestamp, discount_real, discount, tax_real, ship_day_month, discount_long_decimal, tax_short_decimal, long_decimals, keys, doubles, nested_keys, flags, reals, info, dates, timestamps, comment, uppercase_comment, empty_comment, fixed_comment, char_array, varchar_array) AS ").append("SELECT linenumber, orderkey, partkey, suppkey, quantity, extendedprice, tax, shipinstruct, shipmode, ").append("   IF (linenumber % 5 = 0, null, shipmode = 'AIR') AS ship_by_air, ").append("   IF (linenumber % 7 = 0, null, returnflag = 'R') AS is_returned, ").append("   IF (linenumber % 4 = 0, null, CAST(day(shipdate) AS TINYINT)) AS ship_day, ").append("   IF (linenumber % 6 = 0, null, CAST(month(shipdate) AS TINYINT)) AS ship_month, ").append("   IF (linenumber % 3 = 0, null, CAST(shipdate AS TIMESTAMP)) AS ship_timestamp, ")
+						.append("   IF (orderkey % 3 = 0, null, CAST(commitdate AS TIMESTAMP)) AS commit_timestamp, ").append("   IF (orderkey % 5 = 0, null, CAST(discount AS REAL)) AS discount_real, ").append("   IF (orderkey % 43 = 0, null, discount) AS discount, ").append("   IF (orderkey % 7 = 0, null, CAST(tax AS REAL)) AS tax_real, ").append("   IF (linenumber % 2 = 0, null, ARRAY[CAST(day(shipdate) AS TINYINT), CAST(month(shipdate) AS TINYINT)]) AS ship_day_month, ").append("   IF (orderkey % 37 = 0, null, CAST(discount AS DECIMAL(20, 8))) AS discount_long_decimal, ").append("   IF (orderkey % 41 = 0, null, CAST(tax AS DECIMAL(3, 2))) AS tax_short_decimal, ").append("   IF (orderkey % 43 = 0, null, ARRAY[CAST(discount AS DECIMAL(20, 8)), CAST(tax AS DECIMAL(20, 8))]) AS long_decimals, ")
+						.append("   IF (orderkey % 11 = 0, null, ARRAY[orderkey, partkey, suppkey]) AS keys, ").append("   IF (orderkey % 41 = 0, null, ARRAY[extendedprice, discount, tax]) AS doubles, ").append("   IF (orderkey % 13 = 0, null, ARRAY[ARRAY[orderkey, partkey], ARRAY[suppkey], IF (orderkey % 17 = 0, null, ARRAY[orderkey, partkey])]) AS nested_keys, ").append("   IF (orderkey % 17 = 0, null, ARRAY[shipmode = 'AIR', returnflag = 'R']) AS flags, ").append("   IF (orderkey % 19 = 0, null, ARRAY[CAST(discount AS REAL), CAST(tax AS REAL)]), ").append("   IF (orderkey % 23 = 0, null, CAST(ROW(orderkey, linenumber, ROW(day(shipdate), month(shipdate), year(shipdate))) AS ROW(orderkey BIGINT, linenumber INTEGER, shipdate ROW(ship_day TINYINT, ship_month TINYINT, ship_year INTEGER)))), ").append("   IF (orderkey % 31 = 0, NULL, ARRAY[").append("       CAST(ROW(day(shipdate), month(shipdate), year(shipdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER)), ")
+						.append("       CAST(ROW(day(commitdate), month(commitdate), year(commitdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER)), ").append("       CAST(ROW(day(receiptdate), month(receiptdate), year(receiptdate)) AS ROW(day TINYINT, month TINYINT, year INTEGER))]), ").append("   IF (orderkey % 37 = 0, NULL, ARRAY[CAST(shipdate AS TIMESTAMP), CAST(commitdate AS TIMESTAMP)]) AS timestamps, ").append("   IF (orderkey % 43 = 0, NULL, comment) AS comment, ").append("   IF (orderkey % 43 = 0, NULL, upper(comment)) AS uppercase_comment, ").append("   CAST('' as VARBINARY) AS empty_comment, \n").append("   IF (orderkey % 47 = 0, NULL, CAST(comment AS CHAR(5))) AS fixed_comment, ").append("   IF (orderkey % 49 = 0, NULL, ARRAY[CAST(comment AS CHAR(4)), CAST(comment AS CHAR(3)), CAST(SUBSTR(comment,length(comment) - 4) AS CHAR(4))]) AS char_array, ")
+						.append("   IF (orderkey % 49 = 0, NULL, ARRAY[comment, comment]) AS varchar_array ").append("FROM lineitem").toString());
         return queryRunner;
     }
 
@@ -274,12 +216,7 @@ public class TestHivePushdownFilterQueries
     @Test
     public void testMaps()
     {
-        getQueryRunner().execute("CREATE TABLE test_maps AS " +
-                "SELECT orderkey, " +
-                "   linenumber, " +
-                "   IF (keys IS NULL, null, MAP(ARRAY[1, 2, 3], keys)) AS map_keys, " +
-                "   IF (flags IS NULL, null, MAP(ARRAY[1, 2], flags)) AS map_flags " +
-                "FROM lineitem_ex");
+        getQueryRunner().execute(new StringBuilder().append("CREATE TABLE test_maps AS ").append("SELECT orderkey, ").append("   linenumber, ").append("   IF (keys IS NULL, null, MAP(ARRAY[1, 2, 3], keys)) AS map_keys, ").append("   IF (flags IS NULL, null, MAP(ARRAY[1, 2], flags)) AS map_flags ").append("FROM lineitem_ex").toString());
 
         Function<String, String> rewriter = query -> query.replaceAll("map_keys", "keys")
                 .replaceAll("map_flags", "flags")
@@ -364,10 +301,7 @@ public class TestHivePushdownFilterQueries
         assertFilterProject("trim(char_array[1]) = char_array[2]", "count(*)");
         assertFilterProject("char_array[1] IN ('along') and shipinstruct IN ('NONE')", "char_array");
         assertFilterProject("length(varchar_array[1]) > 10", "varchar_array");
-        assertFilterProject("shipmode in ('AIR', 'MAIL', 'RAIL')\n" +
-                "AND shipinstruct in ('TAKE BACK RETURN', 'DELIVER IN PERSON')\n" +
-                "AND substr(shipinstruct, 2, 1) = substr(shipmode, 2, 1)\n" +
-                "AND shipmode = if(linenumber % 2 = 0, 'RAIL', 'MAIL')", "orderkey");
+        assertFilterProject(new StringBuilder().append("shipmode in ('AIR', 'MAIL', 'RAIL')\n").append("AND shipinstruct in ('TAKE BACK RETURN', 'DELIVER IN PERSON')\n").append("AND substr(shipinstruct, 2, 1) = substr(shipmode, 2, 1)\n").append("AND shipmode = if(linenumber % 2 = 0, 'RAIL', 'MAIL')").toString(), "orderkey");
 
         assertFilterProject("varchar_array[1] BETWEEN 'd' AND 'f'", "orderkey");
         assertFilterProject("comment between 'd' and 'f' AND uppercase_comment between 'D' and 'E' and length(comment) % 2  = linenumber % 2 and length(uppercase_comment) % 2  = linenumber % 2", "orderkey");
@@ -444,9 +378,7 @@ public class TestHivePushdownFilterQueries
     @Test
     public void testArrayOfMaps()
     {
-        getQueryRunner().execute("CREATE TABLE test_arrays_of_maps AS\n" +
-                "SELECT orderkey, ARRAY[MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]), MAP(ARRAY[1, 2, 3], ARRAY[orderkey + 1, partkey + 1, suppkey + 1])] as array_of_maps\n" +
-                "FROM lineitem");
+        getQueryRunner().execute(new StringBuilder().append("CREATE TABLE test_arrays_of_maps AS\n").append("SELECT orderkey, ARRAY[MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]), MAP(ARRAY[1, 2, 3], ARRAY[orderkey + 1, partkey + 1, suppkey + 1])] as array_of_maps\n").append("FROM lineitem").toString());
 
         try {
             assertQuery("SELECT t.maps[1] FROM test_arrays_of_maps CROSS JOIN UNNEST(array_of_maps) AS t(maps)", "SELECT orderkey FROM lineitem UNION ALL SELECT orderkey + 1 FROM lineitem");
@@ -461,10 +393,7 @@ public class TestHivePushdownFilterQueries
     @Test
     public void testMapsOfArrays()
     {
-        getQueryRunner().execute("CREATE TABLE test_maps_of_arrays AS\n" +
-                "SELECT orderkey, map_from_entries(array_agg(row(linenumber, array[quantity, discount, tax]))) items\n" +
-                "FROM lineitem\n" +
-                "GROUP BY 1");
+        getQueryRunner().execute(new StringBuilder().append("CREATE TABLE test_maps_of_arrays AS\n").append("SELECT orderkey, map_from_entries(array_agg(row(linenumber, array[quantity, discount, tax]))) items\n").append("FROM lineitem\n").append("GROUP BY 1").toString());
 
         try {
             assertQuery("SELECT t.doubles[2] FROM test_maps_of_arrays CROSS JOIN UNNEST(items) AS t(linenumber, doubles)", "SELECT discount FROM lineitem");
@@ -591,12 +520,7 @@ public class TestHivePushdownFilterQueries
     {
         // Tests composing two pushdowns each with a range filter and filter function.
         assertQuery(
-                "WITH data AS (" +
-                "    SELECT l.suppkey, l.linenumber, l.shipmode, MAX(o.orderdate)" +
-                "    FROM lineitem l,  orders o WHERE" +
-                "        o.orderkey = l.orderkey AND linenumber IN (2, 3, 4, 6) AND shipmode LIKE '%AIR%'" +
-                "        GROUP BY l.suppkey, l.linenumber, l.shipmode)" +
-                "SELECT COUNT(*) FROM data WHERE suppkey BETWEEN 10 AND 30 AND shipmode LIKE '%REG%'");
+                new StringBuilder().append("WITH data AS (").append("    SELECT l.suppkey, l.linenumber, l.shipmode, MAX(o.orderdate)").append("    FROM lineitem l,  orders o WHERE").append("        o.orderkey = l.orderkey AND linenumber IN (2, 3, 4, 6) AND shipmode LIKE '%AIR%'").append("        GROUP BY l.suppkey, l.linenumber, l.shipmode)").append("SELECT COUNT(*) FROM data WHERE suppkey BETWEEN 10 AND 30 AND shipmode LIKE '%REG%'").toString());
     }
 
     @Test
@@ -649,10 +573,7 @@ public class TestHivePushdownFilterQueries
         assertUpdate("ALTER TABLE test_schema_evolution ADD COLUMN nation_minus_region BIGINT");
         assertUpdate("INSERT INTO test_schema_evolution SELECT nationkey, nationkey + regionkey, nationkey - regionkey, regionkey FROM nation", 25);
 
-        String cte = "WITH test_schema_evolution AS (" +
-                "SELECT nationkey, null AS nation_plus_region, null AS nation_minus_region, regionkey FROM nation " +
-                "UNION ALL SELECT nationkey, nationkey + regionkey, null, regionkey FROM nation " +
-                "UNION ALL SELECT nationkey, nationkey + regionkey, nationkey - regionkey, regionkey FROM nation)";
+        String cte = new StringBuilder().append("WITH test_schema_evolution AS (").append("SELECT nationkey, null AS nation_plus_region, null AS nation_minus_region, regionkey FROM nation ").append("UNION ALL SELECT nationkey, nationkey + regionkey, null, regionkey FROM nation ").append("UNION ALL SELECT nationkey, nationkey + regionkey, nationkey - regionkey, regionkey FROM nation)").toString();
 
         assertQueryUsingH2Cte("SELECT * FROM test_schema_evolution", cte);
         assertQueryUsingH2Cte("SELECT * FROM test_schema_evolution WHERE nation_plus_region IS NULL", cte);
@@ -665,7 +586,7 @@ public class TestHivePushdownFilterQueries
 
     private void assertQueryUsingH2Cte(String query, String cte)
     {
-        assertQuery(query, cte + " " + query);
+        assertQuery(query, new StringBuilder().append(cte).append(" ").append(query).toString());
     }
 
     private void assertQueryUsingH2Cte(String query)
@@ -692,8 +613,8 @@ public class TestHivePushdownFilterQueries
         while (matcher.find()) {
             String expression = matcher.group(1);
             List<String> indices = Splitter.onPattern("[^0-9]").omitEmptyStrings().splitToList(matcher.group(2));
-            for (int i = 0; i < indices.size(); i++) {
-                expression = format("array_get(%s, %s)", expression, indices.get(i));
+            for (String indice : indices) {
+                expression = format("array_get(%s, %s)", expression, indice);
             }
 
             builder.append(query, offset, matcher.start()).append(expression);

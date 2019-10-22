@@ -105,9 +105,7 @@ class PlanBuilder
         Assignments.Builder projections = Assignments.builder();
 
         // add an identity projection for underlying plan
-        for (VariableReferenceExpression variable : getRoot().getOutputVariables()) {
-            projections.put(variable, castToRowExpression(new SymbolReference(variable.getName())));
-        }
+		getRoot().getOutputVariables().forEach(variable -> projections.put(variable, castToRowExpression(new SymbolReference(variable.getName()))));
 
         ImmutableMap.Builder<VariableReferenceExpression, Expression> newTranslations = ImmutableMap.builder();
         for (Expression expression : expressions) {
@@ -116,9 +114,7 @@ class PlanBuilder
             newTranslations.put(variable, expression);
         }
         // Now append the new translations into the TranslationMap
-        for (Map.Entry<VariableReferenceExpression, Expression> entry : newTranslations.build().entrySet()) {
-            translations.put(entry.getValue(), entry.getKey());
-        }
+		newTranslations.build().entrySet().forEach(entry -> translations.put(entry.getValue(), entry.getKey()));
 
         return new PlanBuilder(translations, new ProjectNode(idAllocator.getNextId(), getRoot(), projections.build()), parameters);
     }

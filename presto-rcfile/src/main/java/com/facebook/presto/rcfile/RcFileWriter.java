@@ -158,9 +158,7 @@ public class RcFileWriter
         output.writeInt(Integer.reverseBytes(metadata.size() + 2));
         writeMetadataProperty(COLUMN_COUNT_METADATA_KEY, Integer.toString(types.size()));
         writeMetadataProperty(PRESTO_RCFILE_WRITER_VERSION_METADATA_KEY, PRESTO_RCFILE_WRITER_VERSION);
-        for (Entry<String, String> entry : metadata.entrySet()) {
-            writeMetadataProperty(entry.getKey(), entry.getValue());
-        }
+        metadata.entrySet().forEach(entry -> writeMetadataProperty(entry.getKey(), entry.getValue()));
 
         // write sync sequence
         output.writeLong(syncFirst);
@@ -309,16 +307,12 @@ public class RcFileWriter
         // write key section
         output.writeInt(Integer.reverseBytes(keySectionOutput.size()));
         output.writeInt(Integer.reverseBytes(keySectionOutput.getCompressedSize()));
-        for (Slice slice : keySectionOutput.getCompressedSlices()) {
-            output.writeBytes(slice);
-        }
+        keySectionOutput.getCompressedSlices().forEach(output::writeBytes);
 
         // write value section
         for (ColumnEncoder columnEncoder : columnEncoders) {
             List<Slice> slices = columnEncoder.getCompressedData();
-            for (Slice slice : slices) {
-                output.writeBytes(slice);
-            }
+            slices.forEach(output::writeBytes);
             columnEncoder.reset();
         }
 

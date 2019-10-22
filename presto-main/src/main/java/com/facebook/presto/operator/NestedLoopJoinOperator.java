@@ -36,7 +36,127 @@ import static java.util.Objects.requireNonNull;
 public class NestedLoopJoinOperator
         implements Operator, Closeable
 {
-    public static class NestedLoopJoinOperatorFactory
+    private final ListenableFuture<NestedLoopJoinPages> nestedLoopJoinPagesFuture;
+
+	private final OperatorContext operatorContext;
+
+	private final Runnable afterClose;
+
+	private List<Page> buildPages;
+
+	private Page probePage;
+
+	private Iterator<Page> buildPageIterator;
+
+	private NestedLoopPageBuilder nestedLoopPageBuilder;
+
+	private boolean finishing;
+
+	private boolean closed;
+
+	private NestedLoopJoinOperator(OperatorContext operatorContext, NestedLoopJoinBridge joinBridge, Runnable afterClose)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.nestedLoopJoinPagesFuture = joinBridge.getPagesFuture();
+        this.afterClose = requireNonNull(afterClose, "afterClose is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        boolean finished = finishing && probePage == null;
+
+        if (finished) {
+            close();
+        }
+        return finished;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return nestedLoopJoinPagesFuture;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        if (finishing || probePage != null) {
+            return false;
+        }
+
+        if (buildPages == null) {
+            Optional<NestedLoopJoinPages> nestedLoopJoinPages = tryGetFutureValue(nestedLoopJoinPagesFuture);
+            if (nestedLoopJoinPages.isPresent()) {
+                buildPages = nestedLoopJoinPages.get().getPages();
+            }
+        }
+        return buildPages != null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!finishing, "Operator is finishing");
+        checkState(buildPages != null, "Page source has not been built yet");
+        checkState(probePage == null, "Current page has not been completely processed yet");
+        checkState(buildPageIterator == null || !buildPageIterator.hasNext(), "Current buildPageIterator has not been completely processed yet");
+
+        if (page.getPositionCount() <= 0) {
+			return;
+		}
+		probePage = page;
+		buildPageIterator = buildPages.iterator();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        // Either probe side or build side is not ready
+        if (probePage == null || buildPages == null) {
+            return null;
+        }
+
+        if (nestedLoopPageBuilder != null && nestedLoopPageBuilder.hasNext()) {
+            return nestedLoopPageBuilder.next();
+        }
+
+        if (buildPageIterator.hasNext()) {
+            nestedLoopPageBuilder = new NestedLoopPageBuilder(probePage, buildPageIterator.next());
+            return nestedLoopPageBuilder.next();
+        }
+
+        probePage = null;
+        return null;
+    }
+
+	@Override
+    public void close()
+    {
+        buildPages = null;
+        // We don't want to release the supplier multiple times, since its reference counted
+        if (closed) {
+            return;
+        }
+        closed = true;
+        // `afterClose` must be run last.
+        afterClose.run();
+    }
+
+	public static class NestedLoopJoinOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -102,119 +222,6 @@ public class NestedLoopJoinOperator
         {
             return new NestedLoopJoinOperatorFactory(this);
         }
-    }
-
-    private final ListenableFuture<NestedLoopJoinPages> nestedLoopJoinPagesFuture;
-
-    private final OperatorContext operatorContext;
-    private final Runnable afterClose;
-
-    private List<Page> buildPages;
-    private Page probePage;
-    private Iterator<Page> buildPageIterator;
-    private NestedLoopPageBuilder nestedLoopPageBuilder;
-    private boolean finishing;
-    private boolean closed;
-
-    private NestedLoopJoinOperator(OperatorContext operatorContext, NestedLoopJoinBridge joinBridge, Runnable afterClose)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.nestedLoopJoinPagesFuture = joinBridge.getPagesFuture();
-        this.afterClose = requireNonNull(afterClose, "afterClose is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        boolean finished = finishing && probePage == null;
-
-        if (finished) {
-            close();
-        }
-        return finished;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return nestedLoopJoinPagesFuture;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        if (finishing || probePage != null) {
-            return false;
-        }
-
-        if (buildPages == null) {
-            Optional<NestedLoopJoinPages> nestedLoopJoinPages = tryGetFutureValue(nestedLoopJoinPagesFuture);
-            if (nestedLoopJoinPages.isPresent()) {
-                buildPages = nestedLoopJoinPages.get().getPages();
-            }
-        }
-        return buildPages != null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!finishing, "Operator is finishing");
-        checkState(buildPages != null, "Page source has not been built yet");
-        checkState(probePage == null, "Current page has not been completely processed yet");
-        checkState(buildPageIterator == null || !buildPageIterator.hasNext(), "Current buildPageIterator has not been completely processed yet");
-
-        if (page.getPositionCount() > 0) {
-            probePage = page;
-            buildPageIterator = buildPages.iterator();
-        }
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        // Either probe side or build side is not ready
-        if (probePage == null || buildPages == null) {
-            return null;
-        }
-
-        if (nestedLoopPageBuilder != null && nestedLoopPageBuilder.hasNext()) {
-            return nestedLoopPageBuilder.next();
-        }
-
-        if (buildPageIterator.hasNext()) {
-            nestedLoopPageBuilder = new NestedLoopPageBuilder(probePage, buildPageIterator.next());
-            return nestedLoopPageBuilder.next();
-        }
-
-        probePage = null;
-        return null;
-    }
-
-    @Override
-    public void close()
-    {
-        buildPages = null;
-        // We don't want to release the supplier multiple times, since its reference counted
-        if (closed) {
-            return;
-        }
-        closed = true;
-        // `afterClose` must be run last.
-        afterClose.run();
     }
 
     /**

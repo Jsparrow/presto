@@ -32,11 +32,6 @@ public class StatsAndCosts
     private final Map<PlanNodeId, PlanNodeStatsEstimate> stats;
     private final Map<PlanNodeId, PlanCostEstimate> costs;
 
-    public static StatsAndCosts empty()
-    {
-        return EMPTY;
-    }
-
     @JsonCreator
     public StatsAndCosts(
             @JsonProperty("stats") Map<PlanNodeId, PlanNodeStatsEstimate> stats,
@@ -46,19 +41,24 @@ public class StatsAndCosts
         this.costs = ImmutableMap.copyOf(requireNonNull(costs, "costs is null"));
     }
 
-    @JsonProperty
+	public static StatsAndCosts empty()
+    {
+        return EMPTY;
+    }
+
+	@JsonProperty
     public Map<PlanNodeId, PlanNodeStatsEstimate> getStats()
     {
         return stats;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<PlanNodeId, PlanCostEstimate> getCosts()
     {
         return costs;
     }
 
-    public StatsAndCosts getForSubplan(PlanNode root)
+	public StatsAndCosts getForSubplan(PlanNode root)
     {
         Iterable<PlanNode> planIterator = Traverser.forTree(PlanNode::getSources)
                 .depthFirstPreOrder(root);
@@ -75,7 +75,7 @@ public class StatsAndCosts
         return new StatsAndCosts(filteredStats.build(), filteredCosts.build());
     }
 
-    public static StatsAndCosts create(PlanNode root, StatsProvider statsProvider, CostProvider costProvider)
+	public static StatsAndCosts create(PlanNode root, StatsProvider statsProvider, CostProvider costProvider)
     {
         Iterable<PlanNode> planIterator = Traverser.forTree(PlanNode::getSources)
                 .depthFirstPreOrder(root);

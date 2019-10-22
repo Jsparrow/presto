@@ -58,8 +58,7 @@ public class RowHelper
                     to.addBinary(i, from.getBinary(i));
                     break;
                 default:
-                    throw new IllegalStateException("Unknown type " + schema.getColumnByIndex(i).getType()
-                            + " for column " + schema.getColumnByIndex(i).getName());
+                    throw new IllegalStateException(new StringBuilder().append("Unknown type ").append(schema.getColumnByIndex(i).getType()).append(" for column ").append(schema.getColumnByIndex(i).getName()).toString());
             }
         }
     }
@@ -97,8 +96,7 @@ public class RowHelper
                     to.addBinary(i, from.getBinary(i));
                     break;
                 default:
-                    throw new IllegalStateException("Unknown type " + schema.getColumnByIndex(i).getType()
-                            + " for column " + schema.getColumnByIndex(i).getName());
+                    throw new IllegalStateException(new StringBuilder().append("Unknown type ").append(schema.getColumnByIndex(i).getType()).append(" for column ").append(schema.getColumnByIndex(i).getName()).toString());
             }
         }
     }

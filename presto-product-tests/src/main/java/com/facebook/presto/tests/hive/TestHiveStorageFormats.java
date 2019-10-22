@@ -38,6 +38,7 @@ import static io.prestodb.tempto.query.QueryExecutor.defaultQueryExecutor;
 import static io.prestodb.tempto.query.QueryExecutor.query;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.apache.commons.lang3.StringUtils;
 
 public class TestHiveStorageFormats
         extends ProductTest
@@ -69,35 +70,19 @@ public class TestHiveStorageFormats
         setRole("admin");
         setSessionProperties(storageFormat);
 
-        String tableName = "storage_formats_test_insert_into_" + storageFormat.getName().toLowerCase(Locale.ENGLISH);
+        String tableName = "storage_formats_test_insert_into_" + StringUtils.lowerCase(storageFormat.getName(), Locale.ENGLISH);
 
         query(format("DROP TABLE IF EXISTS %s", tableName));
 
         String createTable = format(
-                "CREATE TABLE %s(" +
-                        "   orderkey      BIGINT," +
-                        "   partkey       BIGINT," +
-                        "   suppkey       BIGINT," +
-                        "   linenumber    INTEGER," +
-                        "   quantity      DOUBLE," +
-                        "   extendedprice DOUBLE," +
-                        "   discount      DOUBLE," +
-                        "   tax           DOUBLE," +
-                        "   linestatus    VARCHAR," +
-                        "   shipinstruct  VARCHAR," +
-                        "   shipmode      VARCHAR," +
-                        "   comment       VARCHAR," +
-                        "   returnflag    VARCHAR" +
-                        ") WITH (format='%s')",
+                new StringBuilder().append("CREATE TABLE %s(").append("   orderkey      BIGINT,").append("   partkey       BIGINT,").append("   suppkey       BIGINT,").append("   linenumber    INTEGER,").append("   quantity      DOUBLE,").append("   extendedprice DOUBLE,")
+						.append("   discount      DOUBLE,").append("   tax           DOUBLE,").append("   linestatus    VARCHAR,").append("   shipinstruct  VARCHAR,").append("   shipmode      VARCHAR,").append("   comment       VARCHAR,").append("   returnflag    VARCHAR").append(") WITH (format='%s')")
+						.toString(),
                 tableName,
                 storageFormat.getName());
         query(createTable);
 
-        String insertInto = format("INSERT INTO %s " +
-                "SELECT " +
-                "orderkey, partkey, suppkey, linenumber, quantity, extendedprice, discount, tax, " +
-                "linestatus, shipinstruct, shipmode, comment, returnflag " +
-                "FROM tpch.%s.lineitem", tableName, TPCH_SCHEMA);
+        String insertInto = format(new StringBuilder().append("INSERT INTO %s ").append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, extendedprice, discount, tax, ").append("linestatus, shipinstruct, shipmode, comment, returnflag ").append("FROM tpch.%s.lineitem").toString(), tableName, TPCH_SCHEMA);
         query(insertInto);
 
         assertSelect("select sum(tax), sum(discount), sum(linenumber) from %s", tableName);
@@ -112,15 +97,12 @@ public class TestHiveStorageFormats
         setRole("admin");
         setSessionProperties(storageFormat);
 
-        String tableName = "storage_formats_test_create_table_as_select_" + storageFormat.getName().toLowerCase(Locale.ENGLISH);
+        String tableName = "storage_formats_test_create_table_as_select_" + StringUtils.lowerCase(storageFormat.getName(), Locale.ENGLISH);
 
         query(format("DROP TABLE IF EXISTS %s", tableName));
 
         String createTableAsSelect = format(
-                "CREATE TABLE %s WITH (format='%s') AS " +
-                        "SELECT " +
-                        "partkey, suppkey, extendedprice " +
-                        "FROM tpch.%s.lineitem",
+                new StringBuilder().append("CREATE TABLE %s WITH (format='%s') AS ").append("SELECT ").append("partkey, suppkey, extendedprice ").append("FROM tpch.%s.lineitem").toString(),
                 tableName,
                 storageFormat.getName(),
                 TPCH_SCHEMA);
@@ -138,35 +120,19 @@ public class TestHiveStorageFormats
         setRole("admin");
         setSessionProperties(storageFormat);
 
-        String tableName = "storage_formats_test_insert_into_partitioned_" + storageFormat.getName().toLowerCase(Locale.ENGLISH);
+        String tableName = "storage_formats_test_insert_into_partitioned_" + StringUtils.lowerCase(storageFormat.getName(), Locale.ENGLISH);
 
         query(format("DROP TABLE IF EXISTS %s", tableName));
 
         String createTable = format(
-                "CREATE TABLE %s(" +
-                        "   orderkey      BIGINT," +
-                        "   partkey       BIGINT," +
-                        "   suppkey       BIGINT," +
-                        "   linenumber    INTEGER," +
-                        "   quantity      DOUBLE," +
-                        "   extendedprice DOUBLE," +
-                        "   discount      DOUBLE," +
-                        "   tax           DOUBLE," +
-                        "   linestatus    VARCHAR," +
-                        "   shipinstruct  VARCHAR," +
-                        "   shipmode      VARCHAR," +
-                        "   comment       VARCHAR," +
-                        "   returnflag    VARCHAR" +
-                        ") WITH (format='%s', partitioned_by = ARRAY['returnflag'])",
+                new StringBuilder().append("CREATE TABLE %s(").append("   orderkey      BIGINT,").append("   partkey       BIGINT,").append("   suppkey       BIGINT,").append("   linenumber    INTEGER,").append("   quantity      DOUBLE,").append("   extendedprice DOUBLE,")
+						.append("   discount      DOUBLE,").append("   tax           DOUBLE,").append("   linestatus    VARCHAR,").append("   shipinstruct  VARCHAR,").append("   shipmode      VARCHAR,").append("   comment       VARCHAR,").append("   returnflag    VARCHAR").append(") WITH (format='%s', partitioned_by = ARRAY['returnflag'])")
+						.toString(),
                 tableName,
                 storageFormat.getName());
         query(createTable);
 
-        String insertInto = format("INSERT INTO %s " +
-                "SELECT " +
-                "orderkey, partkey, suppkey, linenumber, quantity, extendedprice, discount, tax, " +
-                "linestatus, shipinstruct, shipmode, comment, returnflag " +
-                "FROM tpch.%s.lineitem", tableName, TPCH_SCHEMA);
+        String insertInto = format(new StringBuilder().append("INSERT INTO %s ").append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, extendedprice, discount, tax, ").append("linestatus, shipinstruct, shipmode, comment, returnflag ").append("FROM tpch.%s.lineitem").toString(), tableName, TPCH_SCHEMA);
         query(insertInto);
 
         assertSelect("select sum(tax), sum(discount), sum(length(returnflag)) from %s", tableName);
@@ -181,15 +147,12 @@ public class TestHiveStorageFormats
         setRole("admin");
         setSessionProperties(storageFormat);
 
-        String tableName = "storage_formats_test_create_table_as_select_partitioned_" + storageFormat.getName().toLowerCase(Locale.ENGLISH);
+        String tableName = "storage_formats_test_create_table_as_select_partitioned_" + StringUtils.lowerCase(storageFormat.getName(), Locale.ENGLISH);
 
         query(format("DROP TABLE IF EXISTS %s", tableName));
 
         String createTableAsSelect = format(
-                "CREATE TABLE %s WITH (format='%s', partitioned_by = ARRAY['returnflag']) AS " +
-                        "SELECT " +
-                        "tax, discount, returnflag " +
-                        "FROM tpch.%s.lineitem",
+                new StringBuilder().append("CREATE TABLE %s WITH (format='%s', partitioned_by = ARRAY['returnflag']) AS ").append("SELECT ").append("tax, discount, returnflag ").append("FROM tpch.%s.lineitem").toString(),
                 tableName,
                 storageFormat.getName(),
                 TPCH_SCHEMA);
@@ -208,11 +171,7 @@ public class TestHiveStorageFormats
         onHive().executeQuery("DROP TABLE IF EXISTS " + tableName);
 
         onHive().executeQuery(format(
-                "CREATE TABLE %s (" +
-                        "   c_bigint BIGINT," +
-                        "   c_varchar VARCHAR(255))" +
-                        "STORED AS PARQUET " +
-                        "TBLPROPERTIES(\"parquet.compression\"=\"SNAPPY\")",
+                new StringBuilder().append("CREATE TABLE %s (").append("   c_bigint BIGINT,").append("   c_varchar VARCHAR(255))").append("STORED AS PARQUET ").append("TBLPROPERTIES(\"parquet.compression\"=\"SNAPPY\")").toString(),
                 tableName));
 
         onHive().executeQuery(format("INSERT INTO %s VALUES(1, 'test data')", tableName));
@@ -224,7 +183,7 @@ public class TestHiveStorageFormats
 
     private static void assertSelect(String query, String tableName)
     {
-        QueryResult expected = query(format(query, "tpch." + TPCH_SCHEMA + ".lineitem"));
+        QueryResult expected = query(format(query, new StringBuilder().append("tpch.").append(TPCH_SCHEMA).append(".lineitem").toString()));
         List<Row> expectedRows = expected.rows().stream()
                 .map((columns) -> row(columns.toArray()))
                 .collect(toImmutableList());

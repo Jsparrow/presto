@@ -22,17 +22,17 @@ public class RowExpressionNodeInliner
 {
     private final Map<? extends RowExpression, ? extends RowExpression> mappings;
 
-    public static RowExpression replaceExpression(RowExpression expression, Map<? extends RowExpression, ? extends RowExpression> mappings)
-    {
-        return RowExpressionTreeRewriter.rewriteWith(new RowExpressionNodeInliner(mappings), expression);
-    }
-
     public RowExpressionNodeInliner(Map<? extends RowExpression, ? extends RowExpression> mappings)
     {
         this.mappings = mappings;
     }
 
-    @Override
+	public static RowExpression replaceExpression(RowExpression expression, Map<? extends RowExpression, ? extends RowExpression> mappings)
+    {
+        return RowExpressionTreeRewriter.rewriteWith(new RowExpressionNodeInliner(mappings), expression);
+    }
+
+	@Override
     public RowExpression rewriteRowExpression(RowExpression node, Void context, RowExpressionTreeRewriter<Void> treeRewriter)
     {
         return mappings.get(node);

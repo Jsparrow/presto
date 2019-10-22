@@ -70,12 +70,12 @@ public class TestStatisticsWriterNode
     {
         StatisticAggregationsDescriptor.Builder<VariableReferenceExpression> builder = StatisticAggregationsDescriptor.builder();
         PlanVariableAllocator variableAllocator = new PlanVariableAllocator();
-        for (String column : COLUMNS) {
+        COLUMNS.forEach(column -> {
             for (ColumnStatisticType type : ColumnStatisticType.values()) {
                 builder.addColumnStatistic(new ColumnStatisticMetadata(column, type), testVariable(variableAllocator));
             }
             builder.addGrouping(column, testVariable(variableAllocator));
-        }
+        });
         builder.addTableStatistic(ROW_COUNT, testVariable(variableAllocator));
         return builder.build();
     }

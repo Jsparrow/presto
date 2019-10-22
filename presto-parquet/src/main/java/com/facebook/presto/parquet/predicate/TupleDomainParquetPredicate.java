@@ -57,11 +57,14 @@ import static com.facebook.presto.spi.type.Varchars.isVarcharType;
 import static java.lang.Float.floatToRawIntBits;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TupleDomainParquetPredicate
         implements Predicate
 {
-    private final TupleDomain<ColumnDescriptor> effectivePredicate;
+    private static final Logger logger = LoggerFactory.getLogger(TupleDomainParquetPredicate.class);
+	private final TupleDomain<ColumnDescriptor> effectivePredicate;
     private final List<RichColumnDescriptor> columns;
 
     public TupleDomainParquetPredicate(TupleDomain<ColumnDescriptor> effectivePredicate, List<RichColumnDescriptor> columns)
@@ -225,17 +228,16 @@ public class TupleDomainParquetPredicate
             return createDomain(type, hasNullValue, parquetStringStatistics);
         }
 
-        if (type.equals(DATE) && statistics instanceof IntStatistics) {
-            IntStatistics intStatistics = (IntStatistics) statistics;
-            if (intStatistics.genericGetMin() > intStatistics.genericGetMax()) {
-                failWithCorruptionException(failOnCorruptedParquetStatistics, column, id, intStatistics);
-                return Domain.create(ValueSet.all(type), hasNullValue);
-            }
-            ParquetIntegerStatistics parquetIntegerStatistics = new ParquetIntegerStatistics((long) intStatistics.getMin(), (long) intStatistics.getMax());
-            return createDomain(type, hasNullValue, parquetIntegerStatistics);
-        }
-
-        return Domain.create(ValueSet.all(type), hasNullValue);
+        if (!(type.equals(DATE) && statistics instanceof IntStatistics)) {
+			return Domain.create(ValueSet.all(type), hasNullValue);
+		}
+		IntStatistics intStatistics = (IntStatistics) statistics;
+		if (intStatistics.genericGetMin() > intStatistics.genericGetMax()) {
+		    failWithCorruptionException(failOnCorruptedParquetStatistics, column, id, intStatistics);
+		    return Domain.create(ValueSet.all(type), hasNullValue);
+		}
+		ParquetIntegerStatistics parquetIntegerStatistics = new ParquetIntegerStatistics((long) intStatistics.getMin(), (long) intStatistics.getMax());
+		return createDomain(type, hasNullValue, parquetIntegerStatistics);
     }
 
     @VisibleForTesting
@@ -256,7 +258,8 @@ public class TupleDomainParquetPredicate
             dictionary = dictionaryPage.get().getEncoding().initDictionary(columnDescriptor, dictionaryPage.get());
         }
         catch (Exception e) {
-            // In case of exception, just continue reading the data, not using dictionary page at all
+            logger.error(e.getMessage(), e);
+			// In case of exception, just continue reading the data, not using dictionary page at all
             // OK to ignore exception when reading dictionaries
             // TODO take failOnCorruptedParquetStatistics parameter and handle appropriately
             return Domain.all(type);
@@ -299,16 +302,15 @@ public class TupleDomainParquetPredicate
             return Domain.union(domains);
         }
 
-        if (isVarcharType(type) && columnDescriptor.getType() == PrimitiveTypeName.BINARY) {
-            List<Domain> domains = new ArrayList<>();
-            for (int i = 0; i < dictionarySize; i++) {
-                domains.add(Domain.singleValue(type, Slices.wrappedBuffer(dictionary.decodeToBinary(i).getBytes())));
-            }
-            domains.add(Domain.onlyNull(type));
-            return Domain.union(domains);
-        }
-
-        return Domain.all(type);
+        if (!(isVarcharType(type) && columnDescriptor.getType() == PrimitiveTypeName.BINARY)) {
+			return Domain.all(type);
+		}
+		List<Domain> domains = new ArrayList<>();
+		for (int i = 0; i < dictionarySize; i++) {
+		    domains.add(Domain.singleValue(type, Slices.wrappedBuffer(dictionary.decodeToBinary(i).getBytes())));
+		}
+		domains.add(Domain.onlyNull(type));
+		return Domain.union(domains);
     }
 
     private static void failWithCorruptionException(boolean failOnCorruptedParquetStatistics, String column, ParquetDataSourceId id, Statistics statistics)

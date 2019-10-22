@@ -38,9 +38,12 @@ import static java.lang.String.format;
 
 public final class TDigestUtils
 {
-    private TDigestUtils() {}
+    // Sorting Functions
+    private static final Random prng = ThreadLocalRandom.current(); // for choosing pivots during quicksort
 
-    static double weightedAverage(double x1, double w1, double x2, double w2)
+	private TDigestUtils() {}
+
+	static double weightedAverage(double x1, double w1, double x2, double w2)
     {
         if (x1 <= x2) {
             return weightedAverageSorted(x1, w1, x2, w2);
@@ -50,37 +53,34 @@ public final class TDigestUtils
         }
     }
 
-    private static double weightedAverageSorted(double x1, double w1, double x2, double w2)
+	private static double weightedAverageSorted(double x1, double w1, double x2, double w2)
     {
         final double x = (x1 * w1 + x2 * w2) / (w1 + w2);
         return Math.max(x1, Math.min(x, x2));
     }
 
-    // Scale Functions
+	// Scale Functions
     public static double maxSize(double q, double compression, double n)
     {
         return Z(compression, n) * q * (1 - q) / compression;
     }
 
-    public static double maxSize(double q, double normalizer)
+	public static double maxSize(double q, double normalizer)
     {
         return q * (1 - q) / normalizer;
     }
 
-    public static double normalizer(double compression, double n)
+	public static double normalizer(double compression, double n)
     {
         return compression / Z(compression, n);
     }
 
-    private static double Z(double compression, double n)
+	private static double Z(double compression, double n)
     {
         return 4 * Math.log(n / compression) + 24;
     }
 
-    // Sorting Functions
-    private static final Random prng = ThreadLocalRandom.current(); // for choosing pivots during quicksort
-
-    /**
+	/**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes 0..values.length
      *
@@ -92,7 +92,7 @@ public final class TDigestUtils
         sort(order, values, 0, values.length);
     }
 
-    /**
+	/**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes 0..n
      *
@@ -105,7 +105,7 @@ public final class TDigestUtils
         sort(order, values, 0, n);
     }
 
-    /**
+	/**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes start..n
      *
@@ -123,7 +123,7 @@ public final class TDigestUtils
         insertionSort(order, values, start, start + n, 64);
     }
 
-    /**
+	/**
      * Standard quick sort except that sorting is done on an index array rather than the values themselves
      *
      * @param order  The pre-allocated index array
@@ -215,7 +215,7 @@ public final class TDigestUtils
         }
     }
 
-    /**
+	/**
      * Quick sort in place of several paired arrays.  On return,
      * keys[...] is in order and the values[] arrays will be
      * reordered as well in the same way.
@@ -228,7 +228,7 @@ public final class TDigestUtils
         sort(key, 0, key.length, values);
     }
 
-    /**
+	/**
      * Quick sort using an index array.  On return,
      * values[order[i]] is in order as i goes start..n
      *  @param key    Values to sort on
@@ -242,7 +242,7 @@ public final class TDigestUtils
         insertionSort(key, values, start, start + n, 8);
     }
 
-    /**
+	/**
      * Standard quick sort except that sorting rearranges parallel arrays
      *
      * @param key    Values to sort on
@@ -383,7 +383,7 @@ public final class TDigestUtils
         }
     }
 
-    /**
+	/**
      * Limited range insertion sort.  We assume that no element has to move more than limit steps
      * because quick sort has done its thing. This version works on parallel arrays of keys and values.
      *
@@ -417,27 +417,27 @@ public final class TDigestUtils
         }
     }
 
-    private static void swap(int[] order, int i, int j)
+	private static void swap(int[] order, int i, int j)
     {
         int t = order[i];
         order[i] = order[j];
         order[j] = t;
     }
 
-    private static void swap(int i, int j, double[] key, double[]...values)
+	private static void swap(int i, int j, double[] key, double[]...values)
     {
         double t = key[i];
         key[i] = key[j];
         key[j] = t;
 
-        for (int k = 0; k < values.length; k++) {
-            t = values[k][i];
-            values[k][i] = values[k][j];
-            values[k][j] = t;
+        for (double[] value : values) {
+            t = value[i];
+            value[i] = value[j];
+            value[j] = t;
         }
     }
 
-    /**
+	/**
      * Check that a partition step was done correctly.  For debugging and testing.
      *
      * @param order      The array of indexes representing a permutation of the keys.
@@ -479,7 +479,7 @@ public final class TDigestUtils
         }
     }
 
-    /**
+	/**
      * Limited range insertion sort.  We assume that no element has to move more than limit steps
      * because quick sort has done its thing.
      *
@@ -508,7 +508,7 @@ public final class TDigestUtils
         }
     }
 
-    /**
+	/**
      * Reverses an array in-place.
      *
      * @param order The array to reverse
@@ -518,7 +518,7 @@ public final class TDigestUtils
         reverse(order, 0, order.length);
     }
 
-    /**
+	/**
      * Reverses part of an array. See {@link #reverse(int[])}
      *
      * @param order  The array containing the data to reverse.
@@ -534,7 +534,7 @@ public final class TDigestUtils
         }
     }
 
-    /**
+	/**
      * Reverses part of an array. See {@link #reverse(int[])}
      *
      * @param order  The array containing the data to reverse.

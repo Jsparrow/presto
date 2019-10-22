@@ -44,19 +44,8 @@ public class SystemConnectorTests
     @Test(groups = {SYSTEM_CONNECTOR, JDBC})
     public void selectRuntimeQueries()
     {
-        String sql = "SELECT" +
-                "  query_id," +
-                "  state," +
-                "  user," +
-                "  query," +
-                "  resource_group_id," +
-                "  queued_time_ms," +
-                "  analysis_time_ms," +
-                "  created," +
-                "  started," +
-                "  last_heartbeat," +
-                "  'end' " +
-                "FROM system.runtime.queries";
+        String sql = new StringBuilder().append("SELECT").append("  query_id,").append("  state,").append("  user,").append("  query,").append("  resource_group_id,").append("  queued_time_ms,").append("  analysis_time_ms,")
+				.append("  created,").append("  started,").append("  last_heartbeat,").append("  'end' ").append("FROM system.runtime.queries").toString();
         JDBCType arrayType = usingTeradataJdbcDriver(defaultQueryExecutor().getConnection()) ? VARCHAR : ARRAY;
         assertThat(query(sql))
                 .hasColumns(VARCHAR, VARCHAR, VARCHAR, VARCHAR, arrayType,
@@ -67,31 +56,9 @@ public class SystemConnectorTests
     @Test(groups = {SYSTEM_CONNECTOR, JDBC})
     public void selectRuntimeTasks()
     {
-        String sql = "SELECT" +
-                "  node_id," +
-                "  task_id," +
-                "  stage_id," +
-                "  query_id," +
-                "  state," +
-                "  splits," +
-                "  queued_splits," +
-                "  running_splits," +
-                "  completed_splits," +
-                "  split_scheduled_time_ms," +
-                "  split_cpu_time_ms," +
-                "  split_blocked_time_ms," +
-                "  raw_input_bytes," +
-                "  raw_input_rows," +
-                "  processed_input_bytes," +
-                "  processed_input_rows," +
-                "  output_bytes," +
-                "  output_rows," +
-                "  physical_written_bytes," +
-                "  created," +
-                "  start," +
-                "  last_heartbeat," +
-                "  'end' " +
-                "FROM SYSTEM.runtime.tasks";
+        String sql = new StringBuilder().append("SELECT").append("  node_id,").append("  task_id,").append("  stage_id,").append("  query_id,").append("  state,").append("  splits,").append("  queued_splits,")
+				.append("  running_splits,").append("  completed_splits,").append("  split_scheduled_time_ms,").append("  split_cpu_time_ms,").append("  split_blocked_time_ms,").append("  raw_input_bytes,").append("  raw_input_rows,").append("  processed_input_bytes,").append("  processed_input_rows,")
+				.append("  output_bytes,").append("  output_rows,").append("  physical_written_bytes,").append("  created,").append("  start,").append("  last_heartbeat,").append("  'end' ").append("FROM SYSTEM.runtime.tasks").toString();
         assertThat(query(sql))
                 .hasColumns(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR,
                         BIGINT, BIGINT, BIGINT, BIGINT, BIGINT, BIGINT, BIGINT, BIGINT,

@@ -30,24 +30,20 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class LegacyResourceGroupConfigurationManager
         implements ResourceGroupConfigurationManager<VoidContext>
 {
-    enum VoidContext
-    {
-        NONE
-    }
-
     private static final ResourceGroupId GLOBAL = new ResourceGroupId("global");
 
-    private final int hardConcurrencyLimit;
-    private final int maxQueued;
+	private final int hardConcurrencyLimit;
 
-    @Inject
+	private final int maxQueued;
+
+	@Inject
     public LegacyResourceGroupConfigurationManager(QueryManagerConfig config)
     {
         hardConcurrencyLimit = config.getMaxConcurrentQueries();
         maxQueued = config.getMaxQueuedQueries();
     }
 
-    @Override
+	@Override
     public void configure(ResourceGroup group, SelectionContext<VoidContext> criteria)
     {
         checkArgument(group.getId().equals(GLOBAL), "Unexpected resource group: %s", group.getId());
@@ -55,9 +51,14 @@ public class LegacyResourceGroupConfigurationManager
         group.setHardConcurrencyLimit(hardConcurrencyLimit);
     }
 
-    @Override
+	@Override
     public Optional<SelectionContext<VoidContext>> match(SelectionCriteria criteria)
     {
         return Optional.of(new SelectionContext<>(GLOBAL, VoidContext.NONE));
+    }
+
+	enum VoidContext
+    {
+        NONE
     }
 }

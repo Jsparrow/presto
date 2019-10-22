@@ -51,10 +51,11 @@ class IntArrayList
             throw new IllegalStateException("Array reached maximum size");
         }
 
-        if (newCapacity > array.length) {
-            int newLength = (int) Math.min(Math.max(2L * (long) array.length, (long) newCapacity), MAX_ARRAY_SIZE);
-            array = Arrays.copyOf(array, newLength);
-        }
+        if (newCapacity <= array.length) {
+			return;
+		}
+		int newLength = (int) Math.min(Math.max(2L * (long) array.length, (long) newCapacity), MAX_ARRAY_SIZE);
+		array = Arrays.copyOf(array, newLength);
     }
 
     public void add(int element)

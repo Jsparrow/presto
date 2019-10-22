@@ -168,7 +168,7 @@ class S3SelectRecordCursor<K, V extends Writable>
                 .append(" ")
                 .append(START_STRUCT);
         stringBuilder.append(fields.stream()
-                .map(field -> " " + field.getType() + " " + field.getName())
+                .map(field -> new StringBuilder().append(" ").append(field.getType()).append(" ").append(field.getName()).toString())
                 .collect(Collectors.joining(",")));
         stringBuilder.append(END_STRUCT);
 

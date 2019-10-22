@@ -40,10 +40,7 @@ public class TestKuduIntegrationHashPartitioning
         createTable += "  id INT WITH (primary_key=true,encoding='auto',compression='default'),\n";
         createTable += "  event_time TIMESTAMP WITH (primary_key=true, encoding='plain', compression='lz4'),\n";
         createTable += "  value DOUBLE WITH (primary_key=false,nullable=false,compression='no')\n";
-        createTable += ") WITH (\n" +
-                " partition_by_hash_columns = ARRAY['id','event_time'],\n" +
-                " partition_by_hash_buckets = 3\n" +
-                ")";
+        createTable += new StringBuilder().append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id','event_time'],\n").append(" partition_by_hash_buckets = 3\n").append(")").toString();
 
         doTestCreateTable("hashtest1", createTable);
     }
@@ -55,12 +52,7 @@ public class TestKuduIntegrationHashPartitioning
         createTable += "  id INT WITH (primary_key=true, encoding='bitshuffle',compression='zlib'),\n";
         createTable += "  event_time TIMESTAMP WITH (primary_key=true, encoding='runlength', compression='snappy'),\n";
         createTable += "  value DOUBLE WITH (nullable=true)\n";
-        createTable += ") WITH (\n" +
-                " partition_by_hash_columns = ARRAY['id'],\n" +
-                " partition_by_hash_buckets = 3\n," +
-                " partition_by_second_hash_columns = ARRAY['event_time'],\n" +
-                " partition_by_second_hash_buckets = 3\n" +
-                ")";
+        createTable += new StringBuilder().append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id'],\n").append(" partition_by_hash_buckets = 3\n,").append(" partition_by_second_hash_columns = ARRAY['event_time'],\n").append(" partition_by_second_hash_buckets = 3\n").append(")").toString();
 
         doTestCreateTable("hashtest2", createTable);
     }
@@ -72,7 +64,7 @@ public class TestKuduIntegrationHashPartitioning
         queryRunner.execute(dropTable);
         queryRunner.execute(createTable);
 
-        String insert = "INSERT INTO " + tableName + " VALUES (1, TIMESTAMP '2001-08-22 03:04:05.321', 2.5)";
+        String insert = new StringBuilder().append("INSERT INTO ").append(tableName).append(" VALUES (1, TIMESTAMP '2001-08-22 03:04:05.321', 2.5)").toString();
 
         queryRunner.execute(insert);
 
@@ -89,9 +81,10 @@ public class TestKuduIntegrationHashPartitioning
     @AfterClass(alwaysRun = true)
     public final void destroy()
     {
-        if (queryRunner != null) {
-            queryRunner.close();
-            queryRunner = null;
-        }
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.close();
+		queryRunner = null;
     }
 }

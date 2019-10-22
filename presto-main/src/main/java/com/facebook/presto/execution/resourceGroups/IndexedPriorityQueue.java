@@ -69,11 +69,11 @@ final class IndexedPriorityQueue<E>
     public boolean remove(E element)
     {
         Entry<E> entry = index.remove(element);
-        if (entry != null) {
-            queue.remove(entry);
-            return true;
-        }
-        return false;
+        if (entry == null) {
+			return false;
+		}
+		queue.remove(entry);
+		return true;
     }
 
     @Override

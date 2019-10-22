@@ -60,10 +60,10 @@ public class InternalTable
     {
         ImmutableList.Builder<String> names = ImmutableList.builder();
         ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (ColumnMetadata column : columns) {
+        columns.forEach(column -> {
             names.add(column.getName());
             types.add(column.getType());
-        }
+        });
         return new Builder(names.build(), types.build());
     }
 
@@ -114,10 +114,11 @@ public class InternalTable
 
         private void flushPage()
         {
-            if (!pageBuilder.isEmpty()) {
-                pages.add(pageBuilder.build());
-                pageBuilder.reset();
-            }
+            if (pageBuilder.isEmpty()) {
+				return;
+			}
+			pages.add(pageBuilder.build());
+			pageBuilder.reset();
         }
     }
 }

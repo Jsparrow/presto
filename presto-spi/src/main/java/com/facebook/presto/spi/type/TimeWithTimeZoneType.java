@@ -47,7 +47,8 @@ public final class TimeWithTimeZoneType
         return leftValue == rightValue;
     }
 
-    public long hash(Block block, int position)
+    @Override
+	public long hash(Block block, int position)
     {
         return AbstractLongType.hash(unpackMillisUtc(block.getLong(position)));
     }

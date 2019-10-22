@@ -374,12 +374,11 @@ public final class DateTimeFunctions
     @SqlType(StandardTypes.TIME)
     public static long addFieldValueTime(ConnectorSession session, @SqlType("varchar(x)") Slice unit, @SqlType(StandardTypes.BIGINT) long value, @SqlType(StandardTypes.TIME) long time)
     {
-        if (session.isLegacyTimestamp()) {
-            ISOChronology chronology = getChronology(session.getTimeZoneKey());
-            return modulo24Hour(chronology, getTimeField(chronology, unit).add(time, toIntExact(value)));
-        }
-
-        return modulo24Hour(getTimeField(UTC_CHRONOLOGY, unit).add(time, toIntExact(value)));
+        if (!session.isLegacyTimestamp()) {
+			return modulo24Hour(getTimeField(UTC_CHRONOLOGY, unit).add(time, toIntExact(value)));
+		}
+		ISOChronology chronology = getChronology(session.getTimeZoneKey());
+		return modulo24Hour(chronology, getTimeField(chronology, unit).add(time, toIntExact(value)));
     }
 
     @Description("add the specified amount of time to the given time")
@@ -441,13 +440,12 @@ public final class DateTimeFunctions
     @SqlType(StandardTypes.BIGINT)
     public static long diffTime(ConnectorSession session, @SqlType("varchar(x)") Slice unit, @SqlType(StandardTypes.TIME) long time1, @SqlType(StandardTypes.TIME) long time2)
     {
-        if (session.isLegacyTimestamp()) {
-            // Session zone could have policy change on/around 1970-01-01, so we cannot use UTC
-            ISOChronology chronology = getChronology(session.getTimeZoneKey());
-            return getTimeField(chronology, unit).getDifferenceAsLong(time2, time1);
-        }
-
-        return getTimeField(UTC_CHRONOLOGY, unit).getDifferenceAsLong(time2, time1);
+        if (!session.isLegacyTimestamp()) {
+			return getTimeField(UTC_CHRONOLOGY, unit).getDifferenceAsLong(time2, time1);
+		}
+		// Session zone could have policy change on/around 1970-01-01, so we cannot use UTC
+		ISOChronology chronology = getChronology(session.getTimeZoneKey());
+		return getTimeField(chronology, unit).getDifferenceAsLong(time2, time1);
     }
 
     @Description("difference of the given times in the given unit")
@@ -506,7 +504,7 @@ public final class DateTimeFunctions
             case "year":
                 return chronology.year();
         }
-        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "'" + unitString + "' is not a valid DATE field");
+        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("'").append(unitString).append("' is not a valid DATE field").toString());
     }
 
     private static DateTimeField getTimeField(ISOChronology chronology, Slice unit)
@@ -522,7 +520,7 @@ public final class DateTimeFunctions
             case "hour":
                 return chronology.hourOfDay();
         }
-        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "'" + unitString + "' is not a valid Time field");
+        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("'").append(unitString).append("' is not a valid Time field").toString());
     }
 
     private static DateTimeField getTimestampField(ISOChronology chronology, Slice unit)
@@ -548,7 +546,7 @@ public final class DateTimeFunctions
             case "year":
                 return chronology.year();
         }
-        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "'" + unitString + "' is not a valid Timestamp field");
+        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("'").append(unitString).append("' is not a valid Timestamp field").toString());
     }
 
     @Description("parses the specified date/time by the given format")

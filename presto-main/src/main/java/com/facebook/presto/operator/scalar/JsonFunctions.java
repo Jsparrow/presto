@@ -60,10 +60,14 @@ import static com.fasterxml.jackson.core.JsonToken.VALUE_TRUE;
 import static com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class JsonFunctions
 {
-    private static final JsonFactory JSON_FACTORY = new JsonFactory()
+    private static final Logger logger = LoggerFactory.getLogger(JsonFunctions.class);
+
+	private static final JsonFactory JSON_FACTORY = new JsonFactory()
             .disable(CANONICALIZE_FIELD_NAMES);
 
     private static final JsonFactory MAPPING_JSON_FACTORY = new MappingJsonFactory()
@@ -123,7 +127,8 @@ public final class JsonFunctions
             return true;
         }
         catch (IOException e) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Invalid JSON value: " + truncateIfNecessaryForErrorMessage(json));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Invalid JSON value: " + truncateIfNecessaryForErrorMessage(json));
         }
     }
 
@@ -152,7 +157,8 @@ public final class JsonFunctions
             return dynamicSliceOutput.slice();
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Cannot convert '%s' to JSON", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Cannot convert '%s' to JSON", slice.toStringUtf8()));
         }
     }
 
@@ -189,7 +195,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -229,7 +236,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -270,7 +278,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -315,7 +324,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -357,7 +367,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -428,7 +439,8 @@ public final class JsonFunctions
             }
         }
         catch (IOException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 

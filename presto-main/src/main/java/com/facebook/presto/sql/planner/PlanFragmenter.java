@@ -242,9 +242,7 @@ public class PlanFragmenter
         }
         ImmutableList.Builder<SubPlan> result = ImmutableList.builder();
         boolean containsTableFinishNode = containsTableFinishNode(fragment);
-        for (SubPlan child : subPlan.getChildren()) {
-            result.add(analyzeGroupedExecution(session, child, containsTableFinishNode));
-        }
+        subPlan.getChildren().forEach(child -> result.add(analyzeGroupedExecution(session, child, containsTableFinishNode)));
         return new SubPlan(fragment, result.build());
     }
 
@@ -293,9 +291,7 @@ public class PlanFragmenter
                 fragment.getJsonRepresentation());
 
         ImmutableList.Builder<SubPlan> childrenBuilder = ImmutableList.builder();
-        for (SubPlan child : subPlan.getChildren()) {
-            childrenBuilder.add(reassignPartitioningHandleIfNecessaryHelper(session, child, fragment.getPartitioning()));
-        }
+        subPlan.getChildren().forEach(child -> childrenBuilder.add(reassignPartitioningHandleIfNecessaryHelper(session, child, fragment.getPartitioning())));
         return new SubPlan(newFragment, childrenBuilder.build());
     }
 
@@ -444,9 +440,7 @@ public class PlanFragmenter
         @Override
         public PlanNode visitTableWriter(TableWriterNode node, RewriteContext<FragmentProperties> context)
         {
-            if (node.getPartitioningScheme().isPresent()) {
-                context.get().setDistribution(node.getPartitioningScheme().get().getPartitioning().getHandle(), metadata, session);
-            }
+            node.getPartitioningScheme().ifPresent(value -> context.get().setDistribution(value.getPartitioning().getHandle(), metadata, session));
             return context.defaultRewrite(node, context.get());
         }
 
@@ -577,7 +571,7 @@ public class PlanFragmenter
         {
             ImmutableList.Builder<VariableReferenceExpression> variables = ImmutableList.builder();
             ImmutableMap.Builder<VariableReferenceExpression, RowExpression> constants = ImmutableMap.builder();
-            for (RowExpression argument : partitioning.getArguments()) {
+            partitioning.getArguments().forEach(argument -> {
                 checkArgument(argument instanceof ConstantExpression || argument instanceof VariableReferenceExpression, format("Expect argument to be ConstantExpression or VariableReferenceExpression, get %s (%s)", argument.getClass(), argument));
                 VariableReferenceExpression variable;
                 if (argument instanceof ConstantExpression) {
@@ -588,7 +582,7 @@ public class PlanFragmenter
                     variable = (VariableReferenceExpression) argument;
                 }
                 variables.add(variable);
-            }
+            });
             return new PartitioningVariableAssignments(variables.build(), constants.build());
         }
 

@@ -35,11 +35,6 @@ public class EmbeddedElasticsearchNode
 
     private ElasticsearchNode node;
 
-    public static EmbeddedElasticsearchNode createEmbeddedElasticsearchNode()
-    {
-        return new EmbeddedElasticsearchNode();
-    }
-
     EmbeddedElasticsearchNode()
     {
         try {
@@ -65,7 +60,12 @@ public class EmbeddedElasticsearchNode
         node = new ElasticsearchNode(setting, ImmutableList.of(Netty4Plugin.class));
     }
 
-    public void start()
+	public static EmbeddedElasticsearchNode createEmbeddedElasticsearchNode()
+    {
+        return new EmbeddedElasticsearchNode();
+    }
+
+	public void start()
             throws Exception
     {
         if (running.compareAndSet(false, true)) {
@@ -73,17 +73,18 @@ public class EmbeddedElasticsearchNode
         }
     }
 
-    @Override
+	@Override
     public void close()
             throws IOException
     {
-        if (running.compareAndSet(true, false)) {
-            node = null;
-            deleteRecursively(elasticsearchDirectory.toPath(), ALLOW_INSECURE);
-        }
+        if (!running.compareAndSet(true, false)) {
+			return;
+		}
+		node = null;
+		deleteRecursively(elasticsearchDirectory.toPath(), ALLOW_INSECURE);
     }
 
-    public Client getClient()
+	public Client getClient()
     {
         return node.client();
     }

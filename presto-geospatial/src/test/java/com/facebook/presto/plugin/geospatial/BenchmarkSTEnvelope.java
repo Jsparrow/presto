@@ -57,7 +57,17 @@ public class BenchmarkSTEnvelope
         return GeoFunctions.stEnvelope(data.complexGeometry);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSTEnvelope.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice complexGeometry;
@@ -70,15 +80,5 @@ public class BenchmarkSTEnvelope
             complexGeometry = GeoFunctions.stGeometryFromText(Slices.utf8Slice(loadPolygon("large_polygon.txt")));
             simpleGeometry = GeoFunctions.stGeometryFromText(Slices.utf8Slice("POLYGON ((1 1, 4 1, 1 4))"));
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSTEnvelope.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

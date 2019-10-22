@@ -49,11 +49,14 @@ import static com.facebook.presto.verifier.framework.QueryStage.DESCRIBE;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DataVerification
         extends AbstractVerification
 {
-    private final TypeManager typeManager;
+    private static final Logger logger = LoggerFactory.getLogger(DataVerification.class);
+	private final TypeManager typeManager;
     private final ChecksumValidator checksumValidator;
     private final LimitQueryDeterminismAnalyzer limitQueryDeterminismAnalyzer;
 
@@ -130,10 +133,12 @@ public class DataVerification
             }
         }
         catch (QueryException qe) {
-            return ANALYSIS_FAILED_QUERY_FAILURE;
+            logger.error(qe.getMessage(), qe);
+			return ANALYSIS_FAILED_QUERY_FAILURE;
         }
         catch (Throwable t) {
-            return ANALYSIS_FAILED;
+            logger.error(t.getMessage(), t);
+			return ANALYSIS_FAILED;
         }
         finally {
             teardownSafely(secondRun);

@@ -24,12 +24,23 @@ public class MatchResult
     private final boolean matches;
     private final SymbolAliases newAliases;
 
-    public static MatchResult match()
+    public MatchResult(boolean matches)
+    {
+        this(matches, new SymbolAliases());
+    }
+
+	private MatchResult(boolean matches, SymbolAliases newAliases)
+    {
+        this.matches = matches;
+        this.newAliases = requireNonNull(newAliases, "newAliases is null");
+    }
+
+	public static MatchResult match()
     {
         return new MatchResult(true, new SymbolAliases());
     }
 
-    public static MatchResult match(String alias, SymbolReference symbolReference)
+	public static MatchResult match(String alias, SymbolReference symbolReference)
     {
         SymbolAliases newAliases = SymbolAliases.builder()
                 .put(alias, symbolReference)
@@ -37,33 +48,22 @@ public class MatchResult
         return new MatchResult(true, newAliases);
     }
 
-    public static MatchResult match(SymbolAliases newAliases)
+	public static MatchResult match(SymbolAliases newAliases)
     {
         return new MatchResult(true, newAliases);
     }
 
-    public MatchResult(boolean matches)
-    {
-        this(matches, new SymbolAliases());
-    }
-
-    private MatchResult(boolean matches, SymbolAliases newAliases)
-    {
-        this.matches = matches;
-        this.newAliases = requireNonNull(newAliases, "newAliases is null");
-    }
-
-    public boolean isMatch()
+	public boolean isMatch()
     {
         return matches;
     }
 
-    public SymbolAliases getAliases()
+	public SymbolAliases getAliases()
     {
         return newAliases;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         if (matches) {

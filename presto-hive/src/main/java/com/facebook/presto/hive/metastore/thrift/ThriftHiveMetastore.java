@@ -104,12 +104,15 @@ import static java.util.stream.Collectors.toSet;
 import static org.apache.hadoop.hive.common.FileUtils.makePartName;
 import static org.apache.hadoop.hive.metastore.api.HiveObjectType.TABLE;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.HIVE_FILTER_FIELD_PARAMS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class ThriftHiveMetastore
         implements HiveMetastore
 {
-    private final ThriftHiveMetastoreStats stats;
+    private static final Logger logger = LoggerFactory.getLogger(ThriftHiveMetastore.class);
+	private final ThriftHiveMetastoreStats stats;
     private final HiveCluster clientProvider;
     private final Function<Exception, Exception> exceptionMapper;
 
@@ -167,7 +170,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -207,7 +211,8 @@ public class ThriftHiveMetastore
                     });
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -235,7 +240,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -282,7 +288,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -317,11 +324,11 @@ public class ThriftHiveMetastore
                 dataColumns,
                 partitionRowCounts);
         ImmutableMap.Builder<String, PartitionStatistics> result = ImmutableMap.builder();
-        for (String partitionName : partitionNames) {
+        partitionNames.forEach(partitionName -> {
             HiveBasicStatistics basicStatistics = partitionBasicStatistics.getOrDefault(partitionName, createEmptyStatistics());
             Map<String, HiveColumnStatistics> columnStatistics = partitionColumnStatistics.getOrDefault(partitionName, ImmutableMap.of());
             result.put(partitionName, new PartitionStatistics(basicStatistics, columnStatistics));
-        }
+        });
 
         return result.build();
     }
@@ -340,7 +347,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -377,7 +385,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -432,7 +441,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -456,7 +466,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -523,7 +534,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -547,7 +559,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -625,15 +638,8 @@ public class ThriftHiveMetastore
     @Override
     public void grantRoles(Set<String> roles, Set<PrestoPrincipal> grantees, boolean withAdminOption, PrestoPrincipal grantor)
     {
-        for (PrestoPrincipal grantee : grantees) {
-            for (String role : roles) {
-                grantRole(
-                        role,
-                        grantee.getName(), fromPrestoPrincipalType(grantee.getType()),
-                        grantor.getName(), fromPrestoPrincipalType(grantor.getType()),
-                        withAdminOption);
-            }
-        }
+        grantees.forEach(grantee -> roles.forEach(role -> grantRole(role, grantee.getName(), fromPrestoPrincipalType(grantee.getType()),
+				grantor.getName(), fromPrestoPrincipalType(grantor.getType()), withAdminOption)));
     }
 
     private void grantRole(String role, String granteeName, PrincipalType granteeType, String grantorName, PrincipalType grantorType, boolean grantOption)
@@ -660,14 +666,8 @@ public class ThriftHiveMetastore
     @Override
     public void revokeRoles(Set<String> roles, Set<PrestoPrincipal> grantees, boolean adminOptionFor, PrestoPrincipal grantor)
     {
-        for (PrestoPrincipal grantee : grantees) {
-            for (String role : roles) {
-                revokeRole(
-                        role,
-                        grantee.getName(), fromPrestoPrincipalType(grantee.getType()),
-                        adminOptionFor);
-            }
-        }
+        grantees.forEach(grantee -> roles.forEach(
+				role -> revokeRole(role, grantee.getName(), fromPrestoPrincipalType(grantee.getType()), adminOptionFor)));
     }
 
     private void revokeRole(String role, String granteeName, PrincipalType granteeType, boolean grantOption)
@@ -721,13 +721,14 @@ public class ThriftHiveMetastore
                     .stopOnIllegalExceptions()
                     .run("getAllViews", stats.getGetAllViews().wrap(() -> {
                         try (HiveMetastoreClient client = clientProvider.createMetastoreClient()) {
-                            String filter = HIVE_FILTER_FIELD_PARAMS + PRESTO_VIEW_FLAG + " = \"true\"";
+                            String filter = new StringBuilder().append(HIVE_FILTER_FIELD_PARAMS).append(PRESTO_VIEW_FLAG).append(" = \"true\"").toString();
                             return Optional.of(client.getTableNamesByFilter(databaseName, filter));
                         }
                     }));
         }
         catch (UnknownDBException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -752,7 +753,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (AlreadyExistsException e) {
-            throw new SchemaAlreadyExistsException(database.getName());
+            logger.error(e.getMessage(), e);
+			throw new SchemaAlreadyExistsException(database.getName());
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -777,7 +779,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new SchemaNotFoundException(databaseName);
+            logger.error(e.getMessage(), e);
+			throw new SchemaNotFoundException(databaseName);
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -802,7 +805,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new SchemaNotFoundException(databaseName);
+            logger.error(e.getMessage(), e);
+			throw new SchemaNotFoundException(databaseName);
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -827,10 +831,12 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (AlreadyExistsException e) {
-            throw new TableAlreadyExistsException(new SchemaTableName(table.getDbName(), table.getTableName()));
+            logger.error(e.getMessage(), e);
+			throw new TableAlreadyExistsException(new SchemaTableName(table.getDbName(), table.getTableName()));
         }
         catch (NoSuchObjectException e) {
-            throw new SchemaNotFoundException(table.getDbName());
+            logger.error(e.getMessage(), e);
+			throw new SchemaNotFoundException(table.getDbName());
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -855,7 +861,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -884,7 +891,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -908,7 +916,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -932,7 +941,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -949,9 +959,8 @@ public class ThriftHiveMetastore
                 .map(ThriftMetastoreUtil::toMetastoreApiPartition)
                 .collect(toImmutableList());
         addPartitionsWithoutStatistics(databaseName, tableName, partitions);
-        for (PartitionWithStatistics partitionWithStatistics : partitionsWithStatistics) {
-            storePartitionColumnStatistics(databaseName, tableName, partitionWithStatistics.getPartitionName(), partitionWithStatistics);
-        }
+        partitionsWithStatistics.forEach(partitionWithStatistics -> storePartitionColumnStatistics(databaseName, tableName, partitionWithStatistics.getPartitionName(),
+				partitionWithStatistics));
     }
 
     private void addPartitionsWithoutStatistics(String databaseName, String tableName, List<Partition> partitions)
@@ -978,7 +987,8 @@ public class ThriftHiveMetastore
             throw new PrestoException(ALREADY_EXISTS, format("One or more partitions already exist for table '%s.%s'", databaseName, tableName), e);
         }
         catch (NoSuchObjectException e) {
-            throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
+            logger.error(e.getMessage(), e);
+			throw new TableNotFoundException(new SchemaTableName(databaseName, tableName));
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -1003,7 +1013,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), parts);
+            logger.error(e.getMessage(), e);
+			throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), parts);
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -1035,7 +1046,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partition.getValues());
+            logger.error(e.getMessage(), e);
+			throw new PartitionNotFoundException(new SchemaTableName(databaseName, tableName), partition.getValues());
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -1093,9 +1105,7 @@ public class ThriftHiveMetastore
                 ImmutableList.copyOf(columnsWithMissingStatistics))
                 .getOrDefault(partitionName, ImmutableList.of());
 
-        for (ColumnStatisticsObj statistics : statisticsToBeRemoved) {
-            deletePartitionColumnStatistics(databaseName, tableName, partitionName, statistics.getColName());
-        }
+        statisticsToBeRemoved.forEach(statistics -> deletePartitionColumnStatistics(databaseName, tableName, partitionName, statistics.getColName()));
     }
 
     @Override
@@ -1113,7 +1123,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
         catch (TException e) {
             throw new PrestoException(HIVE_METASTORE_ERROR, e);
@@ -1140,7 +1151,8 @@ public class ThriftHiveMetastore
                     }));
         }
         catch (NoSuchObjectException e) {
-            // assume none of the partitions in the batch are available
+            logger.error(e.getMessage(), e);
+			// assume none of the partitions in the batch are available
             return ImmutableList.of();
         }
         catch (TException e) {
@@ -1267,10 +1279,10 @@ public class ThriftHiveMetastore
                                         fromPrestoPrincipalType(principal.getType()),
                                         new HiveObjectRef(TABLE, databaseName, tableName, null, null));
                             }
-                            for (HiveObjectPrivilege hiveObjectPrivilege : hiveObjectPrivilegeList) {
+                            hiveObjectPrivilegeList.forEach(hiveObjectPrivilege -> {
                                 PrestoPrincipal grantee = new PrestoPrincipal(fromMetastoreApiPrincipalType(hiveObjectPrivilege.getPrincipalType()), hiveObjectPrivilege.getPrincipalName());
                                 privileges.addAll(parsePrivilege(hiveObjectPrivilege.getGrantInfo(), Optional.of(grantee)));
-                            }
+                            });
                             return privileges.build();
                         }
                     }));
@@ -1290,21 +1302,15 @@ public class ThriftHiveMetastore
             Set<PrivilegeGrantInfo> privilegeGrantInfos)
     {
         ImmutableList.Builder<HiveObjectPrivilege> privilegeBagBuilder = ImmutableList.builder();
-        for (PrivilegeGrantInfo privilegeGrantInfo : privilegeGrantInfos) {
-            privilegeBagBuilder.add(
-                    new HiveObjectPrivilege(
-                            new HiveObjectRef(TABLE, databaseName, tableName, null, null),
-                            grantee.getName(),
-                            fromPrestoPrincipalType(grantee.getType()),
-                            privilegeGrantInfo));
-        }
+        privilegeGrantInfos.forEach(privilegeGrantInfo -> privilegeBagBuilder.add(new HiveObjectPrivilege(new HiveObjectRef(TABLE, databaseName, tableName, null, null),
+				grantee.getName(), fromPrestoPrincipalType(grantee.getType()), privilegeGrantInfo)));
         return new PrivilegeBag(privilegeBagBuilder.build());
     }
 
     private boolean containsAllPrivilege(Set<PrivilegeGrantInfo> requestedPrivileges)
     {
         return requestedPrivileges.stream()
-                .anyMatch(privilege -> privilege.getPrivilege().equalsIgnoreCase("all"));
+                .anyMatch(privilege -> "all".equalsIgnoreCase(privilege.getPrivilege()));
     }
 
     private RetryDriver retry()

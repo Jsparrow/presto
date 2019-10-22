@@ -84,9 +84,7 @@ public class SystemSplitManager
             nodes.addAll(nodeManager.getNodes(ACTIVE));
         }
         Set<InternalNode> nodeSet = nodes.build();
-        for (InternalNode node : nodeSet) {
-            splits.add(new SystemSplit(tableHandle.getConnectorId(), tableHandle, node.getHostAndPort(), constraint));
-        }
+        nodeSet.forEach(node -> splits.add(new SystemSplit(tableHandle.getConnectorId(), tableHandle, node.getHostAndPort(), constraint)));
         return new FixedSplitSource(splits.build());
     }
 }

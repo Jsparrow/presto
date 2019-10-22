@@ -25,67 +25,58 @@ import static java.util.Objects.requireNonNull;
 public class FrameBound
         extends Node
 {
-    public enum Type
-    {
-        UNBOUNDED_PRECEDING,
-        PRECEDING,
-        CURRENT_ROW,
-        FOLLOWING,
-        UNBOUNDED_FOLLOWING
-    }
-
     private final Type type;
-    private final Optional<Expression> value;
+	private final Optional<Expression> value;
 
-    public FrameBound(Type type)
+	public FrameBound(Type type)
     {
         this(Optional.empty(), type);
     }
 
-    public FrameBound(NodeLocation location, Type type)
+	public FrameBound(NodeLocation location, Type type)
     {
         this(Optional.of(location), type);
     }
 
-    public FrameBound(Type type, Expression value)
+	public FrameBound(Type type, Expression value)
     {
         this(Optional.empty(), type, value);
     }
 
-    private FrameBound(Optional<NodeLocation> location, Type type)
-    {
-        this(location, type, null);
-    }
-
-    public FrameBound(NodeLocation location, Type type, Expression value)
+	public FrameBound(NodeLocation location, Type type, Expression value)
     {
         this(Optional.of(location), type, value);
     }
 
-    private FrameBound(Optional<NodeLocation> location, Type type, Expression value)
+	private FrameBound(Optional<NodeLocation> location, Type type)
+    {
+        this(location, type, null);
+    }
+
+	private FrameBound(Optional<NodeLocation> location, Type type, Expression value)
     {
         super(location);
         this.type = requireNonNull(type, "type is null");
         this.value = Optional.ofNullable(value);
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Optional<Expression> getValue()
+	public Optional<Expression> getValue()
     {
         return value;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitFrameBound(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         ImmutableList.Builder<Node> nodes = ImmutableList.builder();
@@ -93,7 +84,7 @@ public class FrameBound
         return nodes.build();
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -107,18 +98,27 @@ public class FrameBound
                 Objects.equals(value, o.value);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, value);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .add("value", value)
                 .toString();
+    }
+
+	public enum Type
+    {
+        UNBOUNDED_PRECEDING,
+        PRECEDING,
+        CURRENT_ROW,
+        FOLLOWING,
+        UNBOUNDED_FOLLOWING
     }
 }

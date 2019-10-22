@@ -685,10 +685,11 @@ public class MapDirectSelectiveStreamReader
 
         rowGroupOpen = false;
 
-        if (outputRequired) {
-            keyReader.startStripe(dictionaryStreamSources, encoding);
-            valueReader.startStripe(dictionaryStreamSources, encoding);
-        }
+        if (!outputRequired) {
+			return;
+		}
+		keyReader.startStripe(dictionaryStreamSources, encoding);
+		valueReader.startStripe(dictionaryStreamSources, encoding);
     }
 
     @Override
@@ -706,10 +707,11 @@ public class MapDirectSelectiveStreamReader
 
         rowGroupOpen = false;
 
-        if (outputRequired) {
-            keyReader.startRowGroup(dataStreamSources);
-            valueReader.startRowGroup(dataStreamSources);
-        }
+        if (!outputRequired) {
+			return;
+		}
+		keyReader.startRowGroup(dataStreamSources);
+		valueReader.startRowGroup(dataStreamSources);
     }
 
     @Override

@@ -29,29 +29,24 @@ import static java.util.Objects.requireNonNull;
 public class FixedCountScheduler
         implements StageScheduler
 {
-    public interface TaskScheduler
-    {
-        Optional<RemoteTask> scheduleTask(InternalNode node, int partition, OptionalInt totalPartitions);
-    }
-
     private final TaskScheduler taskScheduler;
-    private final List<InternalNode> partitionToNode;
+	private final List<InternalNode> partitionToNode;
 
-    public FixedCountScheduler(SqlStageExecution stage, List<InternalNode> partitionToNode)
+	public FixedCountScheduler(SqlStageExecution stage, List<InternalNode> partitionToNode)
     {
         requireNonNull(stage, "stage is null");
         this.taskScheduler = stage::scheduleTask;
         this.partitionToNode = requireNonNull(partitionToNode, "partitionToNode is null");
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     public FixedCountScheduler(TaskScheduler taskScheduler, List<InternalNode> partitionToNode)
     {
         this.taskScheduler = requireNonNull(taskScheduler, "taskScheduler is null");
         this.partitionToNode = requireNonNull(partitionToNode, "partitionToNode is null");
     }
 
-    @Override
+	@Override
     public ScheduleResult schedule()
     {
         OptionalInt totalPartitions = OptionalInt.of(partitionToNode.size());
@@ -64,5 +59,10 @@ public class FixedCountScheduler
         // no need to call stage.transitionToSchedulingSplits() since there is no table splits
 
         return ScheduleResult.nonBlocked(true, newTasks, 0);
+    }
+
+	public interface TaskScheduler
+    {
+        Optional<RemoteTask> scheduleTask(InternalNode node, int partition, OptionalInt totalPartitions);
     }
 }

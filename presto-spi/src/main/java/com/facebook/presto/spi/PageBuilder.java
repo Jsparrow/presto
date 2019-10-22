@@ -59,11 +59,6 @@ public class PageBuilder
         this(initialExpectedEntries, DEFAULT_MAX_PAGE_SIZE_IN_BYTES, types, Optional.empty());
     }
 
-    public static PageBuilder withMaxPageSize(int maxPageBytes, List<? extends Type> types)
-    {
-        return new PageBuilder(DEFAULT_INITIAL_EXPECTED_ENTRIES, maxPageBytes, types, Optional.empty());
-    }
-
     private PageBuilder(int initialExpectedEntries, int maxPageBytes, List<? extends Type> types, Optional<BlockBuilder[]> templateBlockBuilders)
     {
         this.types = unmodifiableList(new ArrayList<>(requireNonNull(types, "types is null")));
@@ -85,7 +80,12 @@ public class PageBuilder
         }
     }
 
-    public void reset()
+	public static PageBuilder withMaxPageSize(int maxPageBytes, List<? extends Type> types)
+    {
+        return new PageBuilder(DEFAULT_INITIAL_EXPECTED_ENTRIES, maxPageBytes, types, Optional.empty());
+    }
+
+	public void reset()
     {
         if (isEmpty()) {
             return;
@@ -99,52 +99,52 @@ public class PageBuilder
         }
     }
 
-    public PageBuilder newPageBuilderLike()
+	public PageBuilder newPageBuilderLike()
     {
         return new PageBuilder(declaredPositions, pageBuilderStatus.getMaxPageSizeInBytes(), types, Optional.of(blockBuilders));
     }
 
-    public BlockBuilder getBlockBuilder(int channel)
+	public BlockBuilder getBlockBuilder(int channel)
     {
         return blockBuilders[channel];
     }
 
-    public Type getType(int channel)
+	public Type getType(int channel)
     {
         return types.get(channel);
     }
 
-    public void declarePosition()
+	public void declarePosition()
     {
         declaredPositions++;
     }
 
-    public void declarePositions(int positions)
+	public void declarePositions(int positions)
     {
         declaredPositions += positions;
     }
 
-    public boolean isFull()
+	public boolean isFull()
     {
         return declaredPositions == Integer.MAX_VALUE || pageBuilderStatus.isFull();
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return declaredPositions == 0;
     }
 
-    public int getPositionCount()
+	public int getPositionCount()
     {
         return declaredPositions;
     }
 
-    public long getSizeInBytes()
+	public long getSizeInBytes()
     {
         return pageBuilderStatus.getSizeInBytes();
     }
 
-    public long getRetainedSizeInBytes()
+	public long getRetainedSizeInBytes()
     {
         // We use a foreach loop instead of streams
         // as it has much better performance.
@@ -155,7 +155,7 @@ public class PageBuilder
         return retainedSizeInBytes;
     }
 
-    public Page build()
+	public Page build()
     {
         if (blockBuilders.length == 0) {
             return new Page(declaredPositions);
@@ -172,7 +172,7 @@ public class PageBuilder
         return new Page(blocks);
     }
 
-    private static void checkArgument(boolean expression, String errorMessage)
+	private static void checkArgument(boolean expression, String errorMessage)
     {
         if (!expression) {
             throw new IllegalArgumentException(errorMessage);

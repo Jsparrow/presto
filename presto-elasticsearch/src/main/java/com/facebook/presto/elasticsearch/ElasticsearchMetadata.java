@@ -135,13 +135,11 @@ public class ElasticsearchMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix)) {
+        listTables(session, prefix).forEach(tableName -> {
             Optional<ConnectorTableMetadata> tableMetadata = getTableMetadata(tableName);
             // table can disappear during listing operation
-            if (tableMetadata.isPresent()) {
-                columns.put(tableName, tableMetadata.get().getColumns());
-            }
-        }
+			tableMetadata.ifPresent(value -> columns.put(tableName, value.getColumns()));
+        });
         return columns.build();
     }
 

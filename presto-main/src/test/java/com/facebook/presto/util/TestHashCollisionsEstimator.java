@@ -48,11 +48,11 @@ public class TestHashCollisionsEstimator
     private void hashEstimatesShouldScaleLinearly(int numberOfValues, int hashTableSize)
     {
         double unscaledEstimate = estimateNumberOfHashCollisions(numberOfValues, hashTableSize);
-        for (int exponent : ImmutableList.of(1, 3, 4)) {
+        ImmutableList.of(1, 3, 4).stream().mapToInt(Integer::valueOf).forEach(exponent -> {
             int scale = (int) pow(10, exponent);
             double scaledEstimate = estimateNumberOfHashCollisions(numberOfValues * scale, hashTableSize * scale);
             assertEquals(unscaledEstimate * scale, scaledEstimate, EPSILON);
-        }
+        });
     }
 
     // Disabled by default since it takes a lot of time to execute

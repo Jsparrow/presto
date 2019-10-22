@@ -27,18 +27,18 @@ public interface TrackingTupleDomainFilter
     {
         private final Consumer<TupleDomainFilter> onTestCallback;
 
-        public static TestBigintRange of(BigintRange range, Consumer<TupleDomainFilter> onTestCallback)
-        {
-            return new TestBigintRange(range.getLower(), range.getUpper(), range.nullAllowed, onTestCallback);
-        }
-
         private TestBigintRange(long lower, long upper, boolean nullAllowed, Consumer<TupleDomainFilter> onTestCallback)
         {
             super(lower, upper, nullAllowed);
             this.onTestCallback = requireNonNull(onTestCallback, "onTestCallback is null");
         }
 
-        @Override
+		public static TestBigintRange of(BigintRange range, Consumer<TupleDomainFilter> onTestCallback)
+        {
+            return new TestBigintRange(range.getLower(), range.getUpper(), range.nullAllowed, onTestCallback);
+        }
+
+		@Override
         public boolean testLong(long value)
         {
             onTestCallback.accept(this);
@@ -52,18 +52,18 @@ public interface TrackingTupleDomainFilter
     {
         private final Consumer<TupleDomainFilter> onTestCallback;
 
-        public static TestDoubleRange of(DoubleRange range, Consumer<TupleDomainFilter> onTestCallback)
-        {
-            return new TestDoubleRange(range.getLower(), range.lowerUnbounded, range.lowerExclusive, range.getUpper(), range.upperUnbounded, range.upperExclusive, range.nullAllowed, onTestCallback);
-        }
-
         private TestDoubleRange(double lower, boolean lowerUnbounded, boolean lowerExclusive, double upper, boolean upperUnbounded, boolean upperExclusive, boolean nullAllowed, Consumer<TupleDomainFilter> onTestCallback)
         {
             super(lower, lowerUnbounded, lowerExclusive, upper, upperUnbounded, upperExclusive, nullAllowed);
             this.onTestCallback = requireNonNull(onTestCallback, "onTestCallback is null");
         }
 
-        @Override
+		public static TestDoubleRange of(DoubleRange range, Consumer<TupleDomainFilter> onTestCallback)
+        {
+            return new TestDoubleRange(range.getLower(), range.lowerUnbounded, range.lowerExclusive, range.getUpper(), range.upperUnbounded, range.upperExclusive, range.nullAllowed, onTestCallback);
+        }
+
+		@Override
         public boolean testDouble(double value)
         {
             onTestCallback.accept(this);

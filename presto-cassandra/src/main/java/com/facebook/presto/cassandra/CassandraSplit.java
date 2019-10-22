@@ -133,7 +133,7 @@ public class CassandraSplit
         }
         else {
             if (splitCondition != null) {
-                return " WHERE " + partitionId + " AND " + splitCondition;
+                return new StringBuilder().append(" WHERE ").append(partitionId).append(" AND ").append(splitCondition).toString();
             }
             else {
                 return " WHERE " + partitionId;

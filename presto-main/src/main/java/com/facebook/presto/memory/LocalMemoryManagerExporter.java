@@ -25,10 +25,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class LocalMemoryManagerExporter
 {
-    private final MBeanExporter exporter;
+    private static final Logger logger = LoggerFactory.getLogger(LocalMemoryManagerExporter.class);
+	private final MBeanExporter exporter;
     @GuardedBy("this")
     private final List<MemoryPool> pools = new ArrayList<>();
 
@@ -36,9 +39,7 @@ public final class LocalMemoryManagerExporter
     public LocalMemoryManagerExporter(LocalMemoryManager memoryManager, MBeanExporter exporter)
     {
         this.exporter = requireNonNull(exporter, "exporter is null");
-        for (MemoryPool pool : memoryManager.getPools()) {
-            addPool(pool);
-        }
+        memoryManager.getPools().forEach(this::addPool);
     }
 
     private synchronized void addPool(MemoryPool pool)
@@ -49,6 +50,7 @@ public final class LocalMemoryManagerExporter
             pools.add(pool);
         }
         catch (JmxException e) {
+			logger.error(e.getMessage(), e);
             // ignored
         }
     }
@@ -56,15 +58,15 @@ public final class LocalMemoryManagerExporter
     @PreDestroy
     public synchronized void destroy()
     {
-        for (MemoryPool pool : pools) {
-            String objectName = ObjectNames.builder(MemoryPool.class, pool.getId().toString()).build();
-            try {
+        pools.stream().map(pool -> ObjectNames.builder(MemoryPool.class, pool.getId().toString()).build()).forEach(objectName -> {
+			try {
                 exporter.unexport(objectName);
             }
             catch (JmxException e) {
+				logger.error(e.getMessage(), e);
                 // ignored
             }
-        }
+		});
         pools.clear();
     }
 }

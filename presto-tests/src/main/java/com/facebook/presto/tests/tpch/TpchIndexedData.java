@@ -62,7 +62,7 @@ public class TpchIndexedData
         ImmutableMap.Builder<Set<TpchScaledColumn>, IndexedTable> indexedTablesBuilder = ImmutableMap.builder();
 
         Set<TpchScaledTable> tables = tpchIndexSpec.listIndexedTables();
-        for (TpchScaledTable table : tables) {
+        tables.forEach(table -> {
             SchemaTableName tableName = new SchemaTableName("sf" + table.getScaleFactor(), table.getTableName());
             TpchTableHandle tableHandle = tpchMetadata.getTableHandle(null, tableName);
             Map<String, ColumnHandle> columnHandles = new LinkedHashMap<>(tpchMetadata.getColumnHandles(null, tableHandle));
@@ -77,7 +77,7 @@ public class TpchIndexedData
                 IndexedTable indexedTable = indexTable(recordSet, ImmutableList.copyOf(columnHandles.keySet()), keyColumnNames);
                 indexedTablesBuilder.put(keyColumns, indexedTable);
             }
-        }
+        });
 
         indexedTables = indexedTablesBuilder.build();
     }

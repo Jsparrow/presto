@@ -64,6 +64,7 @@ import static com.facebook.presto.sql.relational.OriginalExpressionUtils.castToR
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import com.facebook.presto.sql.relational.OriginalExpressionUtils;
 
 /**
  * This optimizer pushes aggregations below outer joins when: the aggregation
@@ -200,7 +201,7 @@ public class PushAggregationThroughOuterJoin
     {
         checkState(join.getType() == JoinNode.Type.LEFT || join.getType() == JoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
         PlanNode innerNode;
-        if (join.getType().equals(JoinNode.Type.LEFT)) {
+        if (join.getType() == JoinNode.Type.LEFT) {
             innerNode = join.getRight();
         }
         else {
@@ -213,7 +214,7 @@ public class PushAggregationThroughOuterJoin
     {
         checkState(join.getType() == JoinNode.Type.LEFT || join.getType() == JoinNode.Type.RIGHT, "expected LEFT or RIGHT JOIN");
         PlanNode outerNode;
-        if (join.getType().equals(JoinNode.Type.LEFT)) {
+        if (join.getType() == JoinNode.Type.LEFT) {
             outerNode = join.getLeft();
         }
         else {
@@ -238,8 +239,7 @@ public class PushAggregationThroughOuterJoin
         Optional<MappedAggregationInfo> aggregationOverNullInfoResultNode = createAggregationOverNull(
                 aggregationNode,
                 variableAllocator,
-                idAllocator,
-                lookup);
+                idAllocator);
 
         if (!aggregationOverNullInfoResultNode.isPresent()) {
             return Optional.empty();
@@ -268,7 +268,7 @@ public class PushAggregationThroughOuterJoin
 
         // Add coalesce expressions for all aggregation functions
         Assignments.Builder assignmentsBuilder = Assignments.builder();
-        for (VariableReferenceExpression variable : outerJoin.getOutputVariables()) {
+        outerJoin.getOutputVariables().forEach(variable -> {
             if (aggregationNode.getAggregations().keySet().contains(variable)) {
                 assignmentsBuilder.put(variable, castToRowExpression(
                         new CoalesceExpression(
@@ -278,11 +278,11 @@ public class PushAggregationThroughOuterJoin
             else {
                 assignmentsBuilder.put(variable, castToRowExpression(new SymbolReference(variable.getName())));
             }
-        }
+        });
         return Optional.of(new ProjectNode(idAllocator.getNextId(), crossJoin, assignmentsBuilder.build()));
     }
 
-    private Optional<MappedAggregationInfo> createAggregationOverNull(AggregationNode referenceAggregation, PlanVariableAllocator variableAllocator, PlanNodeIdAllocator idAllocator, Lookup lookup)
+    private Optional<MappedAggregationInfo> createAggregationOverNull(AggregationNode referenceAggregation, PlanVariableAllocator variableAllocator, PlanNodeIdAllocator idAllocator)
     {
         // Create a values node that consists of a single row of nulls.
         // Map the output symbols from the referenceAggregation's source
@@ -292,13 +292,13 @@ public class PushAggregationThroughOuterJoin
         ImmutableList.Builder<VariableReferenceExpression> nullVariables = ImmutableList.builder();
         ImmutableList.Builder<RowExpression> nullLiterals = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, SymbolReference> sourcesVariableMappingBuilder = ImmutableMap.builder();
-        for (VariableReferenceExpression sourceVariable : referenceAggregation.getSource().getOutputVariables()) {
+        referenceAggregation.getSource().getOutputVariables().forEach(sourceVariable -> {
             nullLiterals.add(castToRowExpression(nullLiteral));
             VariableReferenceExpression nullVariable = variableAllocator.newVariable(nullLiteral, sourceVariable.getType());
             nullVariables.add(nullVariable);
             // TODO The type should be from sourceVariable.getType
             sourcesVariableMappingBuilder.put(sourceVariable, new SymbolReference(nullVariable.getName()));
-        }
+        });
         ValuesNode nullRow = new ValuesNode(
                 idAllocator.getNextId(),
                 nullVariables.build(),
@@ -357,11 +357,11 @@ public class PushAggregationThroughOuterJoin
         // This is a logic expanded from ExpressionTreeRewriter::rewriteSortItems
         ImmutableList.Builder<VariableReferenceExpression> orderBy = ImmutableList.builder();
         ImmutableMap.Builder<VariableReferenceExpression, SortOrder> ordering = new ImmutableMap.Builder<>();
-        for (VariableReferenceExpression variable : orderingScheme.getOrderByVariables()) {
+        orderingScheme.getOrderByVariables().forEach(variable -> {
             VariableReferenceExpression translated = new VariableReferenceExpression(variableMapping.get(variable).getName(), variable.getType());
             orderBy.add(translated);
             ordering.put(translated, orderingScheme.getOrdering(variable));
-        }
+        });
 
         ImmutableMap<VariableReferenceExpression, SortOrder> orderingMap = ordering.build();
         return new OrderingScheme(orderBy.build().stream().map(variable -> new Ordering(variable, orderingMap.get(variable))).collect(toImmutableList()));
@@ -370,12 +370,11 @@ public class PushAggregationThroughOuterJoin
     private static boolean isUsingVariables(AggregationNode.Aggregation aggregation, Set<VariableReferenceExpression> sourceVariables, TypeProvider types)
     {
         Set<VariableReferenceExpression> inputVariables = new HashSet<>();
-        for (RowExpression argument : aggregation.getArguments()) {
-            Expression expression = castToExpression(argument);
-            if (expression instanceof SymbolReference) {
+        aggregation.getArguments().stream().map(OriginalExpressionUtils::castToExpression).forEach(expression -> {
+			if (expression instanceof SymbolReference) {
                 inputVariables.add(toVariableReference(expression, types));
             }
-        }
+		});
         return sourceVariables.stream()
                 .anyMatch(inputVariables::contains);
     }

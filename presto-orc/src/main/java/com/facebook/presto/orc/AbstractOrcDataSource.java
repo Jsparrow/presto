@@ -126,14 +126,14 @@ public abstract class AbstractOrcDataSource
         long maxReadSizeBytes = maxBufferSize.toBytes();
         ImmutableMap.Builder<K, DiskRange> smallRangesBuilder = ImmutableMap.builder();
         ImmutableMap.Builder<K, DiskRange> largeRangesBuilder = ImmutableMap.builder();
-        for (Entry<K, DiskRange> entry : diskRanges.entrySet()) {
+        diskRanges.entrySet().forEach(entry -> {
             if (entry.getValue().getLength() <= maxReadSizeBytes) {
                 smallRangesBuilder.put(entry);
             }
             else {
                 largeRangesBuilder.put(entry);
             }
-        }
+        });
         Map<K, DiskRange> smallRanges = smallRangesBuilder.build();
         Map<K, DiskRange> largeRanges = largeRangesBuilder.build();
 
@@ -158,13 +158,13 @@ public abstract class AbstractOrcDataSource
         if (lazyReadSmallRanges) {
             for (DiskRange mergedRange : mergedRanges) {
                 LazyBufferLoader mergedRangeLazyLoader = new LazyBufferLoader(mergedRange);
-                for (Entry<K, DiskRange> diskRangeEntry : diskRanges.entrySet()) {
+                diskRanges.entrySet().forEach(diskRangeEntry -> {
                     DiskRange diskRange = diskRangeEntry.getValue();
                     if (mergedRange.contains(diskRange)) {
                         FixedLengthSliceInput sliceInput = new LazySliceInput(diskRange.getLength(), new LazyMergedSliceLoader(diskRange, mergedRangeLazyLoader));
                         slices.put(diskRangeEntry.getKey(), new OrcDataSourceInput(sliceInput, diskRange.getLength()));
                     }
-                }
+                });
             }
         }
         else {
@@ -176,9 +176,8 @@ public abstract class AbstractOrcDataSource
                 buffers.put(mergedRange, buffer);
             }
 
-            for (Entry<K, DiskRange> entry : diskRanges.entrySet()) {
-                slices.put(entry.getKey(), new OrcDataSourceInput(getDiskRangeSlice(entry.getValue(), buffers).getInput(), entry.getValue().getLength()));
-            }
+            diskRanges.entrySet().forEach(entry -> slices.put(entry.getKey(), new OrcDataSourceInput(getDiskRangeSlice(entry.getValue(), buffers).getInput(),
+					entry.getValue().getLength())));
         }
 
         Map<K, OrcDataSourceInput> sliceStreams = slices.build();
@@ -193,12 +192,12 @@ public abstract class AbstractOrcDataSource
         }
 
         ImmutableMap.Builder<K, OrcDataSourceInput> slices = ImmutableMap.builder();
-        for (Entry<K, DiskRange> entry : diskRanges.entrySet()) {
+        diskRanges.entrySet().forEach(entry -> {
             DiskRange diskRange = entry.getValue();
             int bufferSize = toIntExact(streamBufferSize.toBytes());
             FixedLengthSliceInput sliceInput = new LazySliceInput(diskRange.getLength(), new LazyChunkedSliceLoader(diskRange, bufferSize));
             slices.put(entry.getKey(), new OrcDataSourceInput(sliceInput, bufferSize));
-        }
+        });
         return slices.build();
     }
 

@@ -23,58 +23,51 @@ import javax.validation.constraints.NotNull;
 @DefunctConfig({"node-scheduler.location-aware-scheduling-enabled", "node-scheduler.multiple-tasks-per-node-enabled"})
 public class NodeSchedulerConfig
 {
-    public static class NetworkTopologyType
-    {
-        public static final String LEGACY = "legacy";
-        public static final String FLAT = "flat";
-        public static final String BENCHMARK = "benchmark";
-    }
-
     private int minCandidates = 10;
-    private boolean includeCoordinator = true;
-    private int maxSplitsPerNode = 100;
-    private int maxPendingSplitsPerTask = 10;
-    private String networkTopology = NetworkTopologyType.LEGACY;
+	private boolean includeCoordinator = true;
+	private int maxSplitsPerNode = 100;
+	private int maxPendingSplitsPerTask = 10;
+	private String networkTopology = NetworkTopologyType.LEGACY;
 
-    @NotNull
+	@NotNull
     public String getNetworkTopology()
     {
         return networkTopology;
     }
 
-    @Config("node-scheduler.network-topology")
+	@Config("node-scheduler.network-topology")
     public NodeSchedulerConfig setNetworkTopology(String networkTopology)
     {
         this.networkTopology = networkTopology;
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getMinCandidates()
     {
         return minCandidates;
     }
 
-    @Config("node-scheduler.min-candidates")
+	@Config("node-scheduler.min-candidates")
     public NodeSchedulerConfig setMinCandidates(int candidates)
     {
         this.minCandidates = candidates;
         return this;
     }
 
-    public boolean isIncludeCoordinator()
+	public boolean isIncludeCoordinator()
     {
         return includeCoordinator;
     }
 
-    @Config("node-scheduler.include-coordinator")
+	@Config("node-scheduler.include-coordinator")
     public NodeSchedulerConfig setIncludeCoordinator(boolean includeCoordinator)
     {
         this.includeCoordinator = includeCoordinator;
         return this;
     }
 
-    @Config("node-scheduler.max-pending-splits-per-task")
+	@Config("node-scheduler.max-pending-splits-per-task")
     @LegacyConfig({"node-scheduler.max-pending-splits-per-node-per-task", "node-scheduler.max-pending-splits-per-node-per-stage"})
     public NodeSchedulerConfig setMaxPendingSplitsPerTask(int maxPendingSplitsPerTask)
     {
@@ -82,20 +75,27 @@ public class NodeSchedulerConfig
         return this;
     }
 
-    public int getMaxPendingSplitsPerTask()
+	public int getMaxPendingSplitsPerTask()
     {
         return maxPendingSplitsPerTask;
     }
 
-    public int getMaxSplitsPerNode()
+	public int getMaxSplitsPerNode()
     {
         return maxSplitsPerNode;
     }
 
-    @Config("node-scheduler.max-splits-per-node")
+	@Config("node-scheduler.max-splits-per-node")
     public NodeSchedulerConfig setMaxSplitsPerNode(int maxSplitsPerNode)
     {
         this.maxSplitsPerNode = maxSplitsPerNode;
         return this;
+    }
+
+	public static class NetworkTopologyType
+    {
+        public static final String LEGACY = "legacy";
+        public static final String FLAT = "flat";
+        public static final String BENCHMARK = "benchmark";
     }
 }

@@ -118,7 +118,7 @@ public class RedisRecordCursor
         // no more keys are unscanned when
         // when redis scan command
         // returns 0 string cursor
-        return (!redisCursor.getStringCursor().equals("0"));
+        return (!"0".equals(redisCursor.getStringCursor()));
     }
 
     @Override
@@ -262,32 +262,28 @@ public class RedisRecordCursor
 
     private ScanParams setScanParms()
     {
-        if (split.getKeyDataType() == RedisDataType.STRING) {
-            ScanParams scanParms = new ScanParams();
-            scanParms.count(redisJedisManager.getRedisConnectorConfig().getRedisScanCount());
-
-            // when Redis key string follows "schema:table:*" format
-            // scan command can efficiently query tables
-            // by returning matching keys
-            // the alternative is to set key-prefix-schema-table to false
-            // and treat entire redis as single schema , single table
-            // redis Hash/Set types are to be supported - they can also be
-            // used to filter out table data
-
-            // "default" schema is not prefixed to the key
-
-            if (redisJedisManager.getRedisConnectorConfig().isKeyPrefixSchemaTable()) {
-                String keyMatch = "";
-                if (!split.getSchemaName().equals("default")) {
-                    keyMatch = split.getSchemaName() + Character.toString(redisJedisManager.getRedisConnectorConfig().getRedisKeyDelimiter());
-                }
-                keyMatch = keyMatch + split.getTableName() + Character.toString(redisJedisManager.getRedisConnectorConfig().getRedisKeyDelimiter()) + "*";
-                scanParms.match(keyMatch);
-            }
-            return scanParms;
-        }
-
-        return null;
+        // when Redis key string follows "schema:table:*" format
+		// scan command can efficiently query tables
+		// by returning matching keys
+		// the alternative is to set key-prefix-schema-table to false
+		// and treat entire redis as single schema , single table
+		// redis Hash/Set types are to be supported - they can also be
+		// used to filter out table data
+		// "default" schema is not prefixed to the key
+		if (split.getKeyDataType() != RedisDataType.STRING) {
+			return null;
+		}
+		ScanParams scanParms = new ScanParams();
+		scanParms.count(redisJedisManager.getRedisConnectorConfig().getRedisScanCount());
+		if (redisJedisManager.getRedisConnectorConfig().isKeyPrefixSchemaTable()) {
+		    String keyMatch = "";
+		    if (!"default".equals(split.getSchemaName())) {
+		        keyMatch = split.getSchemaName() + Character.toString(redisJedisManager.getRedisConnectorConfig().getRedisKeyDelimiter());
+		    }
+		    keyMatch = new StringBuilder().append(keyMatch).append(split.getTableName()).append(Character.toString(redisJedisManager.getRedisConnectorConfig().getRedisKeyDelimiter())).append("*").toString();
+		    scanParms.match(keyMatch);
+		}
+		return scanParms;
     }
 
     // Redis keys can be contained in the user-provided ZSET

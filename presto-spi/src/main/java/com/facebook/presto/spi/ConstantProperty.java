@@ -47,7 +47,8 @@ public final class ConstantProperty<E>
         return column;
     }
 
-    public Set<E> getColumns()
+    @Override
+	public Set<E> getColumns()
     {
         return Collections.singleton(column);
     }
@@ -68,7 +69,7 @@ public final class ConstantProperty<E>
     @Override
     public String toString()
     {
-        return "C(" + column + ")";
+        return new StringBuilder().append("C(").append(column).append(")").toString();
     }
 
     @Override

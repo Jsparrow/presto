@@ -77,12 +77,12 @@ public class BenchmarkBinaryFileSpiller
     public void read(BenchmarkData data)
     {
         List<Iterator<Page>> spills = data.getReadSpiller().getSpills();
-        for (Iterator<Page> spill : spills) {
+        spills.forEach(spill -> {
             while (spill.hasNext()) {
                 Page next = spill.next();
                 next.getPositionCount();
             }
-        }
+        });
     }
 
     @State(Scope.Thread)

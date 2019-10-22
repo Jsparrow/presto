@@ -57,7 +57,7 @@ public class TestFileSingleStreamSpillerFactory
     public void setUp()
     {
         executor = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
-        closer.register(() -> executor.shutdownNow());
+        closer.register(executor::shutdownNow);
         spillPath1 = Files.createTempDir();
         closer.register(() -> deleteRecursively(spillPath1.toPath(), ALLOW_INSECURE));
         spillPath2 = Files.createTempDir();

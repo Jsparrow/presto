@@ -55,12 +55,20 @@ public class BenchmarkJtsStrTreeQuery
     @OperationsPerInvocation(NUM_PROBE_RECTANGLES)
     public void rtreeQuery(BenchmarkData data, Blackhole blackhole)
     {
-        for (Envelope query : data.getProbeEnvs()) {
-            data.getRtree().query(query, blackhole::consume);
-        }
+        data.getProbeEnvs().forEach(query -> data.getRtree().query(query, blackhole::consume));
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkJtsStrTreeQuery.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         @Param({"1000", "3000", "10000", "30000", "100000", "300000", "1000000"})
@@ -95,21 +103,9 @@ public class BenchmarkJtsStrTreeQuery
         private STRtree buildRtree(List<Envelope> envs)
         {
             STRtree rtree = new STRtree();
-            for (Envelope env : envs) {
-                rtree.insert(env, env);
-            }
+            envs.forEach(env -> rtree.insert(env, env));
             rtree.build();
             return rtree;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkJtsStrTreeQuery.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

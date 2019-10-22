@@ -251,10 +251,11 @@ public class TaskInfoFetcher
             return newTaskStatus.getVersion() >= oldTaskStatus.getVersion();
         });
 
-        if (updated && newValue.getTaskStatus().getState().isDone()) {
-            finalTaskInfo.compareAndSet(Optional.empty(), Optional.of(newValue));
-            stop();
-        }
+        if (!(updated && newValue.getTaskStatus().getState().isDone())) {
+			return;
+		}
+		finalTaskInfo.compareAndSet(Optional.empty(), Optional.of(newValue));
+		stop();
     }
 
     @Override

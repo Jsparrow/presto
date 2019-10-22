@@ -92,6 +92,6 @@ public final class OperatorValidator
 
     private static String formatSignature(OperatorType operatorType, TypeSignature returnType, List<TypeSignature> argumentTypes)
     {
-        return operatorType + "(" + Joiner.on(", ").join(argumentTypes) + ")::" + returnType;
+        return new StringBuilder().append(operatorType).append("(").append(Joiner.on(", ").join(argumentTypes)).append(")::").append(returnType).toString();
     }
 }

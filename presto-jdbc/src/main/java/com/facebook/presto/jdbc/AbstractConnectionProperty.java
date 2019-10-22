@@ -24,17 +24,38 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 abstract class AbstractConnectionProperty<T>
         implements ConnectionProperty<T>
 {
-    private final String key;
-    private final Optional<String> defaultValue;
-    private final Predicate<Properties> isRequired;
-    private final Predicate<Properties> isAllowed;
-    private final Converter<T> converter;
+    private static final Logger logger = LoggerFactory.getLogger(AbstractConnectionProperty.class);
+	protected static final Predicate<Properties> REQUIRED = properties -> true;
+	protected static final Predicate<Properties> NOT_REQUIRED = properties -> false;
+	protected static final Predicate<Properties> ALLOWED = properties -> true;
+	protected static final Converter<String> STRING_CONVERTER = value -> value;
+	protected static final Converter<String> NON_EMPTY_STRING_CONVERTER = value -> {
+        checkArgument(!value.isEmpty(), "value is empty");
+        return value;
+    };
+	protected static final Converter<File> FILE_CONVERTER = File::new;
+	protected static final Converter<Boolean> BOOLEAN_CONVERTER = value -> {
+        switch (value.toLowerCase(ENGLISH)) {
+            case "true":
+                return true;
+            case "false":
+                return false;
+        }
+        throw new IllegalArgumentException("value must be 'true' or 'false'");
+    };
+	private final String key;
+	private final Optional<String> defaultValue;
+	private final Predicate<Properties> isRequired;
+	private final Predicate<Properties> isAllowed;
+	private final Converter<T> converter;
 
-    protected AbstractConnectionProperty(
+	protected AbstractConnectionProperty(
             String key,
             Optional<String> defaultValue,
             Predicate<Properties> isRequired,
@@ -48,7 +69,7 @@ abstract class AbstractConnectionProperty<T>
         this.converter = requireNonNull(converter, "converter is null");
     }
 
-    protected AbstractConnectionProperty(
+	protected AbstractConnectionProperty(
             String key,
             Predicate<Properties> required,
             Predicate<Properties> allowed,
@@ -57,19 +78,19 @@ abstract class AbstractConnectionProperty<T>
         this(key, Optional.empty(), required, allowed, converter);
     }
 
-    @Override
+	@Override
     public String getKey()
     {
         return key;
     }
 
-    @Override
+	@Override
     public Optional<String> getDefault()
     {
         return defaultValue;
     }
 
-    @Override
+	@Override
     public DriverPropertyInfo getDriverPropertyInfo(Properties mergedProperties)
     {
         String currentValue = mergedProperties.getProperty(key);
@@ -78,19 +99,19 @@ abstract class AbstractConnectionProperty<T>
         return result;
     }
 
-    @Override
+	@Override
     public boolean isRequired(Properties properties)
     {
         return isRequired.test(properties);
     }
 
-    @Override
+	@Override
     public boolean isAllowed(Properties properties)
     {
         return !properties.containsKey(key) || isAllowed.test(properties);
     }
 
-    @Override
+	@Override
     public Optional<T> getValue(Properties properties)
             throws SQLException
     {
@@ -113,7 +134,7 @@ abstract class AbstractConnectionProperty<T>
         }
     }
 
-    @Override
+	@Override
     public void validate(Properties properties)
             throws SQLException
     {
@@ -124,50 +145,26 @@ abstract class AbstractConnectionProperty<T>
         getValue(properties);
     }
 
-    protected static final Predicate<Properties> REQUIRED = properties -> true;
-    protected static final Predicate<Properties> NOT_REQUIRED = properties -> false;
-
-    protected static final Predicate<Properties> ALLOWED = properties -> true;
-
-    interface Converter<T>
-    {
-        T convert(String value);
-    }
-
-    protected static final Converter<String> STRING_CONVERTER = value -> value;
-
-    protected static final Converter<String> NON_EMPTY_STRING_CONVERTER = value -> {
-        checkArgument(!value.isEmpty(), "value is empty");
-        return value;
-    };
-
-    protected static final Converter<File> FILE_CONVERTER = File::new;
-
-    protected static final Converter<Boolean> BOOLEAN_CONVERTER = value -> {
-        switch (value.toLowerCase(ENGLISH)) {
-            case "true":
-                return true;
-            case "false":
-                return false;
-        }
-        throw new IllegalArgumentException("value must be 'true' or 'false'");
-    };
-
-    protected interface CheckedPredicate<T>
-    {
-        boolean test(T t)
-                throws SQLException;
-    }
-
-    protected static <T> Predicate<T> checkedPredicate(CheckedPredicate<T> predicate)
+	protected static <T> Predicate<T> checkedPredicate(CheckedPredicate<T> predicate)
     {
         return t -> {
             try {
                 return predicate.test(t);
             }
             catch (SQLException e) {
-                return false;
+                logger.error(e.getMessage(), e);
+				return false;
             }
         };
+    }
+	interface Converter<T>
+    {
+        T convert(String value);
+    }
+
+    protected interface CheckedPredicate<T>
+    {
+        boolean test(T t)
+                throws SQLException;
     }
 }

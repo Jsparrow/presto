@@ -35,53 +35,17 @@ import static java.util.Objects.requireNonNull;
 public class SpatialJoinNode
         extends InternalPlanNode
 {
-    public enum Type
-    {
-        INNER("SpatialInnerJoin"),
-        LEFT("SpatialLeftJoin");
-
-        private final String joinLabel;
-
-        Type(String joinLabel)
-        {
-            this.joinLabel = joinLabel;
-        }
-
-        public String getJoinLabel()
-        {
-            return joinLabel;
-        }
-
-        public static Type fromJoinNodeType(JoinNode.Type joinNodeType)
-        {
-            switch (joinNodeType) {
-                case INNER:
-                    return Type.INNER;
-                case LEFT:
-                    return Type.LEFT;
-                default:
-                    throw new IllegalArgumentException("Unsupported spatial join type: " + joinNodeType);
-            }
-        }
-    }
-
     private final Type type;
-    private final PlanNode left;
-    private final PlanNode right;
-    private final List<VariableReferenceExpression> outputVariables;
-    private final RowExpression filter;
-    private final Optional<VariableReferenceExpression> leftPartitionVariable;
-    private final Optional<VariableReferenceExpression> rightPartitionVariable;
-    private final Optional<String> kdbTree;
-    private final DistributionType distributionType;
+	private final PlanNode left;
+	private final PlanNode right;
+	private final List<VariableReferenceExpression> outputVariables;
+	private final RowExpression filter;
+	private final Optional<VariableReferenceExpression> leftPartitionVariable;
+	private final Optional<VariableReferenceExpression> rightPartitionVariable;
+	private final Optional<String> kdbTree;
+	private final DistributionType distributionType;
 
-    public enum DistributionType
-    {
-        PARTITIONED,
-        REPLICATED
-    }
-
-    @JsonCreator
+	@JsonCreator
     public SpatialJoinNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("type") Type type,
@@ -124,77 +88,113 @@ public class SpatialJoinNode
         }
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getLeft()
     {
         return left;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getRight()
     {
         return right;
     }
 
-    @JsonProperty
+	@JsonProperty
     public RowExpression getFilter()
     {
         return filter;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<VariableReferenceExpression> getLeftPartitionVariable()
     {
         return leftPartitionVariable;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<VariableReferenceExpression> getRightPartitionVariable()
     {
         return rightPartitionVariable;
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return ImmutableList.of(left, right);
     }
 
-    @Override
+	@Override
     @JsonProperty
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return outputVariables;
     }
 
-    @JsonProperty
+	@JsonProperty
     public DistributionType getDistributionType()
     {
         return distributionType;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<String> getKdbTree()
     {
         return kdbTree;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitSpatialJoin(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
         return new SpatialJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), outputVariables, filter, leftPartitionVariable, rightPartitionVariable, kdbTree);
+    }
+
+	public enum Type
+    {
+        INNER("SpatialInnerJoin"),
+        LEFT("SpatialLeftJoin");
+
+        private final String joinLabel;
+
+        Type(String joinLabel)
+        {
+            this.joinLabel = joinLabel;
+        }
+
+        public String getJoinLabel()
+        {
+            return joinLabel;
+        }
+
+        public static Type fromJoinNodeType(JoinNode.Type joinNodeType)
+        {
+            switch (joinNodeType) {
+                case INNER:
+                    return Type.INNER;
+                case LEFT:
+                    return Type.LEFT;
+                default:
+                    throw new IllegalArgumentException("Unsupported spatial join type: " + joinNodeType);
+            }
+        }
+    }
+
+	public enum DistributionType
+    {
+        PARTITIONED,
+        REPLICATED
     }
 }

@@ -95,20 +95,8 @@ public class TestPrestoVerifierIntegrationSmokeTest
         jsonLogFile = Paths.get(configDirectory.getAbsolutePath(), "json.log").toFile();
         humanReadableLogFile = Paths.get(configDirectory.getAbsolutePath(), "human-readable.log").toFile();
         sink.write(format(
-                "test-id=%s\n" +
-                        "control.host=%s\n" +
-                        "control.jdbc-port=%s\n" +
-                        "test.host=%s\n" +
-                        "test.jdbc-port=%s\n" +
-                        "control.table-prefix=local.tmp_verifier_c\n" +
-                        "test.table-prefix=local.tmp_verifier_t\n" +
-                        "source-query.database=%s\n" +
-                        "source-query.suites=%s\n" +
-                        "source-query.max-queries-per-suite=100\n" +
-                        "event-clients=json,human-readable\n" +
-                        "json.log-file=%s\n" +
-                        "human-readable.log-file=%s\n" +
-                        "max-concurrency=50\n",
+                new StringBuilder().append("test-id=%s\n").append("control.host=%s\n").append("control.jdbc-port=%s\n").append("test.host=%s\n").append("test.jdbc-port=%s\n").append("control.table-prefix=local.tmp_verifier_c\n").append("test.table-prefix=local.tmp_verifier_t\n")
+						.append("source-query.database=%s\n").append("source-query.suites=%s\n").append("source-query.max-queries-per-suite=100\n").append("event-clients=json,human-readable\n").append("json.log-file=%s\n").append("human-readable.log-file=%s\n").append("max-concurrency=50\n").toString(),
                 TEST_ID,
                 host,
                 port,

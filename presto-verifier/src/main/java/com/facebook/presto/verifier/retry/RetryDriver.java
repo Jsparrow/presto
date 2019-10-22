@@ -98,7 +98,6 @@ public class RetryDriver<E extends RuntimeException>
 
     public interface RetryOperation<V>
     {
-        V run()
-                throws QueryException;
+        V run();
     }
 }

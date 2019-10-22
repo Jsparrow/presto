@@ -28,15 +28,14 @@ public abstract class BlockEncoding
         implements BinaryColumnEncoding
 {
     private final Type type;
+	private final DynamicSliceOutput buffer = new DynamicSliceOutput(0);
 
-    public BlockEncoding(Type type)
+	public BlockEncoding(Type type)
     {
         this.type = type;
     }
 
-    private final DynamicSliceOutput buffer = new DynamicSliceOutput(0);
-
-    @Override
+	@Override
     public final void encodeColumn(Block block, SliceOutput output, EncodeOutput encodeOutput)
     {
         for (int position = 0; position < block.getPositionCount(); position++) {
@@ -47,7 +46,7 @@ public abstract class BlockEncoding
         }
     }
 
-    @Override
+	@Override
     public final void encodeValueInto(Block block, int position, SliceOutput output)
     {
         buffer.reset();
@@ -59,9 +58,9 @@ public abstract class BlockEncoding
         output.writeBytes(slice);
     }
 
-    protected abstract void encodeValue(Block block, int position, SliceOutput output);
+	protected abstract void encodeValue(Block block, int position, SliceOutput output);
 
-    @Override
+	@Override
     public final Block decodeColumn(ColumnData columnData)
     {
         int size = columnData.rowCount();
@@ -82,13 +81,13 @@ public abstract class BlockEncoding
         return builder.build();
     }
 
-    @Override
+	@Override
     public final int getValueLength(Slice slice, int offset)
     {
         return Integer.reverseBytes(slice.getInt(offset));
     }
 
-    @Override
+	@Override
     public final int getValueOffset(Slice slice, int offset)
     {
         return SIZE_OF_INT;

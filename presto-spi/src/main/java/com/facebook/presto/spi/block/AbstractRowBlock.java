@@ -27,20 +27,6 @@ public abstract class AbstractRowBlock
 {
     protected final int numFields;
 
-    protected abstract Block[] getRawFieldBlocks();
-
-    protected abstract int[] getFieldBlockOffsets();
-
-    public abstract int getOffsetBase();
-
-    protected abstract boolean[] getRowIsNull();
-
-    // the offset in each field block, it can also be viewed as the "entry-based" offset in the RowBlock
-    protected int getFieldBlockOffset(int position)
-    {
-        return getFieldBlockOffsets()[position + getOffsetBase()];
-    }
-
     protected AbstractRowBlock(int numFields)
     {
         if (numFields <= 0) {
@@ -49,13 +35,28 @@ public abstract class AbstractRowBlock
         this.numFields = numFields;
     }
 
-    @Override
+	protected abstract Block[] getRawFieldBlocks();
+
+	protected abstract int[] getFieldBlockOffsets();
+
+	@Override
+	public abstract int getOffsetBase();
+
+	protected abstract boolean[] getRowIsNull();
+
+	// the offset in each field block, it can also be viewed as the "entry-based" offset in the RowBlock
+    protected int getFieldBlockOffset(int position)
+    {
+        return getFieldBlockOffsets()[position + getOffsetBase()];
+    }
+
+	@Override
     public String getEncodingName()
     {
         return RowBlockEncoding.NAME;
     }
 
-    @Override
+	@Override
     public Block copyPositions(int[] positions, int offset, int length)
     {
         checkArrayRange(positions, offset, length);
@@ -83,7 +84,7 @@ public abstract class AbstractRowBlock
         return createRowBlockInternal(0, length, newRowIsNull, newOffsets, newBlocks);
     }
 
-    @Override
+	@Override
     public Block getRegion(int position, int length)
     {
         int positionCount = getPositionCount();
@@ -92,7 +93,7 @@ public abstract class AbstractRowBlock
         return createRowBlockInternal(position + getOffsetBase(), length, getRowIsNull(), getFieldBlockOffsets(), getRawFieldBlocks());
     }
 
-    @Override
+	@Override
     public long getRegionSizeInBytes(int position, int length)
     {
         int positionCount = getPositionCount();
@@ -109,7 +110,7 @@ public abstract class AbstractRowBlock
         return regionSizeInBytes;
     }
 
-    @Override
+	@Override
     public long getPositionsSizeInBytes(boolean[] positions)
     {
         checkValidPositions(positions, getPositionCount());
@@ -133,7 +134,7 @@ public abstract class AbstractRowBlock
         return sizeInBytes + (Integer.BYTES + Byte.BYTES) * (long) usedPositionCount;
     }
 
-    @Override
+	@Override
     public Block copyRegion(int position, int length)
     {
         int positionCount = getPositionCount();
@@ -157,7 +158,7 @@ public abstract class AbstractRowBlock
         return createRowBlockInternal(0, length, newRowIsNull, newOffsets, newBlocks);
     }
 
-    @Override
+	@Override
     public Block getBlock(int position)
     {
         checkReadablePosition(position);
@@ -165,14 +166,14 @@ public abstract class AbstractRowBlock
         return new SingleRowBlock(getFieldBlockOffset(position), getRawFieldBlocks());
     }
 
-    @Override
+	@Override
     public void writePositionTo(int position, BlockBuilder blockBuilder)
     {
         checkReadablePosition(position);
         blockBuilder.appendStructureInternal(this, position);
     }
 
-    @Override
+	@Override
     public Block getSingleValueBlock(int position)
     {
         checkReadablePosition(position);
@@ -190,7 +191,7 @@ public abstract class AbstractRowBlock
         return createRowBlockInternal(0, 1, newRowIsNull, newOffsets, newBlocks);
     }
 
-    @Override
+	@Override
     public long getEstimatedDataSizeForStats(int position)
     {
         checkReadablePosition(position);
@@ -207,13 +208,13 @@ public abstract class AbstractRowBlock
         return size;
     }
 
-    @Override
+	@Override
     public boolean mayHaveNull()
     {
         return getRowIsNull() != null;
     }
 
-    @Override
+	@Override
     public boolean isNull(int position)
     {
         checkReadablePosition(position);
@@ -221,21 +222,21 @@ public abstract class AbstractRowBlock
         return rowIsNull != null && rowIsNull[position + getOffsetBase()];
     }
 
-    private void checkReadablePosition(int position)
+	private void checkReadablePosition(int position)
     {
         if (position < 0 || position >= getPositionCount()) {
             throw new IllegalArgumentException("position is not valid");
         }
     }
 
-    @Override
+	@Override
     public Block getBlockUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return new SingleRowBlock(getFieldBlockOffsets()[internalPosition], getRawFieldBlocks());
     }
 
-    @Override
+	@Override
     public boolean isNullUnchecked(int internalPosition)
     {
         assert mayHaveNull() : "no nulls present";

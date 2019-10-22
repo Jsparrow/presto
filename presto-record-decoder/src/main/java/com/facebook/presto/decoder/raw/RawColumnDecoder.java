@@ -45,40 +45,26 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RawColumnDecoder
 {
-    private enum FieldType
-    {
-        BYTE(Byte.SIZE),
-        SHORT(Short.SIZE),
-        INT(Integer.SIZE),
-        LONG(Long.SIZE),
-        FLOAT(Float.SIZE),
-        DOUBLE(Double.SIZE);
+    private static final Logger logger = LoggerFactory.getLogger(RawColumnDecoder.class);
 
-        private final int size;
+	private static final Pattern MAPPING_PATTERN = Pattern.compile("(\\d+)(?::(\\d+))?");
 
-        FieldType(int bitSize)
-        {
-            this.size = bitSize / 8;
-        }
+	private final String columnName;
 
-        public int getSize()
-        {
-            return size;
-        }
-    }
+	private final Type columnType;
 
-    private static final Pattern MAPPING_PATTERN = Pattern.compile("(\\d+)(?::(\\d+))?");
+	private final FieldType fieldType;
 
-    private final String columnName;
-    private final Type columnType;
-    private final FieldType fieldType;
-    private final int start;
-    private final OptionalInt end;
+	private final int start;
 
-    public RawColumnDecoder(DecoderColumnHandle columnHandle)
+	private final OptionalInt end;
+
+	public RawColumnDecoder(DecoderColumnHandle columnHandle)
     {
         try {
             requireNonNull(columnHandle, "columnHandle is null");
@@ -94,7 +80,8 @@ public class RawColumnDecoder
                         FieldType.valueOf(columnHandle.getDataFormat().toUpperCase(Locale.ENGLISH));
             }
             catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(format("invalid dataFormat '%s' for column '%s'", columnHandle.getDataFormat(), columnName));
+                logger.error(e.getMessage(), e);
+				throw new IllegalArgumentException(format("invalid dataFormat '%s' for column '%s'", columnHandle.getDataFormat(), columnName));
             }
 
             String mapping = Optional.ofNullable(columnHandle.getMapping()).orElse("0");
@@ -158,7 +145,7 @@ public class RawColumnDecoder
         }
     }
 
-    private static boolean isSupportedType(Type type)
+	private static boolean isSupportedType(Type type)
     {
         if (isVarcharType(type)) {
             return true;
@@ -169,7 +156,7 @@ public class RawColumnDecoder
         return false;
     }
 
-    private void checkFieldTypeOneOf(FieldType declaredFieldType, String columnName, FieldType... allowedFieldTypes)
+	private void checkFieldTypeOneOf(FieldType declaredFieldType, String columnName, FieldType... allowedFieldTypes)
     {
         if (!Arrays.asList(allowedFieldTypes).contains(declaredFieldType)) {
             throw new IllegalArgumentException(format(
@@ -181,7 +168,7 @@ public class RawColumnDecoder
         }
     }
 
-    public FieldValueProvider decodeField(byte[] value)
+	public FieldValueProvider decodeField(byte[] value)
     {
         requireNonNull(value, "value is null");
 
@@ -205,7 +192,29 @@ public class RawColumnDecoder
         return new RawValueProvider(ByteBuffer.wrap(value, start, actualEnd - start), fieldType, columnName, columnType);
     }
 
-    private static class RawValueProvider
+	private enum FieldType
+    {
+        BYTE(Byte.SIZE),
+        SHORT(Short.SIZE),
+        INT(Integer.SIZE),
+        LONG(Long.SIZE),
+        FLOAT(Float.SIZE),
+        DOUBLE(Double.SIZE);
+
+        private final int size;
+
+        FieldType(int bitSize)
+        {
+            this.size = bitSize / 8;
+        }
+
+        public int getSize()
+        {
+            return size;
+        }
+    }
+
+	private static class RawValueProvider
             extends FieldValueProvider
     {
         private final ByteBuffer value;

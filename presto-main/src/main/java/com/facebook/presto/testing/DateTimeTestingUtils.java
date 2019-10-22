@@ -119,16 +119,16 @@ public final class DateTimeTestingUtils
 
     public static SqlTime sqlTimeOf(LocalTime time, Session session)
     {
-        if (session.toConnectorSession().isLegacyTimestamp()) {
-            long millisUtc = LocalDate.ofEpochDay(0)
-                    .atTime(time)
-                    .atZone(UTC)
-                    .withZoneSameLocal(ZoneId.of(session.getTimeZoneKey().getId()))
-                    .toInstant()
-                    .toEpochMilli();
-            return new SqlTime(millisUtc, session.getTimeZoneKey());
-        }
-        return new SqlTime(NANOSECONDS.toMillis(time.toNanoOfDay()));
+        if (!session.toConnectorSession().isLegacyTimestamp()) {
+			return new SqlTime(NANOSECONDS.toMillis(time.toNanoOfDay()));
+		}
+		long millisUtc = LocalDate.ofEpochDay(0)
+		        .atTime(time)
+		        .atZone(UTC)
+		        .withZoneSameLocal(ZoneId.of(session.getTimeZoneKey().getId()))
+		        .toInstant()
+		        .toEpochMilli();
+		return new SqlTime(millisUtc, session.getTimeZoneKey());
     }
 
     private static int millisToNanos(int millisOfSecond)

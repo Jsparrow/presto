@@ -38,15 +38,11 @@ public class TestJoinUsing
     public void testColumnReferences()
     {
         assertions.assertQuery(
-                "SELECT k, v1, v2, t.v1, u.v2 FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT k, v1, v2, t.v1, u.v2 FROM ").append("(VALUES (1, 'a')) AS t(k, v1) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (1, 'a', 'b', 'a', 'b')");
 
         assertions.assertFails(
-                "SELECT t.k FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT t.k FROM ").append("(VALUES (1, 'a')) AS t(k, v1) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k)").toString(),
                 ".*Column 't.k' cannot be resolved.*");
     }
 
@@ -54,9 +50,7 @@ public class TestJoinUsing
     public void testInner()
     {
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1, 'a')) AS t(k, v1) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (1, 'a', 'b')");
     }
 
@@ -64,9 +58,7 @@ public class TestJoinUsing
     public void testMultipleKeys()
     {
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (1, 'a', 2)) AS t(k1, v1, k2) JOIN" +
-                        "(VALUES (1, 'b', 2)) AS u(k1, v2, k2) USING (k1, k2)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1, 'a', 2)) AS t(k1, v1, k2) JOIN").append("(VALUES (1, 'b', 2)) AS u(k1, v2, k2) USING (k1, k2)").toString(),
                 "VALUES (1, 2, 'a', 'b')");
     }
 
@@ -74,9 +66,7 @@ public class TestJoinUsing
     public void testCoercion()
     {
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (1e0, 'a')) AS t(k, v1) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1e0, 'a')) AS t(k, v1) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (1e0, 'a', 'b')");
 
         // long, double
@@ -117,9 +107,7 @@ public class TestJoinUsing
     public void testDuplicateColumns()
     {
         assertions.assertFails(
-                "SELECT * FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k, k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1, 'a')) AS t(k, v1) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k, k)").toString(),
                 ".*Column 'k' appears multiple times in USING clause.*");
     }
 
@@ -127,9 +115,7 @@ public class TestJoinUsing
     public void testAlternateColumnOrders()
     {
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES ('a', 1)) AS t(v1, k) JOIN" +
-                        "(VALUES (1, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES ('a', 1)) AS t(v1, k) JOIN").append("(VALUES (1, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (1, 'a', 'b')");
     }
 
@@ -137,35 +123,20 @@ public class TestJoinUsing
     public void testOuter()
     {
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) LEFT JOIN" +
-                        "(VALUES (2, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1, 'a')) AS t(k, v1) LEFT JOIN").append("(VALUES (2, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (1, 'a', CAST(NULL AS VARCHAR(1)))");
 
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (1, 'a')) AS t(k, v1) RIGHT JOIN" +
-                        "(VALUES (2, 'b')) AS u(k, v2) USING (k)",
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (1, 'a')) AS t(k, v1) RIGHT JOIN").append("(VALUES (2, 'b')) AS u(k, v2) USING (k)").toString(),
                 "VALUES (2, CAST(NULL AS VARCHAR(1)), 'b')");
 
         assertions.assertQuery(
-                "SELECT * FROM " +
-                        "(VALUES (0, 1, 2), (3, 6, 5)) a(x1, y, z1) FULL OUTER JOIN " +
-                        "(VALUES (3, 1, 5), (0, 4, 2)) b(x2, y, z2) USING (y)",
-                "VALUES " +
-                        "(1, 0, 2, 3, 5), " +
-                        "(6, 3, 5, CAST(NULL AS INTEGER), CAST(NULL AS INTEGER)), " +
-                        "(4, CAST(NULL AS INTEGER), CAST(NULL AS INTEGER), 0, 2)");
+                new StringBuilder().append("SELECT * FROM ").append("(VALUES (0, 1, 2), (3, 6, 5)) a(x1, y, z1) FULL OUTER JOIN ").append("(VALUES (3, 1, 5), (0, 4, 2)) b(x2, y, z2) USING (y)").toString(),
+                new StringBuilder().append("VALUES ").append("(1, 0, 2, 3, 5), ").append("(6, 3, 5, CAST(NULL AS INTEGER), CAST(NULL AS INTEGER)), ").append("(4, CAST(NULL AS INTEGER), CAST(NULL AS INTEGER), 0, 2)").toString());
 
         assertions.assertQuery(
-                "SELECT y, x1, x2 FROM " +
-                        "(VALUES (0, 1, 2), (3, 6, 5), (3, null, 5)) a(x1, y, z1) FULL OUTER JOIN " +
-                        "(VALUES (3, 1, 5), (0, 4, 2)) b(x2, y, z2) USING (y)",
-                "VALUES " +
-                        "(1, 0, 3), " +
-                        "(6, 3, CAST(NULL AS INTEGER)), " +
-                        "(CAST(NULL AS INTEGER), 3, CAST(NULL AS INTEGER)), " +
-                        "(4, CAST(NULL AS INTEGER), 0)");
+                new StringBuilder().append("SELECT y, x1, x2 FROM ").append("(VALUES (0, 1, 2), (3, 6, 5), (3, null, 5)) a(x1, y, z1) FULL OUTER JOIN ").append("(VALUES (3, 1, 5), (0, 4, 2)) b(x2, y, z2) USING (y)").toString(),
+                new StringBuilder().append("VALUES ").append("(1, 0, 3), ").append("(6, 3, CAST(NULL AS INTEGER)), ").append("(CAST(NULL AS INTEGER), 3, CAST(NULL AS INTEGER)), ").append("(4, CAST(NULL AS INTEGER), 0)").toString());
     }
 
     @Test

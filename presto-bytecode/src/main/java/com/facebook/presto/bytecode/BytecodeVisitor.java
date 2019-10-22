@@ -54,15 +54,9 @@ public class BytecodeVisitor<T>
 {
     public T visitClass(ClassDefinition classDefinition)
     {
-        for (AnnotationDefinition annotationDefinition : classDefinition.getAnnotations()) {
-            visitAnnotation(classDefinition, annotationDefinition);
-        }
-        for (FieldDefinition fieldDefinition : classDefinition.getFields()) {
-            visitField(classDefinition, fieldDefinition);
-        }
-        for (MethodDefinition methodDefinition : classDefinition.getMethods()) {
-            visitMethod(classDefinition, methodDefinition);
-        }
+        classDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(classDefinition, annotationDefinition));
+        classDefinition.getFields().forEach(fieldDefinition -> visitField(classDefinition, fieldDefinition));
+        classDefinition.getMethods().forEach(methodDefinition -> visitMethod(classDefinition, methodDefinition));
         return null;
     }
 
@@ -73,26 +67,20 @@ public class BytecodeVisitor<T>
 
     public T visitField(ClassDefinition classDefinition, FieldDefinition fieldDefinition)
     {
-        for (AnnotationDefinition annotationDefinition : fieldDefinition.getAnnotations()) {
-            visitAnnotation(fieldDefinition, annotationDefinition);
-        }
+        fieldDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(fieldDefinition, annotationDefinition));
         return null;
     }
 
     public T visitMethod(ClassDefinition classDefinition, MethodDefinition methodDefinition)
     {
-        for (AnnotationDefinition annotationDefinition : methodDefinition.getAnnotations()) {
-            visitAnnotation(methodDefinition, annotationDefinition);
-        }
+        methodDefinition.getAnnotations().forEach(annotationDefinition -> visitAnnotation(methodDefinition, annotationDefinition));
         methodDefinition.getBody().accept(null, this);
         return null;
     }
 
     public T visitNode(BytecodeNode parent, BytecodeNode node)
     {
-        for (BytecodeNode child : node.getChildNodes()) {
-            child.accept(node, this);
-        }
+        node.getChildNodes().forEach(child -> child.accept(node, this));
         return null;
     }
 

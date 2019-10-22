@@ -175,12 +175,12 @@ public class ShardOrganizationManager
                 .forEach(tableId -> organizerDao.insertNode(currentNodeIdentifier, tableId));
 
         ImmutableSet.Builder<Long> tableIds = ImmutableSet.builder();
-        for (Long tableId : enabledTableIds) {
+        enabledTableIds.forEach(tableId -> {
             TableOrganizationInfo info = organizationInfos.get(tableId);
             if (info == null || shouldRunOrganization(info)) {
                 tableIds.add(tableId);
             }
-        }
+        });
         return tableIds.build();
     }
 
@@ -210,9 +210,7 @@ public class ShardOrganizationManager
         tablesInProgress.add(tableId);
 
         ImmutableList.Builder<CompletableFuture<?>> futures = ImmutableList.builder();
-        for (OrganizationSet organizationSet : organizationSets) {
-            futures.add(organizer.enqueue(organizationSet));
-        }
+        organizationSets.forEach(organizationSet -> futures.add(organizer.enqueue(organizationSet)));
         allAsList(futures.build())
                 .whenComplete((value, throwable) -> {
                     tablesInProgress.remove(tableId);

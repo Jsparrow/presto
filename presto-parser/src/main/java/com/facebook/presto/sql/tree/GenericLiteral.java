@@ -41,7 +41,7 @@ public final class GenericLiteral
         super(location);
         requireNonNull(type, "type is null");
         requireNonNull(value, "value is null");
-        if (type.equalsIgnoreCase("X")) {
+        if ("X".equalsIgnoreCase(type)) {
             // we explicitly disallow "X" as type name, so if the user arrived here,
             // it must be because that he intended to give a binaryLiteral instead, but
             // added whitespace between the X and quote

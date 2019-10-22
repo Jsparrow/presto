@@ -29,17 +29,17 @@ import java.util.concurrent.ThreadLocalRandom;
 @Description("Generates a random permutation of the given array.")
 public final class ArrayShuffleFunction
 {
-    private final PageBuilder pageBuilder;
     private static final int INITIAL_LENGTH = 128;
-    private int[] positions = new int[INITIAL_LENGTH];
+	private final PageBuilder pageBuilder;
+	private int[] positions = new int[INITIAL_LENGTH];
 
-    @TypeParameter("E")
+	@TypeParameter("E")
     public ArrayShuffleFunction(@TypeParameter("E") Type elementType)
     {
         pageBuilder = new PageBuilder(ImmutableList.of(elementType));
     }
 
-    @TypeParameter("E")
+	@TypeParameter("E")
     @SqlType("array(E)")
     public Block shuffle(
             @TypeParameter("E") Type type,

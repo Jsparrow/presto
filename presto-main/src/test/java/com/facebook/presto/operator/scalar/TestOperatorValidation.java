@@ -30,7 +30,12 @@ public class TestOperatorValidation
         extractScalars(InvalidArgumentCount.class);
     }
 
-    public static final class InvalidArgumentCount
+    private static void extractScalars(Class<?> clazz)
+    {
+        new FunctionListBuilder().scalars(clazz);
+    }
+
+	public static final class InvalidArgumentCount
     {
         @ScalarOperator(ADD)
         @SqlType(StandardTypes.BIGINT)
@@ -38,10 +43,5 @@ public class TestOperatorValidation
         {
             return 0;
         }
-    }
-
-    private static void extractScalars(Class<?> clazz)
-    {
-        new FunctionListBuilder().scalars(clazz);
     }
 }

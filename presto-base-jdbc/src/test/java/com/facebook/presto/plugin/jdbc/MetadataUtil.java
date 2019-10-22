@@ -32,13 +32,11 @@ import static org.testng.Assert.assertEquals;
 
 final class MetadataUtil
 {
-    private MetadataUtil() {}
-
     public static final JsonCodec<JdbcColumnHandle> COLUMN_CODEC;
-    public static final JsonCodec<JdbcTableHandle> TABLE_CODEC;
-    public static final JsonCodec<JdbcOutputTableHandle> OUTPUT_TABLE_CODEC;
+	public static final JsonCodec<JdbcTableHandle> TABLE_CODEC;
+	public static final JsonCodec<JdbcOutputTableHandle> OUTPUT_TABLE_CODEC;
 
-    static {
+	static {
         ObjectMapperProvider provider = new ObjectMapperProvider();
         provider.setJsonDeserializers(ImmutableMap.of(Type.class, new TestingTypeDeserializer()));
         JsonCodecFactory codecFactory = new JsonCodecFactory(provider);
@@ -47,7 +45,16 @@ final class MetadataUtil
         OUTPUT_TABLE_CODEC = codecFactory.jsonCodec(JdbcOutputTableHandle.class);
     }
 
-    public static final class TestingTypeDeserializer
+	private MetadataUtil() {}
+
+	public static <T> void assertJsonRoundTrip(JsonCodec<T> codec, T object)
+    {
+        String json = codec.toJson(object);
+        T copy = codec.fromJson(json);
+        assertEquals(copy, object);
+    }
+
+	public static final class TestingTypeDeserializer
             extends FromStringDeserializer<Type>
     {
         private final Map<String, Type> types = ImmutableMap.of(
@@ -66,12 +73,5 @@ final class MetadataUtil
             checkArgument(type != null, "Unknown type %s", value);
             return type;
         }
-    }
-
-    public static <T> void assertJsonRoundTrip(JsonCodec<T> codec, T object)
-    {
-        String json = codec.toJson(object);
-        T copy = codec.fromJson(json);
-        assertEquals(copy, object);
     }
 }

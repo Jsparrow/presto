@@ -55,7 +55,8 @@ public final class SortingProperty<E>
         return column;
     }
 
-    public Set<E> getColumns()
+    @Override
+	public Set<E> getColumns()
     {
         return Collections.singleton(column);
     }
@@ -106,7 +107,7 @@ public final class SortingProperty<E>
                 break;
         }
 
-        return "S" + ordering + nullOrdering + "(" + column + ")";
+        return new StringBuilder().append("S").append(ordering).append(nullOrdering).append("(").append(column).append(")").toString();
     }
 
     @Override

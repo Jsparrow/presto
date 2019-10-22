@@ -286,7 +286,7 @@ public class PrestoResultSet
         }
 
         ColumnInfo columnInfo = columnInfo(columnIndex);
-        if (columnInfo.getColumnTypeName().equalsIgnoreCase("time")) {
+        if ("time".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
             try {
                 return new Time(TIME_FORMATTER.withZone(localTimeZone).parseMillis(String.valueOf(value)));
             }
@@ -295,7 +295,7 @@ public class PrestoResultSet
             }
         }
 
-        if (columnInfo.getColumnTypeName().equalsIgnoreCase("time with time zone")) {
+        if ("time with time zone".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
             try {
                 return new Time(TIME_WITH_TIME_ZONE_FORMATTER.parseMillis(String.valueOf(value)));
             }
@@ -323,7 +323,7 @@ public class PrestoResultSet
         }
 
         ColumnInfo columnInfo = columnInfo(columnIndex);
-        if (columnInfo.getColumnTypeName().equalsIgnoreCase("timestamp")) {
+        if ("timestamp".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
             try {
                 return new Timestamp(TIMESTAMP_FORMATTER.withZone(localTimeZone).parseMillis(String.valueOf(value)));
             }
@@ -332,7 +332,7 @@ public class PrestoResultSet
             }
         }
 
-        if (columnInfo.getColumnTypeName().equalsIgnoreCase("timestamp with time zone")) {
+        if ("timestamp with time zone".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
             try {
                 return new Timestamp(TIMESTAMP_WITH_TIME_ZONE_FORMATTER.parseMillis(String.valueOf(value)));
             }
@@ -526,10 +526,10 @@ public class PrestoResultSet
             case Types.DECIMAL:
                 return getBigDecimal(columnIndex);
             case Types.JAVA_OBJECT:
-                if (columnInfo.getColumnTypeName().equalsIgnoreCase("interval year to month")) {
+                if ("interval year to month".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
                     return getIntervalYearMonth(columnIndex);
                 }
-                if (columnInfo.getColumnTypeName().equalsIgnoreCase("interval day to second")) {
+                if ("interval day to second".equalsIgnoreCase(columnInfo.getColumnTypeName())) {
                     return getIntervalDayTime(columnIndex);
                 }
         }
@@ -1756,7 +1756,44 @@ public class PrestoResultSet
         return (maxRows > 0) ? new LengthLimitedIterator<>(rowsIterator, maxRows) : rowsIterator;
     }
 
-    private static class ResultsPageIterator
+    static SQLException resultsException(QueryStatusInfo results)
+    {
+        QueryError error = requireNonNull(results.getError());
+        String message = format("Query failed (#%s): %s", results.getId(), error.getMessage());
+        Throwable cause = (error.getFailureInfo() == null) ? null : error.getFailureInfo().toException();
+        return new SQLException(message, error.getSqlState(), error.getErrorCode(), cause);
+    }
+
+	private static Map<String, Integer> getFieldMap(List<Column> columns)
+    {
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i < columns.size(); i++) {
+            String name = columns.get(i).getName().toLowerCase(ENGLISH);
+            map.putIfAbsent(name, i + 1);
+        }
+        return ImmutableMap.copyOf(map);
+    }
+
+	private static List<ColumnInfo> getColumnInfo(List<Column> columns)
+    {
+        ImmutableList.Builder<ColumnInfo> list = ImmutableList.builder();
+        columns.forEach(column -> {
+            ColumnInfo.Builder builder = new ColumnInfo.Builder()
+                    .setCatalogName("") // TODO
+                    .setSchemaName("") // TODO
+                    .setTableName("") // TODO
+                    .setColumnLabel(column.getName())
+                    .setColumnName(column.getName()) // TODO
+                    .setColumnTypeSignature(parseTypeSignature(column.getType().toUpperCase(ENGLISH)))
+                    .setNullable(Nullable.UNKNOWN)
+                    .setCurrency(false);
+            setTypeInfo(builder, parseTypeSignature(column.getType()));
+            list.add(builder.build());
+        });
+        return list.build();
+    }
+
+	private static class ResultsPageIterator
             extends AbstractIterator<Iterable<List<Object>>>
     {
         private final StatementClient client;
@@ -1825,49 +1862,11 @@ public class PrestoResultSet
 
         private void checkInterruption(Throwable t)
         {
-            if (Thread.currentThread().isInterrupted()) {
-                client.close();
-                throw new RuntimeException(new SQLException("ResultSet thread was interrupted", t));
-            }
+            if (!Thread.currentThread().isInterrupted()) {
+				return;
+			}
+			client.close();
+			throw new RuntimeException(new SQLException("ResultSet thread was interrupted", t));
         }
-    }
-
-    static SQLException resultsException(QueryStatusInfo results)
-    {
-        QueryError error = requireNonNull(results.getError());
-        String message = format("Query failed (#%s): %s", results.getId(), error.getMessage());
-        Throwable cause = (error.getFailureInfo() == null) ? null : error.getFailureInfo().toException();
-        return new SQLException(message, error.getSqlState(), error.getErrorCode(), cause);
-    }
-
-    private static Map<String, Integer> getFieldMap(List<Column> columns)
-    {
-        Map<String, Integer> map = new HashMap<>();
-        for (int i = 0; i < columns.size(); i++) {
-            String name = columns.get(i).getName().toLowerCase(ENGLISH);
-            if (!map.containsKey(name)) {
-                map.put(name, i + 1);
-            }
-        }
-        return ImmutableMap.copyOf(map);
-    }
-
-    private static List<ColumnInfo> getColumnInfo(List<Column> columns)
-    {
-        ImmutableList.Builder<ColumnInfo> list = ImmutableList.builder();
-        for (Column column : columns) {
-            ColumnInfo.Builder builder = new ColumnInfo.Builder()
-                    .setCatalogName("") // TODO
-                    .setSchemaName("") // TODO
-                    .setTableName("") // TODO
-                    .setColumnLabel(column.getName())
-                    .setColumnName(column.getName()) // TODO
-                    .setColumnTypeSignature(parseTypeSignature(column.getType().toUpperCase(ENGLISH)))
-                    .setNullable(Nullable.UNKNOWN)
-                    .setCurrency(false);
-            setTypeInfo(builder, parseTypeSignature(column.getType()));
-            list.add(builder.build());
-        }
-        return list.build();
     }
 }

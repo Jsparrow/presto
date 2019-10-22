@@ -191,7 +191,8 @@ public class TestDynamicLifespanScheduler
         private final List<Lifespan> lastStartedLifespans = new ArrayList<>();
         private final List<Lifespan> lastRewoundLifespans = new ArrayList<>();
 
-        public ScheduleResult schedule()
+        @Override
+		public ScheduleResult schedule()
         {
             throw new UnsupportedOperationException();
         }

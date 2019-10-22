@@ -77,7 +77,7 @@ abstract class AbstractPropertiesSystemTable
 
         InMemoryRecordSet.Builder table = InMemoryRecordSet.builder(tableMetadata);
         Map<ConnectorId, Map<String, PropertyMetadata<?>>> connectorProperties = propertySupplier.get();
-        for (Entry<String, ConnectorId> entry : new TreeMap<>(transactionManager.getCatalogNames(transactionId)).entrySet()) {
+        new TreeMap<>(transactionManager.getCatalogNames(transactionId)).entrySet().forEach(entry -> {
             String catalog = entry.getKey();
             Map<String, PropertyMetadata<?>> properties = new TreeMap<>(connectorProperties.getOrDefault(entry.getValue(), ImmutableMap.of()));
             for (PropertyMetadata<?> propertyMetadata : properties.values()) {
@@ -88,7 +88,7 @@ abstract class AbstractPropertiesSystemTable
                         propertyMetadata.getSqlType().toString(),
                         propertyMetadata.getDescription());
             }
-        }
+        });
         return table.build().cursor();
     }
 }

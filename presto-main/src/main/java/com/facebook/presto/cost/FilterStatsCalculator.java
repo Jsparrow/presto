@@ -296,34 +296,34 @@ public class FilterStatsCalculator
         @Override
         protected PlanNodeStatsEstimate visitIsNotNullPredicate(IsNotNullPredicate node, Void context)
         {
-            if (node.getValue() instanceof SymbolReference) {
-                VariableReferenceExpression variable = toVariable(node.getValue());
-                VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
-                PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
-                result.setOutputRowCount(input.getOutputRowCount() * (1 - variableStats.getNullsFraction()));
-                result.addVariableStatistics(variable, variableStats.mapNullsFraction(x -> 0.0));
-                return result.build();
-            }
-            return PlanNodeStatsEstimate.unknown();
+            if (!(node.getValue() instanceof SymbolReference)) {
+				return PlanNodeStatsEstimate.unknown();
+			}
+			VariableReferenceExpression variable = toVariable(node.getValue());
+			VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
+			PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
+			result.setOutputRowCount(input.getOutputRowCount() * (1 - variableStats.getNullsFraction()));
+			result.addVariableStatistics(variable, variableStats.mapNullsFraction(x -> 0.0));
+			return result.build();
         }
 
         @Override
         protected PlanNodeStatsEstimate visitIsNullPredicate(IsNullPredicate node, Void context)
         {
-            if (node.getValue() instanceof SymbolReference) {
-                VariableReferenceExpression variable = toVariable(node.getValue());
-                VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
-                PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
-                result.setOutputRowCount(input.getOutputRowCount() * variableStats.getNullsFraction());
-                result.addVariableStatistics(variable, VariableStatsEstimate.builder()
-                        .setNullsFraction(1.0)
-                        .setLowValue(NaN)
-                        .setHighValue(NaN)
-                        .setDistinctValuesCount(0.0)
-                        .build());
-                return result.build();
-            }
-            return PlanNodeStatsEstimate.unknown();
+            if (!(node.getValue() instanceof SymbolReference)) {
+				return PlanNodeStatsEstimate.unknown();
+			}
+			VariableReferenceExpression variable = toVariable(node.getValue());
+			VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
+			PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
+			result.setOutputRowCount(input.getOutputRowCount() * variableStats.getNullsFraction());
+			result.addVariableStatistics(variable, VariableStatsEstimate.builder()
+			        .setNullsFraction(1.0)
+			        .setLowValue(NaN)
+			        .setHighValue(NaN)
+			        .setDistinctValuesCount(0.0)
+			        .build());
+			return result.build();
         }
 
         @Override
@@ -463,11 +463,11 @@ public class FilterStatsCalculator
 
         private VariableStatsEstimate getExpressionStats(Expression expression)
         {
-            if (expression instanceof SymbolReference) {
-                VariableReferenceExpression variable = toVariable(expression);
-                return requireNonNull(input.getVariableStatistics(variable), () -> format("No statistics for variable %s", variable));
-            }
-            return scalarStatsCalculator.calculate(expression, input, session, types);
+            if (!(expression instanceof SymbolReference)) {
+				return scalarStatsCalculator.calculate(expression, input, session, types);
+			}
+			VariableReferenceExpression variable = toVariable(expression);
+			return requireNonNull(input.getVariableStatistics(variable), () -> format("No statistics for variable %s", variable));
         }
 
         private VariableReferenceExpression toVariable(Expression expression)
@@ -517,16 +517,16 @@ public class FilterStatsCalculator
         @Override
         public PlanNodeStatsEstimate visitConstant(ConstantExpression node, Void context)
         {
-            if (node.getType().equals(BOOLEAN)) {
-                if (node.getValue() != null && (boolean) node.getValue()) {
-                    return input;
-                }
-                PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.builder();
-                result.setOutputRowCount(0.0);
-                input.getVariablesWithKnownStatistics().forEach(variable -> result.addVariableStatistics(variable, VariableStatsEstimate.zero()));
-                return result.build();
-            }
-            return PlanNodeStatsEstimate.unknown();
+            if (!node.getType().equals(BOOLEAN)) {
+				return PlanNodeStatsEstimate.unknown();
+			}
+			if (node.getValue() != null && (boolean) node.getValue()) {
+			    return input;
+			}
+			PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.builder();
+			result.setOutputRowCount(0.0);
+			input.getVariablesWithKnownStatistics().forEach(variable -> result.addVariableStatistics(variable, VariableStatsEstimate.zero()));
+			return result.build();
         }
 
         @Override
@@ -593,7 +593,7 @@ public class FilterStatsCalculator
             // NOT case
             if (node.getFunctionHandle().equals(functionResolution.notFunction())) {
                 RowExpression arguemnt = node.getArguments().get(0);
-                if (arguemnt instanceof SpecialFormExpression && ((SpecialFormExpression) arguemnt).getForm().equals(IS_NULL)) {
+                if (arguemnt instanceof SpecialFormExpression && ((SpecialFormExpression) arguemnt).getForm() == IS_NULL) {
                     // IS NOT NULL case
                     RowExpression innerArugment = ((SpecialFormExpression) arguemnt).getArguments().get(0);
                     if (innerArugment instanceof VariableReferenceExpression) {
@@ -610,47 +610,44 @@ public class FilterStatsCalculator
             }
 
             // BETWEEN case
-            if (functionResolution.isBetweenFunction(node.getFunctionHandle())) {
-                RowExpression value = node.getArguments().get(0);
-                RowExpression min = node.getArguments().get(1);
-                RowExpression max = node.getArguments().get(2);
-                if (!(value instanceof VariableReferenceExpression)) {
-                    return PlanNodeStatsEstimate.unknown();
-                }
-                if (!getRowExpressionStats(min).isSingleValue()) {
-                    return PlanNodeStatsEstimate.unknown();
-                }
-                if (!getRowExpressionStats(max).isSingleValue()) {
-                    return PlanNodeStatsEstimate.unknown();
-                }
-
-                VariableStatsEstimate valueStats = input.getVariableStatistics((VariableReferenceExpression) value);
-                RowExpression lowerBound = call(
-                        OperatorType.GREATER_THAN_OR_EQUAL.name(),
-                        metadata.getFunctionManager().resolveOperator(OperatorType.GREATER_THAN_OR_EQUAL, fromTypes(value.getType(), min.getType())),
-                        BOOLEAN,
-                        value,
-                        min);
-                RowExpression upperBound = call(
-                        OperatorType.LESS_THAN_OR_EQUAL.name(),
-                        metadata.getFunctionManager().resolveOperator(OperatorType.LESS_THAN_OR_EQUAL, fromTypes(value.getType(), max.getType())),
-                        BOOLEAN,
-                        value,
-                        max);
-
-                RowExpression transformed;
-                if (isInfinite(valueStats.getLowValue())) {
-                    // We want to do heuristic cut (infinite range to finite range) ASAP and then do filtering on finite range.
-                    // We rely on 'and()' being processed left to right
-                    transformed = and(lowerBound, upperBound);
-                }
-                else {
-                    transformed = and(upperBound, lowerBound);
-                }
-                return process(transformed);
-            }
-
-            return PlanNodeStatsEstimate.unknown();
+			if (!functionResolution.isBetweenFunction(node.getFunctionHandle())) {
+				return PlanNodeStatsEstimate.unknown();
+			}
+			RowExpression value = node.getArguments().get(0);
+			RowExpression min = node.getArguments().get(1);
+			RowExpression max = node.getArguments().get(2);
+			if (!(value instanceof VariableReferenceExpression)) {
+			    return PlanNodeStatsEstimate.unknown();
+			}
+			if (!getRowExpressionStats(min).isSingleValue()) {
+			    return PlanNodeStatsEstimate.unknown();
+			}
+			if (!getRowExpressionStats(max).isSingleValue()) {
+			    return PlanNodeStatsEstimate.unknown();
+			}
+			VariableStatsEstimate valueStats = input.getVariableStatistics((VariableReferenceExpression) value);
+			RowExpression lowerBound = call(
+			        OperatorType.GREATER_THAN_OR_EQUAL.name(),
+			        metadata.getFunctionManager().resolveOperator(OperatorType.GREATER_THAN_OR_EQUAL, fromTypes(value.getType(), min.getType())),
+			        BOOLEAN,
+			        value,
+			        min);
+			RowExpression upperBound = call(
+			        OperatorType.LESS_THAN_OR_EQUAL.name(),
+			        metadata.getFunctionManager().resolveOperator(OperatorType.LESS_THAN_OR_EQUAL, fromTypes(value.getType(), max.getType())),
+			        BOOLEAN,
+			        value,
+			        max);
+			RowExpression transformed;
+			if (isInfinite(valueStats.getLowValue())) {
+			    // We want to do heuristic cut (infinite range to finite range) ASAP and then do filtering on finite range.
+			    // We rely on 'and()' being processed left to right
+			    transformed = and(lowerBound, upperBound);
+			}
+			else {
+			    transformed = and(upperBound, lowerBound);
+			}
+			return process(transformed);
         }
 
         @Override
@@ -762,20 +759,20 @@ public class FilterStatsCalculator
 
         private PlanNodeStatsEstimate estimateIsNull(RowExpression expression)
         {
-            if (expression instanceof VariableReferenceExpression) {
-                VariableReferenceExpression variable = (VariableReferenceExpression) expression;
-                VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
-                PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
-                result.setOutputRowCount(input.getOutputRowCount() * variableStats.getNullsFraction());
-                result.addVariableStatistics(variable, VariableStatsEstimate.builder()
-                        .setNullsFraction(1.0)
-                        .setLowValue(NaN)
-                        .setHighValue(NaN)
-                        .setDistinctValuesCount(0.0)
-                        .build());
-                return result.build();
-            }
-            return PlanNodeStatsEstimate.unknown();
+            if (!(expression instanceof VariableReferenceExpression)) {
+				return PlanNodeStatsEstimate.unknown();
+			}
+			VariableReferenceExpression variable = (VariableReferenceExpression) expression;
+			VariableStatsEstimate variableStats = input.getVariableStatistics(variable);
+			PlanNodeStatsEstimate.Builder result = PlanNodeStatsEstimate.buildFrom(input);
+			result.setOutputRowCount(input.getOutputRowCount() * variableStats.getNullsFraction());
+			result.addVariableStatistics(variable, VariableStatsEstimate.builder()
+			        .setNullsFraction(1.0)
+			        .setLowValue(NaN)
+			        .setHighValue(NaN)
+			        .setDistinctValuesCount(0.0)
+			        .build());
+			return result.build();
         }
 
         private RowExpression isNull(RowExpression expression)
@@ -834,11 +831,11 @@ public class FilterStatsCalculator
 
         private VariableStatsEstimate getRowExpressionStats(RowExpression expression)
         {
-            if (expression instanceof VariableReferenceExpression) {
-                VariableReferenceExpression variable = (VariableReferenceExpression) expression;
-                return requireNonNull(input.getVariableStatistics(variable), () -> format("No statistics for variable %s", variable));
-            }
-            return scalarStatsCalculator.calculate(expression, input, session);
+            if (!(expression instanceof VariableReferenceExpression)) {
+				return scalarStatsCalculator.calculate(expression, input, session);
+			}
+			VariableReferenceExpression variable = (VariableReferenceExpression) expression;
+			return requireNonNull(input.getVariableStatistics(variable), () -> format("No statistics for variable %s", variable));
         }
     }
 }

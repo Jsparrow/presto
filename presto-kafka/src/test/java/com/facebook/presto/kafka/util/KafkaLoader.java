@@ -101,22 +101,23 @@ public class KafkaLoader
                 types.set(getTypes(statusInfo.getColumns()));
             }
 
-            if (data.getData() != null) {
-                checkState(types.get() != null, "Data without types received!");
-                List<Column> columns = statusInfo.getColumns();
-                for (List<Object> fields : data.getData()) {
-                    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-                    for (int i = 0; i < fields.size(); i++) {
-                        Type type = types.get().get(i);
-                        Object value = convertValue(fields.get(i), type);
-                        if (value != null) {
-                            builder.put(columns.get(i).getName(), value);
-                        }
-                    }
+            if (data.getData() == null) {
+				return;
+			}
+			checkState(types.get() != null, "Data without types received!");
+			List<Column> columns = statusInfo.getColumns();
+			for (List<Object> fields : data.getData()) {
+			    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+			    for (int i = 0; i < fields.size(); i++) {
+			        Type type = types.get().get(i);
+			        Object value = convertValue(fields.get(i), type);
+			        if (value != null) {
+			            builder.put(columns.get(i).getName(), value);
+			        }
+			    }
 
-                    producer.send(new KeyedMessage<>(topicName, count.getAndIncrement(), builder.build()));
-                }
-            }
+			    producer.send(new KeyedMessage<>(topicName, count.getAndIncrement(), builder.build()));
+			}
         }
 
         @Override

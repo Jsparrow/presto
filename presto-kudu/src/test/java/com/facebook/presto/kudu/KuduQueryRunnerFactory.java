@@ -89,7 +89,7 @@ public class KuduQueryRunnerFactory
     private static String getSchemaEmulationPrefix()
     {
         String prefix = System.getProperty("kudu.schema-emulation.prefix");
-        if (prefix == null || prefix.equals("null")) {
+        if (prefix == null || "null".equals(prefix)) {
             return null;
         }
         else if (prefix.isEmpty()) {
@@ -117,10 +117,11 @@ public class KuduQueryRunnerFactory
         runner.installPlugin(new KuduPlugin());
         runner.createCatalog("kudu", "kudu", properties);
 
-        if (isSchemaEmulationEnabled()) {
-            runner.execute("DROP SCHEMA IF EXISTS " + schema);
-            runner.execute("CREATE SCHEMA " + schema);
-        }
+        if (!isSchemaEmulationEnabled()) {
+			return;
+		}
+		runner.execute("DROP SCHEMA IF EXISTS " + schema);
+		runner.execute("CREATE SCHEMA " + schema);
     }
 
     public static Session createSession(String schema)

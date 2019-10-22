@@ -41,10 +41,14 @@ import static com.facebook.presto.spi.Subfield.NestedField;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.parquet.schema.OriginalType.DECIMAL;
 import static org.apache.parquet.schema.Type.Repetition.REPEATED;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ParquetTypeUtils
 {
-    private ParquetTypeUtils()
+    private static final Logger logger = LoggerFactory.getLogger(ParquetTypeUtils.class);
+
+	private ParquetTypeUtils()
     {
     }
 
@@ -90,7 +94,7 @@ public final class ParquetTypeUtils
                 columnIO.getType().getOriginalType() == null &&
                 ((GroupColumnIO) columnIO).getChildrenCount() == 1 &&
                 !columnIO.getName().equals("array") &&
-                !columnIO.getName().equals(columnIO.getParent().getName() + "_tuple")) {
+                columnIO.getName() != columnIO.getParent().getName() + "_tuple") {
             return ((GroupColumnIO) columnIO).getChild(0);
         }
 
@@ -156,7 +160,8 @@ public final class ParquetTypeUtils
             return fileSchema.getFieldIndex(name.toLowerCase(Locale.ENGLISH));
         }
         catch (InvalidRecordException e) {
-            for (org.apache.parquet.schema.Type type : fileSchema.getFields()) {
+            logger.error(e.getMessage(), e);
+			for (org.apache.parquet.schema.Type type : fileSchema.getFields()) {
                 if (type.getName().equalsIgnoreCase(name)) {
                     return fileSchema.getFieldIndex(type.getName());
                 }

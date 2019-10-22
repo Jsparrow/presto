@@ -242,18 +242,18 @@ public class TestBucketBalancer
 
         // check that number of buckets per node is within bounds
         ClusterState clusterState = balancer.fetchClusterState();
-        for (Distribution distribution : clusterState.getDistributionAssignments().keySet()) {
+        clusterState.getDistributionAssignments().keySet().forEach(distribution -> {
             Multiset<String> allocationCounts = HashMultiset.create();
             clusterState.getDistributionAssignments().get(distribution).stream()
                     .map(BucketAssignment::getNodeIdentifier)
                     .forEach(allocationCounts::add);
 
             double bucketsPerNode = (1.0 * allocationCounts.size()) / clusterState.getActiveNodes().size();
-            for (String node : allocationCounts) {
+            allocationCounts.forEach(node -> {
                 assertGreaterThanOrEqual(allocationCounts.count(node), (int) Math.floor(bucketsPerNode), node + " has fewer buckets than expected");
                 assertLessThanOrEqual(allocationCounts.count(node), (int) Math.ceil(bucketsPerNode), node + " has more buckets than expected");
-            }
-        }
+            });
+        });
 
         // check stability
         assertEquals(balancer.balance(), 0);

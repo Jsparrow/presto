@@ -30,35 +30,22 @@ import static java.util.Objects.requireNonNull;
 @EventType("VerifierQuery")
 public class VerifierQueryEvent
 {
-    public enum EventStatus
-    {
-        SUCCEEDED,
-        FAILED,
-        FAILED_RESOLVED,
-        SKIPPED,
-    }
-
     private final String suite;
-    private final String testId;
-    private final String name;
+	private final String testId;
+	private final String name;
+	private final String status;
+	private final String skippedReason;
+	private final Boolean deterministic;
+	private final String determinismAnalysis;
+	private final String resolveMessage;
+	private final QueryInfo controlQueryInfo;
+	private final QueryInfo testQueryInfo;
+	private final String errorCode;
+	private final String errorMessage;
+	private final QueryFailure finalQueryFailure;
+	private final List<QueryFailure> queryFailures;
 
-    private final String status;
-    private final String skippedReason;
-
-    private final Boolean deterministic;
-    private final String determinismAnalysis;
-    private final String resolveMessage;
-
-    private final QueryInfo controlQueryInfo;
-    private final QueryInfo testQueryInfo;
-
-    private final String errorCode;
-    private final String errorMessage;
-
-    private final QueryFailure finalQueryFailure;
-    private final List<QueryFailure> queryFailures;
-
-    public VerifierQueryEvent(
+	public VerifierQueryEvent(
             String suite,
             String testId,
             String name,
@@ -89,88 +76,96 @@ public class VerifierQueryEvent
         this.queryFailures = ImmutableList.copyOf(queryFailures);
     }
 
-    @EventField
+	@EventField
     public String getSuite()
     {
         return suite;
     }
 
-    @EventField
+	@EventField
     public String getTestId()
     {
         return testId;
     }
 
-    @EventField
+	@EventField
     public String getName()
     {
         return name;
     }
 
-    @EventField
+	@EventField
     public String getStatus()
     {
         return status;
     }
 
-    @EventField
+	@EventField
     public String getSkippedReason()
     {
         return skippedReason;
     }
 
-    @EventField
+	@EventField
     @Deprecated
     public Boolean getDeterministic()
     {
         return deterministic;
     }
 
-    @EventField
+	@EventField
     public String getDeterminismAnalysis()
     {
         return determinismAnalysis;
     }
 
-    @EventField
+	@EventField
     public String getResolveMessage()
     {
         return resolveMessage;
     }
 
-    @EventField
+	@EventField
     public QueryInfo getControlQueryInfo()
     {
         return controlQueryInfo;
     }
 
-    @EventField
+	@EventField
     public QueryInfo getTestQueryInfo()
     {
         return testQueryInfo;
     }
 
-    @EventField
+	@EventField
     public String getErrorCode()
     {
         return errorCode;
     }
 
-    @EventField
+	@EventField
     public String getErrorMessage()
     {
         return errorMessage;
     }
 
-    @EventField
+	@EventField
     public QueryFailure getFinalQueryFailure()
     {
         return finalQueryFailure;
     }
 
-    @EventField
+	@EventField
     public List<QueryFailure> getQueryFailures()
     {
         return queryFailures;
+    }
+
+	public enum EventStatus
+    {
+        SUCCEEDED,
+        FAILED,
+        FAILED_RESOLVED,
+        SKIPPED,
     }
 }

@@ -35,17 +35,13 @@ import static java.util.Collections.unmodifiableList;
 
 public class TypeSignature
 {
-    private final String base;
-    private final List<TypeSignatureParameter> parameters;
-    private final boolean calculated;
-
     private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("[a-zA-Z_]([a-zA-Z0-9_:@])*");
-    private static final Map<String, String> BASE_NAME_ALIAS_TO_CANONICAL =
+	private static final Map<String, String> BASE_NAME_ALIAS_TO_CANONICAL =
             new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    private static final Set<String> SIMPLE_TYPE_WITH_SPACES =
+	private static final Set<String> SIMPLE_TYPE_WITH_SPACES =
             new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
-    static {
+	static {
         BASE_NAME_ALIAS_TO_CANONICAL.put("int", StandardTypes.INTEGER);
 
         SIMPLE_TYPE_WITH_SPACES.add(StandardTypes.TIME_WITH_TIME_ZONE);
@@ -55,12 +51,16 @@ public class TypeSignature
         SIMPLE_TYPE_WITH_SPACES.add("double precision");
     }
 
-    public TypeSignature(String base, TypeSignatureParameter... parameters)
+	private final String base;
+	private final List<TypeSignatureParameter> parameters;
+	private final boolean calculated;
+
+	public TypeSignature(String base, TypeSignatureParameter... parameters)
     {
         this(base, asList(parameters));
     }
 
-    public TypeSignature(String base, List<TypeSignatureParameter> parameters)
+	public TypeSignature(String base, List<TypeSignatureParameter> parameters)
     {
         checkArgument(base != null, "base is null");
         this.base = base;
@@ -72,17 +72,17 @@ public class TypeSignature
         this.calculated = parameters.stream().anyMatch(TypeSignatureParameter::isCalculated);
     }
 
-    public String getBase()
+	public String getBase()
     {
         return base;
     }
 
-    public List<TypeSignatureParameter> getParameters()
+	public List<TypeSignatureParameter> getParameters()
     {
         return parameters;
     }
 
-    public List<TypeSignature> getTypeParametersAsTypeSignatures()
+	public List<TypeSignature> getTypeParametersAsTypeSignatures()
     {
         List<TypeSignature> result = new ArrayList<>();
         for (TypeSignatureParameter parameter : parameters) {
@@ -95,18 +95,18 @@ public class TypeSignature
         return result;
     }
 
-    public boolean isCalculated()
+	public boolean isCalculated()
     {
         return calculated;
     }
 
-    @JsonCreator
+	@JsonCreator
     public static TypeSignature parseTypeSignature(String signature)
     {
         return parseTypeSignature(signature, new HashSet<>());
     }
 
-    public static TypeSignature parseTypeSignature(String signature, Set<String> literalCalculationParameters)
+	public static TypeSignature parseTypeSignature(String signature, Set<String> literalCalculationParameters)
     {
         if (!signature.contains("<") && !signature.contains("(")) {
             if (signature.equalsIgnoreCase(StandardTypes.VARCHAR)) {
@@ -163,17 +163,7 @@ public class TypeSignature
         throw new IllegalArgumentException(format("Bad type signature: '%s'", signature));
     }
 
-    private enum RowTypeSignatureParsingState
-    {
-        START_OF_FIELD,
-        DELIMITED_NAME,
-        DELIMITED_NAME_ESCAPED,
-        TYPE_OR_NAMED_TYPE,
-        TYPE,
-        FINISHED,
-    }
-
-    private static TypeSignature parseRowTypeSignature(String signature, Set<String> literalParameters)
+	private static TypeSignature parseRowTypeSignature(String signature, Set<String> literalParameters)
     {
         checkArgument(signature.toLowerCase(Locale.ENGLISH).startsWith(StandardTypes.ROW + "("), "Not a row type signature: '%s'", signature);
 
@@ -283,7 +273,7 @@ public class TypeSignature
         return new TypeSignature(signature.substring(0, StandardTypes.ROW.length()), fields);
     }
 
-    private static TypeSignatureParameter parseTypeOrNamedType(String typeOrNamedType, Set<String> literalParameters)
+	private static TypeSignatureParameter parseTypeOrNamedType(String typeOrNamedType, Set<String> literalParameters)
     {
         int split = typeOrNamedType.indexOf(' ');
 
@@ -305,7 +295,7 @@ public class TypeSignature
         return TypeSignatureParameter.of(new NamedTypeSignature(Optional.empty(), parseTypeSignature(typeOrNamedType, literalParameters)));
     }
 
-    private static TypeSignatureParameter parseTypeSignatureParameter(
+	private static TypeSignatureParameter parseTypeSignatureParameter(
             String signature,
             int begin,
             int end,
@@ -323,14 +313,14 @@ public class TypeSignature
         }
     }
 
-    private static boolean isValidStartOfIdentifier(char c)
+	private static boolean isValidStartOfIdentifier(char c)
     {
         return (c >= 'a' && c <= 'z') ||
                 (c >= 'A' && c <= 'Z') ||
                 c == '_';
     }
 
-    @Override
+	@Override
     @JsonValue
     public String toString()
     {
@@ -354,26 +344,26 @@ public class TypeSignature
         return typeName.toString();
     }
 
-    private static void checkArgument(boolean argument, String format, Object... args)
+	private static void checkArgument(boolean argument, String format, Object... args)
     {
         if (!argument) {
             throw new IllegalArgumentException(format(format, args));
         }
     }
 
-    private static void verify(boolean argument, String message)
+	private static void verify(boolean argument, String message)
     {
         if (!argument) {
             throw new AssertionError(message);
         }
     }
 
-    private static boolean validateName(String name)
+	private static boolean validateName(String name)
     {
         return name.chars().noneMatch(c -> c == '<' || c == '>' || c == ',');
     }
 
-    private static String canonicalizeBaseName(String baseName)
+	private static String canonicalizeBaseName(String baseName)
     {
         String canonicalBaseName = BASE_NAME_ALIAS_TO_CANONICAL.get(baseName);
         if (canonicalBaseName == null) {
@@ -382,7 +372,7 @@ public class TypeSignature
         return canonicalBaseName;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -398,9 +388,19 @@ public class TypeSignature
                 Objects.equals(this.parameters, other.parameters);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(base.toLowerCase(Locale.ENGLISH), parameters);
+    }
+
+	private enum RowTypeSignatureParsingState
+    {
+        START_OF_FIELD,
+        DELIMITED_NAME,
+        DELIMITED_NAME_ESCAPED,
+        TYPE_OR_NAMED_TYPE,
+        TYPE,
+        FINISHED,
     }
 }

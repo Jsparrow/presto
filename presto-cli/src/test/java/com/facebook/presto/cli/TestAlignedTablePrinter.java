@@ -41,18 +41,8 @@ public class TestAlignedTablePrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "   first   | last  | quantity \n" +
-                "-----------+-------+----------\n" +
-                " hello     | world |      123 \n" +
-                " a         | NULL  |      4.5 \n" +
-                " some long+| more +|     4567 \n" +
-                " text that+| text  |          \n" +
-                " does not +|       |          \n" +
-                " fit on   +|       |          \n" +
-                " one line  |       |          \n" +
-                " bye       | done  |      -15 \n" +
-                "(4 rows)\n";
+        String expected = new StringBuilder().append("").append("   first   | last  | quantity \n").append("-----------+-------+----------\n").append(" hello     | world |      123 \n").append(" a         | NULL  |      4.5 \n").append(" some long+| more +|     4567 \n").append(" text that+| text  |          \n").append(" does not +|       |          \n")
+				.append(" fit on   +|       |          \n").append(" one line  |       |          \n").append(" bye       | done  |      -15 \n").append("(4 rows)\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -68,12 +58,7 @@ public class TestAlignedTablePrinter
         printer.printRows(rows(row("a long line\nwithout wrapping", "text")), true);
         printer.finish();
 
-        String expected = "" +
-                "      first       | last \n" +
-                "------------------+------\n" +
-                " a long line      | text \n" +
-                " without wrapping |      \n" +
-                "(1 row)\n";
+        String expected = new StringBuilder().append("").append("      first       | last \n").append("------------------+------\n").append(" a long line      | text \n").append(" without wrapping |      \n").append("(1 row)\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -88,10 +73,7 @@ public class TestAlignedTablePrinter
 
         printer.finish();
 
-        String expected = "" +
-                " first | last \n" +
-                "-------+------\n" +
-                "(0 rows)\n";
+        String expected = new StringBuilder().append("").append(" first | last \n").append("-------+------\n").append("(0 rows)\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -111,15 +93,8 @@ public class TestAlignedTablePrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                " first |                     binary                      | last  \n" +
-                "-------+-------------------------------------------------+-------\n" +
-                " hello | 68 65 6c 6c 6f                                  | world \n" +
-                " a     | 73 6f 6d 65 20 6c 6f 6e 67 20 74 65 78 74 20 74+| b     \n" +
-                "       | 68 61 74 20 69 73 20 6d 6f 72 65 20 74 68 61 6e+|       \n" +
-                "       | 20 31 36 20 62 79 74 65 73                      |       \n" +
-                " cat   |                                                 | dog   \n" +
-                "(3 rows)\n";
+        String expected = new StringBuilder().append("").append(" first |                     binary                      | last  \n").append("-------+-------------------------------------------------+-------\n").append(" hello | 68 65 6c 6c 6f                                  | world \n").append(" a     | 73 6f 6d 65 20 6c 6f 6e 67 20 74 65 78 74 20 74+| b     \n").append("       | 68 61 74 20 69 73 20 6d 6f 72 65 20 74 68 61 6e+|       \n").append("       | 20 31 36 20 62 79 74 65 73                      |       \n").append(" cat   |                                                 | dog   \n")
+				.append("(3 rows)\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -139,16 +114,8 @@ public class TestAlignedTablePrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "    go\u7f51    |  last  | quantity\u7f51 \n" +
-                "------------+--------+------------\n" +
-                " hello      | wide\u7f51 |        123 \n" +
-                " some long +| more  +|       4567 \n" +
-                " text \u7f51   +| text   |            \n" +
-                " does not\u7f51+|        |            \n" +
-                " fit        |        |            \n" +
-                " bye        | done   |        -15 \n" +
-                "(3 rows)\n";
+        String expected = new StringBuilder().append("").append("    go\u7f51    |  last  | quantity\u7f51 \n").append("------------+--------+------------\n").append(" hello      | wide\u7f51 |        123 \n").append(" some long +| more  +|       4567 \n").append(" text \u7f51   +| text   |            \n").append(" does not\u7f51+|        |            \n").append(" fit        |        |            \n")
+				.append(" bye        | done   |        -15 \n").append("(3 rows)\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }

@@ -20,7 +20,8 @@ import com.google.common.collect.ImmutableList;
 public final class MemoryPlugin
         implements Plugin
 {
-    public Iterable<ConnectorFactory> getConnectorFactories()
+    @Override
+	public Iterable<ConnectorFactory> getConnectorFactories()
     {
         return ImmutableList.of(new MemoryConnectorFactory());
     }

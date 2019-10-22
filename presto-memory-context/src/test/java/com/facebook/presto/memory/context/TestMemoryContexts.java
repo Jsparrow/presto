@@ -195,11 +195,10 @@ public class TestMemoryContexts
                 }
             }
             else {
-                if (reservation < maxMemory) {
-                    if (future != null) {
-                        future.set(null);
-                    }
-                }
+                boolean condition = reservation < maxMemory && future != null;
+				if (condition) {
+				    future.set(null);
+				}
             }
             return NOT_BLOCKED;
         }

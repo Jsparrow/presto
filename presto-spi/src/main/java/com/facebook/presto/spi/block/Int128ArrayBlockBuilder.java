@@ -81,7 +81,7 @@ public class Int128ArrayBlockBuilder
     public BlockBuilder closeEntry()
     {
         if (entryPositionCount != 2) {
-            throw new IllegalStateException("Expected entry size to be exactly " + INT128_BYTES + " bytes but was " + (entryPositionCount * SIZE_OF_LONG));
+            throw new IllegalStateException(new StringBuilder().append("Expected entry size to be exactly ").append(INT128_BYTES).append(" bytes but was ").append(entryPositionCount * SIZE_OF_LONG).toString());
         }
 
         positionCount++;

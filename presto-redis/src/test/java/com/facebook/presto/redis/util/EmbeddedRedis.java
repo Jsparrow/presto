@@ -27,36 +27,36 @@ public class EmbeddedRedis
     private final RedisServer redisServer;
     private JedisPool jedisPool;
 
-    public static EmbeddedRedis createEmbeddedRedis()
-            throws IOException, URISyntaxException
-    {
-        return new EmbeddedRedis();
-    }
-
     EmbeddedRedis()
             throws IOException, URISyntaxException
     {
         redisServer = new RedisServer();
     }
 
-    public void start()
+	public static EmbeddedRedis createEmbeddedRedis()
+            throws IOException, URISyntaxException
+    {
+        return new EmbeddedRedis();
+    }
+
+	public void start()
             throws IOException
     {
         redisServer.start();
         jedisPool = new JedisPool(new JedisPoolConfig(), getConnectString(), getPort());
     }
 
-    public JedisPool getJedisPool()
+	public JedisPool getJedisPool()
     {
         return jedisPool;
     }
 
-    public void destroyJedisPool()
+	public void destroyJedisPool()
     {
         jedisPool.destroy();
     }
 
-    @Override
+	@Override
     public void close()
     {
         jedisPool.destroy();
@@ -69,12 +69,12 @@ public class EmbeddedRedis
         }
     }
 
-    public int getPort()
+	public int getPort()
     {
         return redisServer.getPort();
     }
 
-    public String getConnectString()
+	public String getConnectString()
     {
         return "localhost";
     }

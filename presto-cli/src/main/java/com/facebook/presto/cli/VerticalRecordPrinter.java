@@ -69,7 +69,7 @@ public class VerticalRecordPrinter
         for (List<?> row : rows) {
             rowCount++;
 
-            String header = "-[ RECORD " + rowCount + " ]";
+            String header = new StringBuilder().append("-[ RECORD ").append(rowCount).append(" ]").toString();
             if ((namesWidth + 1) >= header.length()) {
                 header += repeat("-", (namesWidth + 1) - header.length()) + "+";
             }

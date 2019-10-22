@@ -56,6 +56,8 @@ import static io.airlift.units.DataSize.Unit.BYTE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link ExchangeClient} is the client on receiver side, used in operators requiring data exchange from other tasks,
@@ -74,7 +76,9 @@ import static java.util.Objects.requireNonNull;
 public class ExchangeClient
         implements Closeable
 {
-    private static final SerializedPage NO_MORE_PAGES = new SerializedPage(EMPTY_SLICE, PageCodecMarker.none(), 0, 0);
+    private static final Logger logger = LoggerFactory.getLogger(ExchangeClient.class);
+
+	private static final SerializedPage NO_MORE_PAGES = new SerializedPage(EMPTY_SLICE, PageCodecMarker.none(), 0, 0);
 
     private final long bufferCapacity;
     private final DataSize maxResponseSize;
@@ -150,9 +154,7 @@ public class ExchangeClient
         // It does not guarantee a consistent view between different exchange clients.
         // Guaranteeing a consistent view introduces significant lock contention.
         ImmutableList.Builder<PageBufferClientStatus> pageBufferClientStatusBuilder = ImmutableList.builder();
-        for (HttpPageBufferClient client : allClients.values()) {
-            pageBufferClientStatusBuilder.add(client.getStatus());
-        }
+        allClients.values().forEach(client -> pageBufferClientStatusBuilder.add(client.getStatus()));
         List<PageBufferClientStatus> pageBufferClientStatus = pageBufferClientStatusBuilder.build();
         synchronized (this) {
             int bufferedPages = pageBuffer.size();
@@ -318,9 +320,7 @@ public class ExchangeClient
             return;
         }
 
-        for (HttpPageBufferClient client : allClients.values()) {
-            closeQuietly(client);
-        }
+        allClients.values().forEach(ExchangeClient::closeQuietly);
         pageBuffer.clear();
         systemMemoryContext.setBytes(0);
         bufferRetainedSizeInBytes = 0;
@@ -449,11 +449,12 @@ public class ExchangeClient
         }
 
         // TODO: properly handle the failed vs closed state
-        // it is important not to treat failures as a successful close
-        if (!isClosed()) {
-            failure.compareAndSet(null, cause);
-            notifyBlockedCallers();
-        }
+		// it is important not to treat failures as a successful close
+		if (isClosed()) {
+			return;
+		}
+		failure.compareAndSet(null, cause);
+		notifyBlockedCallers();
     }
 
     private boolean isFailed()
@@ -464,13 +465,25 @@ public class ExchangeClient
     private void throwIfFailed()
     {
         Throwable t = failure.get();
-        if (t != null) {
-            throwIfUnchecked(t);
-            throw new RuntimeException(t);
+        if (t == null) {
+			return;
+		}
+		throwIfUnchecked(t);
+		throw new RuntimeException(t);
+    }
+
+    private static void closeQuietly(HttpPageBufferClient client)
+    {
+        try {
+            client.close();
+        }
+        catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
+            // ignored
         }
     }
 
-    private class ExchangeClientCallback
+	private class ExchangeClientCallback
             implements ClientCallback
     {
         @Override
@@ -501,16 +514,6 @@ public class ExchangeClient
             requireNonNull(cause, "cause is null");
 
             ExchangeClient.this.clientFailed(client, cause);
-        }
-    }
-
-    private static void closeQuietly(HttpPageBufferClient client)
-    {
-        try {
-            client.close();
-        }
-        catch (RuntimeException e) {
-            // ignored
         }
     }
 

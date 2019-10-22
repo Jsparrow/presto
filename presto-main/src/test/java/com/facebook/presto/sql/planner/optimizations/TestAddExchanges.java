@@ -748,7 +748,7 @@ public class TestAddExchanges
     private static <T> List<T> stableSort(List<T> list, Comparator<T> comparator)
     {
         ArrayList<T> copy = Lists.newArrayList(list);
-        Collections.sort(copy, comparator);
+        copy.sort(comparator);
         return copy;
     }
 

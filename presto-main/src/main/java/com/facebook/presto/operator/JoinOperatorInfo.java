@@ -33,17 +33,6 @@ public class JoinOperatorInfo
     private final long[] logHistogramOutput;
     private final Optional<Long> lookupSourcePositions;
 
-    public static JoinOperatorInfo createJoinOperatorInfo(JoinType joinType, long[] logHistogramCounters, Optional<Long> lookupSourcePositions)
-    {
-        long[] logHistogramProbes = new long[HISTOGRAM_BUCKETS];
-        long[] logHistogramOutput = new long[HISTOGRAM_BUCKETS];
-        for (int i = 0; i < HISTOGRAM_BUCKETS; i++) {
-            logHistogramProbes[i] = logHistogramCounters[2 * i];
-            logHistogramOutput[i] = logHistogramCounters[2 * i + 1];
-        }
-        return new JoinOperatorInfo(joinType, logHistogramProbes, logHistogramOutput, lookupSourcePositions);
-    }
-
     @JsonCreator
     public JoinOperatorInfo(
             @JsonProperty("joinType") JoinType joinType,
@@ -59,25 +48,36 @@ public class JoinOperatorInfo
         this.lookupSourcePositions = lookupSourcePositions;
     }
 
-    @JsonProperty
+	public static JoinOperatorInfo createJoinOperatorInfo(JoinType joinType, long[] logHistogramCounters, Optional<Long> lookupSourcePositions)
+    {
+        long[] logHistogramProbes = new long[HISTOGRAM_BUCKETS];
+        long[] logHistogramOutput = new long[HISTOGRAM_BUCKETS];
+        for (int i = 0; i < HISTOGRAM_BUCKETS; i++) {
+            logHistogramProbes[i] = logHistogramCounters[2 * i];
+            logHistogramOutput[i] = logHistogramCounters[2 * i + 1];
+        }
+        return new JoinOperatorInfo(joinType, logHistogramProbes, logHistogramOutput, lookupSourcePositions);
+    }
+
+	@JsonProperty
     public JoinType getJoinType()
     {
         return joinType;
     }
 
-    @JsonProperty
+	@JsonProperty
     public long[] getLogHistogramProbes()
     {
         return logHistogramProbes;
     }
 
-    @JsonProperty
+	@JsonProperty
     public long[] getLogHistogramOutput()
     {
         return logHistogramOutput;
     }
 
-    /**
+	/**
      * Estimated number of positions in on the build side
      */
     @JsonProperty
@@ -86,7 +86,7 @@ public class JoinOperatorInfo
         return lookupSourcePositions;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -97,7 +97,7 @@ public class JoinOperatorInfo
                 .toString();
     }
 
-    @Override
+	@Override
     public JoinOperatorInfo mergeWith(JoinOperatorInfo other)
     {
         checkState(this.joinType.equals(other.joinType), "different join types");
@@ -116,7 +116,7 @@ public class JoinOperatorInfo
         return new JoinOperatorInfo(this.joinType, logHistogramProbes, logHistogramOutput, mergedSourcePositions);
     }
 
-    @Override
+	@Override
     public boolean isFinal()
     {
         return true;

@@ -37,9 +37,7 @@ public class TestTpcds
     public void testSelect()
     {
         MaterializedResult actual = computeActual(
-                "SELECT c_first_name, c_last_name, ca_address_sk, ca_gmt_offset " +
-                        "FROM customer JOIN customer_address ON c_current_addr_sk = ca_address_sk " +
-                        "WHERE ca_address_sk = 4");
+                new StringBuilder().append("SELECT c_first_name, c_last_name, ca_address_sk, ca_gmt_offset ").append("FROM customer JOIN customer_address ON c_current_addr_sk = ca_address_sk ").append("WHERE ca_address_sk = 4").toString());
         MaterializedResult expected = resultBuilder(getSession(), actual.getTypes())
                 // note that c_first_name and c_last_name are both of type CHAR(X) so the results
                 // are padded with whitespace
@@ -48,9 +46,7 @@ public class TestTpcds
         assertEquals(expected, actual);
 
         actual = computeActual(
-                "SELECT c_first_name, c_last_name " +
-                        "FROM customer JOIN customer_address ON c_current_addr_sk = ca_address_sk " +
-                        "WHERE ca_address_sk = 4 AND ca_gmt_offset = DECIMAL '-7.00'");
+                new StringBuilder().append("SELECT c_first_name, c_last_name ").append("FROM customer JOIN customer_address ON c_current_addr_sk = ca_address_sk ").append("WHERE ca_address_sk = 4 AND ca_gmt_offset = DECIMAL '-7.00'").toString());
         expected = resultBuilder(getSession(), actual.getTypes())
                 .row("James               ", "Brown                         ")
                 .build();
@@ -66,10 +62,10 @@ public class TestTpcds
                 .collect(joining(", "));
 
         assertQuery("SELECT typeof(i_current_price) FROM item LIMIT 1", "VALUES 'decimal(7,2)'"); // decimal(7,2) is a short decimal
-        assertQuerySucceeds("SELECT i_current_price FROM item WHERE i_current_price IN (" + longValues + ")");
-        assertQuerySucceeds("SELECT i_current_price FROM item WHERE i_current_price NOT IN (" + longValues + ")");
-        assertQuerySucceeds("SELECT i_current_price FROM item WHERE i_current_price IN (i_wholesale_cost, " + longValues + ")");
-        assertQuerySucceeds("SELECT i_current_price FROM item WHERE i_current_price NOT IN (i_wholesale_cost, " + longValues + ")");
+        assertQuerySucceeds(new StringBuilder().append("SELECT i_current_price FROM item WHERE i_current_price IN (").append(longValues).append(")").toString());
+        assertQuerySucceeds(new StringBuilder().append("SELECT i_current_price FROM item WHERE i_current_price NOT IN (").append(longValues).append(")").toString());
+        assertQuerySucceeds(new StringBuilder().append("SELECT i_current_price FROM item WHERE i_current_price IN (i_wholesale_cost, ").append(longValues).append(")").toString());
+        assertQuerySucceeds(new StringBuilder().append("SELECT i_current_price FROM item WHERE i_current_price NOT IN (i_wholesale_cost, ").append(longValues).append(")").toString());
     }
 
     private void assertQuerySucceeds(String sql)

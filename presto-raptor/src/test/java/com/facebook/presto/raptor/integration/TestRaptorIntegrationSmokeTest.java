@@ -154,10 +154,7 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testBucketNumberHiddenColumn()
     {
-        assertUpdate("" +
-                        "CREATE TABLE test_bucket_number " +
-                        "WITH (bucket_count = 50, bucketed_on = ARRAY ['orderkey']) " +
-                        "AS SELECT * FROM orders",
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_bucket_number ").append("WITH (bucket_count = 50, bucketed_on = ARRAY ['orderkey']) ").append("AS SELECT * FROM orders").toString(),
                 "SELECT count(*) FROM orders");
 
         MaterializedResult actualResults = computeActual("SELECT DISTINCT \"$bucket_number\" FROM test_bucket_number");
@@ -181,26 +178,16 @@ public class TestRaptorIntegrationSmokeTest
         // Make sure we have at least 2 different orderdate.
         assertEquals(computeActual("SELECT count(DISTINCT orderdate) >= 2 FROM orders WHERE orderdate < date '1992-02-08'").getOnlyValue(), true);
 
-        assertUpdate("CREATE TABLE test_shard_temporal_date " +
-                        "WITH (temporal_column = 'orderdate') AS " +
-                        "SELECT orderdate, orderkey " +
-                        "FROM orders " +
-                        "WHERE orderdate < date '1992-02-08'",
-                "SELECT count(*) " +
-                        "FROM orders " +
-                        "WHERE orderdate < date '1992-02-08'");
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_shard_temporal_date ").append("WITH (temporal_column = 'orderdate') AS ").append("SELECT orderdate, orderkey ").append("FROM orders ").append("WHERE orderdate < date '1992-02-08'").toString(),
+                new StringBuilder().append("SELECT count(*) ").append("FROM orders ").append("WHERE orderdate < date '1992-02-08'").toString());
 
         MaterializedResult results = computeActual("SELECT orderdate, \"$shard_uuid\" FROM test_shard_temporal_date");
 
         // Each shard will only contain data of one date.
         SetMultimap<String, LocalDate> shardDateMap = HashMultimap.create();
-        for (MaterializedRow row : results.getMaterializedRows()) {
-            shardDateMap.put((String) row.getField(1), (LocalDate) row.getField(0));
-        }
+        results.getMaterializedRows().forEach(row -> shardDateMap.put((String) row.getField(1), (LocalDate) row.getField(0)));
 
-        for (Collection<LocalDate> dates : shardDateMap.asMap().values()) {
-            assertEquals(dates.size(), 1);
-        }
+        shardDateMap.asMap().values().forEach(dates -> assertEquals(dates.size(), 1));
 
         // Make sure we have all the rows
         assertQuery("SELECT orderdate, orderkey FROM test_shard_temporal_date",
@@ -217,13 +204,9 @@ public class TestRaptorIntegrationSmokeTest
 
         // Each shard will only contain data of one date.
         SetMultimap<String, LocalDate> shardDateMap = HashMultimap.create();
-        for (MaterializedRow row : results.getMaterializedRows()) {
-            shardDateMap.put((String) row.getField(1), (LocalDate) row.getField(0));
-        }
+        results.getMaterializedRows().forEach(row -> shardDateMap.put((String) row.getField(1), (LocalDate) row.getField(0)));
 
-        for (Collection<LocalDate> dates : shardDateMap.asMap().values()) {
-            assertEquals(dates.size(), 1);
-        }
+        shardDateMap.asMap().values().forEach(dates -> assertEquals(dates.size(), 1));
 
         // Make sure we have all the rows
         assertQuery("SELECT orderdate, orderkey FROM " + tableName,
@@ -242,48 +225,26 @@ public class TestRaptorIntegrationSmokeTest
 
         assertQuery(
                 colocated,
-                format("SELECT t1.orderkey " +
-                                "FROM %s t1 JOIN %s t2 " +
-                                "ON t1.orderkey = t2.orderkey",
+                format(new StringBuilder().append("SELECT t1.orderkey ").append("FROM %s t1 JOIN %s t2 ").append("ON t1.orderkey = t2.orderkey").toString(),
                 tableName,
                 tableName),
-                "SELECT t1.orderkey FROM " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t1 " +
-                        "JOIN " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t2 " +
-                        "   ON t1.orderkey = t2.orderkey");
+                new StringBuilder().append("SELECT t1.orderkey FROM ").append("(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t1 ").append("JOIN ").append("(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t2 ").append("   ON t1.orderkey = t2.orderkey").toString());
 
         // empty probe side
         assertQuery(
                 colocated,
-                format("SELECT t1.orderkey " +
-                                "FROM " +
-                                "(SELECT * FROM %s WHERE orderdate < date '1970-01-01') t1 " +
-                                "JOIN %s t2 " +
-                                "   ON t1.orderkey = t2.orderkey",
+                format(new StringBuilder().append("SELECT t1.orderkey ").append("FROM ").append("(SELECT * FROM %s WHERE orderdate < date '1970-01-01') t1 ").append("JOIN %s t2 ").append("   ON t1.orderkey = t2.orderkey").toString(),
                         tableName,
                         tableName),
-                "SELECT t1.orderkey FROM " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1970-01-01') t1 " +
-                        "JOIN " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t2 " +
-                        "   ON t1.orderkey = t2.orderkey");
+                new StringBuilder().append("SELECT t1.orderkey FROM ").append("(SELECT * FROM orders WHERE orderdate < date '1970-01-01') t1 ").append("JOIN ").append("(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t2 ").append("   ON t1.orderkey = t2.orderkey").toString());
 
         // empty build side
         assertQuery(
                 colocated,
-                format("SELECT t1.orderkey " +
-                                "FROM " +
-                                "%s t1 JOIN " +
-                                "(SELECT * FROM %s WHERE orderdate < date '1970-01-01') t2 " +
-                                "   ON t1.orderkey = t2.orderkey",
+                format(new StringBuilder().append("SELECT t1.orderkey ").append("FROM ").append("%s t1 JOIN ").append("(SELECT * FROM %s WHERE orderdate < date '1970-01-01') t2 ").append("   ON t1.orderkey = t2.orderkey").toString(),
                         tableName,
                         tableName),
-                "SELECT t1.orderkey FROM " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t1 " +
-                        "JOIN " +
-                        "(SELECT * FROM orders WHERE orderdate < date '1970-01-01') t2 " +
-                        "   ON t1.orderkey = t2.orderkey");
+                new StringBuilder().append("SELECT t1.orderkey FROM ").append("(SELECT * FROM orders WHERE orderdate < date '1992-02-08') t1 ").append("JOIN ").append("(SELECT * FROM orders WHERE orderdate < date '1970-01-01') t2 ").append("   ON t1.orderkey = t2.orderkey").toString());
     }
 
     private void prepareTemporalShardedAndBucketedTable(String tableName)
@@ -292,15 +253,9 @@ public class TestRaptorIntegrationSmokeTest
         assertEquals(computeActual("SELECT count(DISTINCT orderdate) >= 2 FROM orders WHERE orderdate < date '1992-02-08'").getOnlyValue(), true);
 
         assertUpdate(
-                format("CREATE TABLE %s " +
-                                "WITH (temporal_column = 'orderdate', bucket_count = 10, bucketed_on = ARRAY ['orderkey']) AS " +
-                                "SELECT orderdate, orderkey " +
-                                "FROM orders " +
-                                "WHERE orderdate < date '1992-02-08'",
+                format(new StringBuilder().append("CREATE TABLE %s ").append("WITH (temporal_column = 'orderdate', bucket_count = 10, bucketed_on = ARRAY ['orderkey']) AS ").append("SELECT orderdate, orderkey ").append("FROM orders ").append("WHERE orderdate < date '1992-02-08'").toString(),
                         tableName),
-                "SELECT count(*) " +
-                        "FROM orders " +
-                        "WHERE orderdate < date '1992-02-08'");
+                new StringBuilder().append("SELECT count(*) ").append("FROM orders ").append("WHERE orderdate < date '1992-02-08'").toString());
     }
 
     @Test
@@ -321,13 +276,9 @@ public class TestRaptorIntegrationSmokeTest
 
         // Each shard will only contain data of one date.
         SetMultimap<String, String> shardDateMap = HashMultimap.create();
-        for (MaterializedRow row : results.getMaterializedRows()) {
-            shardDateMap.put((String) row.getField(1), (String) row.getField(0));
-        }
+        results.getMaterializedRows().forEach(row -> shardDateMap.put((String) row.getField(1), (String) row.getField(0)));
 
-        for (Collection<String> dates : shardDateMap.asMap().values()) {
-            assertEquals(dates.size(), 1);
-        }
+        shardDateMap.asMap().values().forEach(dates -> assertEquals(dates.size(), 1));
 
         // Ensure one shard can contain different timestamps from the same day
         assertLessThan(shardDateMap.size(), rows);
@@ -336,9 +287,7 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testShardingByTemporalTimestampColumnBucketed()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_shard_temporal_timestamp_bucketed(col1 BIGINT, col2 TIMESTAMP) " +
-                "WITH (temporal_column = 'col2', bucket_count = 3, bucketed_on = ARRAY ['col1'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_shard_temporal_timestamp_bucketed(col1 BIGINT, col2 TIMESTAMP) ").append("WITH (temporal_column = 'col2', bucket_count = 3, bucketed_on = ARRAY ['col1'])").toString());
 
         int rows = 100;
         StringJoiner joiner = new StringJoiner(", ", "INSERT INTO test_shard_temporal_timestamp_bucketed VALUES ", "");
@@ -348,21 +297,15 @@ public class TestRaptorIntegrationSmokeTest
 
         assertUpdate(joiner.toString(), format("VALUES(%s)", rows));
 
-        MaterializedResult results = computeActual("" +
-                "SELECT format_datetime(col2 AT TIME ZONE 'UTC', 'yyyyMMdd'), \"$shard_uuid\" " +
-                "FROM test_shard_temporal_timestamp_bucketed");
+        MaterializedResult results = computeActual(new StringBuilder().append("").append("SELECT format_datetime(col2 AT TIME ZONE 'UTC', 'yyyyMMdd'), \"$shard_uuid\" ").append("FROM test_shard_temporal_timestamp_bucketed").toString());
 
         assertEquals(results.getRowCount(), rows);
 
         // Each shard will only contain data of one date.
         SetMultimap<String, String> shardDateMap = HashMultimap.create();
-        for (MaterializedRow row : results.getMaterializedRows()) {
-            shardDateMap.put((String) row.getField(1), (String) row.getField(0));
-        }
+        results.getMaterializedRows().forEach(row -> shardDateMap.put((String) row.getField(1), (String) row.getField(0)));
 
-        for (Collection<String> dates : shardDateMap.asMap().values()) {
-            assertEquals(dates.size(), 1);
-        }
+        shardDateMap.asMap().values().forEach(dates -> assertEquals(dates.size(), 1));
 
         // Ensure one shard can contain different timestamps from the same day
         assertLessThan(shardDateMap.size(), rows);
@@ -378,16 +321,8 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testShardsSystemTable()
     {
-        assertQuery("" +
-                        "SELECT table_schema, table_name, sum(row_count)\n" +
-                        "FROM system.shards\n" +
-                        "WHERE table_schema = 'tpch'\n" +
-                        "  AND table_name IN ('orders', 'lineitem')\n" +
-                        "GROUP BY 1, 2",
-                "" +
-                        "SELECT 'tpch', 'orders', (SELECT count(*) FROM orders)\n" +
-                        "UNION ALL\n" +
-                        "SELECT 'tpch', 'lineitem', (SELECT count(*) FROM lineitem)");
+        assertQuery(new StringBuilder().append("").append("SELECT table_schema, table_name, sum(row_count)\n").append("FROM system.shards\n").append("WHERE table_schema = 'tpch'\n").append("  AND table_name IN ('orders', 'lineitem')\n").append("GROUP BY 1, 2").toString(),
+                new StringBuilder().append("").append("SELECT 'tpch', 'orders', (SELECT count(*) FROM orders)\n").append("UNION ALL\n").append("SELECT 'tpch', 'lineitem', (SELECT count(*) FROM lineitem)").toString());
     }
 
     @Test
@@ -397,69 +332,30 @@ public class TestRaptorIntegrationSmokeTest
         assertEquals(computeActual("SELECT count(*) >= 1 FROM orders WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'").getOnlyValue(), true);
 
         // Create a table that has DATE type temporal column
-        assertUpdate("CREATE TABLE test_shards_system_table_date_temporal\n" +
-                        "WITH (temporal_column = 'orderdate') AS\n" +
-                        "SELECT orderdate, orderkey\n" +
-                        "FROM orders\n" +
-                        "WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'",
-                "SELECT count(*)\n" +
-                        "FROM orders\n" +
-                        "WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'");
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_shards_system_table_date_temporal\n").append("WITH (temporal_column = 'orderdate') AS\n").append("SELECT orderdate, orderkey\n").append("FROM orders\n").append("WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'").toString(),
+                new StringBuilder().append("SELECT count(*)\n").append("FROM orders\n").append("WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'").toString());
 
         // Create a table that has TIMESTAMP type temporal column
-        assertUpdate("CREATE TABLE test_shards_system_table_timestamp_temporal\n" +
-                        "WITH (temporal_column = 'ordertimestamp') AS\n" +
-                        "SELECT CAST (orderdate AS TIMESTAMP) AS ordertimestamp, orderkey\n" +
-                        "FROM test_shards_system_table_date_temporal",
-                "SELECT count(*)\n" +
-                        "FROM orders\n" +
-                        "WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'");
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_shards_system_table_timestamp_temporal\n").append("WITH (temporal_column = 'ordertimestamp') AS\n").append("SELECT CAST (orderdate AS TIMESTAMP) AS ordertimestamp, orderkey\n").append("FROM test_shards_system_table_date_temporal").toString(),
+                new StringBuilder().append("SELECT count(*)\n").append("FROM orders\n").append("WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08'").toString());
 
         // For table with DATE type temporal column, min/max_timestamp columns must be null while min/max_date columns must not be null
-        assertEquals(computeActual("" +
-                "SELECT count(*)\n" +
-                "FROM system.shards\n" +
-                "WHERE table_schema = 'tpch'\n" +
-                "AND table_name = 'test_shards_system_table_date_temporal'\n" +
-                "AND NOT \n" +
-                "(min_timestamp IS NULL AND max_timestamp IS NULL\n" +
-                "AND min_date IS NOT NULL AND max_date IS NOT NULL)").getOnlyValue(), 0L);
+        assertEquals(computeActual(new StringBuilder().append("").append("SELECT count(*)\n").append("FROM system.shards\n").append("WHERE table_schema = 'tpch'\n").append("AND table_name = 'test_shards_system_table_date_temporal'\n").append("AND NOT \n").append("(min_timestamp IS NULL AND max_timestamp IS NULL\n").append("AND min_date IS NOT NULL AND max_date IS NOT NULL)")
+				.toString()).getOnlyValue(), 0L);
 
         // For table with TIMESTAMP type temporal column, min/max_date columns must be null while min/max_timestamp columns must not be null
-        assertEquals(computeActual("" +
-                "SELECT count(*)\n" +
-                "FROM system.shards\n" +
-                "WHERE table_schema = 'tpch'\n" +
-                "AND table_name = 'test_shards_system_table_timestamp_temporal'\n" +
-                "AND NOT\n" +
-                "(min_date IS NULL AND max_date IS NULL\n" +
-                "AND min_timestamp IS NOT NULL AND max_timestamp IS NOT NULL)").getOnlyValue(), 0L);
+        assertEquals(computeActual(new StringBuilder().append("").append("SELECT count(*)\n").append("FROM system.shards\n").append("WHERE table_schema = 'tpch'\n").append("AND table_name = 'test_shards_system_table_timestamp_temporal'\n").append("AND NOT\n").append("(min_date IS NULL AND max_date IS NULL\n").append("AND min_timestamp IS NOT NULL AND max_timestamp IS NOT NULL)")
+				.toString()).getOnlyValue(), 0L);
 
         // Test date predicates in table with DATE temporal column
-        assertQuery("" +
-                        "SELECT table_schema, table_name, sum(row_count)\n" +
-                        "FROM system.shards \n" +
-                        "WHERE table_schema = 'tpch'\n" +
-                        "AND table_name = 'test_shards_system_table_date_temporal'\n" +
-                        "AND min_date >= date '1992-01-01'\n" +
-                        "AND max_date <= date '1992-02-08'\n" +
-                        "GROUP BY 1, 2",
-                "" +
-                        "SELECT 'tpch', 'test_shards_system_table_date_temporal',\n" +
-                        "(SELECT count(*) FROM orders WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08')");
+        assertQuery(new StringBuilder().append("").append("SELECT table_schema, table_name, sum(row_count)\n").append("FROM system.shards \n").append("WHERE table_schema = 'tpch'\n").append("AND table_name = 'test_shards_system_table_date_temporal'\n").append("AND min_date >= date '1992-01-01'\n").append("AND max_date <= date '1992-02-08'\n").append("GROUP BY 1, 2")
+				.toString(),
+                new StringBuilder().append("").append("SELECT 'tpch', 'test_shards_system_table_date_temporal',\n").append("(SELECT count(*) FROM orders WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08')").toString());
 
         // Test timestamp predicates in table with TIMESTAMP temporal column
-        assertQuery("" +
-                        "SELECT table_schema, table_name, sum(row_count)\n" +
-                        "FROM system.shards \n" +
-                        "WHERE table_schema = 'tpch'\n" +
-                        "AND table_name = 'test_shards_system_table_timestamp_temporal'\n" +
-                        "AND min_timestamp >= timestamp '1992-01-01'\n" +
-                        "AND max_timestamp <= timestamp '1992-02-08'\n" +
-                        "GROUP BY 1, 2",
-                "" +
-                        "SELECT 'tpch', 'test_shards_system_table_timestamp_temporal',\n" +
-                        "(SELECT count(*) FROM orders WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08')");
+        assertQuery(new StringBuilder().append("").append("SELECT table_schema, table_name, sum(row_count)\n").append("FROM system.shards \n").append("WHERE table_schema = 'tpch'\n").append("AND table_name = 'test_shards_system_table_timestamp_temporal'\n").append("AND min_timestamp >= timestamp '1992-01-01'\n").append("AND max_timestamp <= timestamp '1992-02-08'\n").append("GROUP BY 1, 2")
+				.toString(),
+                new StringBuilder().append("").append("SELECT 'tpch', 'test_shards_system_table_timestamp_temporal',\n").append("(SELECT count(*) FROM orders WHERE orderdate BETWEEN date '1992-01-01' AND date '1992-02-08')").toString());
     }
 
     @Test
@@ -503,10 +399,7 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testCreateBucketedTable()
     {
-        assertUpdate("" +
-                        "CREATE TABLE orders_bucketed " +
-                        "WITH (bucket_count = 50, bucketed_on = ARRAY ['orderkey']) " +
-                        "AS SELECT * FROM orders",
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE orders_bucketed ").append("WITH (bucket_count = 50, bucketed_on = ARRAY ['orderkey']) ").append("AS SELECT * FROM orders").toString(),
                 "SELECT count(*) FROM orders");
 
         assertQuery("SELECT * FROM orders_bucketed", "SELECT * FROM orders");
@@ -534,18 +427,9 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testCreateBucketedTableLike()
     {
-        assertUpdate("" +
-                "CREATE TABLE orders_bucketed_original (" +
-                "  orderkey bigint" +
-                ", custkey bigint" +
-                ") " +
-                "WITH (bucket_count = 50, bucketed_on = ARRAY['orderkey'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE orders_bucketed_original (").append("  orderkey bigint").append(", custkey bigint").append(") ").append("WITH (bucket_count = 50, bucketed_on = ARRAY['orderkey'])").toString());
 
-        assertUpdate("" +
-                "CREATE TABLE orders_bucketed_like (" +
-                "  orderdate date" +
-                ", LIKE orders_bucketed_original INCLUDING PROPERTIES" +
-                ")");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE orders_bucketed_like (").append("  orderdate date").append(", LIKE orders_bucketed_original INCLUDING PROPERTIES").append(")").toString());
 
         assertUpdate("INSERT INTO orders_bucketed_like SELECT orderdate, orderkey, custkey FROM orders", "SELECT count(*) FROM orders");
         assertUpdate("INSERT INTO orders_bucketed_like SELECT orderdate, orderkey, custkey FROM orders", "SELECT count(*) FROM orders");
@@ -559,10 +443,7 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testBucketingMixedTypes()
     {
-        assertUpdate("" +
-                        "CREATE TABLE orders_bucketed_mixed " +
-                        "WITH (bucket_count = 50, bucketed_on = ARRAY ['custkey', 'clerk', 'shippriority']) " +
-                        "AS SELECT * FROM orders",
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE orders_bucketed_mixed ").append("WITH (bucket_count = 50, bucketed_on = ARRAY ['custkey', 'clerk', 'shippriority']) ").append("AS SELECT * FROM orders").toString(),
                 "SELECT count(*) FROM orders");
 
         assertQuery("SELECT * FROM orders_bucketed_mixed", "SELECT * FROM orders");
@@ -574,71 +455,37 @@ public class TestRaptorIntegrationSmokeTest
     @Test
     public void testShowCreateTable()
     {
-        String createTableSql = format("" +
-                        "CREATE TABLE %s.%s.%s (\n" +
-                        "   c1 bigint,\n" +
-                        "   c2 double,\n" +
-                        "   \"c 3\" varchar,\n" +
-                        "   \"c'4\" array(bigint),\n" +
-                        "   c5 map(bigint, varchar),\n" +
-                        "   c6 bigint,\n" +
-                        "   c7 timestamp\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   bucket_count = 32,\n" +
-                        "   bucketed_on = ARRAY['c1','c6'],\n" +
-                        "   ordering = ARRAY['c6','c1'],\n" +
-                        "   temporal_column = 'c7'\n" +
-                        ")",
+        String createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.%s (\n").append("   c1 bigint,\n").append("   c2 double,\n").append("   \"c 3\" varchar,\n").append("   \"c'4\" array(bigint),\n").append("   c5 map(bigint, varchar),\n").append("   c6 bigint,\n")
+				.append("   c7 timestamp\n").append(")\n").append("WITH (\n").append("   bucket_count = 32,\n").append("   bucketed_on = ARRAY['c1','c6'],\n").append("   ordering = ARRAY['c6','c1'],\n").append("   temporal_column = 'c7'\n").append(")").toString(),
                 getSession().getCatalog().get(), getSession().getSchema().get(), "test_show_create_table");
         assertUpdate(createTableSql);
 
         MaterializedResult actualResult = computeActual("SHOW CREATE TABLE test_show_create_table");
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        actualResult = computeActual("SHOW CREATE TABLE " + getSession().getSchema().get() + ".test_show_create_table");
+        actualResult = computeActual(new StringBuilder().append("SHOW CREATE TABLE ").append(getSession().getSchema().get()).append(".test_show_create_table").toString());
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        actualResult = computeActual("SHOW CREATE TABLE " + getSession().getCatalog().get() + "." + getSession().getSchema().get() + ".test_show_create_table");
+        actualResult = computeActual(new StringBuilder().append("SHOW CREATE TABLE ").append(getSession().getCatalog().get()).append(".").append(getSession().getSchema().get()).append(".test_show_create_table").toString());
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
         // With organization enabled
-        createTableSql = format("" +
-                        "CREATE TABLE %s.%s.%s (\n" +
-                        "   c1 bigint,\n" +
-                        "   c2 double,\n" +
-                        "   \"c 3\" varchar,\n" +
-                        "   \"c'4\" array(bigint),\n" +
-                        "   c5 map(bigint, varchar),\n" +
-                        "   c6 bigint,\n" +
-                        "   c7 timestamp\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   bucket_count = 32,\n" +
-                        "   bucketed_on = ARRAY['c1','c6'],\n" +
-                        "   ordering = ARRAY['c6','c1'],\n" +
-                        "   organized = true\n" +
-                        ")",
+        createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.%s (\n").append("   c1 bigint,\n").append("   c2 double,\n").append("   \"c 3\" varchar,\n").append("   \"c'4\" array(bigint),\n").append("   c5 map(bigint, varchar),\n").append("   c6 bigint,\n")
+				.append("   c7 timestamp\n").append(")\n").append("WITH (\n").append("   bucket_count = 32,\n").append("   bucketed_on = ARRAY['c1','c6'],\n").append("   ordering = ARRAY['c6','c1'],\n").append("   organized = true\n").append(")").toString(),
                 getSession().getCatalog().get(), getSession().getSchema().get(), "test_show_create_table_organized");
         assertUpdate(createTableSql);
 
         actualResult = computeActual("SHOW CREATE TABLE test_show_create_table_organized");
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        actualResult = computeActual("SHOW CREATE TABLE " + getSession().getSchema().get() + ".test_show_create_table_organized");
+        actualResult = computeActual(new StringBuilder().append("SHOW CREATE TABLE ").append(getSession().getSchema().get()).append(".test_show_create_table_organized").toString());
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        actualResult = computeActual("SHOW CREATE TABLE " + getSession().getCatalog().get() + "." + getSession().getSchema().get() + ".test_show_create_table_organized");
+        actualResult = computeActual(new StringBuilder().append("SHOW CREATE TABLE ").append(getSession().getCatalog().get()).append(".").append(getSession().getSchema().get()).append(".test_show_create_table_organized").toString());
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        createTableSql = format("" +
-                        "CREATE TABLE %s.%s.%s (\n" +
-                        "   \"c\"\"1\" bigint,\n" +
-                        "   c2 double,\n" +
-                        "   \"c 3\" varchar,\n" +
-                        "   \"c'4\" array(bigint),\n" +
-                        "   c5 map(bigint, varchar)\n" +
-                        ")",
+        createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.%s (\n").append("   \"c\"\"1\" bigint,\n").append("   c2 double,\n").append("   \"c 3\" varchar,\n").append("   \"c'4\" array(bigint),\n").append("   c5 map(bigint, varchar)\n").append(")")
+				.toString(),
                 getSession().getCatalog().get(), getSession().getSchema().get(), "\"test_show_create_table\"\"2\"");
         assertUpdate(createTableSql);
 
@@ -651,21 +498,11 @@ public class TestRaptorIntegrationSmokeTest
     {
         assertUpdate("" +
                 "CREATE TABLE system_tables_test0 (c00 timestamp, c01 varchar, c02 double, c03 bigint, c04 bigint)");
-        assertUpdate("" +
-                "CREATE TABLE system_tables_test1 (c10 timestamp, c11 varchar, c12 double, c13 bigint, c14 bigint) " +
-                "WITH (temporal_column = 'c10')");
-        assertUpdate("" +
-                "CREATE TABLE system_tables_test2 (c20 timestamp, c21 varchar, c22 double, c23 bigint, c24 bigint) " +
-                "WITH (temporal_column = 'c20', ordering = ARRAY['c22', 'c21'])");
-        assertUpdate("" +
-                "CREATE TABLE system_tables_test3 (c30 timestamp, c31 varchar, c32 double, c33 bigint, c34 bigint) " +
-                "WITH (temporal_column = 'c30', bucket_count = 40, bucketed_on = ARRAY ['c34', 'c33'])");
-        assertUpdate("" +
-                "CREATE TABLE system_tables_test4 (c40 timestamp, c41 varchar, c42 double, c43 bigint, c44 bigint) " +
-                "WITH (temporal_column = 'c40', ordering = ARRAY['c41', 'c42'], distribution_name = 'test_distribution', bucket_count = 50, bucketed_on = ARRAY ['c43', 'c44'])");
-        assertUpdate("" +
-                "CREATE TABLE system_tables_test5 (c50 timestamp, c51 varchar, c52 double, c53 bigint, c54 bigint) " +
-                "WITH (ordering = ARRAY['c51', 'c52'], distribution_name = 'test_distribution', bucket_count = 50, bucketed_on = ARRAY ['c53', 'c54'], organized = true)");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE system_tables_test1 (c10 timestamp, c11 varchar, c12 double, c13 bigint, c14 bigint) ").append("WITH (temporal_column = 'c10')").toString());
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE system_tables_test2 (c20 timestamp, c21 varchar, c22 double, c23 bigint, c24 bigint) ").append("WITH (temporal_column = 'c20', ordering = ARRAY['c22', 'c21'])").toString());
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE system_tables_test3 (c30 timestamp, c31 varchar, c32 double, c33 bigint, c34 bigint) ").append("WITH (temporal_column = 'c30', bucket_count = 40, bucketed_on = ARRAY ['c34', 'c33'])").toString());
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE system_tables_test4 (c40 timestamp, c41 varchar, c42 double, c43 bigint, c44 bigint) ").append("WITH (temporal_column = 'c40', ordering = ARRAY['c41', 'c42'], distribution_name = 'test_distribution', bucket_count = 50, bucketed_on = ARRAY ['c43', 'c44'])").toString());
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE system_tables_test5 (c50 timestamp, c51 varchar, c52 double, c53 bigint, c54 bigint) ").append("WITH (ordering = ARRAY['c51', 'c52'], distribution_name = 'test_distribution', bucket_count = 50, bucketed_on = ARRAY ['c53', 'c54'], organized = true)").toString());
 
         MaterializedResult actualResults = computeActual("SELECT * FROM system.tables");
         assertEquals(
@@ -715,10 +552,7 @@ public class TestRaptorIntegrationSmokeTest
         actualResults = computeActual("SELECT * FROM system.tables WHERE table_schema = 'tpch' and table_name = 'system_tables_test3'");
         assertEquals(actualResults.getMaterializedRows().size(), 1);
 
-        actualResults = computeActual("" +
-                "SELECT distribution_name, bucket_count, bucketing_columns, ordering_columns, temporal_column, organized " +
-                "FROM system.tables " +
-                "WHERE table_schema = 'tpch' and table_name = 'system_tables_test3'");
+        actualResults = computeActual(new StringBuilder().append("").append("SELECT distribution_name, bucket_count, bucketing_columns, ordering_columns, temporal_column, organized ").append("FROM system.tables ").append("WHERE table_schema = 'tpch' and table_name = 'system_tables_test3'").toString());
         assertEquals(actualResults.getTypes(), ImmutableList.of(VARCHAR, BIGINT, new ArrayType(VARCHAR), new ArrayType(VARCHAR), VARCHAR, BOOLEAN));
         assertEquals(actualResults.getMaterializedRows().size(), 1);
 
@@ -737,35 +571,16 @@ public class TestRaptorIntegrationSmokeTest
     public void testTableStatsSystemTable()
     {
         // basic sanity tests
-        assertQuery("" +
-                        "SELECT table_schema, table_name, sum(row_count)\n" +
-                        "FROM system.table_stats\n" +
-                        "WHERE table_schema = 'tpch'\n" +
-                        "  AND table_name IN ('orders', 'lineitem')\n" +
-                        "GROUP BY 1, 2",
-                "" +
-                        "SELECT 'tpch', 'orders', (SELECT count(*) FROM orders)\n" +
-                        "UNION ALL\n" +
-                        "SELECT 'tpch', 'lineitem', (SELECT count(*) FROM lineitem)");
+        assertQuery(new StringBuilder().append("").append("SELECT table_schema, table_name, sum(row_count)\n").append("FROM system.table_stats\n").append("WHERE table_schema = 'tpch'\n").append("  AND table_name IN ('orders', 'lineitem')\n").append("GROUP BY 1, 2").toString(),
+                new StringBuilder().append("").append("SELECT 'tpch', 'orders', (SELECT count(*) FROM orders)\n").append("UNION ALL\n").append("SELECT 'tpch', 'lineitem', (SELECT count(*) FROM lineitem)").toString());
 
-        assertQuery("" +
-                        "SELECT\n" +
-                        "  bool_and(row_count >= shard_count)\n" +
-                        ", bool_and(update_time >= create_time)\n" +
-                        ", bool_and(table_version >= 1)\n" +
-                        "FROM system.table_stats\n" +
-                        "WHERE row_count > 0",
+        assertQuery(new StringBuilder().append("").append("SELECT\n").append("  bool_and(row_count >= shard_count)\n").append(", bool_and(update_time >= create_time)\n").append(", bool_and(table_version >= 1)\n").append("FROM system.table_stats\n").append("WHERE row_count > 0").toString(),
                 "SELECT true, true, true");
 
         // create empty table
         assertUpdate("CREATE TABLE test_table_stats (x bigint)");
 
-        @Language("SQL") String sql = "" +
-                "SELECT create_time, update_time, table_version," +
-                "  shard_count, row_count, uncompressed_size\n" +
-                "FROM system.table_stats\n" +
-                "WHERE table_schema = 'tpch'\n" +
-                "  AND table_name = 'test_table_stats'";
+        @Language("SQL") String sql = new StringBuilder().append("").append("SELECT create_time, update_time, table_version,").append("  shard_count, row_count, uncompressed_size\n").append("FROM system.table_stats\n").append("WHERE table_schema = 'tpch'\n").append("  AND table_name = 'test_table_stats'").toString();
         MaterializedRow row = getOnlyElement(computeActual(sql).getMaterializedRows());
 
         LocalDateTime createTime = (LocalDateTime) row.getField(0);

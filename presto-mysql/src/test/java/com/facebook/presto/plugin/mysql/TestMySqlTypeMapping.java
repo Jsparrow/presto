@@ -111,7 +111,7 @@ public class TestMySqlTypeMapping
                 .addRoundTrip(stringDataType("varchar(65536)", createVarcharType(16777215)), "text_e")
                 .addRoundTrip(stringDataType("varchar(16777215)", createVarcharType(16777215)), "text_f")
                 .addRoundTrip(stringDataType("varchar(16777216)", createUnboundedVarcharType()), "text_g")
-                .addRoundTrip(stringDataType("varchar(" + VarcharType.MAX_LENGTH + ")", createUnboundedVarcharType()), "text_h")
+                .addRoundTrip(stringDataType(new StringBuilder().append("varchar(").append(VarcharType.MAX_LENGTH).append(")").toString(), createUnboundedVarcharType()), "text_h")
                 .addRoundTrip(stringDataType("varchar", createUnboundedVarcharType()), "unbounded")
                 .execute(getQueryRunner(), prestoCreateAsSelect("presto_test_parameterized_varchar"));
     }
@@ -227,7 +227,7 @@ public class TestMySqlTypeMapping
         // Note: there is identical test for PostgreSQL
 
         ZoneId jvmZone = ZoneId.systemDefault();
-        checkState(jvmZone.getId().equals("America/Bahia_Banderas"), "This test assumes certain JVM time zone");
+        checkState("America/Bahia_Banderas".equals(jvmZone.getId()), "This test assumes certain JVM time zone");
         LocalDate dateOfLocalTimeChangeForwardAtMidnightInJvmZone = LocalDate.of(1970, 1, 1);
         verify(jvmZone.getRules().getValidOffsets(dateOfLocalTimeChangeForwardAtMidnightInJvmZone.atStartOfDay()).isEmpty());
 
@@ -247,13 +247,12 @@ public class TestMySqlTypeMapping
                 .addRoundTrip(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInSomeZone)
                 .addRoundTrip(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone);
 
-        for (String timeZoneId : ImmutableList.of(UTC_KEY.getId(), jvmZone.getId(), someZone.getId())) {
-            Session session = Session.builder(getQueryRunner().getDefaultSession())
-                    .setTimeZoneKey(TimeZoneKey.getTimeZoneKey(timeZoneId))
-                    .build();
-            testCases.execute(getQueryRunner(), session, mysqlCreateAndInsert("tpch.test_date"));
-            testCases.execute(getQueryRunner(), session, prestoCreateAsSelect("test_date"));
-        }
+        ImmutableList.of(UTC_KEY.getId(), jvmZone.getId(), someZone.getId()).stream().map(timeZoneId -> Session.builder(getQueryRunner().getDefaultSession())
+		        .setTimeZoneKey(TimeZoneKey.getTimeZoneKey(timeZoneId))
+		        .build()).forEach(session -> {
+			testCases.execute(getQueryRunner(), session, mysqlCreateAndInsert("tpch.test_date"));
+			testCases.execute(getQueryRunner(), session, prestoCreateAsSelect("test_date"));
+		});
     }
 
     @Test

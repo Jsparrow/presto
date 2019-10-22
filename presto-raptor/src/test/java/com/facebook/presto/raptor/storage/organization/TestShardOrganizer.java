@@ -51,7 +51,12 @@ public class TestShardOrganizer
         organizer.shutdown();
     }
 
-    private static class MockJobFactory
+    static ShardOrganizer createShardOrganizer()
+    {
+        return new ShardOrganizer(new MockJobFactory(), 1);
+    }
+
+	private static class MockJobFactory
             implements JobFactory
     {
         @Override
@@ -59,10 +64,5 @@ public class TestShardOrganizer
         {
             return () -> sleepUninterruptibly(10, MILLISECONDS);
         }
-    }
-
-    static ShardOrganizer createShardOrganizer()
-    {
-        return new ShardOrganizer(new MockJobFactory(), 1);
     }
 }

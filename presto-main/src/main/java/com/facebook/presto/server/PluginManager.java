@@ -178,10 +178,10 @@ public class PluginManager
             log.warn("No service providers of type %s", Plugin.class.getName());
         }
 
-        for (Plugin plugin : plugins) {
+        plugins.forEach(plugin -> {
             log.info("Installing %s", plugin.getClass().getName());
             installPlugin(plugin);
-        }
+        });
     }
 
     public void installPlugin(Plugin plugin)
@@ -246,7 +246,7 @@ public class PluginManager
             throws Exception
     {
         File file = new File(plugin);
-        if (file.isFile() && (file.getName().equals("pom.xml") || file.getName().endsWith(".pom"))) {
+        if (file.isFile() && ("pom.xml".equals(file.getName()) || file.getName().endsWith(".pom"))) {
             return buildClassLoaderFromPom(file);
         }
         if (file.isDirectory()) {
@@ -327,7 +327,7 @@ public class PluginManager
     private static List<Artifact> sortedArtifacts(List<Artifact> artifacts)
     {
         List<Artifact> list = new ArrayList<>(artifacts);
-        Collections.sort(list, Ordering.natural().nullsLast().onResultOf(Artifact::getFile));
+        list.sort(Ordering.natural().nullsLast().onResultOf(Artifact::getFile));
         return list;
     }
 }

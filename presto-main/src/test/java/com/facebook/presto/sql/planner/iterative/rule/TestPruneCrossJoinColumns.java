@@ -41,7 +41,7 @@ public class TestPruneCrossJoinColumns
     public void testLeftInputNotReferenced()
     {
         tester().assertThat(new PruneCrossJoinColumns())
-                .on(p -> buildProjectedCrossJoin(p, variable -> variable.getName().equals("rightValue")))
+                .on(p -> buildProjectedCrossJoin(p, variable -> "rightValue".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("rightValue", PlanMatchPattern.expression("rightValue")),
@@ -60,7 +60,7 @@ public class TestPruneCrossJoinColumns
     public void testRightInputNotReferenced()
     {
         tester().assertThat(new PruneCrossJoinColumns())
-                .on(p -> buildProjectedCrossJoin(p, variable -> variable.getName().equals("leftValue")))
+                .on(p -> buildProjectedCrossJoin(p, variable -> "leftValue".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("leftValue", PlanMatchPattern.expression("leftValue")),

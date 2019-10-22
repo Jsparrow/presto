@@ -159,9 +159,7 @@ public final class TypeRegistry
         addParametricType(FUNCTION);
         addParametricType(QDIGEST);
 
-        for (Type type : types) {
-            addType(type);
-        }
+        types.forEach(this::addType);
         parametricTypeCache = CacheBuilder.newBuilder()
                 .maximumSize(1000)
                 .build(CacheLoader.from(this::instantiateParametricType));
@@ -199,10 +197,7 @@ public final class TypeRegistry
     {
         List<TypeParameter> parameters = new ArrayList<>();
 
-        for (TypeSignatureParameter parameter : signature.getParameters()) {
-            TypeParameter typeParameter = TypeParameter.of(parameter, this);
-            parameters.add(typeParameter);
-        }
+        signature.getParameters().stream().map(parameter -> TypeParameter.of(parameter, this)).forEach(parameters::add);
 
         ParametricType parametricType = parametricTypes.get(signature.getBase().toLowerCase(Locale.ENGLISH));
         if (parametricType == null) {
@@ -250,18 +245,18 @@ public final class TypeRegistry
         String sourceTypeBase = source.getTypeSignature().getBase();
         String resultTypeBase = result.getTypeSignature().getBase();
 
-        if (sourceTypeBase.equals(resultTypeBase) && isCovariantParametrizedType(source)) {
-            List<Type> sourceTypeParameters = source.getTypeParameters();
-            List<Type> resultTypeParameters = result.getTypeParameters();
-            checkState(sourceTypeParameters.size() == resultTypeParameters.size());
-            for (int i = 0; i < sourceTypeParameters.size(); i++) {
-                if (!isTypeOnlyCoercion(sourceTypeParameters.get(i), resultTypeParameters.get(i))) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
+        if (!(sourceTypeBase.equals(resultTypeBase) && isCovariantParametrizedType(source))) {
+			return false;
+		}
+		List<Type> sourceTypeParameters = source.getTypeParameters();
+		List<Type> resultTypeParameters = result.getTypeParameters();
+		checkState(sourceTypeParameters.size() == resultTypeParameters.size());
+		for (int i = 0; i < sourceTypeParameters.size(); i++) {
+		    if (!isTypeOnlyCoercion(sourceTypeParameters.get(i), resultTypeParameters.get(i))) {
+		        return false;
+		    }
+		}
+		return true;
     }
 
     @Override
@@ -326,15 +321,14 @@ public final class TypeRegistry
         }
 
         coercedType = coerceTypeBase(toType, fromType.getTypeSignature().getBase());
-        if (coercedType.isPresent()) {
-            TypeCompatibility typeCompatibility = compatibility(fromType, coercedType.get());
-            if (!typeCompatibility.isCompatible()) {
-                return TypeCompatibility.incompatible();
-            }
-            return TypeCompatibility.compatible(typeCompatibility.getCommonSuperType(), false);
-        }
-
-        return TypeCompatibility.incompatible();
+        if (!coercedType.isPresent()) {
+			return TypeCompatibility.incompatible();
+		}
+		TypeCompatibility typeCompatibility = compatibility(fromType, coercedType.get());
+		if (!typeCompatibility.isCompatible()) {
+		    return TypeCompatibility.incompatible();
+		}
+		return TypeCompatibility.compatible(typeCompatibility.getCommonSuperType(), false);
     }
 
     private static Type getCommonSuperTypeForDecimal(DecimalType firstType, DecimalType secondType)

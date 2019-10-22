@@ -94,9 +94,7 @@ public final class LocalMemoryManager
     public MemoryInfo getInfo()
     {
         ImmutableMap.Builder<MemoryPoolId, MemoryPoolInfo> builder = ImmutableMap.builder();
-        for (Map.Entry<MemoryPoolId, MemoryPool> entry : pools.entrySet()) {
-            builder.put(entry.getKey(), entry.getValue().getInfo());
-        }
+        pools.entrySet().forEach(entry -> builder.put(entry.getKey(), entry.getValue().getInfo()));
         return new MemoryInfo(maxMemory, builder.build());
     }
 

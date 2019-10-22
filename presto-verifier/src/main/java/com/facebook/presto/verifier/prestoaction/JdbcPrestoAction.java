@@ -44,11 +44,15 @@ import static com.facebook.presto.verifier.framework.QueryException.Type.CLUSTER
 import static com.facebook.presto.verifier.framework.QueryException.Type.PRESTO;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcPrestoAction
         implements PrestoAction
 {
-    private static final String QUERY_MAX_EXECUTION_TIME = "query_max_execution_time";
+    private static final Logger logger = LoggerFactory.getLogger(JdbcPrestoAction.class);
+
+	private static final String QUERY_MAX_EXECUTION_TIME = "query_max_execution_time";
 
     private final SqlExceptionClassifier exceptionClassifier;
     private final QueryConfiguration queryConfiguration;
@@ -178,6 +182,7 @@ public class JdbcPrestoAction
             connection.setSchema(queryConfiguration.getSchema());
         }
         catch (SQLClientInfoException ignored) {
+			logger.error(ignored.getMessage(), ignored);
             // Do nothing
         }
 
@@ -185,9 +190,7 @@ public class JdbcPrestoAction
                 .putAll(queryConfiguration.getSessionProperties())
                 .put(QUERY_MAX_EXECUTION_TIME, getTimeout(queryStage).toString())
                 .build();
-        for (Entry<String, String> entry : sessionProperties.entrySet()) {
-            connection.setSessionProperty(entry.getKey(), entry.getValue());
-        }
+        sessionProperties.entrySet().forEach(entry -> connection.setSessionProperty(entry.getKey(), entry.getValue()));
         return connection;
     }
 

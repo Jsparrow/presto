@@ -135,7 +135,7 @@ public class AddIntermediateAggregations
     private Optional<PlanNode> recurseToPartial(PlanNode node, Lookup lookup, PlanNodeIdAllocator idAllocator, TypeProvider types)
     {
         if (node instanceof AggregationNode && ((AggregationNode) node).getStep() == PARTIAL) {
-            return Optional.of(addGatheringIntermediate((AggregationNode) node, idAllocator, types));
+            return Optional.of(addGatheringIntermediate((AggregationNode) node, idAllocator));
         }
 
         if (!(node instanceof ExchangeNode) && !(node instanceof ProjectNode)) {
@@ -153,7 +153,7 @@ public class AddIntermediateAggregations
         return Optional.of(node.replaceChildren(builder.build()));
     }
 
-    private PlanNode addGatheringIntermediate(AggregationNode aggregation, PlanNodeIdAllocator idAllocator, TypeProvider types)
+    private PlanNode addGatheringIntermediate(AggregationNode aggregation, PlanNodeIdAllocator idAllocator)
     {
         verify(aggregation.getGroupingKeys().isEmpty(), "Should be an un-grouped aggregation");
         ExchangeNode gatheringExchange = gatheringExchange(idAllocator.getNextId(), LOCAL, aggregation);
@@ -178,7 +178,7 @@ public class AddIntermediateAggregations
     private static Map<VariableReferenceExpression, Aggregation> outputsAsInputs(Map<VariableReferenceExpression, Aggregation> assignments)
     {
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> builder = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, Aggregation> entry : assignments.entrySet()) {
+        assignments.entrySet().forEach(entry -> {
             VariableReferenceExpression output = entry.getKey();
             Aggregation aggregation = entry.getValue();
             checkState(!aggregation.getOrderBy().isPresent(), "Intermediate aggregation does not support ORDER BY");
@@ -194,7 +194,7 @@ public class AddIntermediateAggregations
                             Optional.empty(),
                             false,
                             Optional.empty()));  // No mask for INTERMEDIATE
-        }
+        });
         return builder.build();
     }
 
@@ -209,7 +209,7 @@ public class AddIntermediateAggregations
     private static Map<VariableReferenceExpression, Aggregation> inputsAsOutputs(Map<VariableReferenceExpression, Aggregation> assignments, TypeProvider types)
     {
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> builder = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, Aggregation> entry : assignments.entrySet()) {
+        assignments.entrySet().forEach(entry -> {
             // Should only have one input symbol
             Aggregation aggregation = entry.getValue();
             checkArgument(
@@ -217,7 +217,7 @@ public class AddIntermediateAggregations
                     "Aggregation should only have one argument and should have no order by  or filter to be able to rewritten to intermediate form");
             VariableReferenceExpression input = getOnlyElement(extractAggregationUniqueVariables(entry.getValue(), types));
             builder.put(input, entry.getValue());
-        }
+        });
         return builder.build();
     }
 }

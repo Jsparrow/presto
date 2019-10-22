@@ -136,7 +136,7 @@ public class MemoryLocalQueryRunner
         Session session = localQueryRunner.getDefaultSession();
         Metadata metadata = localQueryRunner.getMetadata();
         Optional<TableHandle> tableHandle = metadata.getTableHandle(session, QualifiedObjectName.valueOf(tableName));
-        assertTrue(tableHandle.isPresent(), "Table " + tableName + " does not exist");
+        assertTrue(tableHandle.isPresent(), new StringBuilder().append("Table ").append(tableName).append(" does not exist").toString());
         metadata.dropTable(session, tableHandle.get());
     }
 

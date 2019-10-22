@@ -33,7 +33,35 @@ public final class UuidUtil
 {
     private UuidUtil() {}
 
-    public static final class UuidArgumentFactory
+    public static UUID uuidFromBytes(byte[] bytes)
+    {
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        long msb = buffer.getLong();
+        long lsb = buffer.getLong();
+        return new UUID(msb, lsb);
+    }
+
+	public static byte[] uuidToBytes(UUID uuid)
+    {
+        return ByteBuffer.allocate(16)
+                .putLong(uuid.getMostSignificantBits())
+                .putLong(uuid.getLeastSignificantBits())
+                .array();
+    }
+
+	/**
+     * @param uuidSlice textual representation of UUID
+     * @return byte representation of UUID
+     * @throws IllegalArgumentException if uuidSlice is not a valid string representation of UUID
+     */
+    public static Slice uuidStringToBytes(Slice uuidSlice)
+    {
+        UUID uuid = UUID.fromString(uuidSlice.toStringUtf8());
+        byte[] bytes = uuidToBytes(uuid);
+        return Slices.wrappedBuffer(bytes);
+    }
+
+	public static final class UuidArgumentFactory
             implements ArgumentFactory<UUID>
     {
         @Override
@@ -111,33 +139,5 @@ public final class UuidUtil
         {
             return uuidFromBytes(r.getBytes(index));
         }
-    }
-
-    public static UUID uuidFromBytes(byte[] bytes)
-    {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        long msb = buffer.getLong();
-        long lsb = buffer.getLong();
-        return new UUID(msb, lsb);
-    }
-
-    public static byte[] uuidToBytes(UUID uuid)
-    {
-        return ByteBuffer.allocate(16)
-                .putLong(uuid.getMostSignificantBits())
-                .putLong(uuid.getLeastSignificantBits())
-                .array();
-    }
-
-    /**
-     * @param uuidSlice textual representation of UUID
-     * @return byte representation of UUID
-     * @throws IllegalArgumentException if uuidSlice is not a valid string representation of UUID
-     */
-    public static Slice uuidStringToBytes(Slice uuidSlice)
-    {
-        UUID uuid = UUID.fromString(uuidSlice.toStringUtf8());
-        byte[] bytes = uuidToBytes(uuid);
-        return Slices.wrappedBuffer(bytes);
     }
 }

@@ -60,7 +60,26 @@ public class BenchmarkEnvelopeIntersection
         return stIntersection(data.geometry, data.otherGeometry);
     }
 
-    @State(Scope.Thread)
+    @Test
+    public void validate()
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        BenchmarkEnvelopeIntersection benchmark = new BenchmarkEnvelopeIntersection();
+        assertEquals(deserialize(benchmark.envelopes(data)), deserialize(benchmark.geometries(data)));
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkEnvelopeIntersection.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice envelope;
@@ -77,24 +96,5 @@ public class BenchmarkEnvelopeIntersection
             envelope = stEnvelope(geometry);
             otherEnvelope = stEnvelope(otherGeometry);
         }
-    }
-
-    @Test
-    public void validate()
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        BenchmarkEnvelopeIntersection benchmark = new BenchmarkEnvelopeIntersection();
-        assertEquals(deserialize(benchmark.envelopes(data)), deserialize(benchmark.geometries(data)));
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkEnvelopeIntersection.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -113,25 +113,21 @@ public class InlineProjections
                 .collect(toSet());
 
         Builder childAssignments = Assignments.builder();
-        for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : child.getAssignments().entrySet()) {
-            if (!targets.contains(assignment.getKey())) {
-                childAssignments.put(assignment);
-            }
-        }
+        child.getAssignments().entrySet().stream().filter(assignment -> !targets.contains(assignment.getKey())).forEach(childAssignments::put);
 
         boolean allTranslated = child.getAssignments().entrySet()
                 .stream()
                 .map(Map.Entry::getValue)
                 .noneMatch(OriginalExpressionUtils::isExpression);
 
-        for (VariableReferenceExpression input : inputs) {
+        inputs.forEach(input -> {
             if (allTranslated) {
                 childAssignments.put(input, input);
             }
             else {
                 childAssignments.put(identityAsSymbolReference(input));
             }
-        }
+        });
 
         return Result.ofPlanNode(
                 new ProjectNode(
@@ -145,16 +141,16 @@ public class InlineProjections
 
     private RowExpression inlineReferences(RowExpression expression, Assignments assignments, TypeProvider types)
     {
-        if (isExpression(expression)) {
-            Function<VariableReferenceExpression, Expression> mapping = variable -> {
-                if (assignments.get(variable) == null) {
-                    return new SymbolReference(variable.getName());
-                }
-                return castToExpression(assignments.get(variable));
-            };
-            return castToRowExpression(ExpressionVariableInliner.inlineVariables(mapping, castToExpression(expression), types));
-        }
-        return RowExpressionVariableInliner.inlineVariables(variable -> assignments.getMap().getOrDefault(variable, variable), expression);
+        if (!isExpression(expression)) {
+			return RowExpressionVariableInliner.inlineVariables(variable -> assignments.getMap().getOrDefault(variable, variable), expression);
+		}
+		Function<VariableReferenceExpression, Expression> mapping = variable -> {
+		    if (assignments.get(variable) == null) {
+		        return new SymbolReference(variable.getName());
+		    }
+		    return castToExpression(assignments.get(variable));
+		};
+		return castToRowExpression(ExpressionVariableInliner.inlineVariables(mapping, castToExpression(expression), types));
     }
 
     private Sets.SetView<VariableReferenceExpression> extractInliningTargets(ProjectNode parent, ProjectNode child, Context context)

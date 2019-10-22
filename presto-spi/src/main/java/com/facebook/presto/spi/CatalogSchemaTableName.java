@@ -75,6 +75,6 @@ public final class CatalogSchemaTableName
     @Override
     public String toString()
     {
-        return catalogName + '.' + schemaTableName.toString();
+        return new StringBuilder().append(catalogName).append('.').append(schemaTableName.toString()).toString();
     }
 }

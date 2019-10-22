@@ -28,21 +28,10 @@ import static java.util.Objects.requireNonNull;
 public class RowPageBuilder
 {
     private final List<Type> types;
+	private final List<BlockBuilder> builders;
+	private long rowCount;
 
-    public static RowPageBuilder rowPageBuilder(Type... types)
-    {
-        return rowPageBuilder(ImmutableList.copyOf(types));
-    }
-
-    public static RowPageBuilder rowPageBuilder(Iterable<Type> types)
-    {
-        return new RowPageBuilder(types);
-    }
-
-    private final List<BlockBuilder> builders;
-    private long rowCount;
-
-    RowPageBuilder(Iterable<Type> types)
+	RowPageBuilder(Iterable<Type> types)
     {
         this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
         ImmutableList.Builder<BlockBuilder> builders = ImmutableList.builder();
@@ -53,12 +42,22 @@ public class RowPageBuilder
         checkArgument(!this.builders.isEmpty(), "At least one value info is required");
     }
 
-    public boolean isEmpty()
+	public static RowPageBuilder rowPageBuilder(Type... types)
+    {
+        return rowPageBuilder(ImmutableList.copyOf(types));
+    }
+
+	public static RowPageBuilder rowPageBuilder(Iterable<Type> types)
+    {
+        return new RowPageBuilder(types);
+    }
+
+	public boolean isEmpty()
     {
         return rowCount == 0;
     }
 
-    public RowPageBuilder row(Object... values)
+	public RowPageBuilder row(Object... values)
     {
         checkArgument(values.length == builders.size(), "Expected %s values, but got %s", builders.size(), values.length);
 
@@ -69,7 +68,7 @@ public class RowPageBuilder
         return this;
     }
 
-    public Page build()
+	public Page build()
     {
         Block[] blocks = new Block[builders.size()];
         for (int i = 0; i < blocks.length; i++) {
@@ -78,7 +77,7 @@ public class RowPageBuilder
         return new Page(blocks);
     }
 
-    private void append(int channel, Object element)
+	private void append(int channel, Object element)
     {
         BlockBuilder blockBuilder = builders.get(channel);
         Type type = types.get(channel);

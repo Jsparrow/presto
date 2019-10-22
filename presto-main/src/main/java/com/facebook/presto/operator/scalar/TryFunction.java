@@ -112,7 +112,31 @@ public final class TryFunction
         }
     }
 
-    @FunctionalInterface
+    public static <T> T evaluate(Supplier<T> supplier, T defaultValue)
+    {
+        try {
+            return supplier.get();
+        }
+        catch (PrestoException e) {
+            propagateIfUnhandled(e);
+            return defaultValue;
+        }
+    }
+
+	private static void propagateIfUnhandled(PrestoException e)
+    {
+        int errorCode = e.getErrorCode().getCode();
+        if (errorCode == DIVISION_BY_ZERO.toErrorCode().getCode()
+                || errorCode == INVALID_CAST_ARGUMENT.toErrorCode().getCode()
+                || errorCode == INVALID_FUNCTION_ARGUMENT.toErrorCode().getCode()
+                || errorCode == NUMERIC_VALUE_OUT_OF_RANGE.toErrorCode().getCode()) {
+            return;
+        }
+
+        throw e;
+    }
+
+	@FunctionalInterface
     public interface TryLongLambda
             extends LambdaFunctionInterface
     {
@@ -145,30 +169,5 @@ public final class TryFunction
             extends LambdaFunctionInterface
     {
         Block apply();
-    }
-
-    public static <T> T evaluate(Supplier<T> supplier, T defaultValue)
-    {
-        try {
-            return supplier.get();
-        }
-        catch (PrestoException e) {
-            propagateIfUnhandled(e);
-            return defaultValue;
-        }
-    }
-
-    private static void propagateIfUnhandled(PrestoException e)
-            throws PrestoException
-    {
-        int errorCode = e.getErrorCode().getCode();
-        if (errorCode == DIVISION_BY_ZERO.toErrorCode().getCode()
-                || errorCode == INVALID_CAST_ARGUMENT.toErrorCode().getCode()
-                || errorCode == INVALID_FUNCTION_ARGUMENT.toErrorCode().getCode()
-                || errorCode == NUMERIC_VALUE_OUT_OF_RANGE.toErrorCode().getCode()) {
-            return;
-        }
-
-        throw e;
     }
 }

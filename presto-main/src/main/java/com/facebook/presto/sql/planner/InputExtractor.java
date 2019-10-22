@@ -112,9 +112,7 @@ public class InputExtractor
             TableHandle tableHandle = node.getTable();
 
             Set<Column> columns = new HashSet<>();
-            for (ColumnHandle columnHandle : node.getAssignments().values()) {
-                columns.add(createColumn(metadata.getColumnMetadata(session, tableHandle, columnHandle)));
-            }
+            node.getAssignments().values().forEach(columnHandle -> columns.add(createColumn(metadata.getColumnMetadata(session, tableHandle, columnHandle))));
 
             List<ColumnHandle> desiredColumns = node.getAssignments().values().stream().collect(toImmutableList());
 
@@ -136,9 +134,7 @@ public class InputExtractor
             TableHandle tableHandle = node.getTableHandle();
 
             Set<Column> columns = new HashSet<>();
-            for (ColumnHandle columnHandle : node.getAssignments().values()) {
-                columns.add(createColumn(metadata.getColumnMetadata(session, tableHandle, columnHandle)));
-            }
+            node.getAssignments().values().forEach(columnHandle -> columns.add(createColumn(metadata.getColumnMetadata(session, tableHandle, columnHandle))));
 
             List<ColumnHandle> desiredColumns = node.getAssignments().values().stream().collect(toImmutableList());
 
@@ -157,9 +153,7 @@ public class InputExtractor
         @Override
         public Void visitPlan(PlanNode node, Context context)
         {
-            for (PlanNode child : node.getSources()) {
-                child.accept(this, context);
-            }
+            node.getSources().forEach(child -> child.accept(this, context));
             return null;
         }
     }

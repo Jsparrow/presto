@@ -34,28 +34,10 @@ import static java.util.Objects.requireNonNull;
 public class InvokeFunctionBytecodeExpression
         extends BytecodeExpression
 {
-    public static BytecodeExpression invokeFunction(Scope scope, CachedInstanceBinder cachedInstanceBinder, String name, ScalarFunctionImplementation function, BytecodeExpression... parameters)
-    {
-        return invokeFunction(scope, cachedInstanceBinder, name, function, ImmutableList.copyOf(parameters));
-    }
-
-    public static BytecodeExpression invokeFunction(Scope scope, CachedInstanceBinder cachedInstanceBinder, String name, ScalarFunctionImplementation function, List<BytecodeExpression> parameters)
-    {
-        requireNonNull(scope, "scope is null");
-        requireNonNull(function, "function is null");
-
-        Optional<BytecodeNode> instance = Optional.empty();
-        if (function.getInstanceFactory().isPresent()) {
-            FieldDefinition field = cachedInstanceBinder.getCachedInstance(function.getInstanceFactory().get());
-            instance = Optional.of(scope.getThis().getField(field));
-        }
-        return new InvokeFunctionBytecodeExpression(scope, cachedInstanceBinder.getCallSiteBinder(), name, function, instance, parameters);
-    }
-
     private final BytecodeNode invocation;
-    private final String oneLineDescription;
+	private final String oneLineDescription;
 
-    private InvokeFunctionBytecodeExpression(
+	private InvokeFunctionBytecodeExpression(
             Scope scope,
             CallSiteBinder binder,
             String name,
@@ -72,22 +54,40 @@ public class InvokeFunctionBytecodeExpression
                 instance,
                 parameters.stream().map(BytecodeNode.class::cast).collect(toImmutableList()),
                 binder);
-        this.oneLineDescription = name + "(" + Joiner.on(", ").join(parameters) + ")";
+        this.oneLineDescription = new StringBuilder().append(name).append("(").append(Joiner.on(", ").join(parameters)).append(")").toString();
     }
 
-    @Override
+	public static BytecodeExpression invokeFunction(Scope scope, CachedInstanceBinder cachedInstanceBinder, String name, ScalarFunctionImplementation function, BytecodeExpression... parameters)
+    {
+        return invokeFunction(scope, cachedInstanceBinder, name, function, ImmutableList.copyOf(parameters));
+    }
+
+	public static BytecodeExpression invokeFunction(Scope scope, CachedInstanceBinder cachedInstanceBinder, String name, ScalarFunctionImplementation function, List<BytecodeExpression> parameters)
+    {
+        requireNonNull(scope, "scope is null");
+        requireNonNull(function, "function is null");
+
+        Optional<BytecodeNode> instance = Optional.empty();
+        if (function.getInstanceFactory().isPresent()) {
+            FieldDefinition field = cachedInstanceBinder.getCachedInstance(function.getInstanceFactory().get());
+            instance = Optional.of(scope.getThis().getField(field));
+        }
+        return new InvokeFunctionBytecodeExpression(scope, cachedInstanceBinder.getCallSiteBinder(), name, function, instance, parameters);
+    }
+
+	@Override
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         return invocation;
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     protected String formatOneLine()
     {
         return oneLineDescription;

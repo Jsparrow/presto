@@ -84,9 +84,7 @@ public class KafkaRecordSet
 
         ImmutableList.Builder<Type> typeBuilder = ImmutableList.builder();
 
-        for (DecoderColumnHandle handle : columnHandles) {
-            typeBuilder.add(handle.getType());
-        }
+        columnHandles.forEach(handle -> typeBuilder.add(handle.getType()));
 
         this.columnTypes = typeBuilder.build();
     }
@@ -325,7 +323,7 @@ public class KafkaRecordSet
                     if (fetchResponse.hasError()) {
                         short errorCode = fetchResponse.errorCode(split.getTopicName(), split.getPartitionId());
                         log.warn("Fetch response has error: %d", errorCode);
-                        throw new RuntimeException("could not fetch data from Kafka, error code is '" + errorCode + "'");
+                        throw new RuntimeException(new StringBuilder().append("could not fetch data from Kafka, error code is '").append(errorCode).append("'").toString());
                     }
 
                     messageAndOffsetIterator = fetchResponse.messageSet(split.getTopicName(), split.getPartitionId()).iterator();

@@ -43,7 +43,182 @@ import static java.util.Objects.requireNonNull;
 public class TableScanOperator
         implements SourceOperator, Closeable
 {
-    public static class TableScanOperatorFactory
+    private final OperatorContext operatorContext;
+	private final PlanNodeId planNodeId;
+	private final PageSourceProvider pageSourceProvider;
+	private final TableHandle table;
+	private final List<ColumnHandle> columns;
+	private final LocalMemoryContext systemMemoryContext;
+	private final SettableFuture<?> blocked = SettableFuture.create();
+	private Split split;
+	private ConnectorPageSource source;
+	private boolean finished;
+	private long completedBytes;
+	private long completedPositions;
+	private long readTimeNanos;
+
+	public TableScanOperator(
+            OperatorContext operatorContext,
+            PlanNodeId planNodeId,
+            PageSourceProvider pageSourceProvider,
+            TableHandle table,
+            Iterable<ColumnHandle> columns)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
+        this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
+        this.table = requireNonNull(table, "table is null");
+        this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(TableScanOperator.class.getSimpleName());
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public PlanNodeId getSourceId()
+    {
+        return planNodeId;
+    }
+
+	@Override
+    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
+    {
+        requireNonNull(split, "split is null");
+        checkState(this.split == null, "Table scan split already set");
+
+        if (finished) {
+            return Optional::empty;
+        }
+
+        this.split = split;
+
+        Object splitInfo = split.getInfo();
+        if (splitInfo != null) {
+            operatorContext.setInfoSupplier(() -> new SplitOperatorInfo(splitInfo));
+        }
+
+        blocked.set(null);
+
+        if (split.getConnectorSplit() instanceof EmptySplit) {
+            source = new EmptySplitPageSource();
+        }
+
+        return () -> {
+            if (source instanceof UpdatablePageSource) {
+                return Optional.of((UpdatablePageSource) source);
+            }
+            return Optional.empty();
+        };
+    }
+
+	@Override
+    public void noMoreSplits()
+    {
+        if (split == null) {
+            finished = true;
+        }
+        blocked.set(null);
+    }
+
+	@Override
+    public void close()
+    {
+        finish();
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+        blocked.set(null);
+
+        if (source == null) {
+			return;
+		}
+		try {
+		    source.close();
+		}
+		catch (IOException e) {
+		    throw new UncheckedIOException(e);
+		}
+		systemMemoryContext.setBytes(source.getSystemMemoryUsage());
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        if (!finished) {
+            finished = (source != null) && source.isFinished();
+            if (source != null) {
+                systemMemoryContext.setBytes(source.getSystemMemoryUsage());
+            }
+        }
+
+        return finished;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        if (!blocked.isDone()) {
+            return blocked;
+        }
+        if (source == null) {
+			return NOT_BLOCKED;
+		}
+		CompletableFuture<?> pageSourceBlocked = source.isBlocked();
+		return pageSourceBlocked.isDone() ? NOT_BLOCKED : toListenableFuture(pageSourceBlocked);
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (split == null) {
+            return null;
+        }
+        if (source == null) {
+            source = pageSourceProvider.createPageSource(operatorContext.getSession(), split, table, columns);
+        }
+
+        Page page = source.getNextPage();
+        if (page != null) {
+            // assure the page is in memory before handing to another operator
+            page = page.getLoadedPage();
+
+            // update operator stats
+            long endCompletedBytes = source.getCompletedBytes();
+            long endCompletedPositions = source.getCompletedPositions();
+            long endReadTimeNanos = source.getReadTimeNanos();
+            operatorContext.recordRawInputWithTiming(endCompletedBytes - completedBytes, endCompletedPositions - completedPositions, endReadTimeNanos - readTimeNanos);
+            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
+            completedBytes = endCompletedBytes;
+            completedPositions = endCompletedPositions;
+            readTimeNanos = endReadTimeNanos;
+        }
+
+        // updating system memory usage should happen after page is loaded.
+        systemMemoryContext.setBytes(source.getSystemMemoryUsage());
+
+        return page;
+    }
+
+	public static class TableScanOperatorFactory
             implements SourceOperatorFactory
     {
         private final int operatorId;
@@ -91,182 +266,5 @@ public class TableScanOperator
         {
             closed = true;
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final PlanNodeId planNodeId;
-    private final PageSourceProvider pageSourceProvider;
-    private final TableHandle table;
-    private final List<ColumnHandle> columns;
-    private final LocalMemoryContext systemMemoryContext;
-    private final SettableFuture<?> blocked = SettableFuture.create();
-
-    private Split split;
-    private ConnectorPageSource source;
-
-    private boolean finished;
-
-    private long completedBytes;
-    private long completedPositions;
-    private long readTimeNanos;
-
-    public TableScanOperator(
-            OperatorContext operatorContext,
-            PlanNodeId planNodeId,
-            PageSourceProvider pageSourceProvider,
-            TableHandle table,
-            Iterable<ColumnHandle> columns)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.planNodeId = requireNonNull(planNodeId, "planNodeId is null");
-        this.pageSourceProvider = requireNonNull(pageSourceProvider, "pageSourceProvider is null");
-        this.table = requireNonNull(table, "table is null");
-        this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
-        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(TableScanOperator.class.getSimpleName());
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public PlanNodeId getSourceId()
-    {
-        return planNodeId;
-    }
-
-    @Override
-    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
-    {
-        requireNonNull(split, "split is null");
-        checkState(this.split == null, "Table scan split already set");
-
-        if (finished) {
-            return Optional::empty;
-        }
-
-        this.split = split;
-
-        Object splitInfo = split.getInfo();
-        if (splitInfo != null) {
-            operatorContext.setInfoSupplier(() -> new SplitOperatorInfo(splitInfo));
-        }
-
-        blocked.set(null);
-
-        if (split.getConnectorSplit() instanceof EmptySplit) {
-            source = new EmptySplitPageSource();
-        }
-
-        return () -> {
-            if (source instanceof UpdatablePageSource) {
-                return Optional.of((UpdatablePageSource) source);
-            }
-            return Optional.empty();
-        };
-    }
-
-    @Override
-    public void noMoreSplits()
-    {
-        if (split == null) {
-            finished = true;
-        }
-        blocked.set(null);
-    }
-
-    @Override
-    public void close()
-    {
-        finish();
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-        blocked.set(null);
-
-        if (source != null) {
-            try {
-                source.close();
-            }
-            catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-            systemMemoryContext.setBytes(source.getSystemMemoryUsage());
-        }
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        if (!finished) {
-            finished = (source != null) && source.isFinished();
-            if (source != null) {
-                systemMemoryContext.setBytes(source.getSystemMemoryUsage());
-            }
-        }
-
-        return finished;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        if (!blocked.isDone()) {
-            return blocked;
-        }
-        if (source != null) {
-            CompletableFuture<?> pageSourceBlocked = source.isBlocked();
-            return pageSourceBlocked.isDone() ? NOT_BLOCKED : toListenableFuture(pageSourceBlocked);
-        }
-        return NOT_BLOCKED;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (split == null) {
-            return null;
-        }
-        if (source == null) {
-            source = pageSourceProvider.createPageSource(operatorContext.getSession(), split, table, columns);
-        }
-
-        Page page = source.getNextPage();
-        if (page != null) {
-            // assure the page is in memory before handing to another operator
-            page = page.getLoadedPage();
-
-            // update operator stats
-            long endCompletedBytes = source.getCompletedBytes();
-            long endCompletedPositions = source.getCompletedPositions();
-            long endReadTimeNanos = source.getReadTimeNanos();
-            operatorContext.recordRawInputWithTiming(endCompletedBytes - completedBytes, endCompletedPositions - completedPositions, endReadTimeNanos - readTimeNanos);
-            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
-            completedBytes = endCompletedBytes;
-            completedPositions = endCompletedPositions;
-            readTimeNanos = endReadTimeNanos;
-        }
-
-        // updating system memory usage should happen after page is loaded.
-        systemMemoryContext.setBytes(source.getSystemMemoryUsage());
-
-        return page;
     }
 }

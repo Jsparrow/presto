@@ -63,9 +63,7 @@ public class CatalogJdbcTable
     {
         Session session = toSession(transactionHandle, connectorSession);
         Builder table = InMemoryRecordSet.builder(METADATA);
-        for (String name : listCatalogs(session, metadata, accessControl).keySet()) {
-            table.addRow(name);
-        }
+        listCatalogs(session, metadata, accessControl).keySet().forEach(table::addRow);
         return table.build().cursor();
     }
 }

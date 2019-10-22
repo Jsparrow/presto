@@ -150,9 +150,7 @@ public class SortingFileWriter
     public void rollback()
     {
         if (!sortedWriteToTempPathEnabled) {
-            for (TempFile file : tempFiles) {
-                cleanupFile(file.getPath());
-            }
+            tempFiles.forEach(file -> cleanupFile(file.getPath()));
         }
 
         outputWriter.rollback();
@@ -275,7 +273,7 @@ public class SortingFileWriter
 
     private Path getTempFileName()
     {
-        return new Path(tempFilePrefix + "." + randomUUID().toString().replaceAll("-", "_"));
+        return new Path(new StringBuilder().append(tempFilePrefix).append(".").append(randomUUID().toString().replaceAll("-", "_")).toString());
     }
 
     private static class TempFile

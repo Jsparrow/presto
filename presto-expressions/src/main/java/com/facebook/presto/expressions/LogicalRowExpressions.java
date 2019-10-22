@@ -99,19 +99,17 @@ public final class LogicalRowExpressions
 
     public static List<RowExpression> extractPredicates(Form form, RowExpression expression)
     {
-        if (expression instanceof SpecialFormExpression && ((SpecialFormExpression) expression).getForm() == form) {
-            SpecialFormExpression specialFormExpression = (SpecialFormExpression) expression;
-            if (specialFormExpression.getArguments().size() != 2) {
-                throw new IllegalStateException("logical binary expression requires exactly 2 operands");
-            }
-
-            List<RowExpression> predicates = new ArrayList<>();
-            predicates.addAll(extractPredicates(form, specialFormExpression.getArguments().get(0)));
-            predicates.addAll(extractPredicates(form, specialFormExpression.getArguments().get(1)));
-            return unmodifiableList(predicates);
-        }
-
-        return singletonList(expression);
+        if (!(expression instanceof SpecialFormExpression && ((SpecialFormExpression) expression).getForm() == form)) {
+			return singletonList(expression);
+		}
+		SpecialFormExpression specialFormExpression = (SpecialFormExpression) expression;
+		if (specialFormExpression.getArguments().size() != 2) {
+		    throw new IllegalStateException("logical binary expression requires exactly 2 operands");
+		}
+		List<RowExpression> predicates = new ArrayList<>();
+		predicates.addAll(extractPredicates(form, specialFormExpression.getArguments().get(0)));
+		predicates.addAll(extractPredicates(form, specialFormExpression.getArguments().get(1)));
+		return unmodifiableList(predicates);
     }
 
     public static RowExpression and(RowExpression... expressions)
@@ -376,7 +374,7 @@ public final class LogicalRowExpressions
         Set<RowExpression> seen = new HashSet<>();
 
         List<RowExpression> result = new ArrayList<>();
-        for (RowExpression expression : expressions) {
+        expressions.forEach(expression -> {
             if (!determinismEvaluator.isDeterministic(expression)) {
                 result.add(expression);
             }
@@ -384,21 +382,217 @@ public final class LogicalRowExpressions
                 result.add(expression);
                 seen.add(expression);
             }
-        }
+        });
 
         return unmodifiableList(result);
     }
 
     private boolean isConjunctionOrDisjunction(RowExpression expression)
     {
-        if (expression instanceof SpecialFormExpression) {
-            Form form = ((SpecialFormExpression) expression).getForm();
-            return form == AND || form == OR;
-        }
-        return false;
+        if (!(expression instanceof SpecialFormExpression)) {
+			return false;
+		}
+		Form form = ((SpecialFormExpression) expression).getForm();
+		return form == AND || form == OR;
     }
 
-    private final class PushNegationVisitor
+    private static ConvertNormalFormVisitorContext rootContext(Form clauseJoiner)
+    {
+        return new ConvertNormalFormVisitorContext(clauseJoiner, 0);
+    }
+
+	private boolean isNegationExpression(RowExpression expression)
+    {
+        return expression instanceof CallExpression && ((CallExpression) expression).getFunctionHandle().equals(functionResolution.notFunction());
+    }
+
+	private boolean isComparisonExpression(RowExpression expression)
+    {
+        return expression instanceof CallExpression && functionResolution.isComparisonFunction(((CallExpression) expression).getFunctionHandle());
+    }
+
+	/**
+     * Extract the component predicates as a list of list in which is grouped so that the outer level has same conjunctive/disjunctive joiner as original predicate and
+     * inner level has opposite joiner.
+     * For example, (a or b) and (a or c) or ( a or c) returns [[a,b], [a,c], [a,c]]
+     */
+    private List<List<RowExpression>> getGroupedClauses(SpecialFormExpression expression)
+    {
+        return extractPredicates(expression.getForm(), expression).stream()
+                .map(LogicalRowExpressions::extractPredicates)
+                .collect(toList());
+    }
+
+	private int numOfClauses(RowExpression expression)
+    {
+        if (expression instanceof SpecialFormExpression) {
+            return getGroupedClauses((SpecialFormExpression) expression).stream().mapToInt(List::size).sum();
+        }
+        return 1;
+    }
+
+	/**
+     * Eliminate a sub predicate if its sub predicates contain its peer.
+     * For example: (a || b) && a = a, (a && b) || b = b
+     */
+    private List<List<RowExpression>> eliminateCommonPredicates(List<List<RowExpression>> groupedClauses)
+    {
+        if (groupedClauses.size() < 2) {
+            return groupedClauses;
+        }
+        // initialize to self
+        int[] reduceTo = IntStream.range(0, groupedClauses.size()).toArray();
+        for (int i = 0; i < groupedClauses.size(); i++) {
+            // Do not eliminate predicates contain non-deterministic value
+            // (a || b) && a should be kept same if a is non-deterministic.
+            // TODO We can eliminate (a || b) && a if a is deterministic even b is not.
+            if (groupedClauses.get(i).stream().allMatch(determinismEvaluator::isDeterministic)) {
+                for (int j = 0; j < groupedClauses.size(); j++) {
+                    if (isSuperSet(groupedClauses.get(reduceTo[i]), groupedClauses.get(j))) {
+                        reduceTo[i] = j; //prefer smaller set
+                    }
+                    else if (isSameSet(groupedClauses.get(reduceTo[i]), groupedClauses.get(j))) {
+                        reduceTo[i] = min(reduceTo[i], j); //prefer predicates that appears earlier.
+                    }
+                }
+            }
+        }
+
+        return unmodifiableList(stream(reduceTo)
+                .distinct()
+                .boxed()
+                .map(groupedClauses::get)
+                .collect(toList()));
+    }
+
+	/**
+     * Eliminate a sub predicate if its component predicates contain its peer. Will return null if cannot extract common predicates otherwise return a nested list with flipped form
+     * For example:
+     * (a || b || c || d) && (a || b || e || f)  -> a || b || ((c || d) && (e || f))
+     * (a || b) && (c || d) -> null
+     */
+    private List<List<RowExpression>> extractCommonPredicates(Form rootClauseJoiner, List<List<RowExpression>> groupedPredicates)
+    {
+        if (groupedPredicates.isEmpty()) {
+            return null;
+        }
+        Set<RowExpression> commonPredicates = new LinkedHashSet<>(groupedPredicates.get(0));
+        for (int i = 1; i < groupedPredicates.size(); i++) {
+            // remove all non-common predicates
+            commonPredicates.retainAll(groupedPredicates.get(i));
+        }
+
+        if (commonPredicates.isEmpty()) {
+            return null;
+        }
+        // extract the component predicates that are not in common predicates: [(c || d), (e || f)]
+        List<RowExpression> remainingPredicates = new ArrayList<>();
+        groupedPredicates.forEach(group -> {
+            List<RowExpression> remaining = group.stream()
+                    .filter(predicate -> !commonPredicates.contains(predicate))
+                    .collect(toList());
+            remainingPredicates.add(combinePredicates(flip(rootClauseJoiner), remaining));
+        });
+        // combine common predicates and remaining predicates to flipped nested form. For example: [[a], [b], [ (c || d), (e || f)]
+        return Stream.concat(commonPredicates.stream().map(Collections::singletonList), Stream.of(remainingPredicates))
+                .collect(toList());
+    }
+
+	private RowExpression combineGroupedClauses(Form clauseJoiner, List<List<RowExpression>> nestedPredicates)
+    {
+        return combinePredicates(clauseJoiner, nestedPredicates.stream()
+                .map(predicate -> combinePredicates(flip(clauseJoiner), predicate))
+                .collect(toList()));
+    }
+
+	/**
+     * Cartesian cross product of List of List.
+     * For example, [[a], [b, c], [d]] becomes [[a,b,d], [a,c,d]]
+     */
+    private static List<List<RowExpression>> crossProduct(List<List<RowExpression>> groupedPredicates)
+    {
+        checkArgument(groupedPredicates.size() > 0, "Must contains more than one child");
+        List<List<RowExpression>> result = groupedPredicates.get(0).stream().map(Collections::singletonList).collect(toList());
+        for (int i = 1; i < groupedPredicates.size(); i++) {
+            result = crossProduct(result, groupedPredicates.get(i));
+        }
+        return result;
+    }
+
+	private static List<List<RowExpression>> crossProduct(List<List<RowExpression>> previousCrossProduct, List<RowExpression> clauses)
+    {
+        List<List<RowExpression>> result = new ArrayList<>();
+        previousCrossProduct.forEach(previousClauses -> clauses.forEach(newClause -> {
+			List<RowExpression> newClauses = new ArrayList<>(previousClauses);
+			newClauses.add(newClause);
+			result.add(newClauses);
+		}));
+        return result;
+    }
+
+	private static Form flip(Form binaryLogicalOperation)
+    {
+        switch (binaryLogicalOperation) {
+            case AND:
+                return OR;
+            case OR:
+                return AND;
+        }
+        throw new UnsupportedOperationException("Invalid binary logical operation: " + binaryLogicalOperation);
+    }
+
+	private Optional<OperatorType> getOperator(RowExpression expression)
+    {
+        if (expression instanceof CallExpression) {
+            return functionMetadataManager.getFunctionMetadata(((CallExpression) expression).getFunctionHandle()).getOperatorType();
+        }
+        return Optional.empty();
+    }
+
+	private RowExpression notCallExpression(RowExpression argument)
+    {
+        return new CallExpression("not", functionResolution.notFunction(), BOOLEAN, singletonList(argument));
+    }
+
+	private static OperatorType negate(OperatorType operator)
+    {
+        switch (operator) {
+            case EQUAL:
+                return NOT_EQUAL;
+            case NOT_EQUAL:
+                return EQUAL;
+            case GREATER_THAN:
+                return LESS_THAN_OR_EQUAL;
+            case LESS_THAN:
+                return GREATER_THAN_OR_EQUAL;
+            case LESS_THAN_OR_EQUAL:
+                return GREATER_THAN;
+            case GREATER_THAN_OR_EQUAL:
+                return LESS_THAN;
+        }
+        return null;
+    }
+
+	private static void checkArgument(boolean condition, String message, Object... arguments)
+    {
+        if (!condition) {
+            throw new IllegalArgumentException(String.format(message, arguments));
+        }
+    }
+
+	private static <T> boolean isSuperSet(Collection<T> a, Collection<T> b)
+    {
+        // We assumes a, b both are de-duplicated collections.
+        return a.size() > b.size() && a.containsAll(b);
+    }
+
+	private static <T> boolean isSameSet(Collection<T> a, Collection<T> b)
+    {
+        // We assumes a, b both are de-duplicated collections.
+        return a.size() == b.size() && a.containsAll(b) && b.containsAll(a);
+    }
+
+	private final class PushNegationVisitor
             implements RowExpressionVisitor<RowExpression, Void>
     {
         @Override
@@ -491,11 +685,6 @@ public final class LogicalRowExpressions
         {
             return reference;
         }
-    }
-
-    private static ConvertNormalFormVisitorContext rootContext(Form clauseJoiner)
-    {
-        return new ConvertNormalFormVisitorContext(clauseJoiner, 0);
     }
 
     private static class ConvertNormalFormVisitorContext
@@ -613,198 +802,5 @@ public final class LogicalRowExpressions
         {
             return reference;
         }
-    }
-
-    private boolean isNegationExpression(RowExpression expression)
-    {
-        return expression instanceof CallExpression && ((CallExpression) expression).getFunctionHandle().equals(functionResolution.notFunction());
-    }
-
-    private boolean isComparisonExpression(RowExpression expression)
-    {
-        return expression instanceof CallExpression && functionResolution.isComparisonFunction(((CallExpression) expression).getFunctionHandle());
-    }
-
-    /**
-     * Extract the component predicates as a list of list in which is grouped so that the outer level has same conjunctive/disjunctive joiner as original predicate and
-     * inner level has opposite joiner.
-     * For example, (a or b) and (a or c) or ( a or c) returns [[a,b], [a,c], [a,c]]
-     */
-    private List<List<RowExpression>> getGroupedClauses(SpecialFormExpression expression)
-    {
-        return extractPredicates(expression.getForm(), expression).stream()
-                .map(LogicalRowExpressions::extractPredicates)
-                .collect(toList());
-    }
-
-    private int numOfClauses(RowExpression expression)
-    {
-        if (expression instanceof SpecialFormExpression) {
-            return getGroupedClauses((SpecialFormExpression) expression).stream().mapToInt(List::size).sum();
-        }
-        return 1;
-    }
-
-    /**
-     * Eliminate a sub predicate if its sub predicates contain its peer.
-     * For example: (a || b) && a = a, (a && b) || b = b
-     */
-    private List<List<RowExpression>> eliminateCommonPredicates(List<List<RowExpression>> groupedClauses)
-    {
-        if (groupedClauses.size() < 2) {
-            return groupedClauses;
-        }
-        // initialize to self
-        int[] reduceTo = IntStream.range(0, groupedClauses.size()).toArray();
-        for (int i = 0; i < groupedClauses.size(); i++) {
-            // Do not eliminate predicates contain non-deterministic value
-            // (a || b) && a should be kept same if a is non-deterministic.
-            // TODO We can eliminate (a || b) && a if a is deterministic even b is not.
-            if (groupedClauses.get(i).stream().allMatch(determinismEvaluator::isDeterministic)) {
-                for (int j = 0; j < groupedClauses.size(); j++) {
-                    if (isSuperSet(groupedClauses.get(reduceTo[i]), groupedClauses.get(j))) {
-                        reduceTo[i] = j; //prefer smaller set
-                    }
-                    else if (isSameSet(groupedClauses.get(reduceTo[i]), groupedClauses.get(j))) {
-                        reduceTo[i] = min(reduceTo[i], j); //prefer predicates that appears earlier.
-                    }
-                }
-            }
-        }
-
-        return unmodifiableList(stream(reduceTo)
-                .distinct()
-                .boxed()
-                .map(groupedClauses::get)
-                .collect(toList()));
-    }
-
-    /**
-     * Eliminate a sub predicate if its component predicates contain its peer. Will return null if cannot extract common predicates otherwise return a nested list with flipped form
-     * For example:
-     * (a || b || c || d) && (a || b || e || f)  -> a || b || ((c || d) && (e || f))
-     * (a || b) && (c || d) -> null
-     */
-    private List<List<RowExpression>> extractCommonPredicates(Form rootClauseJoiner, List<List<RowExpression>> groupedPredicates)
-    {
-        if (groupedPredicates.isEmpty()) {
-            return null;
-        }
-        Set<RowExpression> commonPredicates = new LinkedHashSet<>(groupedPredicates.get(0));
-        for (int i = 1; i < groupedPredicates.size(); i++) {
-            // remove all non-common predicates
-            commonPredicates.retainAll(groupedPredicates.get(i));
-        }
-
-        if (commonPredicates.isEmpty()) {
-            return null;
-        }
-        // extract the component predicates that are not in common predicates: [(c || d), (e || f)]
-        List<RowExpression> remainingPredicates = new ArrayList<>();
-        for (List<RowExpression> group : groupedPredicates) {
-            List<RowExpression> remaining = group.stream()
-                    .filter(predicate -> !commonPredicates.contains(predicate))
-                    .collect(toList());
-            remainingPredicates.add(combinePredicates(flip(rootClauseJoiner), remaining));
-        }
-        // combine common predicates and remaining predicates to flipped nested form. For example: [[a], [b], [ (c || d), (e || f)]
-        return Stream.concat(commonPredicates.stream().map(predicate -> singletonList(predicate)), Stream.of(remainingPredicates))
-                .collect(toList());
-    }
-
-    private RowExpression combineGroupedClauses(Form clauseJoiner, List<List<RowExpression>> nestedPredicates)
-    {
-        return combinePredicates(clauseJoiner, nestedPredicates.stream()
-                .map(predicate -> combinePredicates(flip(clauseJoiner), predicate))
-                .collect(toList()));
-    }
-
-    /**
-     * Cartesian cross product of List of List.
-     * For example, [[a], [b, c], [d]] becomes [[a,b,d], [a,c,d]]
-     */
-    private static List<List<RowExpression>> crossProduct(List<List<RowExpression>> groupedPredicates)
-    {
-        checkArgument(groupedPredicates.size() > 0, "Must contains more than one child");
-        List<List<RowExpression>> result = groupedPredicates.get(0).stream().map(Collections::singletonList).collect(toList());
-        for (int i = 1; i < groupedPredicates.size(); i++) {
-            result = crossProduct(result, groupedPredicates.get(i));
-        }
-        return result;
-    }
-
-    private static List<List<RowExpression>> crossProduct(List<List<RowExpression>> previousCrossProduct, List<RowExpression> clauses)
-    {
-        List<List<RowExpression>> result = new ArrayList<>();
-        for (List<RowExpression> previousClauses : previousCrossProduct) {
-            for (RowExpression newClause : clauses) {
-                List<RowExpression> newClauses = new ArrayList<>(previousClauses);
-                newClauses.add(newClause);
-                result.add(newClauses);
-            }
-        }
-        return result;
-    }
-
-    private static Form flip(Form binaryLogicalOperation)
-    {
-        switch (binaryLogicalOperation) {
-            case AND:
-                return OR;
-            case OR:
-                return AND;
-        }
-        throw new UnsupportedOperationException("Invalid binary logical operation: " + binaryLogicalOperation);
-    }
-
-    private Optional<OperatorType> getOperator(RowExpression expression)
-    {
-        if (expression instanceof CallExpression) {
-            return functionMetadataManager.getFunctionMetadata(((CallExpression) expression).getFunctionHandle()).getOperatorType();
-        }
-        return Optional.empty();
-    }
-
-    private RowExpression notCallExpression(RowExpression argument)
-    {
-        return new CallExpression("not", functionResolution.notFunction(), BOOLEAN, singletonList(argument));
-    }
-
-    private static OperatorType negate(OperatorType operator)
-    {
-        switch (operator) {
-            case EQUAL:
-                return NOT_EQUAL;
-            case NOT_EQUAL:
-                return EQUAL;
-            case GREATER_THAN:
-                return LESS_THAN_OR_EQUAL;
-            case LESS_THAN:
-                return GREATER_THAN_OR_EQUAL;
-            case LESS_THAN_OR_EQUAL:
-                return GREATER_THAN;
-            case GREATER_THAN_OR_EQUAL:
-                return LESS_THAN;
-        }
-        return null;
-    }
-
-    private static void checkArgument(boolean condition, String message, Object... arguments)
-    {
-        if (!condition) {
-            throw new IllegalArgumentException(String.format(message, arguments));
-        }
-    }
-
-    private static <T> boolean isSuperSet(Collection<T> a, Collection<T> b)
-    {
-        // We assumes a, b both are de-duplicated collections.
-        return a.size() > b.size() && a.containsAll(b);
-    }
-
-    private static <T> boolean isSameSet(Collection<T> a, Collection<T> b)
-    {
-        // We assumes a, b both are de-duplicated collections.
-        return a.size() == b.size() && a.containsAll(b) && b.containsAll(a);
     }
 }

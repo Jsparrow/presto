@@ -670,11 +670,10 @@ public class BuiltInFunctionNamespaceManager
 
     public synchronized void registerBuiltInFunctions(List<? extends BuiltInFunction> functions)
     {
-        for (SqlFunction function : functions) {
-            for (SqlFunction existingFunction : this.functions.list()) {
-                checkArgument(!function.getSignature().equals(existingFunction.getSignature()), "Function already registered: %s", function.getSignature());
-            }
-        }
+        functions.forEach(function -> this.functions.list()
+				.forEach(existingFunction -> checkArgument(
+						!function.getSignature().equals(existingFunction.getSignature()),
+						"Function already registered: %s", function.getSignature())));
         this.functions = new FunctionMap(this.functions, functions);
     }
 
@@ -684,7 +683,8 @@ public class BuiltInFunctionNamespaceManager
         throw new UnsupportedOperationException("createFunction cannot be called on BuiltInFunctionNamespaceManager");
     }
 
-    public String getName()
+    @Override
+	public String getName()
     {
         return NAME;
     }
@@ -912,14 +912,14 @@ public class BuiltInFunctionNamespaceManager
                     .build();
 
             // Make sure all functions with the same name are aggregations or none of them are
-            for (Map.Entry<FullyQualifiedName, Collection<BuiltInFunction>> entry : this.functions.asMap().entrySet()) {
+			this.functions.asMap().entrySet().forEach(entry -> {
                 Collection<BuiltInFunction> values = entry.getValue();
                 long aggregations = values.stream()
                         .map(function -> function.getSignature().getKind())
                         .filter(kind -> kind == AGGREGATE)
                         .count();
                 checkState(aggregations == 0 || aggregations == values.size(), "'%s' is both an aggregation and a scalar function", entry.getKey());
-            }
+            });
         }
 
         public List<BuiltInFunction> list()
@@ -973,11 +973,10 @@ public class BuiltInFunctionNamespaceManager
                 methodHandle = MethodHandles.identity(parameterType.getJavaType());
             }
 
-            if (parameterType.getJavaType() == Slice.class) {
-                if (type.getJavaType() == Block.class) {
-                    methodHandle = BlockSerdeUtil.READ_BLOCK.bindTo(blockEncodingSerde);
-                }
-            }
+            boolean condition = parameterType.getJavaType() == Slice.class && type.getJavaType() == Block.class;
+			if (condition) {
+			    methodHandle = BlockSerdeUtil.READ_BLOCK.bindTo(blockEncodingSerde);
+			}
 
             checkArgument(methodHandle != null,
                     "Expected type %s to use (or can be converted into) Java type %s, but Java type is %s",

@@ -29,14 +29,14 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 public class PushDownNegationsExpressionRewriter
 {
-    public static Expression pushDownNegations(Expression expression)
+    private PushDownNegationsExpressionRewriter() {}
+
+	public static Expression pushDownNegations(Expression expression)
     {
         return ExpressionTreeRewriter.rewriteWith(new Visitor(), expression);
     }
 
-    private PushDownNegationsExpressionRewriter() {}
-
-    private static class Visitor
+	private static class Visitor
             extends ExpressionRewriter<Void>
     {
         @Override

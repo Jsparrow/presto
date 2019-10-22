@@ -21,10 +21,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestQualifiedTablePrefix
 {
-    private static final JsonCodec<QualifiedTablePrefix> CODEC = jsonCodec(QualifiedTablePrefix.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestQualifiedTablePrefix.class);
+	private static final JsonCodec<QualifiedTablePrefix> CODEC = jsonCodec(QualifiedTablePrefix.class);
 
     @Test
     public void testCatalog()
@@ -69,6 +72,7 @@ public class TestQualifiedTablePrefix
             fail();
         }
         catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
             // ok
         }
     }

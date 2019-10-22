@@ -42,9 +42,7 @@ public final class ArrayUtil
     public static byte[] intArrayToBytes(Collection<Integer> values)
     {
         ByteBuffer buffer = ByteBuffer.allocate(values.size() * Integer.BYTES);
-        for (int value : values) {
-            buffer.putInt(value);
-        }
+        values.stream().mapToInt(Integer::valueOf).forEach(buffer::putInt);
         return buffer.array();
     }
 }

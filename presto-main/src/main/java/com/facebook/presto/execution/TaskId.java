@@ -30,48 +30,48 @@ public class TaskId
     private final StageExecutionId stageExecutionId;
     private final int id;
 
-    @JsonCreator
-    public static TaskId valueOf(String taskId)
-    {
-        List<String> parts = parseDottedId(taskId, 4, "taskId");
-        return new TaskId(parts.get(0), parseInt(parts.get(1)), parseInt(parts.get(2)), parseInt(parts.get(3)));
-    }
-
     public TaskId(String queryId, int stageId, int stageExecutionId, int id)
     {
         this(new StageExecutionId(new StageId(new QueryId(queryId), stageId), stageExecutionId), id);
     }
 
-    public TaskId(StageExecutionId stageExecutionId, int id)
+	public TaskId(StageExecutionId stageExecutionId, int id)
     {
         this.stageExecutionId = requireNonNull(stageExecutionId, "stageExecutionId");
         checkArgument(id >= 0, "id is negative");
         this.id = id;
     }
 
-    public StageExecutionId getStageExecutionId()
+	@JsonCreator
+    public static TaskId valueOf(String taskId)
+    {
+        List<String> parts = parseDottedId(taskId, 4, "taskId");
+        return new TaskId(parts.get(0), parseInt(parts.get(1)), parseInt(parts.get(2)), parseInt(parts.get(3)));
+    }
+
+	public StageExecutionId getStageExecutionId()
     {
         return stageExecutionId;
     }
 
-    public int getId()
+	public int getId()
     {
         return id;
     }
 
-    public QueryId getQueryId()
+	public QueryId getQueryId()
     {
         return stageExecutionId.getStageId().getQueryId();
     }
 
-    @Override
+	@Override
     @JsonValue
     public String toString()
     {
-        return stageExecutionId + "." + id;
+        return new StringBuilder().append(stageExecutionId).append(".").append(id).toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -85,7 +85,7 @@ public class TaskId
                 Objects.equals(stageExecutionId, taskId.stageExecutionId);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(stageExecutionId, id);

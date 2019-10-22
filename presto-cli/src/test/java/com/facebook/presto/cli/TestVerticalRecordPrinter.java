@@ -43,28 +43,9 @@ public class TestVerticalRecordPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]-------\n" +
-                "first    | hello\n" +
-                "last     | world\n" +
-                "quantity | 123\n" +
-                "-[ RECORD 2 ]-------\n" +
-                "first    | a\n" +
-                "last     | NULL\n" +
-                "quantity | 4.5\n" +
-                "-[ RECORD 3 ]-------\n" +
-                "first    | some long\n" +
-                "         | text that\n" +
-                "         | does not\n" +
-                "         | fit on\n" +
-                "         | one line\n" +
-                "last     | more\n" +
-                "         | text\n" +
-                "quantity | 4567\n" +
-                "-[ RECORD 4 ]-------\n" +
-                "first    | bye\n" +
-                "last     | done\n" +
-                "quantity | -15\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]-------\n").append("first    | hello\n").append("last     | world\n").append("quantity | 123\n").append("-[ RECORD 2 ]-------\n").append("first    | a\n").append("last     | NULL\n")
+				.append("quantity | 4.5\n").append("-[ RECORD 3 ]-------\n").append("first    | some long\n").append("         | text that\n").append("         | does not\n").append("         | fit on\n").append("         | one line\n").append("last     | more\n").append("         | text\n")
+				.append("quantity | 4567\n").append("-[ RECORD 4 ]-------\n").append("first    | bye\n").append("last     | done\n").append("quantity | -15\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -80,9 +61,7 @@ public class TestVerticalRecordPrinter
         printer.printRows(rows(row("x")), true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]\n" +
-                "a | x\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]\n").append("a | x\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -98,9 +77,7 @@ public class TestVerticalRecordPrinter
         printer.printRows(rows(row("hello")), true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]+------\n" +
-                "shippriority | hello\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]+------\n").append("shippriority | hello\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -116,9 +93,7 @@ public class TestVerticalRecordPrinter
         printer.printRows(rows(row("hello")), true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]--+------\n" +
-                "order_priority | hello\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]--+------\n").append("order_priority | hello\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -134,9 +109,7 @@ public class TestVerticalRecordPrinter
         printer.printRows(rows(row("hello")), true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]----+------\n" +
-                "order_priority\u7f51 | hello\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]----+------\n").append("order_priority\u7f51 | hello\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -152,9 +125,7 @@ public class TestVerticalRecordPrinter
         printer.printRows(rows(row("hello\u7f51 bye")), true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]-----\n" +
-                "name | hello\u7f51 bye\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]-----\n").append("name | hello\u7f51 bye\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -187,21 +158,8 @@ public class TestVerticalRecordPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "-[ RECORD 1 ]-------------------------------------------\n" +
-                "first  | hello\n" +
-                "binary | 68 65 6c 6c 6f\n" +
-                "last   | world\n" +
-                "-[ RECORD 2 ]-------------------------------------------\n" +
-                "first  | a\n" +
-                "binary | 73 6f 6d 65 20 6c 6f 6e 67 20 74 65 78 74 20 74\n" +
-                "       | 68 61 74 20 69 73 20 6d 6f 72 65 20 74 68 61 6e\n" +
-                "       | 20 31 36 20 62 79 74 65 73\n" +
-                "last   | b\n" +
-                "-[ RECORD 3 ]-------------------------------------------\n" +
-                "first  | cat\n" +
-                "binary | \n" +
-                "last   | dog\n";
+        String expected = new StringBuilder().append("").append("-[ RECORD 1 ]-------------------------------------------\n").append("first  | hello\n").append("binary | 68 65 6c 6c 6f\n").append("last   | world\n").append("-[ RECORD 2 ]-------------------------------------------\n").append("first  | a\n").append("binary | 73 6f 6d 65 20 6c 6f 6e 67 20 74 65 78 74 20 74\n")
+				.append("       | 68 61 74 20 69 73 20 6d 6f 72 65 20 74 68 61 6e\n").append("       | 20 31 36 20 62 79 74 65 73\n").append("last   | b\n").append("-[ RECORD 3 ]-------------------------------------------\n").append("first  | cat\n").append("binary | \n").append("last   | dog\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }

@@ -34,9 +34,7 @@ public class HostAddressFactory
     public List<HostAddress> toHostAddressList(Collection<Host> hosts)
     {
         ArrayList<HostAddress> list = new ArrayList<>(hosts.size());
-        for (Host host : hosts) {
-            list.add(toHostAddress(host));
-        }
+        hosts.forEach(host -> list.add(toHostAddress(host)));
         return list;
     }
 
@@ -53,9 +51,7 @@ public class HostAddressFactory
     public List<HostAddress> AddressNamesToHostAddressList(Collection<String> hosts)
     {
         ArrayList<HostAddress> list = new ArrayList<>(hosts.size());
-        for (String host : hosts) {
-            list.add(toHostAddress(host));
-        }
+        hosts.forEach(host -> list.add(toHostAddress(host)));
         return list;
     }
 }

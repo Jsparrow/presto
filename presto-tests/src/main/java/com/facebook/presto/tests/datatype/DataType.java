@@ -47,91 +47,99 @@ public class DataType<T>
     private final Function<T, String> toLiteral;
     private final Function<T, ?> toPrestoQueryResult;
 
-    public static DataType<Boolean> booleanDataType()
+    private DataType(String insertType, Type prestoResultType, Function<T, String> toLiteral, Function<T, ?> toPrestoQueryResult)
+    {
+        this.insertType = insertType;
+        this.prestoResultType = prestoResultType;
+        this.toLiteral = toLiteral;
+        this.toPrestoQueryResult = toPrestoQueryResult;
+    }
+
+	public static DataType<Boolean> booleanDataType()
     {
         return dataType("boolean", BooleanType.BOOLEAN);
     }
 
-    public static DataType<Long> bigintDataType()
+	public static DataType<Long> bigintDataType()
     {
         return dataType("bigint", BigintType.BIGINT);
     }
 
-    public static DataType<Integer> integerDataType()
+	public static DataType<Integer> integerDataType()
     {
         return dataType("integer", IntegerType.INTEGER);
     }
 
-    public static DataType<Short> smallintDataType()
+	public static DataType<Short> smallintDataType()
     {
         return dataType("smallint", SmallintType.SMALLINT);
     }
 
-    public static DataType<Byte> tinyintDataType()
+	public static DataType<Byte> tinyintDataType()
     {
         return dataType("tinyint", TinyintType.TINYINT);
     }
 
-    public static DataType<Double> doubleDataType()
+	public static DataType<Double> doubleDataType()
     {
         return dataType("double", DoubleType.DOUBLE);
     }
 
-    public static DataType<Float> realDataType()
+	public static DataType<Float> realDataType()
     {
         return dataType("real", RealType.REAL);
     }
 
-    public static DataType<String> varcharDataType(int size)
+	public static DataType<String> varcharDataType(int size)
     {
         return varcharDataType(size, "");
     }
 
-    public static DataType<String> varcharDataType(int size, String properties)
+	public static DataType<String> varcharDataType(int size, String properties)
     {
         return varcharDataType(Optional.of(size), properties);
     }
 
-    public static DataType<String> varcharDataType()
+	public static DataType<String> varcharDataType()
     {
         return varcharDataType(Optional.empty(), "");
     }
 
-    private static DataType<String> varcharDataType(Optional<Integer> length, String properties)
+	private static DataType<String> varcharDataType(Optional<Integer> length, String properties)
     {
-        String prefix = length.map(size -> "varchar(" + size + ")").orElse("varchar");
+        String prefix = length.map(size -> new StringBuilder().append("varchar(").append(size).append(")").toString()).orElse("varchar");
         String suffix = properties.isEmpty() ? "" : " " + properties;
         VarcharType varcharType = length.map(VarcharType::createVarcharType).orElse(createUnboundedVarcharType());
         return stringDataType(prefix + suffix, varcharType);
     }
 
-    public static DataType<String> stringDataType(String insertType, Type prestoResultType)
+	public static DataType<String> stringDataType(String insertType, Type prestoResultType)
     {
         return dataType(insertType, prestoResultType, DataType::quote, Function.identity());
     }
 
-    public static DataType<String> charDataType(int length)
+	public static DataType<String> charDataType(int length)
     {
         return charDataType(length, "");
     }
 
-    public static DataType<String> charDataType(int length, String properties)
+	public static DataType<String> charDataType(int length, String properties)
     {
         String suffix = properties.isEmpty() ? "" : " " + properties;
-        return charDataType("char(" + length + ")" + suffix, length);
+        return charDataType(new StringBuilder().append("char(").append(length).append(")").append(suffix).toString(), length);
     }
 
-    public static DataType<String> charDataType(String insertType, int length)
+	public static DataType<String> charDataType(String insertType, int length)
     {
         return dataType(insertType, createCharType(length), DataType::quote, input -> padEnd(input, length, ' '));
     }
 
-    public static DataType<byte[]> varbinaryDataType()
+	public static DataType<byte[]> varbinaryDataType()
     {
         return dataType("varbinary", VarbinaryType.VARBINARY, DataType::binaryLiteral, Function.identity());
     }
 
-    public static DataType<BigDecimal> decimalDataType(int precision, int scale)
+	public static DataType<BigDecimal> decimalDataType(int precision, int scale)
     {
         String databaseType = format("decimal(%s, %s)", precision, scale);
         return dataType(
@@ -141,7 +149,7 @@ public class DataType<T>
                 bigDecimal -> bigDecimal.setScale(scale, UNNECESSARY));
     }
 
-    public static DataType<LocalDate> dateDataType()
+	public static DataType<LocalDate> dateDataType()
     {
         return dataType(
                 "DATE",
@@ -150,38 +158,30 @@ public class DataType<T>
                 identity());
     }
 
-    private static String quote(String value)
+	private static String quote(String value)
     {
-        return "'" + value + "'";
+        return new StringBuilder().append("'").append(value).append("'").toString();
     }
 
-    /**
+	/**
      * Formats bytes using SQL standard format for binary string literal
      */
     public static String binaryLiteral(byte[] value)
     {
-        return "X'" + base16().encode(value) + "'";
+        return new StringBuilder().append("X'").append(base16().encode(value)).append("'").toString();
     }
 
-    private static <T> DataType<T> dataType(String insertType, Type prestoResultType)
+	private static <T> DataType<T> dataType(String insertType, Type prestoResultType)
     {
         return new DataType<>(insertType, prestoResultType, Object::toString, Function.identity());
     }
 
-    public static <T> DataType<T> dataType(String insertType, Type prestoResultType, Function<T, String> toLiteral, Function<T, ?> toPrestoQueryResult)
+	public static <T> DataType<T> dataType(String insertType, Type prestoResultType, Function<T, String> toLiteral, Function<T, ?> toPrestoQueryResult)
     {
         return new DataType<>(insertType, prestoResultType, toLiteral, toPrestoQueryResult);
     }
 
-    private DataType(String insertType, Type prestoResultType, Function<T, String> toLiteral, Function<T, ?> toPrestoQueryResult)
-    {
-        this.insertType = insertType;
-        this.prestoResultType = prestoResultType;
-        this.toLiteral = toLiteral;
-        this.toPrestoQueryResult = toPrestoQueryResult;
-    }
-
-    public String toLiteral(T inputValue)
+	public String toLiteral(T inputValue)
     {
         if (inputValue == null) {
             return "NULL";
@@ -189,17 +189,17 @@ public class DataType<T>
         return toLiteral.apply(inputValue);
     }
 
-    public Object toPrestoQueryResult(T inputValue)
+	public Object toPrestoQueryResult(T inputValue)
     {
         return toPrestoQueryResult.apply(inputValue);
     }
 
-    public String getInsertType()
+	public String getInsertType()
     {
         return insertType;
     }
 
-    public Type getPrestoResultType()
+	public Type getPrestoResultType()
     {
         return prestoResultType;
     }

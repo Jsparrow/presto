@@ -46,11 +46,6 @@ public class HiveColumnStatistics
     private final OptionalLong nullsCount;
     private final OptionalLong distinctValuesCount;
 
-    public static HiveColumnStatistics empty()
-    {
-        return EMPTY;
-    }
-
     @JsonCreator
     public HiveColumnStatistics(
             @JsonProperty("integerStatistics") Optional<IntegerStatistics> integerStatistics,
@@ -82,61 +77,66 @@ public class HiveColumnStatistics
         checkArgument(presentStatistics.size() <= 1, "multiple type specific statistic objects are present: %s", presentStatistics);
     }
 
-    @JsonProperty
+	public static HiveColumnStatistics empty()
+    {
+        return EMPTY;
+    }
+
+	@JsonProperty
     public Optional<IntegerStatistics> getIntegerStatistics()
     {
         return integerStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<DoubleStatistics> getDoubleStatistics()
     {
         return doubleStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<DecimalStatistics> getDecimalStatistics()
     {
         return decimalStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<DateStatistics> getDateStatistics()
     {
         return dateStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<BooleanStatistics> getBooleanStatistics()
     {
         return booleanStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getMaxValueSizeInBytes()
     {
         return maxValueSizeInBytes;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getTotalSizeInBytes()
     {
         return totalSizeInBytes;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getNullsCount()
     {
         return nullsCount;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getDistinctValuesCount()
     {
         return distinctValuesCount;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -157,7 +157,7 @@ public class HiveColumnStatistics
                 Objects.equals(distinctValuesCount, that.distinctValuesCount);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(
@@ -172,7 +172,7 @@ public class HiveColumnStatistics
                 distinctValuesCount);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -188,7 +188,7 @@ public class HiveColumnStatistics
                 .toString();
     }
 
-    public static HiveColumnStatistics createIntegerColumnStatistics(OptionalLong min, OptionalLong max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
+	public static HiveColumnStatistics createIntegerColumnStatistics(OptionalLong min, OptionalLong max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
     {
         return builder()
                 .setIntegerStatistics(new IntegerStatistics(min, max))
@@ -197,7 +197,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createDoubleColumnStatistics(OptionalDouble min, OptionalDouble max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
+	public static HiveColumnStatistics createDoubleColumnStatistics(OptionalDouble min, OptionalDouble max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
     {
         return builder()
                 .setDoubleStatistics(new DoubleStatistics(min, max))
@@ -206,7 +206,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createDecimalColumnStatistics(Optional<BigDecimal> min, Optional<BigDecimal> max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
+	public static HiveColumnStatistics createDecimalColumnStatistics(Optional<BigDecimal> min, Optional<BigDecimal> max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
     {
         return builder()
                 .setDecimalStatistics(new DecimalStatistics(min, max))
@@ -215,7 +215,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createDateColumnStatistics(Optional<LocalDate> min, Optional<LocalDate> max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
+	public static HiveColumnStatistics createDateColumnStatistics(Optional<LocalDate> min, Optional<LocalDate> max, OptionalLong nullsCount, OptionalLong distinctValuesCount)
     {
         return builder()
                 .setDateStatistics(new DateStatistics(min, max))
@@ -224,7 +224,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createBooleanColumnStatistics(OptionalLong trueCount, OptionalLong falseCount, OptionalLong nullsCount)
+	public static HiveColumnStatistics createBooleanColumnStatistics(OptionalLong trueCount, OptionalLong falseCount, OptionalLong nullsCount)
     {
         return builder()
                 .setBooleanStatistics(new BooleanStatistics(trueCount, falseCount))
@@ -232,7 +232,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createStringColumnStatistics(
+	public static HiveColumnStatistics createStringColumnStatistics(
             OptionalLong maxValueSizeInBytes,
             OptionalLong totalSizeInBytes,
             OptionalLong nullsCount,
@@ -246,7 +246,7 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static HiveColumnStatistics createBinaryColumnStatistics(OptionalLong maxValueSizeInBytes, OptionalLong totalSizeInBytes, OptionalLong nullsCount)
+	public static HiveColumnStatistics createBinaryColumnStatistics(OptionalLong maxValueSizeInBytes, OptionalLong totalSizeInBytes, OptionalLong nullsCount)
     {
         return builder()
                 .setMaxValueSizeInBytes(maxValueSizeInBytes)
@@ -255,17 +255,17 @@ public class HiveColumnStatistics
                 .build();
     }
 
-    public static Builder builder(HiveColumnStatistics other)
+	public static Builder builder(HiveColumnStatistics other)
     {
         return new Builder(other);
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public static class Builder
+	public static class Builder
     {
         private Optional<IntegerStatistics> integerStatistics = Optional.empty();
         private Optional<DoubleStatistics> doubleStatistics = Optional.empty();

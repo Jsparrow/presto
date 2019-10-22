@@ -380,16 +380,17 @@ public class MapFlatSelectiveStreamReader
             }
         }
 
-        if (outputRequired) {
-            nestedOutputPositions = ensureCapacity(nestedOutputPositions, keyCount);
-            for (int i = 0; i < keyCount; i++) {
-                int nestedPositionCount = nestedPositionCounts[i];
-                if (nestedPositionCount > 0) {
-                    nestedOutputPositions[i] = ensureCapacity(nestedOutputPositions[i], nestedPositionCount);
-                    System.arraycopy(nestedPositions[i], 0, nestedOutputPositions[i], 0, nestedPositionCount);
-                }
-            }
-        }
+        if (!outputRequired) {
+			return;
+		}
+		nestedOutputPositions = ensureCapacity(nestedOutputPositions, keyCount);
+		for (int i = 0; i < keyCount; i++) {
+		    int nestedPositionCount = nestedPositionCounts[i];
+		    if (nestedPositionCount > 0) {
+		        nestedOutputPositions[i] = ensureCapacity(nestedOutputPositions[i], nestedPositionCount);
+		        System.arraycopy(nestedPositions[i], 0, nestedOutputPositions[i], 0, nestedPositionCount);
+		    }
+		}
     }
 
     private void openRowGroup()

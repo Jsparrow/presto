@@ -63,8 +63,7 @@ public class CassandraColumnHandle
         int typeArgsSize = cassandraType.getTypeArgumentSize();
         if (typeArgsSize > 0) {
             this.typeArguments = requireNonNull(typeArguments, "typeArguments is null");
-            checkArgument(typeArguments.size() == typeArgsSize, cassandraType
-                    + " must provide " + typeArgsSize + " type arguments");
+            checkArgument(typeArguments.size() == typeArgsSize, new StringBuilder().append(cassandraType).append(" must provide ").append(typeArgsSize).append(" type arguments").toString());
         }
         else {
             this.typeArguments = null;

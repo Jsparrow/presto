@@ -130,7 +130,18 @@ public class PageProcessor
         return WorkProcessor.create(new ProjectSelectedPositions(session, yieldSignal, memoryContext, page, positionsRange(0, page.getPositionCount())));
     }
 
-    private class ProjectSelectedPositions
+    @VisibleForTesting
+    public List<PageProjection> getProjections()
+    {
+        return projections;
+    }
+
+	private static boolean isNotLoadedLazyBlock(Block block)
+    {
+        return (block instanceof LazyBlock) && !((LazyBlock) block).isLoaded();
+    }
+
+	private class ProjectSelectedPositions
             implements WorkProcessor.Process<Page>
     {
         private final ConnectorSession session;
@@ -193,7 +204,7 @@ public class PageProcessor
                 if (result.isPageTooLarge()) {
                     // if the page buffer filled up, so halve the batch size and retry
                     verify(batchSize > 1);
-                    projectBatchSize = projectBatchSize / 2;
+                    projectBatchSize /= 2;
                     continue;
                 }
 
@@ -203,12 +214,12 @@ public class PageProcessor
                 // if we produced a large page or if the expression is expensive, halve the batch size for the next call
                 long pageSize = resultPage.getSizeInBytes();
                 if (resultPage.getPositionCount() > 1 && (pageSize > MAX_PAGE_SIZE_IN_BYTES || expressionProfiler.isExpressionExpensive())) {
-                    projectBatchSize = projectBatchSize / 2;
+                    projectBatchSize /= 2;
                 }
 
                 // if we produced a small page, double the batch size for the next call
                 if (pageSize < MIN_PAGE_SIZE_IN_BYTES && projectBatchSize < MAX_BATCH_SIZE && !expressionProfiler.isExpressionExpensive()) {
-                    projectBatchSize = projectBatchSize * 2;
+                    projectBatchSize *= 2;
                 }
 
                 // remove batch from selectedPositions and previouslyComputedResults
@@ -304,17 +315,6 @@ public class PageProcessor
             }
             return ProcessBatchResult.processBatchSuccess(new Page(positionsBatch.size(), blocks));
         }
-    }
-
-    @VisibleForTesting
-    public List<PageProjection> getProjections()
-    {
-        return projections;
-    }
-
-    private static boolean isNotLoadedLazyBlock(Block block)
-    {
-        return (block instanceof LazyBlock) && !((LazyBlock) block).isLoaded();
     }
 
     @NotThreadSafe

@@ -102,32 +102,30 @@ public class PushProjectionThroughExchange
                         inputs.add(variable);
                     });
 
-            if (exchange.getPartitioningScheme().getHashColumn().isPresent()) {
+            exchange.getPartitioningScheme().getHashColumn().ifPresent(hashVariable -> {
                 // Need to retain the hash symbol for the exchange
-                VariableReferenceExpression hashVariable = exchange.getPartitioningScheme().getHashColumn().get();
                 projections.put(hashVariable, castToRowExpression(new SymbolReference(hashVariable.getName())));
                 inputs.add(hashVariable);
-            }
+            });
 
-            if (exchange.getOrderingScheme().isPresent()) {
-                // need to retain ordering columns for the exchange
-                exchange.getOrderingScheme().get().getOrderByVariables().stream()
-                        // do not project the same symbol twice as ExchangeNode verifies that source input symbols match partitioning scheme outputLayout
-                        .filter(variable -> !partitioningColumns.contains(variable))
-                        .map(outputToInputMap::get)
-                        .forEach(variable -> {
-                            projections.put(variable, variable);
-                            inputs.add(variable);
-                        });
-            }
+            // need to retain ordering columns for the exchange
+			exchange.getOrderingScheme().ifPresent(value -> value.getOrderByVariables().stream()
+			        // do not project the same symbol twice as ExchangeNode verifies that source input symbols match partitioning scheme outputLayout
+			        .filter(variable -> !partitioningColumns.contains(variable))
+			        .map(outputToInputMap::get)
+			        .forEach(variable -> {
+			            projections.put(variable, variable);
+			            inputs.add(variable);
+			        }));
 
-            for (Map.Entry<VariableReferenceExpression, RowExpression> projection : project.getAssignments().entrySet()) {
-                checkArgument(!isExpression(projection.getValue()), "Cannot contain RowExpression after AddExchange");
-                RowExpression translatedExpression = RowExpressionVariableInliner.inlineVariables(outputToInputMap, projection.getValue());
-                VariableReferenceExpression variable = context.getVariableAllocator().newVariable(translatedExpression);
-                projections.put(variable, translatedExpression);
-                inputs.add(variable);
-            }
+            project.getAssignments().entrySet().stream().map(projection -> {
+				checkArgument(!isExpression(projection.getValue()), "Cannot contain RowExpression after AddExchange");
+				return RowExpressionVariableInliner.inlineVariables(outputToInputMap, projection.getValue());
+			}).forEach(translatedExpression -> {
+				VariableReferenceExpression variable = context.getVariableAllocator().newVariable(translatedExpression);
+				projections.put(variable, translatedExpression);
+				inputs.add(variable);
+			});
             newSourceBuilder.add(new ProjectNode(context.getIdAllocator().getNextId(), exchange.getSources().get(i), projections.build()));
             inputsBuilder.add(inputs.build());
         }
@@ -136,14 +134,10 @@ public class PushProjectionThroughExchange
         ImmutableList.Builder<VariableReferenceExpression> outputBuilder = ImmutableList.builder();
         partitioningColumns.forEach(outputBuilder::add);
         exchange.getPartitioningScheme().getHashColumn().ifPresent(outputBuilder::add);
-        if (exchange.getOrderingScheme().isPresent()) {
-            exchange.getOrderingScheme().get().getOrderByVariables().stream()
-                    .filter(variable -> !partitioningColumns.contains(variable))
-                    .forEach(outputBuilder::add);
-        }
-        for (Map.Entry<VariableReferenceExpression, RowExpression> projection : project.getAssignments().entrySet()) {
-            outputBuilder.add(projection.getKey());
-        }
+        exchange.getOrderingScheme().ifPresent(value -> value.getOrderByVariables().stream()
+		        .filter(variable -> !partitioningColumns.contains(variable))
+		        .forEach(outputBuilder::add));
+        project.getAssignments().entrySet().forEach(projection -> outputBuilder.add(projection.getKey()));
 
         // outputBuilder contains all partition and hash symbols so simply swap the output layout
         PartitioningScheme partitioningScheme = new PartitioningScheme(

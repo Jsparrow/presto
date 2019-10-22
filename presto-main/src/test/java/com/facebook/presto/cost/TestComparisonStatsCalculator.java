@@ -175,13 +175,8 @@ public class TestComparisonStatsCalculator
 
     private Consumer<VariableStatsAssertion> equalTo(VariableStatsEstimate estimate)
     {
-        return symbolAssert -> {
-            symbolAssert
-                    .lowValue(estimate.getLowValue())
-                    .highValue(estimate.getHighValue())
-                    .distinctValuesCount(estimate.getDistinctValuesCount())
-                    .nullsFraction(estimate.getNullsFraction());
-        };
+        return symbolAssert -> symbolAssert.lowValue(estimate.getLowValue()).highValue(estimate.getHighValue())
+				.distinctValuesCount(estimate.getDistinctValuesCount()).nullsFraction(estimate.getNullsFraction());
     }
 
     private VariableStatsEstimate updateNDV(VariableStatsEstimate symbolStats, double delta)
@@ -222,8 +217,7 @@ public class TestComparisonStatsCalculator
                 new StatsNormalizer(),
                 "standardInputStatistics",
                 standardInputStatistics,
-                standardInputStatistics.getVariablesWithKnownStatistics(),
-                types);
+                standardInputStatistics.getVariablesWithKnownStatistics());
     }
 
     @Test
@@ -232,67 +226,37 @@ public class TestComparisonStatsCalculator
         // Simple case
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("y"), new DoubleLiteral("2.5")))
                 .outputRowsCount(25.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(2.5)
-                            .highValue(2.5)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(2.5).highValue(2.5)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new DoubleLiteral("10.0")))
                 .outputRowsCount(18.75) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(10.0)
-                            .highValue(10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(10.0).highValue(10.0)
+						.nullsFraction(0.0));
 
         // Literal out of symbol range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("y"), new DoubleLiteral("10.0")))
                 .outputRowsCount(0.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(0.0)
-                            .distinctValuesCount(0.0)
-                            .emptyRange()
-                            .nullsFraction(1.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(0.0).distinctValuesCount(0.0).emptyRange().nullsFraction(1.0));
 
         // Literal in left open range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("leftOpen"), new DoubleLiteral("2.5")))
                 .outputRowsCount(18.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(2.5)
-                            .highValue(2.5)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(2.5).highValue(2.5)
+						.nullsFraction(0.0));
 
         // Literal in right open range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("rightOpen"), new DoubleLiteral("-2.5")))
                 .outputRowsCount(18.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(-2.5)
-                            .highValue(-2.5)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(-2.5).highValue(-2.5)
+						.nullsFraction(0.0));
 
         // Literal in unknown range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("unknownRange"), new DoubleLiteral("0.0")))
                 .outputRowsCount(18.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(0.0)
-                            .highValue(0.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(0.0).highValue(0.0)
+						.nullsFraction(0.0));
 
         // Literal in empty range
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("emptyRange"), new DoubleLiteral("0.0")))
@@ -302,13 +266,8 @@ public class TestComparisonStatsCalculator
         // Column with values not representable as double (unknown range)
         assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("varchar"), new StringLiteral("blah")))
                 .outputRowsCount(18.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("varchar", VarcharType.createVarcharType(10)), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(NEGATIVE_INFINITY)
-                            .highValue(POSITIVE_INFINITY)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("varchar", VarcharType.createVarcharType(10)), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(NEGATIVE_INFINITY)
+						.highValue(POSITIVE_INFINITY).nullsFraction(0.0));
     }
 
     @Test
@@ -317,68 +276,38 @@ public class TestComparisonStatsCalculator
         // Simple case
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("y"), new DoubleLiteral("2.5")))
                 .outputRowsCount(475.0) // all rows minus nulls multiplied by ((distinct values - 1) / distinct values)
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(19.0)
-                            .lowValue(0.0)
-                            .highValue(5.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(19.0).lowValue(0.0).highValue(5.0)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("x"), new DoubleLiteral("10.0")))
                 .outputRowsCount(731.25) // all rows minus nulls multiplied by ((distinct values - 1) / distinct values)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(39.0)
-                            .lowValue(-10.0)
-                            .highValue(10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(39.0).lowValue(-10.0).highValue(10.0)
+						.nullsFraction(0.0));
 
         // Literal out of symbol range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("y"), new DoubleLiteral("10.0")))
                 .outputRowsCount(500.0) // all rows minus nulls
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(19.0)
-                            .lowValue(0.0)
-                            .highValue(5.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(19.0).lowValue(0.0).highValue(5.0)
+						.nullsFraction(0.0));
 
         // Literal in left open range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("leftOpen"), new DoubleLiteral("2.5")))
                 .outputRowsCount(882.0) // all rows minus nulls multiplied by ((distinct values - 1) / distinct values)
-                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(49.0)
-                            .lowValueUnknown()
-                            .highValue(15.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(49.0).lowValueUnknown().highValue(15.0)
+						.nullsFraction(0.0));
 
         // Literal in right open range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("rightOpen"), new DoubleLiteral("-2.5")))
                 .outputRowsCount(882.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(49.0)
-                            .lowValue(-15.0)
-                            .highValueUnknown()
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(49.0).lowValue(-15.0).highValueUnknown()
+						.nullsFraction(0.0));
 
         // Literal in unknown range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("unknownRange"), new DoubleLiteral("0.0")))
                 .outputRowsCount(882.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(49.0)
-                            .lowValueUnknown()
-                            .highValueUnknown()
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(49.0).lowValueUnknown().highValueUnknown()
+						.nullsFraction(0.0));
 
         // Literal in empty range
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("emptyRange"), new DoubleLiteral("0.0")))
@@ -388,13 +317,8 @@ public class TestComparisonStatsCalculator
         // Column with values not representable as double (unknown range)
         assertCalculate(new ComparisonExpression(NOT_EQUAL, new SymbolReference("varchar"), new StringLiteral("blah")))
                 .outputRowsCount(882.0) // all rows minus nulls divided by distinct values count
-                .variableStats(new VariableReferenceExpression("varchar", VarcharType.createVarcharType(10)), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(49.0)
-                            .lowValueUnknown()
-                            .highValueUnknown()
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("varchar", VarcharType.createVarcharType(10)), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(49.0).lowValueUnknown().highValueUnknown()
+						.nullsFraction(0.0));
     }
 
     @Test
@@ -403,78 +327,46 @@ public class TestComparisonStatsCalculator
         // Simple case
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("y"), new DoubleLiteral("2.5")))
                 .outputRowsCount(250.0) // all rows minus nulls times range coverage (50%)
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(10.0)
-                            .lowValue(0.0)
-                            .highValue(2.5)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(10.0).lowValue(0.0).highValue(2.5)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range (whole range included)
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("x"), new DoubleLiteral("10.0")))
                 .outputRowsCount(750.0) // all rows minus nulls times range coverage (100%)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(40.0)
-                            .lowValue(-10.0)
-                            .highValue(10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(40.0).lowValue(-10.0).highValue(10.0)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range (whole range excluded)
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("x"), new DoubleLiteral("-10.0")))
                 .outputRowsCount(18.75) // all rows minus nulls divided by NDV (one value from edge is included as approximation)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(-10.0)
-                            .highValue(-10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(-10.0).highValue(-10.0)
+						.nullsFraction(0.0));
 
         // Literal range out of symbol range
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("y"), new DoubleLiteral("-10.0")))
                 .outputRowsCount(0.0) // all rows minus nulls times range coverage (0%)
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(0.0)
-                            .distinctValuesCount(0.0)
-                            .emptyRange()
-                            .nullsFraction(1.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(0.0).distinctValuesCount(0.0).emptyRange().nullsFraction(1.0));
 
-        // Literal in left open range
+        //(50% heuristic)
+		// Literal in left open range
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("leftOpen"), new DoubleLiteral("0.0")))
                 .outputRowsCount(450.0) // all rows minus nulls times range coverage (50% - heuristic)
-                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(25.0) //(50% heuristic)
-                            .lowValueUnknown()
-                            .highValue(0.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(25.0).lowValueUnknown().highValue(0.0)
+						.nullsFraction(0.0));
 
-        // Literal in right open range
+        //(25% heuristic)
+		// Literal in right open range
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("rightOpen"), new DoubleLiteral("0.0")))
                 .outputRowsCount(225.0) // all rows minus nulls times range coverage (25% - heuristic)
-                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(12.5) //(25% heuristic)
-                            .lowValue(-15.0)
-                            .highValue(0.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(12.5).lowValue(-15.0).highValue(0.0)
+						.nullsFraction(0.0));
 
-        // Literal in unknown range
+        // (50% heuristic)
+		// Literal in unknown range
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("unknownRange"), new DoubleLiteral("0.0")))
                 .outputRowsCount(450.0) // all rows minus nulls times range coverage (50% - heuristic)
-                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(25.0) // (50% heuristic)
-                            .lowValueUnknown()
-                            .highValue(0.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(25.0).lowValueUnknown().highValue(0.0)
+						.nullsFraction(0.0));
 
         // Literal in empty range
         assertCalculate(new ComparisonExpression(LESS_THAN, new SymbolReference("emptyRange"), new DoubleLiteral("0.0")))
@@ -488,78 +380,46 @@ public class TestComparisonStatsCalculator
         // Simple case
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("y"), new DoubleLiteral("2.5")))
                 .outputRowsCount(250.0) // all rows minus nulls times range coverage (50%)
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(10.0)
-                            .lowValue(2.5)
-                            .highValue(5.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(10.0).lowValue(2.5).highValue(5.0)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range (whole range included)
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("x"), new DoubleLiteral("-10.0")))
                 .outputRowsCount(750.0) // all rows minus nulls times range coverage (100%)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(40.0)
-                            .lowValue(-10.0)
-                            .highValue(10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(40.0).lowValue(-10.0).highValue(10.0)
+						.nullsFraction(0.0));
 
         // Literal on the edge of symbol range (whole range excluded)
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("x"), new DoubleLiteral("10.0")))
                 .outputRowsCount(18.75) // all rows minus nulls divided by NDV (one value from edge is included as approximation)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(1.0)
-                            .lowValue(10.0)
-                            .highValue(10.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(1.0).lowValue(10.0).highValue(10.0)
+						.nullsFraction(0.0));
 
         // Literal range out of symbol range
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("y"), new DoubleLiteral("10.0")))
                 .outputRowsCount(0.0) // all rows minus nulls times range coverage (0%)
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(0.0)
-                            .distinctValuesCount(0.0)
-                            .emptyRange()
-                            .nullsFraction(1.0);
-                });
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(0.0).distinctValuesCount(0.0).emptyRange().nullsFraction(1.0));
 
-        // Literal in left open range
+        //(25% heuristic)
+		// Literal in left open range
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("leftOpen"), new DoubleLiteral("0.0")))
                 .outputRowsCount(225.0) // all rows minus nulls times range coverage (25% - heuristic)
-                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(12.5) //(25% heuristic)
-                            .lowValue(0.0)
-                            .highValue(15.0)
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("leftOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(12.5).lowValue(0.0).highValue(15.0)
+						.nullsFraction(0.0));
 
-        // Literal in right open range
+        //(50% heuristic)
+		// Literal in right open range
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("rightOpen"), new DoubleLiteral("0.0")))
                 .outputRowsCount(450.0) // all rows minus nulls times range coverage (50% - heuristic)
-                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(25.0) //(50% heuristic)
-                            .lowValue(0.0)
-                            .highValueUnknown()
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("rightOpen", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(25.0).lowValue(0.0).highValueUnknown()
+						.nullsFraction(0.0));
 
-        // Literal in unknown range
+        // (50% heuristic)
+		// Literal in unknown range
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("unknownRange"), new DoubleLiteral("0.0")))
                 .outputRowsCount(450.0) // all rows minus nulls times range coverage (50% - heuristic)
-                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4.0)
-                            .distinctValuesCount(25.0) // (50% heuristic)
-                            .lowValue(0.0)
-                            .highValueUnknown()
-                            .nullsFraction(0.0);
-                });
+                .variableStats(new VariableReferenceExpression("unknownRange", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4.0).distinctValuesCount(25.0).lowValue(0.0).highValueUnknown()
+						.nullsFraction(0.0));
 
         // Literal in empty range
         assertCalculate(new ComparisonExpression(GREATER_THAN, new SymbolReference("emptyRange"), new DoubleLiteral("0.0")))
@@ -581,62 +441,32 @@ public class TestComparisonStatsCalculator
 
         // One symbol's range is within the other's
         rowCount = 9.375;
-        assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("y")))
+        /* min(rowCount, ndv in intersection */
+		/* min(rowCount, ndv in intersection */
+		assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("y")))
                 .outputRowsCount(rowCount)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4)
-                            .lowValue(0)
-                            .highValue(5)
-                            .distinctValuesCount(9.375 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
-                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(4)
-                            .lowValue(0)
-                            .highValue(5)
-                            .distinctValuesCount(9.375 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4).lowValue(0).highValue(5).distinctValuesCount(9.375).nullsFraction(0))
+                .variableStats(new VariableReferenceExpression("y", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(4).lowValue(0).highValue(5).distinctValuesCount(9.375).nullsFraction(0))
                 .variableStats(new VariableReferenceExpression("z", DOUBLE), equalTo(capNDV(zStats, rowCount)));
 
         // Partially overlapping ranges
         rowCount = 16.875;
-        assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("w")))
+        /* min(rowCount, ndv in intersection */
+		/* min(rowCount, ndv in intersection */
+		assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("w")))
                 .outputRowsCount(rowCount)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(6)
-                            .lowValue(0)
-                            .highValue(10)
-                            .distinctValuesCount(16.875 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
-                .variableStats(new VariableReferenceExpression("w", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(6)
-                            .lowValue(0)
-                            .highValue(10)
-                            .distinctValuesCount(16.875 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(6).lowValue(0).highValue(10).distinctValuesCount(16.875).nullsFraction(0))
+                .variableStats(new VariableReferenceExpression("w", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(6).lowValue(0).highValue(10).distinctValuesCount(16.875).nullsFraction(0))
                 .variableStats(new VariableReferenceExpression("z", DOUBLE), equalTo(capNDV(zStats, rowCount)));
 
         // None of the ranges is included in the other, and one symbol has much higher cardinality, so that it has bigger NDV in intersect than the other in total
         rowCount = 2.25;
-        assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("u")))
+        /* min(rowCount, ndv in intersection */
+		/* min(rowCount, ndv in intersection */
+		assertCalculate(new ComparisonExpression(EQUAL, new SymbolReference("x"), new SymbolReference("u")))
                 .outputRowsCount(rowCount)
-                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(6)
-                            .lowValue(0)
-                            .highValue(10)
-                            .distinctValuesCount(2.25 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
-                .variableStats(new VariableReferenceExpression("u", DOUBLE), symbolAssert -> {
-                    symbolAssert.averageRowSize(6)
-                            .lowValue(0)
-                            .highValue(10)
-                            .distinctValuesCount(2.25 /* min(rowCount, ndv in intersection */)
-                            .nullsFraction(0);
-                })
+                .variableStats(new VariableReferenceExpression("x", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(6).lowValue(0).highValue(10).distinctValuesCount(2.25).nullsFraction(0))
+                .variableStats(new VariableReferenceExpression("u", DOUBLE), symbolAssert -> symbolAssert.averageRowSize(6).lowValue(0).highValue(10).distinctValuesCount(2.25).nullsFraction(0))
                 .variableStats(new VariableReferenceExpression("z", DOUBLE), equalTo(capNDV(zStats, rowCount)));
     }
 
@@ -693,7 +523,7 @@ public class TestComparisonStatsCalculator
                 .variableStats(new VariableReferenceExpression("z", DOUBLE), equalTo(capNDV(zStats, rowCount)));
     }
 
-    private static void checkConsistent(StatsNormalizer normalizer, String source, PlanNodeStatsEstimate stats, Collection<VariableReferenceExpression> outputVariables, TypeProvider types)
+    private static void checkConsistent(StatsNormalizer normalizer, String source, PlanNodeStatsEstimate stats, Collection<VariableReferenceExpression> outputVariables)
     {
         PlanNodeStatsEstimate normalized = normalizer.normalize(stats, outputVariables);
         if (Objects.equals(stats, normalized)) {
@@ -709,15 +539,8 @@ public class TestComparisonStatsCalculator
                     normalized.getOutputRowCount()));
         }
 
-        for (VariableReferenceExpression variable : stats.getVariablesWithKnownStatistics()) {
-            if (!Objects.equals(stats.getVariableStatistics(variable), normalized.getVariableStatistics(variable))) {
-                problems.add(format(
-                        "Variable stats for '%s' are \n\t\t\t\t\t%s, should be normalized to \n\t\t\t\t\t%s",
-                        variable,
-                        stats.getVariableStatistics(variable),
-                        normalized.getVariableStatistics(variable)));
-            }
-        }
+        stats.getVariablesWithKnownStatistics().stream().filter(variable -> !Objects.equals(stats.getVariableStatistics(variable), normalized.getVariableStatistics(variable))).forEach(variable -> problems.add(format("Variable stats for '%s' are \n\t\t\t\t\t%s, should be normalized to \n\t\t\t\t\t%s",
+				variable, stats.getVariableStatistics(variable), normalized.getVariableStatistics(variable))));
 
         if (problems.isEmpty()) {
             problems.add(stats.toString());

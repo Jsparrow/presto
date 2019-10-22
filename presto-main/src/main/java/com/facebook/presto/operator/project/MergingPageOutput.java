@@ -173,11 +173,12 @@ public class MergingPageOutput
 
     private void flush()
     {
-        if (!pageBuilder.isEmpty()) {
-            Page output = pageBuilder.build();
-            pageBuilder.reset();
-            outputQueue.add(output);
-        }
+        if (pageBuilder.isEmpty()) {
+			return;
+		}
+		Page output = pageBuilder.build();
+		pageBuilder.reset();
+		outputQueue.add(output);
     }
 
     public long getRetainedSizeInBytes()

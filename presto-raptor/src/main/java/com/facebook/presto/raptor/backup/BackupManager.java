@@ -101,7 +101,30 @@ public class BackupManager
         return future;
     }
 
-    private class BackgroundBackup
+    @Managed
+    public int getPendingBackupCount()
+    {
+        return pendingBackups.get();
+    }
+
+	@Managed
+    @Flatten
+    public BackupStats getStats()
+    {
+        return stats;
+    }
+
+	private static boolean filesEqual(File file1, File file2)
+    {
+        try {
+            return Files.equal(file1, file2);
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+	private class BackgroundBackup
             implements Runnable
     {
         private final UUID uuid;
@@ -152,29 +175,6 @@ public class BackupManager
                 stats.incrementBackupFailure();
                 throw t;
             }
-        }
-    }
-
-    @Managed
-    public int getPendingBackupCount()
-    {
-        return pendingBackups.get();
-    }
-
-    @Managed
-    @Flatten
-    public BackupStats getStats()
-    {
-        return stats;
-    }
-
-    private static boolean filesEqual(File file1, File file2)
-    {
-        try {
-            return Files.equal(file1, file2);
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 }

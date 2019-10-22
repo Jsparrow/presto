@@ -25,18 +25,13 @@ import static java.util.Objects.requireNonNull;
 
 public class BufferResult
 {
-    public static BufferResult emptyResults(String taskInstanceId, long token, boolean bufferComplete)
-    {
-        return new BufferResult(taskInstanceId, token, token, bufferComplete, ImmutableList.of());
-    }
-
     private final String taskInstanceId;
-    private final long token;
-    private final long nextToken;
-    private final boolean bufferComplete;
-    private final List<SerializedPage> serializedPages;
+	private final long token;
+	private final long nextToken;
+	private final boolean bufferComplete;
+	private final List<SerializedPage> serializedPages;
 
-    public BufferResult(String taskInstanceId, long token, long nextToken, boolean bufferComplete, List<SerializedPage> serializedPages)
+	public BufferResult(String taskInstanceId, long token, long nextToken, boolean bufferComplete, List<SerializedPage> serializedPages)
     {
         checkArgument(!isNullOrEmpty(taskInstanceId), "taskInstanceId is null");
 
@@ -47,42 +42,47 @@ public class BufferResult
         this.serializedPages = ImmutableList.copyOf(requireNonNull(serializedPages, "serializedPages is null"));
     }
 
-    public long getToken()
+	public static BufferResult emptyResults(String taskInstanceId, long token, boolean bufferComplete)
+    {
+        return new BufferResult(taskInstanceId, token, token, bufferComplete, ImmutableList.of());
+    }
+
+	public long getToken()
     {
         return token;
     }
 
-    public long getNextToken()
+	public long getNextToken()
     {
         return nextToken;
     }
 
-    public boolean isBufferComplete()
+	public boolean isBufferComplete()
     {
         return bufferComplete;
     }
 
-    public List<SerializedPage> getSerializedPages()
+	public List<SerializedPage> getSerializedPages()
     {
         return serializedPages;
     }
 
-    public int size()
+	public int size()
     {
         return serializedPages.size();
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return serializedPages.isEmpty();
     }
 
-    public String getTaskInstanceId()
+	public String getTaskInstanceId()
     {
         return taskInstanceId;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -99,13 +99,13 @@ public class BufferResult
                 Objects.equals(serializedPages, that.serializedPages);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(token, nextToken, taskInstanceId, bufferComplete, serializedPages);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

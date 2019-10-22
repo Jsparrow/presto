@@ -44,7 +44,7 @@ public enum ReadPreferenceType
 
     public ReadPreference getReadPreferenceWithTags(List<TagSet> tagSets)
     {
-        if (PRIMARY.equals(this)) {
+        if (PRIMARY == this) {
             throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Primary read preference can not specify tag sets");
         }
 

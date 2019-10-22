@@ -181,16 +181,14 @@ public class IndexLookup
     private static Multimap<AccumuloColumnConstraint, Range> getIndexedConstraintRanges(Collection<AccumuloColumnConstraint> constraints, AccumuloRowSerializer serializer)
     {
         ImmutableListMultimap.Builder<AccumuloColumnConstraint, Range> builder = ImmutableListMultimap.builder();
-        for (AccumuloColumnConstraint columnConstraint : constraints) {
+        constraints.forEach(columnConstraint -> {
             if (columnConstraint.isIndexed()) {
-                for (Range range : getRangesFromDomain(columnConstraint.getDomain(), serializer)) {
-                    builder.put(columnConstraint, range);
-                }
+                getRangesFromDomain(columnConstraint.getDomain(), serializer).forEach(range -> builder.put(columnConstraint, range));
             }
             else {
                 LOG.warn("Query contains constraint on non-indexed column %s. Is it worth indexing?", columnConstraint.getName());
             }
-        }
+        });
         return builder.build();
     }
 
@@ -272,16 +270,15 @@ public class IndexLookup
         LOG.debug("Use of index would scan %d of %d rows, ratio %s. Threshold %2f, Using for table? %b", numEntries, numRows, ratio, threshold, ratio < threshold, table);
 
         // If the percentage of scanned rows, the ratio, less than the configured threshold
-        if (ratio < threshold) {
-            // Bin the ranges into TabletMetadataSplits and return true to use the tablet splits
-            binRanges(getNumIndexRowsPerSplit(session), indexRanges, tabletSplits);
-            LOG.debug("Number of splits for %s.%s is %d with %d ranges", schema, table, tabletSplits.size(), indexRanges.size());
-            return true;
-        }
-        else {
-            // We are going to do too much work to use the secondary index, so return false
+		// We are going to do too much work to use the secondary index, so return false
+		if (ratio >= threshold) {
+			// We are going to do too much work to use the secondary index, so return false
             return false;
-        }
+		}
+		// Bin the ranges into TabletMetadataSplits and return true to use the tablet splits
+		binRanges(getNumIndexRowsPerSplit(session), indexRanges, tabletSplits);
+		LOG.debug("Number of splits for %s.%s is %d with %d ranges", schema, table, tabletSplits.size(), indexRanges.size());
+		return true;
     }
 
     private static boolean smallestCardAboveThreshold(ConnectorSession session, long numRows, long smallestCardinality)

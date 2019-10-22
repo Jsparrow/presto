@@ -60,18 +60,11 @@ import static java.util.Objects.requireNonNull;
 public class RowExpressionEqualityInference
 {
     // Ordering used to determine Expression preference when determining canonicals
-    private static final Ordering<RowExpression> CANONICAL_ORDERING = Ordering.from((expression1, expression2) -> {
-        // Current cost heuristic:
-        // 1) Prefer fewer input symbols
-        // 2) Prefer smaller expression trees
-        // 3) Sort the expressions alphabetically - creates a stable consistent ordering (extremely useful for unit testing)
-        // TODO: be more precise in determining the cost of an RowExpression
-        return ComparisonChain.start()
-                .compare(VariablesExtractor.extractAll(expression1).size(), VariablesExtractor.extractAll(expression2).size())
-                .compare(uniqueSubExpressions(expression1).size(), uniqueSubExpressions(expression2).size())
-                .compare(expression1.toString(), expression2.toString())
-                .result();
-    });
+    private static final Ordering<RowExpression> CANONICAL_ORDERING = Ordering.from((expression1, expression2) -> ComparisonChain.start()
+			.compare(VariablesExtractor.extractAll(expression1).size(),
+					VariablesExtractor.extractAll(expression2).size())
+			.compare(uniqueSubExpressions(expression1).size(), uniqueSubExpressions(expression2).size())
+			.compare(expression1.toString(), expression2.toString()).result());
 
     private final SetMultimap<RowExpression, RowExpression> equalitySets; // Indexed by canonical RowExpression
     private final Map<RowExpression, RowExpression> canonicalMap; // Map each known RowExpression to canonical RowExpression
@@ -96,11 +89,11 @@ public class RowExpressionEqualityInference
         equalitySets = setBuilder.build();
 
         ImmutableMap.Builder<RowExpression, RowExpression> mapBuilder = ImmutableMap.builder();
-        for (Map.Entry<RowExpression, RowExpression> entry : equalitySets.entries()) {
+        equalitySets.entries().forEach(entry -> {
             RowExpression canonical = entry.getKey();
             RowExpression expression = entry.getValue();
             mapBuilder.put(expression, canonical);
-        }
+        });
         canonicalMap = mapBuilder.build();
 
         this.derivedExpressions = ImmutableSet.copyOf(derivedExpressions);
@@ -194,7 +187,7 @@ public class RowExpressionEqualityInference
         ImmutableSet.Builder<RowExpression> scopeComplementEqualities = ImmutableSet.builder();
         ImmutableSet.Builder<RowExpression> scopeStraddlingEqualities = ImmutableSet.builder();
 
-        for (Collection<RowExpression> equalitySet : equalitySets.asMap().values()) {
+        equalitySets.asMap().values().forEach(equalitySet -> {
             Set<RowExpression> scopeExpressions = new LinkedHashSet<>();
             Set<RowExpression> scopeComplementExpressions = new LinkedHashSet<>();
             Set<RowExpression> scopeStraddlingExpressions = new LinkedHashSet<>();
@@ -239,7 +232,7 @@ public class RowExpressionEqualityInference
                     scopeStraddlingEqualities.add(buildEqualsExpression(functionManager, connectingCanonical, expression));
                 }
             }
-        }
+        });
 
         return new EqualityPartition(scopeEqualities.build(), scopeComplementEqualities.build(), scopeStraddlingEqualities.build());
     }
@@ -274,7 +267,42 @@ public class RowExpressionEqualityInference
         return expression -> Iterables.all(VariablesExtractor.extractUnique(expression), variableScope);
     }
 
-    public static class EqualityPartition
+    private static RowExpression getLeft(RowExpression expression)
+    {
+        checkArgument(expression instanceof CallExpression && ((CallExpression) expression).getArguments().size() == 2, "must be binary call expression");
+        return ((CallExpression) expression).getArguments().get(0);
+    }
+
+	private static RowExpression getRight(RowExpression expression)
+    {
+        checkArgument(expression instanceof CallExpression && ((CallExpression) expression).getArguments().size() == 2, "must be binary call expression");
+        return ((CallExpression) expression).getArguments().get(1);
+    }
+
+	private static boolean isInPredicate(RowExpression expression)
+    {
+        if (expression instanceof SpecialFormExpression) {
+            return ((SpecialFormExpression) expression).getForm() == SpecialFormExpression.Form.IN;
+        }
+        return false;
+    }
+
+	private static CallExpression buildEqualsExpression(FunctionManager functionManager, RowExpression left, RowExpression right)
+    {
+        return binaryOperation(functionManager, EQUAL, left, right);
+    }
+
+	private static CallExpression binaryOperation(FunctionManager functionManager, OperatorType type, RowExpression left, RowExpression right)
+    {
+        return call(
+                type.getFunctionName().getSuffix(),
+                functionManager.resolveOperator(type, fromTypes(left.getType(), right.getType())),
+                BOOLEAN,
+                left,
+                right);
+    }
+
+	public static class EqualityPartition
     {
         private final List<RowExpression> scopeEqualities;
         private final List<RowExpression> scopeComplementEqualities;
@@ -423,27 +451,23 @@ public class RowExpressionEqualityInference
 
             // Map every expression to the set of equivalent expressions
             ImmutableMap.Builder<RowExpression, Set<RowExpression>> mapBuilder = ImmutableMap.builder();
-            for (Set<RowExpression> expressions : equivalentClasses) {
-                expressions.forEach(expression -> mapBuilder.put(expression, expressions));
-            }
+            equivalentClasses.forEach(expressions -> expressions.forEach(expression -> mapBuilder.put(expression, expressions)));
 
             // For every non-derived expression, extract the sub-expressions and see if they can be rewritten as other expressions. If so,
             // use this new information to update the known equalities.
             Map<RowExpression, Set<RowExpression>> map = mapBuilder.build();
-            for (RowExpression expression : map.keySet()) {
-                if (!derivedExpressions.contains(expression)) {
-                    for (RowExpression subExpression : filter(uniqueSubExpressions(expression), not(equalTo(expression)))) {
-                        Set<RowExpression> equivalentSubExpressions = map.get(subExpression);
-                        if (equivalentSubExpressions != null) {
-                            for (RowExpression equivalentSubExpression : filter(equivalentSubExpressions, not(equalTo(subExpression)))) {
-                                RowExpression rewritten = RowExpressionTreeRewriter.rewriteWith(new RowExpressionNodeInliner(ImmutableMap.of(subExpression, equivalentSubExpression)), expression);
-                                equalities.findAndUnion(expression, rewritten);
-                                derivedExpressions.add(rewritten);
-                            }
-                        }
-                    }
-                }
-            }
+            map.keySet().stream().filter(expression -> !derivedExpressions.contains(expression)).forEach(expression -> {
+			    for (RowExpression subExpression : filter(uniqueSubExpressions(expression), not(equalTo(expression)))) {
+			        Set<RowExpression> equivalentSubExpressions = map.get(subExpression);
+			        if (equivalentSubExpressions != null) {
+			            for (RowExpression equivalentSubExpression : filter(equivalentSubExpressions, not(equalTo(subExpression)))) {
+			                RowExpression rewritten = RowExpressionTreeRewriter.rewriteWith(new RowExpressionNodeInliner(ImmutableMap.of(subExpression, equivalentSubExpression)), expression);
+			                equalities.findAndUnion(expression, rewritten);
+			                derivedExpressions.add(rewritten);
+			            }
+			        }
+			    }
+			});
         }
 
         public RowExpressionEqualityInference build()
@@ -463,40 +487,5 @@ public class RowExpressionEqualityInference
             }
             return false;
         }
-    }
-
-    private static RowExpression getLeft(RowExpression expression)
-    {
-        checkArgument(expression instanceof CallExpression && ((CallExpression) expression).getArguments().size() == 2, "must be binary call expression");
-        return ((CallExpression) expression).getArguments().get(0);
-    }
-
-    private static RowExpression getRight(RowExpression expression)
-    {
-        checkArgument(expression instanceof CallExpression && ((CallExpression) expression).getArguments().size() == 2, "must be binary call expression");
-        return ((CallExpression) expression).getArguments().get(1);
-    }
-
-    private static boolean isInPredicate(RowExpression expression)
-    {
-        if (expression instanceof SpecialFormExpression) {
-            return ((SpecialFormExpression) expression).getForm() == SpecialFormExpression.Form.IN;
-        }
-        return false;
-    }
-
-    private static CallExpression buildEqualsExpression(FunctionManager functionManager, RowExpression left, RowExpression right)
-    {
-        return binaryOperation(functionManager, EQUAL, left, right);
-    }
-
-    private static CallExpression binaryOperation(FunctionManager functionManager, OperatorType type, RowExpression left, RowExpression right)
-    {
-        return call(
-                type.getFunctionName().getSuffix(),
-                functionManager.resolveOperator(type, fromTypes(left.getType(), right.getType())),
-                BOOLEAN,
-                left,
-                right);
     }
 }

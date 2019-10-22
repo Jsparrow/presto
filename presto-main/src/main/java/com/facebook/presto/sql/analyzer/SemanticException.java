@@ -47,10 +47,10 @@ public class SemanticException
 
     private static String formatMessage(String formatString, Node node, Object[] args)
     {
-        if (node.getLocation().isPresent()) {
-            NodeLocation nodeLocation = node.getLocation().get();
-            return format("line %s:%s: %s", nodeLocation.getLineNumber(), nodeLocation.getColumnNumber(), format(formatString, args));
-        }
-        return format(formatString, args);
+        if (!node.getLocation().isPresent()) {
+			return format(formatString, args);
+		}
+		NodeLocation nodeLocation = node.getLocation().get();
+		return format("line %s:%s: %s", nodeLocation.getLineNumber(), nodeLocation.getColumnNumber(), format(formatString, args));
     }
 }

@@ -99,7 +99,6 @@ final class DescribeInputRewrite
 
         @Override
         protected Node visitDescribeInput(DescribeInput node, Void context)
-                throws SemanticException
         {
             String sqlString = session.getPreparedStatement(node.getName().getValue());
             Statement statement = parser.createStatement(sqlString, createParsingOptions(session, warningCollector));

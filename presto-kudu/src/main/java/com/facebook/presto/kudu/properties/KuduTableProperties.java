@@ -189,7 +189,7 @@ public final class KuduTableProperties
             design.setHash(hashPartitions);
         }
         else if (!hashColumns2.isEmpty()) {
-            throw new PrestoException(GENERIC_USER_ERROR, "Table property " + PARTITION_BY_HASH_COLUMNS_2 + " is only allowed if there is also " + PARTITION_BY_HASH_COLUMNS);
+            throw new PrestoException(GENERIC_USER_ERROR, new StringBuilder().append("Table property ").append(PARTITION_BY_HASH_COLUMNS_2).append(" is only allowed if there is also ").append(PARTITION_BY_HASH_COLUMNS).toString());
         }
 
         List<String> rangeColumns = (List) tableProperties.get(PARTITION_BY_RANGE_COLUMNS);
@@ -408,7 +408,7 @@ public final class KuduTableProperties
             case BINARY:
                 return bound.getBinaryCopy(idx);
             default:
-                throw new IllegalStateException("Unhandled type " + type + " for range partition");
+                throw new IllegalStateException(new StringBuilder().append("Unhandled type ").append(type).append(" for range partition").toString());
         }
     }
 
@@ -416,14 +416,14 @@ public final class KuduTableProperties
     {
         Schema schema = table.getSchema();
         LinkedHashMap<String, ColumnDesign> columns = new LinkedHashMap<>();
-        for (ColumnSchema columnSchema : schema.getColumns()) {
+        schema.getColumns().forEach(columnSchema -> {
             ColumnDesign design = new ColumnDesign();
             design.setNullable(columnSchema.isNullable());
             design.setPrimaryKey(columnSchema.isKey());
             design.setCompression(lookupCompressionString(columnSchema.getCompressionAlgorithm()));
             design.setEncoding(lookupEncodingString(columnSchema.getEncoding()));
             columns.put(columnSchema.getName(), design);
-        }
+        });
         return columns;
     }
 
@@ -465,8 +465,7 @@ public final class KuduTableProperties
                     .map(schema::getColumnIndex).collect(toImmutableList());
 
             if (rangeColumns.size() != boundValue.getValues().size()) {
-                throw new IllegalStateException("Expected " + rangeColumns.size()
-                        + " range columns, but got " + boundValue.getValues().size());
+                throw new IllegalStateException(new StringBuilder().append("Expected ").append(rangeColumns.size()).append(" range columns, but got ").append(boundValue.getValues().size()).toString());
             }
             for (int i = 0; i < rangeColumns.size(); i++) {
                 Object obj = boundValue.getValues().get(i);
@@ -596,7 +595,7 @@ public final class KuduTableProperties
 
     private static void handleInvalidValue(String name, Type type, Object obj)
     {
-        throw new IllegalStateException("Invalid value " + obj + " for column " + name + " of type " + type);
+        throw new IllegalStateException(new StringBuilder().append("Invalid value ").append(obj).append(" for column ").append(name).append(" of type ").append(type).toString());
     }
 
     public static ColumnSchema.CompressionAlgorithm lookupCompression(String compression)

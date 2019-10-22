@@ -46,16 +46,6 @@ public class BenchmarkBingTilesAround
         return BingTileFunctions.bingTilesAround(0, 0, data.zoomLevel, data.radiusKm);
     }
 
-    @State(Scope.Thread)
-    public static class BenchmarkData
-    {
-        @Param({"10", "14", "20"})
-        private int zoomLevel;
-
-        @Param({"0.1", "1", "5"})
-        private double radiusKm;
-    }
-
     @Test
     public void verify()
     {
@@ -64,13 +54,23 @@ public class BenchmarkBingTilesAround
         new BenchmarkBingTilesAround().benchmark(data);
     }
 
-    public static void main(String[] args)
+	public static void main(String[] args)
             throws RunnerException
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkBingTilesAround.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkBingTilesAround.class.getSimpleName()).append(".*").toString())
                 .build();
         new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
+    public static class BenchmarkData
+    {
+        @Param({"10", "14", "20"})
+        private int zoomLevel;
+
+        @Param({"0.1", "1", "5"})
+        private double radiusKm;
     }
 }

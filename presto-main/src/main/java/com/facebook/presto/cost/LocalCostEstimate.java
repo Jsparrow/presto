@@ -29,31 +29,6 @@ public class LocalCostEstimate
     private final double maxMemory;
     private final double networkCost;
 
-    public static LocalCostEstimate unknown()
-    {
-        return of(NaN, NaN, NaN);
-    }
-
-    public static LocalCostEstimate zero()
-    {
-        return of(0, 0, 0);
-    }
-
-    public static LocalCostEstimate ofCpu(double cpuCost)
-    {
-        return of(cpuCost, 0, 0);
-    }
-
-    public static LocalCostEstimate ofNetwork(double networkCost)
-    {
-        return of(0, 0, networkCost);
-    }
-
-    public static LocalCostEstimate of(double cpuCost, double maxMemory, double networkCost)
-    {
-        return new LocalCostEstimate(cpuCost, maxMemory, networkCost);
-    }
-
     private LocalCostEstimate(double cpuCost, double maxMemory, double networkCost)
     {
         this.cpuCost = cpuCost;
@@ -61,22 +36,47 @@ public class LocalCostEstimate
         this.networkCost = networkCost;
     }
 
-    public double getCpuCost()
+	public static LocalCostEstimate unknown()
+    {
+        return of(NaN, NaN, NaN);
+    }
+
+	public static LocalCostEstimate zero()
+    {
+        return of(0, 0, 0);
+    }
+
+	public static LocalCostEstimate ofCpu(double cpuCost)
+    {
+        return of(cpuCost, 0, 0);
+    }
+
+	public static LocalCostEstimate ofNetwork(double networkCost)
+    {
+        return of(0, 0, networkCost);
+    }
+
+	public static LocalCostEstimate of(double cpuCost, double maxMemory, double networkCost)
+    {
+        return new LocalCostEstimate(cpuCost, maxMemory, networkCost);
+    }
+
+	public double getCpuCost()
     {
         return cpuCost;
     }
 
-    public double getMaxMemory()
+	public double getMaxMemory()
     {
         return maxMemory;
     }
 
-    public double getNetworkCost()
+	public double getNetworkCost()
     {
         return networkCost;
     }
 
-    /**
+	/**
      * @deprecated This class represents individual cost of a part of a plan (usually of a single {@link PlanNode}). Use {@link CostProvider} instead.
      */
     @Deprecated
@@ -85,7 +85,7 @@ public class LocalCostEstimate
         return new PlanCostEstimate(cpuCost, maxMemory, maxMemory, networkCost);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -95,7 +95,7 @@ public class LocalCostEstimate
                 .toString();
     }
 
-    /**
+	/**
      * Sums partial cost estimates of some (single) plan node.
      */
     public static LocalCostEstimate addPartialComponents(LocalCostEstimate one, LocalCostEstimate two, LocalCostEstimate... more)

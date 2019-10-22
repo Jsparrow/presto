@@ -61,6 +61,8 @@ import static com.google.common.collect.Iterables.filter;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class IndexLoader
@@ -132,9 +134,7 @@ public class IndexLoader
         this.indexLoaderTimeout = indexLoaderTimeout;
 
         ImmutableList.Builder<Type> keyTypeBuilder = ImmutableList.builder();
-        for (int keyOutputChannel : keyOutputChannels) {
-            keyTypeBuilder.add(outputTypes.get(keyOutputChannel));
-        }
+        keyOutputChannels.stream().mapToInt(Integer::valueOf).forEach(keyOutputChannel -> keyTypeBuilder.add(outputTypes.get(keyOutputChannel)));
         this.keyTypes = keyTypeBuilder.build();
 
         // start with an empty source
@@ -201,9 +201,7 @@ public class IndexLoader
                 }
                 catch (Throwable t) {
                     // Mark requests as failed since they will not be requeued
-                    for (UpdateRequest request : requests) {
-                        request.failed(t);
-                    }
+					requests.forEach(request -> request.failed(t));
                     throw t;
                 }
 
@@ -283,7 +281,8 @@ public class IndexLoader
     @NotThreadSafe
     private static class IndexSnapshotLoader
     {
-        private final DriverFactory driverFactory;
+        private final Logger logger = LoggerFactory.getLogger(IndexSnapshotLoader.class);
+		private final DriverFactory driverFactory;
         private final PipelineContext pipelineContext;
         private final Set<Integer> lookupSourceInputChannels;
         private final Set<Integer> allInputChannels;
@@ -354,7 +353,8 @@ public class IndexLoader
                         process.get(timeout.toMillis(), MILLISECONDS);
                     }
                     catch (TimeoutException e) {
-                        throw new PrestoException(INDEX_LOADER_TIMEOUT, format("Exceeded the time limit of %s loading indexes for index join", timeout));
+                        logger.error(e.getMessage(), e);
+						throw new PrestoException(INDEX_LOADER_TIMEOUT, format("Exceeded the time limit of %s loading indexes for index join", timeout));
                     }
                     catch (ExecutionException e) {
                         throw new PrestoException(GENERIC_INTERNAL_ERROR, "Error loading index for join", e);
@@ -384,9 +384,7 @@ public class IndexLoader
             }
 
             indexSnapshotReference.set(newValue);
-            for (UpdateRequest request : requests) {
-                request.finished(newValue);
-            }
+            requests.forEach(request -> request.finished(newValue));
             return true;
         }
 

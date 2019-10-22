@@ -102,15 +102,14 @@ public class SplitToMultimapFunction
         pageBuilder.declarePosition();
         BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(0);
         BlockBuilder singleMapBlockBuilder = blockBuilder.beginBlockEntry();
-        for (Map.Entry<Slice, Collection<Slice>> entry : multimap.asMap().entrySet()) {
-            VARCHAR.writeSlice(singleMapBlockBuilder, entry.getKey());
-            Collection<Slice> values = entry.getValue();
-            BlockBuilder valueBlockBuilder = singleMapBlockBuilder.beginBlockEntry();
-            for (Slice value : values) {
-                VARCHAR.writeSlice(valueBlockBuilder, value);
-            }
-            singleMapBlockBuilder.closeEntry();
-        }
+        multimap.asMap().entrySet().stream().map(entry -> {
+			VARCHAR.writeSlice(singleMapBlockBuilder, entry.getKey());
+			return entry.getValue();
+		}).forEach(values -> {
+			BlockBuilder valueBlockBuilder = singleMapBlockBuilder.beginBlockEntry();
+			values.forEach(value -> VARCHAR.writeSlice(valueBlockBuilder, value));
+			singleMapBlockBuilder.closeEntry();
+		});
         blockBuilder.closeEntry();
 
         return (Block) mapType.getObject(blockBuilder, blockBuilder.getPositionCount() - 1);

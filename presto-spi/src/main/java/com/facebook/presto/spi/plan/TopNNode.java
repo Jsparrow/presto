@@ -33,26 +33,12 @@ import static java.util.Objects.requireNonNull;
 public final class TopNNode
         extends PlanNode
 {
-    /**
-     * Stages of `TopNNode`:
-     *
-     * SINGLE:    `TopNNode` is in the logical plan.
-     * PARTIAL:   `TopNNode` is in the distributed plan, and generates partial results of `TopN` on local workers.
-     * FINAL:     `TopNNode` is in the distributed plan, and finalizes the partial results from `PARTIAL` nodes.
-     */
-    public enum Step
-    {
-        SINGLE,
-        PARTIAL,
-        FINAL
-    }
-
     private final PlanNode source;
-    private final long count;
-    private final OrderingScheme orderingScheme;
-    private final Step step;
+	private final long count;
+	private final OrderingScheme orderingScheme;
+	private final Step step;
 
-    @JsonCreator
+	@JsonCreator
     public TopNNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("source") PlanNode source,
@@ -73,66 +59,80 @@ public final class TopNNode
         this.step = requireNonNull(step, "step is null");
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return singletonList(source);
     }
 
-    @JsonProperty("source")
+	@JsonProperty("source")
     public PlanNode getSource()
     {
         return source;
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return source.getOutputVariables();
     }
 
-    @JsonProperty("count")
+	@JsonProperty("count")
     public long getCount()
     {
         return count;
     }
 
-    @JsonProperty("orderingScheme")
+	@JsonProperty("orderingScheme")
     public OrderingScheme getOrderingScheme()
     {
         return orderingScheme;
     }
 
-    @JsonProperty("step")
+	@JsonProperty("step")
     public Step getStep()
     {
         return step;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitTopN(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         checkCondition(newChildren != null && newChildren.size() == 1, GENERIC_INTERNAL_ERROR, "Expect exactly 1 child PlanNode");
         return new TopNNode(getId(), newChildren.get(0), count, orderingScheme, step);
     }
 
-    private static void checkArgument(boolean condition, String message)
+	private static void checkArgument(boolean condition, String message)
     {
         if (!condition) {
             throw new IllegalArgumentException(message);
         }
     }
 
-    private static void checkCondition(boolean condition, ErrorCodeSupplier errorCode, String formatString, Object... args)
+	private static void checkCondition(boolean condition, ErrorCodeSupplier errorCode, String formatString, Object... args)
     {
         if (!condition) {
             throw new PrestoException(errorCode, format(formatString, args));
         }
+    }
+
+	/**
+     * Stages of `TopNNode`:
+     *
+     * SINGLE:    `TopNNode` is in the logical plan.
+     * PARTIAL:   `TopNNode` is in the distributed plan, and generates partial results of `TopN` on local workers.
+     * FINAL:     `TopNNode` is in the distributed plan, and finalizes the partial results from `PARTIAL` nodes.
+     */
+    public enum Step
+    {
+        SINGLE,
+        PARTIAL,
+        FINAL
     }
 }

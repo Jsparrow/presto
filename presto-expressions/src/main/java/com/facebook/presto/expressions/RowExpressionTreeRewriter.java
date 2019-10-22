@@ -33,38 +33,36 @@ public final class RowExpressionTreeRewriter<C>
     private final RowExpressionRewriter<C> rewriter;
     private final RowExpressionVisitor<RowExpression, Context<C>> visitor;
 
-    public static <C, T extends RowExpression> T rewriteWith(RowExpressionRewriter<C> rewriter, T node)
-    {
-        return new RowExpressionTreeRewriter<>(rewriter).rewrite(node, null);
-    }
-
-    public static <C, T extends RowExpression> T rewriteWith(RowExpressionRewriter<C> rewriter, T node, C context)
-    {
-        return new RowExpressionTreeRewriter<>(rewriter).rewrite(node, context);
-    }
-
     public RowExpressionTreeRewriter(RowExpressionRewriter<C> rewriter)
     {
         this.rewriter = rewriter;
         this.visitor = new RewritingVisitor();
     }
 
-    private List<RowExpression> rewrite(List<RowExpression> items, Context<C> context)
+	public static <C, T extends RowExpression> T rewriteWith(RowExpressionRewriter<C> rewriter, T node)
+    {
+        return new RowExpressionTreeRewriter<>(rewriter).rewrite(node, null);
+    }
+
+	public static <C, T extends RowExpression> T rewriteWith(RowExpressionRewriter<C> rewriter, T node, C context)
+    {
+        return new RowExpressionTreeRewriter<>(rewriter).rewrite(node, context);
+    }
+
+	private List<RowExpression> rewrite(List<RowExpression> items, Context<C> context)
     {
         List<RowExpression> rewritenExpressions = new ArrayList<>();
-        for (RowExpression expression : items) {
-            rewritenExpressions.add(rewrite(expression, context.get()));
-        }
+        items.forEach(expression -> rewritenExpressions.add(rewrite(expression, context.get())));
         return Collections.unmodifiableList(rewritenExpressions);
     }
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
     public <T extends RowExpression> T rewrite(T node, C context)
     {
         return (T) node.accept(visitor, new Context<>(context, false));
     }
 
-    /**
+	/**
      * Invoke the default rewrite logic explicitly. Specifically, it skips the invocation of the expression rewriter for the provided node.
      */
     @SuppressWarnings("unchecked")
@@ -73,7 +71,26 @@ public final class RowExpressionTreeRewriter<C>
         return (T) node.accept(visitor, new Context<>(context, true));
     }
 
-    private class RewritingVisitor
+	@SuppressWarnings("ObjectEquality")
+    private static <T> boolean sameElements(Collection<? extends T> a, Collection<? extends T> b)
+    {
+        if (a.size() != b.size()) {
+            return false;
+        }
+
+        Iterator<? extends T> first = a.iterator();
+        Iterator<? extends T> second = b.iterator();
+
+        while (first.hasNext() && second.hasNext()) {
+            if (first.next() != second.next()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+	private class RewritingVisitor
             implements RowExpressionVisitor<RowExpression, Context<C>>
     {
         @Override
@@ -190,24 +207,5 @@ public final class RowExpressionTreeRewriter<C>
         {
             return defaultRewrite;
         }
-    }
-
-    @SuppressWarnings("ObjectEquality")
-    private static <T> boolean sameElements(Collection<? extends T> a, Collection<? extends T> b)
-    {
-        if (a.size() != b.size()) {
-            return false;
-        }
-
-        Iterator<? extends T> first = a.iterator();
-        Iterator<? extends T> second = b.iterator();
-
-        while (first.hasNext() && second.hasNext()) {
-            if (first.next() != second.next()) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

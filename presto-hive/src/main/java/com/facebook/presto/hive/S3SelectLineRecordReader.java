@@ -56,25 +56,25 @@ import static org.apache.hadoop.hive.serde.serdeConstants.SERIALIZATION_FORMAT;
 public abstract class S3SelectLineRecordReader
         implements RecordReader<LongWritable, Text>
 {
-    private InputStream selectObjectContent;
-    private long processedRecords;
-    private long recordsFromS3;
-    private long position;
-    private LineReader reader;
-    private boolean isFirstLine;
     private static final Duration BACKOFF_MIN_SLEEP = new Duration(1, SECONDS);
-    private final PrestoS3SelectClient selectClient;
-    private final long start;
-    private final long end;
-    private final int maxAttempts;
-    private final Duration maxBackoffTime;
-    private final Duration maxRetryTime;
-    private final Closer closer = Closer.create();
-    private final SelectObjectContentRequest selectObjectContentRequest;
-    protected final CompressionCodecFactory compressionCodecFactory;
-    protected final String lineDelimiter;
+	private InputStream selectObjectContent;
+	private long processedRecords;
+	private long recordsFromS3;
+	private long position;
+	private LineReader reader;
+	private boolean isFirstLine;
+	private final PrestoS3SelectClient selectClient;
+	private final long start;
+	private final long end;
+	private final int maxAttempts;
+	private final Duration maxBackoffTime;
+	private final Duration maxRetryTime;
+	private final Closer closer = Closer.create();
+	private final SelectObjectContentRequest selectObjectContentRequest;
+	protected final CompressionCodecFactory compressionCodecFactory;
+	protected final String lineDelimiter;
 
-    S3SelectLineRecordReader(
+	S3SelectLineRecordReader(
             Configuration configuration,
             HiveClientConfig clientConfig,
             Path path,
@@ -110,9 +110,9 @@ public abstract class S3SelectLineRecordReader
         closer.register(selectClient);
     }
 
-    public abstract SelectObjectContentRequest buildSelectObjectRequest(Properties schema, String query, Path path);
+	public abstract SelectObjectContentRequest buildSelectObjectRequest(Properties schema, String query, Path path);
 
-    private int readLine(Text value)
+	private int readLine(Text value)
             throws IOException
     {
         try {
@@ -154,7 +154,7 @@ public abstract class S3SelectLineRecordReader
         }
     }
 
-    @Override
+	@Override
     public synchronized boolean next(LongWritable key, Text value)
             throws IOException
     {
@@ -176,43 +176,43 @@ public abstract class S3SelectLineRecordReader
         }
     }
 
-    @Override
+	@Override
     public LongWritable createKey()
     {
         return new LongWritable();
     }
 
-    @Override
+	@Override
     public Text createValue()
     {
         return new Text();
     }
 
-    @Override
+	@Override
     public long getPos()
     {
         return position;
     }
 
-    @Override
+	@Override
     public void close()
             throws IOException
     {
         closer.close();
     }
 
-    @Override
+	@Override
     public float getProgress()
     {
         return ((float) (position - start)) / (end - start);
     }
 
-    String getFieldDelimiter(Properties schema)
+	String getFieldDelimiter(Properties schema)
     {
         return schema.getProperty(FIELD_DELIM, schema.getProperty(SERIALIZATION_FORMAT));
     }
 
-    /**
+	/**
      * This exception is for stopping retries for S3 Select calls that shouldn't be retried.
      * For example, "Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403 ..."
      */

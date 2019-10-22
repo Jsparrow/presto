@@ -296,7 +296,7 @@ public class StateCompiler
         else if (fields.size() > 1) {
             Variable rowBuilder = scope.declareVariable(BlockBuilder.class, "rowBuilder");
             serializerBody.append(rowBuilder.set(out.invoke("beginBlockEntry", BlockBuilder.class)));
-            for (StateField field : fields) {
+            fields.forEach(field -> {
                 Method getter = getGetter(clazz, field);
                 SqlTypeBytecodeExpression sqlType = constantType(binder, field.getSqlType());
                 Variable fieldValue = scope.createTempVariable(getter.getReturnType());
@@ -310,7 +310,7 @@ public class StateCompiler
                     // For primitive type, we need to cast here because we serialize byte fields with TINYINT/INTEGER (whose java type is long).
                     serializerBody.append(sqlType.writeValue(rowBuilder, fieldValue.cast(field.getSqlType().getJavaType())));
                 }
-            }
+            });
             serializerBody.append(out.invoke("closeEntry", BlockBuilder.class).pop());
         }
         serializerBody.ret();
@@ -431,9 +431,7 @@ public class StateCompiler
 
         // Generate fields
         List<StateField> fields = enumerateFields(clazz, fieldTypes);
-        for (StateField field : fields) {
-            generateField(definition, constructor, field);
-        }
+        fields.forEach(field -> generateField(definition, constructor, field));
 
         constructor.getBody()
                 .ret();
@@ -480,9 +478,7 @@ public class StateCompiler
 
         // Generate fields, constructor, and ensureCapacity
         List<FieldDefinition> fieldDefinitions = new ArrayList<>();
-        for (StateField field : fields) {
-            fieldDefinitions.add(generateGroupedField(definition, constructor, ensureCapacity, field));
-        }
+        fields.forEach(field -> fieldDefinitions.add(generateGroupedField(definition, constructor, ensureCapacity, field)));
 
         constructor.getBody().ret();
         ensureCapacity.getBody().ret();
@@ -497,9 +493,7 @@ public class StateCompiler
         body.append(size.set(getStatic(instanceSize)));
 
         // add field to size
-        for (FieldDefinition field : fieldDefinitions) {
-            body.append(size.set(add(size, getEstimatedSize.getThis().getField(field).invoke("sizeOf", long.class))));
-        }
+		fieldDefinitions.forEach(field -> body.append(size.set(add(size, getEstimatedSize.getThis().getField(field).invoke("sizeOf", long.class)))));
 
         // return size
         body.append(size.ret());
@@ -576,7 +570,7 @@ public class StateCompiler
         final Set<Class<?>> primitiveClasses = ImmutableSet.of(byte.class, boolean.class, long.class, double.class, int.class);
         Set<Class<?>> supportedClasses = getSupportedFieldTypes();
         for (Method method : clazz.getMethods()) {
-            if (method.getName().equals("getEstimatedSize")) {
+            if ("getEstimatedSize".equals(method.getName())) {
                 continue;
             }
             if (method.getName().startsWith("get")) {
@@ -648,16 +642,14 @@ public class StateCompiler
         Set<String> isGetters = new HashSet<>();
 
         Map<String, Class<?>> fieldTypes = new HashMap<>();
-        for (StateField field : fields) {
-            fieldTypes.put(field.getName(), field.getType());
-        }
+        fields.forEach(field -> fieldTypes.put(field.getName(), field.getType()));
 
         for (Method method : clazz.getMethods()) {
             if (Modifier.isStatic(method.getModifiers())) {
                 continue;
             }
 
-            if (method.getName().equals("getEstimatedSize")) {
+            if ("getEstimatedSize".equals(method.getName())) {
                 checkArgument(method.getReturnType().equals(long.class), "getEstimatedSize must return long");
                 checkArgument(method.getParameterTypes().length == 0, "getEstimatedSize may not have parameters");
                 continue;

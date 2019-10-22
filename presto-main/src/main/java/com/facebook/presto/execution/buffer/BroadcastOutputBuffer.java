@@ -163,14 +163,11 @@ public class BroadcastOutputBuffer
             outputBuffers = newOutputBuffers;
 
             // add the new buffers
-            for (Entry<OutputBufferId, Integer> entry : outputBuffers.getBuffers().entrySet()) {
-                if (!buffers.containsKey(entry.getKey())) {
-                    ClientBuffer buffer = getBuffer(entry.getKey());
-                    if (!state.canAddPages()) {
-                        buffer.setNoMorePages();
-                    }
-                }
-            }
+			outputBuffers.getBuffers().entrySet().stream().filter(entry -> !buffers.containsKey(entry.getKey())).map(entry -> getBuffer(entry.getKey())).forEach(buffer -> {
+				if (!state.canAddPages()) {
+			        buffer.setNoMorePages();
+			    }
+			});
 
             // update state if no more buffers is set
             if (outputBuffers.isNoMoreBufferIds()) {
@@ -306,25 +303,25 @@ public class BroadcastOutputBuffer
         checkState(!Thread.holdsLock(this), "Can not destroy while holding a lock on this");
 
         // ignore destroy if the buffer already in a terminal state.
-        if (state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
-            noMoreBuffers();
-
-            safeGetBuffersSnapshot().forEach(ClientBuffer::destroy);
-
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-        }
+		if (!state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		noMoreBuffers();
+		safeGetBuffersSnapshot().forEach(ClientBuffer::destroy);
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
     }
 
     @Override
     public void fail()
     {
         // ignore fail if the buffer already in a terminal state.
-        if (state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-            // DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
-        }
+		if (!state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
+		// DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
     }
 
     @Override

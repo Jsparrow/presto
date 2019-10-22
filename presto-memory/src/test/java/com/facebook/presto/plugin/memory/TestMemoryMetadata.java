@@ -45,11 +45,14 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestMemoryMetadata
 {
-    private MemoryMetadata metadata;
+    private static final Logger logger = LoggerFactory.getLogger(TestMemoryMetadata.class);
+	private MemoryMetadata metadata;
 
     @BeforeMethod
     public void setUp()
@@ -73,7 +76,7 @@ public class TestMemoryMetadata
 
         List<SchemaTableName> tables = metadata.listTables(SESSION, Optional.empty());
         assertTrue(tables.size() == 1, "Expected only one table");
-        assertTrue(tables.get(0).getTableName().equals("temp_table"), "Expected table with name 'temp_table'");
+        assertTrue("temp_table".equals(tables.get(0).getTableName()), "Expected table with name 'temp_table'");
     }
 
     @Test
@@ -188,7 +191,8 @@ public class TestMemoryMetadata
             metadata.createView(SESSION, test, "test", false);
         }
         catch (Exception e) {
-            fail("should have succeeded");
+            logger.error(e.getMessage(), e);
+			fail("should have succeeded");
         }
         metadata.createView(SESSION, test, "test", false);
     }
@@ -317,7 +321,7 @@ public class TestMemoryMetadata
         SchemaTableName invalidSchemaTableName = new SchemaTableName("test_schema_not_exist", "test_table_renamed");
         ConnectorTableHandle tableHandle = metadata.getTableHandle(SESSION, tableName);
         Throwable throwable = expectThrows(SchemaNotFoundException.class, () -> metadata.renameTable(SESSION, tableHandle, invalidSchemaTableName));
-        assertTrue(throwable.getMessage().equals("Schema test_schema_not_exist not found"));
+        assertTrue("Schema test_schema_not_exist not found".equals(throwable.getMessage()));
 
         // rename table to same schema
         SchemaTableName sameSchemaTableName = new SchemaTableName("test_schema", "test_renamed");

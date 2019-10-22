@@ -217,7 +217,27 @@ public class BenchmarkJtsGeometrySerde
         return deserialize(data.complexGeometryCollectionSerialized);
     }
 
-    @State(Scope.Thread)
+    private static Geometry fromText(String text)
+    {
+        try {
+            return new WKTReader().read(text);
+        }
+        catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkJtsGeometrySerde.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         // POINT
@@ -293,33 +313,13 @@ public class BenchmarkJtsGeometrySerde
 
             simpleGeometryCollection = fromText(GEOMETRYCOLLECTION);
             simpleGeometryCollectionSerialized = serialize(simpleGeometryCollection);
-            complexGeometryCollection = fromText("GEOMETRYCOLLECTION (" + Joiner.on(", ").join(
+            complexGeometryCollection = fromText(new StringBuilder().append("GEOMETRYCOLLECTION (").append(Joiner.on(", ").join(
                     readResource("complex-multipoint.txt"),
                     readResource("complex-linestring.txt"),
                     readResource("complex-multilinestring.txt"),
                     readResource("complex-polygon.txt"),
-                    readResource("complex-multipolygon.txt")) + ")");
+                    readResource("complex-multipolygon.txt"))).append(")").toString());
             complexGeometryCollectionSerialized = serialize(complexGeometryCollection);
         }
-    }
-
-    private static Geometry fromText(String text)
-    {
-        try {
-            return new WKTReader().read(text);
-        }
-        catch (ParseException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkJtsGeometrySerde.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

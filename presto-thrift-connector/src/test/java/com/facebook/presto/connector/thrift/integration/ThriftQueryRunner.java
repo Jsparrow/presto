@@ -74,9 +74,7 @@ public final class ThriftQueryRunner
             closeQuietly(runner);
             // runner might be null, so closing servers explicitly
             if (servers != null) {
-                for (DriftServer server : servers) {
-                    server.shutdown();
-                }
+                servers.forEach(DriftServer::shutdown);
             }
             throw t;
         }
@@ -171,12 +169,11 @@ public final class ThriftQueryRunner
                 closeQuietly(source);
                 source = null;
             }
-            if (thriftServers != null) {
-                for (DriftServer server : thriftServers) {
-                    server.shutdown();
-                }
-                thriftServers = null;
-            }
+            if (thriftServers == null) {
+				return;
+			}
+			thriftServers.forEach(DriftServer::shutdown);
+			thriftServers = null;
         }
 
         @Override

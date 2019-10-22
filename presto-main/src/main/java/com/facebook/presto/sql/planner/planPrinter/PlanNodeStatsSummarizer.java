@@ -57,9 +57,7 @@ public class PlanNodeStatsSummarizer
                 .map(TaskInfo::getStats)
                 .flatMap(taskStats -> getPlanNodeStats(taskStats).stream())
                 .collect(toList());
-        for (PlanNodeStats stats : planNodeStats) {
-            aggregatedStats.merge(stats.getPlanNodeId(), stats, (left, right) -> left.mergeWith(right));
-        }
+        planNodeStats.forEach(stats -> aggregatedStats.merge(stats.getPlanNodeId(), stats, PlanNodeStats::mergeWith));
         return aggregatedStats;
     }
 
@@ -138,7 +136,7 @@ public class PlanNodeStatsSummarizer
                 // The only statistics we have for Window Functions are very low level, thus displayed only in VERBOSE mode
                 if (operatorStats.getInfo() instanceof WindowInfo) {
                     WindowInfo windowInfo = (WindowInfo) operatorStats.getInfo();
-                    windowNodeStats.merge(planNodeId, WindowOperatorStats.create(windowInfo), (left, right) -> left.mergeWith(right));
+                    windowNodeStats.merge(planNodeId, WindowOperatorStats.create(windowInfo), WindowOperatorStats::mergeWith);
                 }
 
                 planNodeInputPositions.merge(planNodeId, operatorStats.getInputPositions(), Long::sum);

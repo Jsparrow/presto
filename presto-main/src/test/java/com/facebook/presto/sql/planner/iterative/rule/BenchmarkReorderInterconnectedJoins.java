@@ -61,7 +61,18 @@ public class BenchmarkReorderInterconnectedJoins
         return benchmarkInfo.getQueryRunner().execute(benchmarkInfo.getQuery());
     }
 
-    @State(Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkReorderInterconnectedJoins.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class BenchmarkInfo
     {
         @Param({"ELIMINATE_CROSS_JOINS", "AUTOMATIC"})
@@ -108,16 +119,5 @@ public class BenchmarkReorderInterconnectedJoins
         {
             queryRunner.close();
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkReorderInterconnectedJoins.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

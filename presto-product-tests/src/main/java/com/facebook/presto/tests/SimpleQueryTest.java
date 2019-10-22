@@ -35,7 +35,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class SimpleQueryTest
         extends ProductTest
 {
-    private static class SimpleTestRequirements
+    @BeforeTestWithContext
+    public void beforeTest()
+    {
+        assertThat(testContextIfSet().isPresent()).isTrue();
+    }
+
+	@AfterTestWithContext
+    public void afterTest()
+    {
+        assertThat(testContextIfSet().isPresent()).isTrue();
+    }
+
+	@Test(groups = {SIMPLE, SMOKE})
+    @Requires(SimpleTestRequirements.class)
+    public void selectAllFromNation()
+    {
+        QueryAssert.assertThat(query("select * from nation")).hasRowsCount(25);
+    }
+
+	@Test(groups = {SIMPLE, SMOKE})
+    @Requires(SimpleTestRequirements.class)
+    public void selectCountFromNation()
+    {
+        QueryAssert.assertThat(query("select count(*) from nation"))
+                .hasRowsCount(1)
+                .contains(row(25));
+    }
+
+	private static class SimpleTestRequirements
             implements RequirementsProvider
     {
         @Override
@@ -43,33 +71,5 @@ public class SimpleQueryTest
         {
             return new ImmutableTableRequirement(NATION);
         }
-    }
-
-    @BeforeTestWithContext
-    public void beforeTest()
-    {
-        assertThat(testContextIfSet().isPresent()).isTrue();
-    }
-
-    @AfterTestWithContext
-    public void afterTest()
-    {
-        assertThat(testContextIfSet().isPresent()).isTrue();
-    }
-
-    @Test(groups = {SIMPLE, SMOKE})
-    @Requires(SimpleTestRequirements.class)
-    public void selectAllFromNation()
-    {
-        QueryAssert.assertThat(query("select * from nation")).hasRowsCount(25);
-    }
-
-    @Test(groups = {SIMPLE, SMOKE})
-    @Requires(SimpleTestRequirements.class)
-    public void selectCountFromNation()
-    {
-        QueryAssert.assertThat(query("select count(*) from nation"))
-                .hasRowsCount(1)
-                .contains(row(25));
     }
 }

@@ -220,10 +220,10 @@ public class ImplementIntersectAndExceptAsUnion
         {
             Assignments.Builder assignments = Assignments.builder();
             // add existing intersect symbols to projection
-            for (Map.Entry<VariableReferenceExpression, SymbolReference> entry : projections.entrySet()) {
+			projections.entrySet().forEach(entry -> {
                 VariableReferenceExpression variable = variableAllocator.newVariable(entry.getKey().getName(), entry.getKey().getType());
                 assignments.put(variable, castToRowExpression(entry.getValue()));
-            }
+            });
 
             // add extra marker fields to the projection
             for (int i = 0; i < markers.size(); ++i) {
@@ -237,11 +237,11 @@ public class ImplementIntersectAndExceptAsUnion
         private UnionNode union(List<PlanNode> nodes, List<VariableReferenceExpression> outputs)
         {
             ImmutableListMultimap.Builder<VariableReferenceExpression, VariableReferenceExpression> outputsToInputs = ImmutableListMultimap.builder();
-            for (PlanNode source : nodes) {
+            nodes.forEach(source -> {
                 for (int i = 0; i < source.getOutputVariables().size(); i++) {
                     outputsToInputs.put(outputs.get(i), source.getOutputVariables().get(i));
                 }
-            }
+            });
 
             ListMultimap<VariableReferenceExpression, VariableReferenceExpression> mapping = outputsToInputs.build();
             return new UnionNode(idAllocator.getNextId(), nodes, ImmutableList.copyOf(mapping.keySet()), fromListMultimap(mapping));
@@ -287,9 +287,8 @@ public class ImplementIntersectAndExceptAsUnion
         {
             ImmutableList.Builder<Expression> predicatesBuilder = ImmutableList.builder();
             predicatesBuilder.add(new ComparisonExpression(GREATER_THAN_OR_EQUAL, new SymbolReference(firstSource.getName()), new GenericLiteral("BIGINT", "1")));
-            for (VariableReferenceExpression variable : remainingSources) {
-                predicatesBuilder.add(new ComparisonExpression(EQUAL, new SymbolReference(variable.getName()), new GenericLiteral("BIGINT", "0")));
-            }
+            remainingSources.forEach(variable -> predicatesBuilder.add(new ComparisonExpression(EQUAL, new SymbolReference(variable.getName()),
+					new GenericLiteral("BIGINT", "0"))));
 
             return new FilterNode(idAllocator.getNextId(), aggregation, castToRowExpression(ExpressionUtils.and(predicatesBuilder.build())));
         }

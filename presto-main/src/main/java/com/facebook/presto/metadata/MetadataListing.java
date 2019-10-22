@@ -44,11 +44,7 @@ public final class MetadataListing
         Set<String> allowedCatalogs = accessControl.filterCatalogs(session.getIdentity(), catalogNames.keySet());
 
         ImmutableSortedMap.Builder<String, ConnectorId> result = ImmutableSortedMap.naturalOrder();
-        for (Map.Entry<String, ConnectorId> entry : catalogNames.entrySet()) {
-            if (allowedCatalogs.contains(entry.getKey())) {
-                result.put(entry);
-            }
-        }
+        catalogNames.entrySet().stream().filter(entry -> allowedCatalogs.contains(entry.getKey())).forEach(result::put);
         return result.build();
     }
 
@@ -99,11 +95,7 @@ public final class MetadataListing
                 tableColumns.keySet());
 
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> result = ImmutableMap.builder();
-        for (Entry<SchemaTableName, List<ColumnMetadata>> entry : tableColumns.entrySet()) {
-            if (allowedTables.contains(entry.getKey())) {
-                result.put(entry);
-            }
-        }
+        tableColumns.entrySet().stream().filter(entry -> allowedTables.contains(entry.getKey())).forEach(result::put);
         return result.build();
     }
 }

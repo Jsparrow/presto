@@ -110,15 +110,16 @@ public class KeyValuePairs
      */
     public void add(Block key, Block value, int keyPosition, int valuePosition)
     {
-        if (!keyExists(key, keyPosition)) {
-            addKey(key, keyPosition);
-            if (value.isNull(valuePosition)) {
-                valueBlockBuilder.appendNull();
-            }
-            else {
-                valueType.appendTo(value, valuePosition, valueBlockBuilder);
-            }
-        }
+        if (keyExists(key, keyPosition)) {
+			return;
+		}
+		addKey(key, keyPosition);
+		if (value.isNull(valuePosition)) {
+		    valueBlockBuilder.appendNull();
+		}
+		else {
+		    valueType.appendTo(value, valuePosition, valueBlockBuilder);
+		}
     }
 
     private boolean keyExists(Block key, int position)
@@ -132,12 +133,13 @@ public class KeyValuePairs
         checkArgument(position >= 0, "position is negative");
         keyType.appendTo(key, position, keyBlockBuilder);
         int hashPosition = getHashPositionOfKey(key, position);
-        if (keyPositionByHash[hashPosition] == EMPTY_SLOT) {
-            keyPositionByHash[hashPosition] = keyBlockBuilder.getPositionCount() - 1;
-            if (keyBlockBuilder.getPositionCount() >= maxFill) {
-                rehash();
-            }
-        }
+        if (keyPositionByHash[hashPosition] != EMPTY_SLOT) {
+			return;
+		}
+		keyPositionByHash[hashPosition] = keyBlockBuilder.getPositionCount() - 1;
+		if (keyBlockBuilder.getPositionCount() >= maxFill) {
+		    rehash();
+		}
     }
 
     private int getHashPositionOfKey(Block key, int position)

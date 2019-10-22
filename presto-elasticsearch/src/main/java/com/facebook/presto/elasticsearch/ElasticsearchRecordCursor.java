@@ -253,14 +253,10 @@ public class ElasticsearchRecordCursor
     private void extractFromSource(SearchHit hit)
     {
         List<Field> fields = new ArrayList<>();
-        for (Map.Entry<String, Object> entry : hit.getSourceAsMap().entrySet()) {
-            fields.add(new Field(entry.getKey(), entry.getValue()));
-        }
-        Collections.sort(fields, Comparator.comparing(Field::getName));
+        hit.getSourceAsMap().entrySet().forEach(entry -> fields.add(new Field(entry.getKey(), entry.getValue())));
+        fields.sort(Comparator.comparing(Field::getName));
 
-        for (Map.Entry<String, Object> entry : unflatten(fields).entrySet()) {
-            setFieldIfExists(entry.getKey(), entry.getValue());
-        }
+        unflatten(fields).entrySet().forEach(entry -> setFieldIfExists(entry.getKey(), entry.getValue()));
     }
 
     private static Map<String, Object> unflatten(List<Field> fields)

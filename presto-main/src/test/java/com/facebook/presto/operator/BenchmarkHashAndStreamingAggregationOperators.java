@@ -87,7 +87,81 @@ public class BenchmarkHashAndStreamingAggregationOperators
     private static final InternalAggregationFunction COUNT = functionManager.getAggregateFunctionImplementation(
             functionManager.lookupFunction("count", ImmutableList.of()));
 
-    @State(Thread)
+    @Benchmark
+    public List<Page> benchmark(Context context)
+    {
+        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+        Operator operator = context.getOperatorFactory().createOperator(driverContext);
+
+        Iterator<Page> input = context.getPages().iterator();
+        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
+
+        boolean finishing = false;
+        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
+            if (operator.needsInput()) {
+                if (input.hasNext()) {
+                    Page inputPage = input.next();
+                    operator.addInput(inputPage);
+                }
+                else if (!finishing) {
+                    operator.finish();
+                    finishing = true;
+                }
+            }
+
+            Page outputPage = operator.getOutput();
+            if (outputPage != null) {
+                outputPages.add(outputPage);
+            }
+        }
+
+        return outputPages.build();
+    }
+
+	@Test
+    public void verifyStreaming()
+    {
+        verify(1, "streaming");
+        verify(10, "streaming");
+        verify(1000, "streaming");
+    }
+
+	@Test
+    public void verifyHash()
+    {
+        verify(1, "hash");
+        verify(10, "hash");
+        verify(1000, "hash");
+    }
+
+	private void verify(int rowsPerGroup, String operatorType)
+    {
+        Context context = new Context();
+        context.operatorType = operatorType;
+        context.rowsPerGroup = rowsPerGroup;
+        context.setup();
+
+        assertEquals(TOTAL_PAGES, context.getPages().size());
+        for (int i = 0; i < TOTAL_PAGES; i++) {
+            assertEquals(ROWS_PER_PAGE, context.getPages().get(i).getPositionCount());
+        }
+
+        List<Page> outputPages = benchmark(context);
+        assertEquals(TOTAL_PAGES * ROWS_PER_PAGE / rowsPerGroup, outputPages.stream().mapToInt(Page::getPositionCount).sum());
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkHashAndStreamingAggregationOperators.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class Context
     {
         public static final int TOTAL_PAGES = 140;
@@ -112,7 +186,7 @@ public class BenchmarkHashAndStreamingAggregationOperators
 
             int groupsPerPage = ROWS_PER_PAGE / rowsPerGroup;
 
-            boolean hashAggregation = operatorType.equalsIgnoreCase("hash");
+            boolean hashAggregation = "hash".equalsIgnoreCase(operatorType);
 
             RowPagesBuilder pagesBuilder = RowPagesBuilder.rowPagesBuilder(hashAggregation, ImmutableList.of(0), VARCHAR, BIGINT);
             for (int i = 0; i < TOTAL_PAGES; i++) {
@@ -196,79 +270,5 @@ public class BenchmarkHashAndStreamingAggregationOperators
         {
             return pages;
         }
-    }
-
-    @Benchmark
-    public List<Page> benchmark(Context context)
-    {
-        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
-        Operator operator = context.getOperatorFactory().createOperator(driverContext);
-
-        Iterator<Page> input = context.getPages().iterator();
-        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
-
-        boolean finishing = false;
-        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
-            if (operator.needsInput()) {
-                if (input.hasNext()) {
-                    Page inputPage = input.next();
-                    operator.addInput(inputPage);
-                }
-                else if (!finishing) {
-                    operator.finish();
-                    finishing = true;
-                }
-            }
-
-            Page outputPage = operator.getOutput();
-            if (outputPage != null) {
-                outputPages.add(outputPage);
-            }
-        }
-
-        return outputPages.build();
-    }
-
-    @Test
-    public void verifyStreaming()
-    {
-        verify(1, "streaming");
-        verify(10, "streaming");
-        verify(1000, "streaming");
-    }
-
-    @Test
-    public void verifyHash()
-    {
-        verify(1, "hash");
-        verify(10, "hash");
-        verify(1000, "hash");
-    }
-
-    private void verify(int rowsPerGroup, String operatorType)
-    {
-        Context context = new Context();
-        context.operatorType = operatorType;
-        context.rowsPerGroup = rowsPerGroup;
-        context.setup();
-
-        assertEquals(TOTAL_PAGES, context.getPages().size());
-        for (int i = 0; i < TOTAL_PAGES; i++) {
-            assertEquals(ROWS_PER_PAGE, context.getPages().get(i).getPositionCount());
-        }
-
-        List<Page> outputPages = benchmark(context);
-        assertEquals(TOTAL_PAGES * ROWS_PER_PAGE / rowsPerGroup, outputPages.stream().mapToInt(Page::getPositionCount).sum());
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkHashAndStreamingAggregationOperators.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

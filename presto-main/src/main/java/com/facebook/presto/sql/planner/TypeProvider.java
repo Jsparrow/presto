@@ -31,32 +31,32 @@ public class TypeProvider
 {
     private final Map<String, Type> types;
 
-    public static TypeProvider viewOf(Map<String, Type> types)
-    {
-        return new TypeProvider(types);
-    }
-
-    public static TypeProvider copyOf(Map<String, Type> types)
-    {
-        return new TypeProvider(ImmutableMap.copyOf(types));
-    }
-
-    public static TypeProvider empty()
-    {
-        return new TypeProvider(ImmutableMap.of());
-    }
-
-    public static TypeProvider fromVariables(Collection<VariableReferenceExpression> variables)
-    {
-        return new TypeProvider(variables.stream().collect(toImmutableMap(VariableReferenceExpression::getName, VariableReferenceExpression::getType)));
-    }
-
     private TypeProvider(Map<String, Type> types)
     {
         this.types = types;
     }
 
-    public Type get(Expression expression)
+	public static TypeProvider viewOf(Map<String, Type> types)
+    {
+        return new TypeProvider(types);
+    }
+
+	public static TypeProvider copyOf(Map<String, Type> types)
+    {
+        return new TypeProvider(ImmutableMap.copyOf(types));
+    }
+
+	public static TypeProvider empty()
+    {
+        return new TypeProvider(ImmutableMap.of());
+    }
+
+	public static TypeProvider fromVariables(Collection<VariableReferenceExpression> variables)
+    {
+        return new TypeProvider(variables.stream().collect(toImmutableMap(VariableReferenceExpression::getName, VariableReferenceExpression::getType)));
+    }
+
+	public Type get(Expression expression)
     {
         requireNonNull(expression, "expression is null");
         Symbol symbol = Symbol.from(expression);
@@ -66,7 +66,7 @@ public class TypeProvider
         return type;
     }
 
-    public Set<VariableReferenceExpression> allVariables()
+	public Set<VariableReferenceExpression> allVariables()
     {
         return types.entrySet().stream()
                 .map(entry -> new VariableReferenceExpression(entry.getKey(), entry.getValue()))

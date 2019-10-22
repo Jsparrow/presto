@@ -26,8 +26,6 @@ import static org.testng.Assert.assertTrue;
 public class TestKuduIntegrationRangePartitioning
         extends AbstractTestQueryFramework
 {
-    private QueryRunner queryRunner;
-
     static final TestRanges[] testRangesList = {
             new TestRanges("varchar",
                     "{\"lower\": null, \"upper\": \"D\"}",
@@ -83,12 +81,14 @@ public class TestKuduIntegrationRangePartitioning
                     "{\"lower\": [2, \"Z\"], \"upper\": null}"),
     };
 
-    public TestKuduIntegrationRangePartitioning()
+	private QueryRunner queryRunner;
+
+	public TestKuduIntegrationRangePartitioning()
     {
         super(() -> KuduQueryRunnerFactory.createKuduQueryRunner("range_partitioning"));
     }
 
-    @Test
+	@Test
     public void testCreateAndChangeTableWithRangePartition()
     {
         for (TestRanges ranges : testRangesList) {
@@ -96,37 +96,36 @@ public class TestKuduIntegrationRangePartitioning
         }
     }
 
-    public void doTestCreateAndChangeTableWithRangePartition(TestRanges ranges)
+	public void doTestCreateAndChangeTableWithRangePartition(TestRanges ranges)
     {
         String[] types = ranges.types;
         String name = String.join("_", ranges.types);
         String tableName = "range_partitioning_" + name;
-        String createTable = "CREATE TABLE " + tableName + " (\n";
+        String createTable = new StringBuilder().append("CREATE TABLE ").append(tableName).append(" (\n").toString();
         String rangePartitionColumns = "ARRAY[";
         for (int i = 0; i < types.length; i++) {
             String type = types[i];
             String columnName = "key" + i;
-            createTable += "  " + columnName + " " + type + " WITH (primary_key=true),\n";
+            createTable += new StringBuilder().append("  ").append(columnName).append(" ").append(type).append(" WITH (primary_key=true),\n").toString();
             if (i > 0) {
                 rangePartitionColumns += ",";
             }
-            rangePartitionColumns += "'" + columnName + "'";
+            rangePartitionColumns += new StringBuilder().append("'").append(columnName).append("'").toString();
         }
         rangePartitionColumns += "]";
 
         createTable +=
-                "  value varchar\n" +
-                        ") WITH (\n" +
-                        " partition_by_range_columns = " + rangePartitionColumns + ",\n" +
-                        " range_partitions = '[" + ranges.range1 + "," + ranges.range2 + "]'\n" +
-                        ")";
+                new StringBuilder().append("  value varchar\n").append(") WITH (\n").append(" partition_by_range_columns = ").append(rangePartitionColumns).append(",\n").append(" range_partitions = '[")
+						.append(ranges.range1).append(",").append(ranges.range2).append("]'\n").append(")").toString();
         queryRunner.execute(createTable);
 
         String schema = queryRunner.getDefaultSession().getSchema().get();
 
-        String addPartition3 = "CALL kudu.system.add_range_partition('" + schema + "','" + tableName + "','" + ranges.range3 + "')";
+        String addPartition3 = new StringBuilder().append("CALL kudu.system.add_range_partition('").append(schema).append("','").append(tableName).append("','").append(ranges.range3)
+				.append("')").toString();
         queryRunner.execute(addPartition3);
-        String addPartition4 = "CALL kudu.system.add_range_partition('" + schema + "','" + tableName + "','" + ranges.range4 + "')";
+        String addPartition4 = new StringBuilder().append("CALL kudu.system.add_range_partition('").append(schema).append("','").append(tableName).append("','").append(ranges.range4)
+				.append("')").toString();
         queryRunner.execute(addPartition4);
 
         String dropPartition3 = addPartition3.replace(".add_range_partition(", ".drop_range_partition(");
@@ -135,28 +134,30 @@ public class TestKuduIntegrationRangePartitioning
         MaterializedResult result = queryRunner.execute("SHOW CREATE TABLE " + tableName);
         assertEquals(result.getRowCount(), 1);
         String createSQL = result.getMaterializedRows().get(0).getField(0).toString();
-        String rangesArray = "'[" + ranges.cmp1 + "," + ranges.cmp2 + "," + ranges.cmp4 + "]'";
+        String rangesArray = new StringBuilder().append("'[").append(ranges.cmp1).append(",").append(ranges.cmp2).append(",")
+				.append(ranges.cmp4).append("]'").toString();
         rangesArray = rangesArray.replaceAll("\\s+", "");
         String expectedRanges = "range_partitions = " + rangesArray;
-        assertTrue(createSQL.contains(expectedRanges), createSQL + "\ncontains\n" + expectedRanges);
+        assertTrue(createSQL.contains(expectedRanges), new StringBuilder().append(createSQL).append("\ncontains\n").append(expectedRanges).toString());
     }
 
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         queryRunner = getQueryRunner();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public final void destroy()
     {
-        if (queryRunner != null) {
-            queryRunner.close();
-            queryRunner = null;
-        }
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.close();
+		queryRunner = null;
     }
 
-    static class TestRanges
+	static class TestRanges
     {
         final String[] types;
         final String range1;

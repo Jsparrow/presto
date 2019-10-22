@@ -49,25 +49,25 @@ import static java.util.Objects.requireNonNull;
 public class HashBuildAndJoinBenchmark
         extends AbstractOperatorBenchmark
 {
-    private final boolean hashEnabled;
-    private final List<Type> ordersTableTypes = getColumnTypes("orders", "orderkey", "totalprice");
-    private final OperatorFactory ordersTableScan = createTableScanOperator(0, new PlanNodeId("test"), "orders", "orderkey", "totalprice");
-    private final List<Type> lineItemTableTypes = getColumnTypes("lineitem", "orderkey", "quantity");
-    private final OperatorFactory lineItemTableScan = createTableScanOperator(0, new PlanNodeId("test"), "lineitem", "orderkey", "quantity");
     private static final LookupJoinOperators LOOKUP_JOIN_OPERATORS = new LookupJoinOperators();
+	private final boolean hashEnabled;
+	private final List<Type> ordersTableTypes = getColumnTypes("orders", "orderkey", "totalprice");
+	private final OperatorFactory ordersTableScan = createTableScanOperator(0, new PlanNodeId("test"), "orders", "orderkey", "totalprice");
+	private final List<Type> lineItemTableTypes = getColumnTypes("lineitem", "orderkey", "quantity");
+	private final OperatorFactory lineItemTableScan = createTableScanOperator(0, new PlanNodeId("test"), "lineitem", "orderkey", "quantity");
 
-    public HashBuildAndJoinBenchmark(Session session, LocalQueryRunner localQueryRunner)
+	public HashBuildAndJoinBenchmark(Session session, LocalQueryRunner localQueryRunner)
     {
         super(session, localQueryRunner, "hash_build_and_join_hash_enabled_" + isHashEnabled(session), 4, 5);
         this.hashEnabled = isHashEnabled(session);
     }
 
-    private static boolean isHashEnabled(Session session)
+	private static boolean isHashEnabled(Session session)
     {
         return SystemSessionProperties.isOptimizeHashGenerationEnabled(session);
     }
 
-    /*
+	/*
     select orderkey, quantity, totalprice
     from lineitem join orders using (orderkey)
      */
@@ -152,7 +152,7 @@ public class HashBuildAndJoinBenchmark
         return ImmutableList.of(hashBuildDriver, joinDriver);
     }
 
-    public static void main(String[] args)
+	public static void main(String[] args)
     {
         new HashBuildAndJoinBenchmark(testSessionBuilder().build(), createLocalQueryRunner()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
         new HashBuildAndJoinBenchmark(testSessionBuilder().build(), createLocalQueryRunnerHashEnabled()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));

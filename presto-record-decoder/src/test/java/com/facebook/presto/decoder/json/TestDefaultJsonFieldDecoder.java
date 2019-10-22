@@ -44,25 +44,25 @@ public class TestDefaultJsonFieldDecoder
         tester.assertDecodedAs("" + Byte.MAX_VALUE, TINYINT, Byte.MAX_VALUE);
         tester.assertDecodedAs("0", TINYINT, 0);
         tester.assertDecodedAs("\"10\"", TINYINT, 10);
-        assertCouldNotParse("" + (Byte.MIN_VALUE - 1), TINYINT);
-        assertCouldNotParse("" + (Byte.MAX_VALUE + 1), TINYINT);
+        assertCouldNotParse(Integer.toString((Byte.MIN_VALUE - 1)), TINYINT);
+        assertCouldNotParse(Integer.toString((Byte.MAX_VALUE + 1)), TINYINT);
 
         tester.assertDecodedAs("" + Short.MIN_VALUE, SMALLINT, Short.MIN_VALUE);
         tester.assertDecodedAs("" + Short.MAX_VALUE, SMALLINT, Short.MAX_VALUE);
         tester.assertDecodedAs("0", SMALLINT, 0);
         tester.assertDecodedAs("\"1000\"", SMALLINT, 1000);
-        assertCouldNotParse("" + (Short.MIN_VALUE - 1), SMALLINT);
-        assertCouldNotParse("" + (Short.MAX_VALUE + 1), SMALLINT);
+        assertCouldNotParse(Integer.toString((Short.MIN_VALUE - 1)), SMALLINT);
+        assertCouldNotParse(Integer.toString((Short.MAX_VALUE + 1)), SMALLINT);
 
-        tester.assertDecodedAs("" + Integer.MIN_VALUE, INTEGER, Integer.MIN_VALUE);
-        tester.assertDecodedAs("" + Integer.MAX_VALUE, INTEGER, Integer.MAX_VALUE);
+        tester.assertDecodedAs(Integer.toString(Integer.MIN_VALUE), INTEGER, Integer.MIN_VALUE);
+        tester.assertDecodedAs(Integer.toString(Integer.MAX_VALUE), INTEGER, Integer.MAX_VALUE);
         tester.assertDecodedAs("0", INTEGER, 0);
         tester.assertDecodedAs("\"1000\"", INTEGER, 1000);
-        assertCouldNotParse("" + (Integer.MIN_VALUE - 1L), INTEGER);
-        assertCouldNotParse("" + (Integer.MAX_VALUE + 1L), INTEGER);
+        assertCouldNotParse(Long.toString((Integer.MIN_VALUE - 1L)), INTEGER);
+        assertCouldNotParse(Long.toString((Integer.MAX_VALUE + 1L)), INTEGER);
 
-        tester.assertDecodedAs("" + Long.MIN_VALUE, BIGINT, Long.MIN_VALUE);
-        tester.assertDecodedAs("" + Long.MAX_VALUE, BIGINT, Long.MAX_VALUE);
+        tester.assertDecodedAs(Long.toString(Long.MIN_VALUE), BIGINT, Long.MIN_VALUE);
+        tester.assertDecodedAs(Long.toString(Long.MAX_VALUE), BIGINT, Long.MAX_VALUE);
         tester.assertDecodedAs("0", BIGINT, 0);
         tester.assertDecodedAs("\"1000\"", BIGINT, 1000);
         assertCouldNotParse("" + (BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE)), BIGINT);
@@ -83,19 +83,19 @@ public class TestDefaultJsonFieldDecoder
     @Test
     public void testDecodeNulls()
     {
-        for (Type type : asList(TINYINT, SMALLINT, INTEGER, BIGINT, DOUBLE, BOOLEAN)) {
+        asList(TINYINT, SMALLINT, INTEGER, BIGINT, DOUBLE, BOOLEAN).forEach(type -> {
             tester.assertDecodedAsNull("null", type);
             tester.assertMissingDecodedAsNull(type);
-        }
+        });
     }
 
     @Test
     public void decodeNonValue()
     {
-        for (Type type : asList(TINYINT, SMALLINT, INTEGER, BIGINT, DOUBLE, BOOLEAN)) {
+        asList(TINYINT, SMALLINT, INTEGER, BIGINT, DOUBLE, BOOLEAN).forEach(type -> {
             assertCouldNotParse("{}", type);
             assertCouldNotParse("[]", type);
-        }
+        });
     }
 
     private void assertCouldNotParse(String jsonValue, Type type)

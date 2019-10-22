@@ -72,7 +72,50 @@ public class BenchmarkSTArea
         return GeoFunctions.stArea(data.geometry500k);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws IOException, RunnerException
+    {
+        // assure the benchmarks are valid before running
+        verify();
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSTArea.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@Test
+    public static void verify() throws IOException
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        BenchmarkSTArea benchmark = new BenchmarkSTArea();
+
+        assertEquals(Math.round(1000 * (Double) benchmark.stSphericalArea(data) / 3.659E8), 1000);
+        assertEquals(Math.round(1000 * (Double) benchmark.stSphericalArea500k(data) / 38842273735.0), 1000);
+        assertEquals(benchmark.stArea(data), 0.05033099592771004);
+        assertEquals(Math.round(1000 * (Double) benchmark.stArea500k(data) / Math.PI), 1000);
+    }
+
+	private static String createPolygon(double numVertices)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("POLYGON((");
+        String separator = "";
+        for (int i = 0; i < numVertices; i++) {
+            double angle = i * Math.PI * 2 / numVertices;
+            sb.append(separator);
+            sb.append(Math.cos(angle));
+            sb.append(" ");
+            sb.append(Math.sin(angle));
+            separator = ",";
+        }
+        sb.append("))");
+        return sb.toString();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice geometry;
@@ -89,48 +132,5 @@ public class BenchmarkSTArea
             geography = toSphericalGeography(geometry);
             geography500k = toSphericalGeography(geometry500k);
         }
-    }
-
-    public static void main(String[] args)
-            throws IOException, RunnerException
-    {
-        // assure the benchmarks are valid before running
-        verify();
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSTArea.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
-    }
-
-    @Test
-    public static void verify() throws IOException
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        BenchmarkSTArea benchmark = new BenchmarkSTArea();
-
-        assertEquals(Math.round(1000 * (Double) benchmark.stSphericalArea(data) / 3.659E8), 1000);
-        assertEquals(Math.round(1000 * (Double) benchmark.stSphericalArea500k(data) / 38842273735.0), 1000);
-        assertEquals(benchmark.stArea(data), 0.05033099592771004);
-        assertEquals(Math.round(1000 * (Double) benchmark.stArea500k(data) / Math.PI), 1000);
-    }
-
-    private static String createPolygon(double numVertices)
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.append("POLYGON((");
-        String separator = "";
-        for (int i = 0; i < numVertices; i++) {
-            double angle = i * Math.PI * 2 / numVertices;
-            sb.append(separator);
-            sb.append(Math.cos(angle));
-            sb.append(" ");
-            sb.append(Math.sin(angle));
-            separator = ",";
-        }
-        sb.append("))");
-        return sb.toString();
     }
 }

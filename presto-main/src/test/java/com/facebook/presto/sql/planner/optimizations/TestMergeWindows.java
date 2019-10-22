@@ -140,11 +140,7 @@ public class TestMergeWindows
     @Test
     public void testMergeableWindowsAllOptimizers()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         PlanMatchPattern pattern =
                 anyTree(
@@ -165,11 +161,7 @@ public class TestMergeWindows
     @Test
     public void testIdenticalWindowSpecificationsABA()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -186,11 +178,7 @@ public class TestMergeWindows
     @Test
     public void testIdenticalWindowSpecificationsABcpA()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "LAG(quantity, 1, 0.0E0) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("LAG(quantity, 1, 0.0E0) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -210,17 +198,8 @@ public class TestMergeWindows
     {
         // This test makes sure that we don't merge window nodes across filter nodes, which obviously would affect
         // the result of the window function by removing some input values.
-        @Language("SQL") String sql = "" +
-                "SELECT" +
-                "  sum_discount_A, " +
-                "  SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "  SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B " +
-                "FROM (" +
-                "  SELECT" +
-                "    *, " +
-                "    SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "  FROM lineitem)" +
-                "WHERE shipdate IS NOT NULL";
+        @Language("SQL") String sql = new StringBuilder().append("").append("SELECT").append("  sum_discount_A, ").append("  SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("  SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B ").append("FROM (").append("  SELECT").append("    *, ")
+				.append("    SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("  FROM lineitem)").append("WHERE shipdate IS NOT NULL").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -241,11 +220,7 @@ public class TestMergeWindows
     @Test
     public void testIdenticalWindowSpecificationsAAcpA()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "LAG(quantity, 1, 0.0E0) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("LAG(quantity, 1, 0.0E0) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_B, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -261,17 +236,8 @@ public class TestMergeWindows
     @Test
     public void testIdenticalWindowSpecificationsAAfilterA()
     {
-        @Language("SQL") String sql = "" +
-                "SELECT" +
-                "  sum_discount_A, " +
-                "  SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, " +
-                "  AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) avg_quantity_A " +
-                "FROM (" +
-                "  SELECT" +
-                "    *, " +
-                "    SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "  FROM lineitem)" +
-                "WHERE shipdate IS NOT NULL";
+        @Language("SQL") String sql = new StringBuilder().append("").append("SELECT").append("  sum_discount_A, ").append("  SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_A, ").append("  AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) avg_quantity_A ").append("FROM (").append("  SELECT").append("    *, ")
+				.append("    SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("  FROM lineitem)").append("WHERE shipdate IS NOT NULL").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -300,11 +266,7 @@ public class TestMergeWindows
                 ImmutableList.of(SHIPDATE_ALIAS),
                 ImmutableMap.of(SHIPDATE_ALIAS, SortOrder.ASC_NULLS_LAST));
 
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION By suppkey ORDER BY orderkey), " +
-                "SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate), " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey) " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION By suppkey ORDER BY orderkey), ").append("SUM(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate), ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey) ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -336,11 +298,7 @@ public class TestMergeWindows
                 new FrameBound(FrameBound.Type.CURRENT_ROW),
                 Optional.of(new FrameBound(FrameBound.Type.UNBOUNDED_FOLLOWING))));
 
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, " +
-                "AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) avg_quantity_D, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_C " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, ").append("AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) avg_quantity_D, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_C ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -365,11 +323,7 @@ public class TestMergeWindows
                 ImmutableList.of(ORDERKEY_ALIAS),
                 ImmutableMap.of(ORDERKEY_ALIAS, SortOrder.ASC_NULLS_LAST));
 
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey) sum_quantity_C, " +
-                "AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) avg_quantity_D, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey) sum_discount_C " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey) sum_quantity_C, ").append("AVG(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) avg_quantity_D, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey) sum_discount_C ").append("FROM lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -388,19 +342,8 @@ public class TestMergeWindows
         String rShipdateAlias = "R_SHIPDATE";
         String rQuantityAlias = "R_QUANTITY";
 
-        @Language("SQL") String sql = "WITH foo AS (" +
-                "SELECT " +
-                "suppkey, orderkey, partkey, " +
-                "SUM(discount) OVER (PARTITION BY orderkey ORDER BY shipdate, quantity DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) a " +
-                "FROM lineitem WHERE (partkey = 272 OR partkey = 273) AND suppkey > 50 " +
-                "), " +
-                "bar AS ( " +
-                "SELECT " +
-                "suppkey, orderkey, partkey, " +
-                "AVG(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate, quantity DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) b " +
-                "FROM lineitem WHERE (partkey = 272 OR partkey = 273) AND suppkey > 50 " +
-                ")" +
-                "SELECT * FROM foo, bar WHERE foo.a = bar.b";
+        @Language("SQL") String sql = new StringBuilder().append("WITH foo AS (").append("SELECT ").append("suppkey, orderkey, partkey, ").append("SUM(discount) OVER (PARTITION BY orderkey ORDER BY shipdate, quantity DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) a ").append("FROM lineitem WHERE (partkey = 272 OR partkey = 273) AND suppkey > 50 ").append("), ").append("bar AS ( ").append("SELECT ")
+				.append("suppkey, orderkey, partkey, ").append("AVG(quantity) OVER (PARTITION BY orderkey ORDER BY shipdate, quantity DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) b ").append("FROM lineitem WHERE (partkey = 272 OR partkey = 273) AND suppkey > 50 ").append(")").append("SELECT * FROM foo, bar WHERE foo.a = bar.b").toString();
 
         ExpectedValueProvider<WindowNode.Specification> leftSpecification = specification(
                 ImmutableList.of(ORDERKEY_ALIAS),
@@ -453,10 +396,7 @@ public class TestMergeWindows
     @Test
     public void testNotMergeDifferentPartition()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, " +
-                "SUM(quantity) over (PARTITION BY quantity ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, ").append("SUM(quantity) over (PARTITION BY quantity ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C ").append("FROM lineitem").toString();
 
         ExpectedValueProvider<WindowNode.Specification> specificationC = specification(
                 ImmutableList.of(QUANTITY_ALIAS),
@@ -477,10 +417,7 @@ public class TestMergeWindows
     @Test
     public void testNotMergeDifferentOrderBy()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY quantity ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY quantity ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C ").append("FROM lineitem").toString();
 
         ExpectedValueProvider<WindowNode.Specification> specificationC = specification(
                 ImmutableList.of(SUPPKEY_ALIAS),
@@ -501,11 +438,7 @@ public class TestMergeWindows
     @Test
     public void testNotMergeDifferentOrdering()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(extendedprice) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, " +
-                "SUM(quantity) over (PARTITION BY suppkey ORDER BY orderkey DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, " +
-                "SUM(discount) over (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(extendedprice) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, ").append("SUM(quantity) over (PARTITION BY suppkey ORDER BY orderkey DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, ").append("SUM(discount) over (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         ExpectedValueProvider<WindowNode.Specification> specificationC = specification(
                 ImmutableList.of(SUPPKEY_ALIAS),
@@ -527,11 +460,7 @@ public class TestMergeWindows
     @Test
     public void testNotMergeDifferentNullOrdering()
     {
-        @Language("SQL") String sql = "SELECT " +
-                "SUM(extendedprice) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, " +
-                "SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, " +
-                "SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A " +
-                "FROM lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT ").append("SUM(extendedprice) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_extendedprice_A, ").append("SUM(quantity) OVER (PARTITION BY suppkey ORDER BY orderkey NULLS FIRST ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_quantity_C, ").append("SUM(discount) OVER (PARTITION BY suppkey ORDER BY orderkey ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_discount_A ").append("FROM lineitem").toString();
 
         ExpectedValueProvider<WindowNode.Specification> specificationC = specification(
                 ImmutableList.of(SUPPKEY_ALIAS),

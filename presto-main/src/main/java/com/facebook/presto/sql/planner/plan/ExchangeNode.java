@@ -46,51 +46,15 @@ import static java.util.Objects.requireNonNull;
 public class ExchangeNode
         extends InternalPlanNode
 {
-    public enum Type
-    {
-        GATHER,
-        REPARTITION,
-        REPLICATE
-    }
-
-    public enum Scope
-    {
-        LOCAL(false),
-        REMOTE_STREAMING(true),
-        REMOTE_MATERIALIZED(true),
-        /**/;
-
-        private boolean remote;
-
-        Scope(boolean remote)
-        {
-            this.remote = remote;
-        }
-
-        public boolean isRemote()
-        {
-            return remote;
-        }
-
-        public boolean isLocal()
-        {
-            return !isRemote();
-        }
-    }
-
     private final Type type;
-    private final Scope scope;
-
-    private final List<PlanNode> sources;
-
-    private final PartitioningScheme partitioningScheme;
-
-    // for each source, the list of inputs corresponding to each output
+	private final Scope scope;
+	private final List<PlanNode> sources;
+	private final PartitioningScheme partitioningScheme;
+	// for each source, the list of inputs corresponding to each output
     private final List<List<VariableReferenceExpression>> inputs;
+	private final Optional<OrderingScheme> orderingScheme;
 
-    private final Optional<OrderingScheme> orderingScheme;
-
-    @JsonCreator
+	@JsonCreator
     public ExchangeNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("type") Type type,
@@ -136,12 +100,12 @@ public class ExchangeNode
         this.orderingScheme = orderingScheme;
     }
 
-    public static ExchangeNode systemPartitionedExchange(PlanNodeId id, Scope scope, PlanNode child, List<VariableReferenceExpression> partitioningColumns, Optional<VariableReferenceExpression> hashColumn)
+	public static ExchangeNode systemPartitionedExchange(PlanNodeId id, Scope scope, PlanNode child, List<VariableReferenceExpression> partitioningColumns, Optional<VariableReferenceExpression> hashColumn)
     {
         return systemPartitionedExchange(id, scope, child, partitioningColumns, hashColumn, false);
     }
 
-    public static ExchangeNode systemPartitionedExchange(PlanNodeId id, Scope scope, PlanNode child, List<VariableReferenceExpression> partitioningColumns, Optional<VariableReferenceExpression> hashColumn, boolean replicateNullsAndAny)
+	public static ExchangeNode systemPartitionedExchange(PlanNodeId id, Scope scope, PlanNode child, List<VariableReferenceExpression> partitioningColumns, Optional<VariableReferenceExpression> hashColumn, boolean replicateNullsAndAny)
     {
         return partitionedExchange(
                 id,
@@ -152,12 +116,12 @@ public class ExchangeNode
                 replicateNullsAndAny);
     }
 
-    public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, Partitioning partitioning, Optional<VariableReferenceExpression> hashColumn)
+	public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, Partitioning partitioning, Optional<VariableReferenceExpression> hashColumn)
     {
         return partitionedExchange(id, scope, child, partitioning, hashColumn, false);
     }
 
-    public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, Partitioning partitioning, Optional<VariableReferenceExpression> hashColumn, boolean replicateNullsAndAny)
+	public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, Partitioning partitioning, Optional<VariableReferenceExpression> hashColumn, boolean replicateNullsAndAny)
     {
         return partitionedExchange(
                 id,
@@ -171,7 +135,7 @@ public class ExchangeNode
                         Optional.empty()));
     }
 
-    public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, PartitioningScheme partitioningScheme)
+	public static ExchangeNode partitionedExchange(PlanNodeId id, Scope scope, PlanNode child, PartitioningScheme partitioningScheme)
     {
         if (partitioningScheme.getPartitioning().getHandle().isSingleNode()) {
             return gatheringExchange(id, scope, child);
@@ -186,7 +150,7 @@ public class ExchangeNode
                 Optional.empty());
     }
 
-    public static ExchangeNode replicatedExchange(PlanNodeId id, Scope scope, PlanNode child)
+	public static ExchangeNode replicatedExchange(PlanNodeId id, Scope scope, PlanNode child)
     {
         return new ExchangeNode(
                 id,
@@ -198,7 +162,7 @@ public class ExchangeNode
                 Optional.empty());
     }
 
-    public static ExchangeNode gatheringExchange(PlanNodeId id, Scope scope, PlanNode child)
+	public static ExchangeNode gatheringExchange(PlanNodeId id, Scope scope, PlanNode child)
     {
         return new ExchangeNode(
                 id,
@@ -210,7 +174,7 @@ public class ExchangeNode
                 Optional.empty());
     }
 
-    public static ExchangeNode roundRobinExchange(PlanNodeId id, Scope scope, PlanNode child)
+	public static ExchangeNode roundRobinExchange(PlanNodeId id, Scope scope, PlanNode child)
     {
         return partitionedExchange(
                 id,
@@ -219,7 +183,7 @@ public class ExchangeNode
                 new PartitioningScheme(Partitioning.create(FIXED_ARBITRARY_DISTRIBUTION, ImmutableList.of()), child.getOutputVariables()));
     }
 
-    public static ExchangeNode mergingExchange(PlanNodeId id, Scope scope, PlanNode child, OrderingScheme orderingScheme)
+	public static ExchangeNode mergingExchange(PlanNodeId id, Scope scope, PlanNode child, OrderingScheme orderingScheme)
     {
         PartitioningHandle partitioningHandle = scope.isLocal() ? FIXED_PASSTHROUGH_DISTRIBUTION : SINGLE_DISTRIBUTION;
         return new ExchangeNode(
@@ -232,58 +196,90 @@ public class ExchangeNode
                 Optional.of(orderingScheme));
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Scope getScope()
     {
         return scope;
     }
 
-    @Override
+	@Override
     @JsonProperty
     public List<PlanNode> getSources()
     {
         return sources;
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return partitioningScheme.getOutputLayout();
     }
 
-    @JsonProperty
+	@JsonProperty
     public PartitioningScheme getPartitioningScheme()
     {
         return partitioningScheme;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<OrderingScheme> getOrderingScheme()
     {
         return orderingScheme;
     }
 
-    @JsonProperty
+	@JsonProperty
     public List<List<VariableReferenceExpression>> getInputs()
     {
         return inputs;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitExchange(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new ExchangeNode(getId(), type, scope, partitioningScheme, newChildren, inputs, orderingScheme);
+    }
+
+	public enum Type
+    {
+        GATHER,
+        REPARTITION,
+        REPLICATE
+    }
+
+	public enum Scope
+    {
+        LOCAL(false),
+        REMOTE_STREAMING(true),
+        REMOTE_MATERIALIZED(true),
+        /**/;
+
+        private boolean remote;
+
+        Scope(boolean remote)
+        {
+            this.remote = remote;
+        }
+
+        public boolean isRemote()
+        {
+            return remote;
+        }
+
+        public boolean isLocal()
+        {
+            return !isRemote();
+        }
     }
 }

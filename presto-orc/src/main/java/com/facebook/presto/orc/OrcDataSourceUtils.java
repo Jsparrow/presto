@@ -41,7 +41,7 @@ public final class OrcDataSourceUtils
     {
         // sort ranges by start offset
         List<DiskRange> ranges = new ArrayList<>(diskRanges);
-        Collections.sort(ranges, new Comparator<DiskRange>()
+        ranges.sort(new Comparator<DiskRange>()
         {
             @Override
             public int compare(DiskRange o1, DiskRange o2)

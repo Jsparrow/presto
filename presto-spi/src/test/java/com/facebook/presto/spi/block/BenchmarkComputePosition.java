@@ -86,7 +86,7 @@ public class BenchmarkComputePosition
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkComputePosition.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkComputePosition.class.getSimpleName()).append(".*").toString())
                 .build();
 
         new Runner(options).run();

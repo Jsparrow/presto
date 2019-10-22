@@ -89,14 +89,8 @@ public class RowSchema
     public static RowSchema fromColumns(List<AccumuloColumnHandle> columns)
     {
         RowSchema schema = new RowSchema();
-        for (AccumuloColumnHandle columnHandle : columns) {
-            schema.addColumn(
-                    columnHandle.getName(),
-                    columnHandle.getFamily(),
-                    columnHandle.getQualifier(),
-                    columnHandle.getType(),
-                    columnHandle.isIndexed());
-        }
+        columns.forEach(columnHandle -> schema.addColumn(columnHandle.getName(), columnHandle.getFamily(), columnHandle.getQualifier(),
+				columnHandle.getType(), columnHandle.isIndexed()));
         return schema;
     }
 
@@ -104,12 +98,7 @@ public class RowSchema
     public String toString()
     {
         StringBuilder builder = new StringBuilder("{");
-        for (AccumuloColumnHandle columnHandle : columns) {
-            builder.append(columnHandle.getName())
-                    .append(' ')
-                    .append(columnHandle.getType())
-                    .append(',');
-        }
+        columns.forEach(columnHandle -> builder.append(columnHandle.getName()).append(' ').append(columnHandle.getType()).append(','));
 
         if (builder.length() > 1) {
             builder.deleteCharAt(builder.length() - 1);

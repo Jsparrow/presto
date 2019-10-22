@@ -62,9 +62,7 @@ public class FeatureVectorUnitNormalizer
         }
         double magnitude = Math.sqrt(sumSquares);
         Map<Integer, Double> transformed = new HashMap<>();
-        for (Map.Entry<Integer, Double> entry : features.getFeatures().entrySet()) {
-            transformed.put(entry.getKey(), entry.getValue() / magnitude);
-        }
+        features.getFeatures().entrySet().forEach(entry -> transformed.put(entry.getKey(), entry.getValue() / magnitude));
         return new FeatureVector(transformed);
     }
 }

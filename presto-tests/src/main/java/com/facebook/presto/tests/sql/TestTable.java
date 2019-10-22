@@ -18,24 +18,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestTable
         implements AutoCloseable
 {
-    private final SqlExecutor sqlExecutor;
-    private final String name;
-
     private static final AtomicInteger instanceCounter = new AtomicInteger();
+	private final SqlExecutor sqlExecutor;
+	private final String name;
 
-    public TestTable(SqlExecutor sqlExecutor, String namePrefix, String createDdlTemplate)
+	public TestTable(SqlExecutor sqlExecutor, String namePrefix, String createDdlTemplate)
     {
         this.sqlExecutor = sqlExecutor;
-        this.name = namePrefix + "_" + instanceCounter.incrementAndGet();
+        this.name = new StringBuilder().append(namePrefix).append("_").append(instanceCounter.incrementAndGet()).toString();
         sqlExecutor.execute(createDdlTemplate.replace("{TABLE_NAME}", this.name));
     }
 
-    public String getName()
+	public String getName()
     {
         return name;
     }
 
-    @Override
+	@Override
     public void close()
     {
         sqlExecutor.execute("DROP TABLE " + name);

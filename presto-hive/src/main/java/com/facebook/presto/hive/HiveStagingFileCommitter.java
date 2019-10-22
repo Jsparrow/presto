@@ -56,16 +56,16 @@ public class HiveStagingFileCommitter
         HdfsContext context = new HdfsContext(session, schemaName, tableName);
         List<ListenableFuture<?>> commitFutures = new ArrayList<>();
 
-        for (PartitionUpdate partitionUpdate : partitionUpdates) {
+        partitionUpdates.forEach(partitionUpdate -> {
             Path path = partitionUpdate.getWritePath();
             FileSystem fileSystem = getFileSystem(hdfsEnvironment, context, path);
-            for (FileWriteInfo fileWriteInfo : partitionUpdate.getFileWriteInfos()) {
+            partitionUpdate.getFileWriteInfos().forEach(fileWriteInfo -> {
                 checkState(!fileWriteInfo.getWriteFileName().equals(fileWriteInfo.getTargetFileName()));
                 Path source = new Path(path, fileWriteInfo.getWriteFileName());
                 Path target = new Path(path, fileWriteInfo.getTargetFileName());
                 commitFutures.add(fileRenameExecutor.submit(() -> renameFile(fileSystem, source, target)));
-            }
-        }
+            });
+        });
 
         ListenableFuture<?> listenableFutureAggregate = whenAllSucceed(commitFutures).call(() -> null, directExecutor());
         try {

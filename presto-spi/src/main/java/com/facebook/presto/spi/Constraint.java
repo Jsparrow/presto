@@ -27,27 +27,17 @@ public class Constraint<T>
     private final TupleDomain<T> summary;
     private final Optional<Predicate<Map<T, NullableValue>>> predicate;
 
-    public static <V> Constraint<V> alwaysTrue()
-    {
-        return new Constraint<>(TupleDomain.<V>all(), Optional.empty());
-    }
-
-    public static <V> Constraint<V> alwaysFalse()
-    {
-        return new Constraint<>(TupleDomain.<V>none(), Optional.of(bindings -> false));
-    }
-
     public Constraint(TupleDomain<T> summary)
     {
         this(summary, Optional.empty());
     }
 
-    public Constraint(TupleDomain<T> summary, Predicate<Map<T, NullableValue>> predicate)
+	public Constraint(TupleDomain<T> summary, Predicate<Map<T, NullableValue>> predicate)
     {
         this(summary, Optional.of(predicate));
     }
 
-    public Constraint(TupleDomain<T> summary, Optional<Predicate<Map<T, NullableValue>>> predicate)
+	public Constraint(TupleDomain<T> summary, Optional<Predicate<Map<T, NullableValue>>> predicate)
     {
         requireNonNull(summary, "summary is null");
         requireNonNull(predicate, "predicate is null");
@@ -56,12 +46,22 @@ public class Constraint<T>
         this.predicate = predicate;
     }
 
-    public TupleDomain<T> getSummary()
+	public static <V> Constraint<V> alwaysTrue()
+    {
+        return new Constraint<>(TupleDomain.<V>all(), Optional.empty());
+    }
+
+	public static <V> Constraint<V> alwaysFalse()
+    {
+        return new Constraint<>(TupleDomain.<V>none(), Optional.of(bindings -> false));
+    }
+
+	public TupleDomain<T> getSummary()
     {
         return summary;
     }
 
-    public Optional<Predicate<Map<T, NullableValue>>> predicate()
+	public Optional<Predicate<Map<T, NullableValue>>> predicate()
     {
         return predicate;
     }

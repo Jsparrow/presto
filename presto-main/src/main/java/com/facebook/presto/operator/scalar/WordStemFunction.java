@@ -50,8 +50,6 @@ import static io.airlift.slice.Slices.utf8Slice;
 
 public final class WordStemFunction
 {
-    private WordStemFunction() {}
-
     private static final Map<Slice, Supplier<SnowballProgram>> STEMMERS = ImmutableMap.<Slice, Supplier<SnowballProgram>>builder()
             .put(utf8Slice("ca"), CatalanStemmer::new)
             .put(utf8Slice("da"), DanishStemmer::new)
@@ -75,7 +73,9 @@ public final class WordStemFunction
             .put(utf8Slice("tr"), TurkishStemmer::new)
             .build();
 
-    @Description("returns the stem of a word in the English language")
+	private WordStemFunction() {}
+
+	@Description("returns the stem of a word in the English language")
     @ScalarFunction
     @LiteralParameters("x")
     @SqlType("varchar(x)")
@@ -84,7 +84,7 @@ public final class WordStemFunction
         return wordStem(slice, new EnglishStemmer());
     }
 
-    @Description("returns the stem of a word in the given language")
+	@Description("returns the stem of a word in the given language")
     @ScalarFunction
     @LiteralParameters("x")
     @SqlType("varchar(x)")
@@ -97,7 +97,7 @@ public final class WordStemFunction
         return wordStem(slice, stemmer.get());
     }
 
-    private static Slice wordStem(Slice slice, SnowballProgram stemmer)
+	private static Slice wordStem(Slice slice, SnowballProgram stemmer)
     {
         stemmer.setCurrent(slice.toStringUtf8());
         return stemmer.stem() ? utf8Slice(stemmer.getCurrent()) : slice;

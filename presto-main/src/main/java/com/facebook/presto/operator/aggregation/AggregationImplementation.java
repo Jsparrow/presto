@@ -67,44 +67,33 @@ import static java.util.Objects.requireNonNull;
 public class AggregationImplementation
         implements ParametricImplementation
 {
-    public static class AggregateNativeContainerType
-    {
-        private final Class<?> javaType;
-        private final boolean isBlockPosition;
-
-        public AggregateNativeContainerType(Class<?> javaType, boolean isBlockPosition)
-        {
-            this.javaType = javaType;
-            this.isBlockPosition = isBlockPosition;
-        }
-
-        public Class<?> getJavaType()
-        {
-            return javaType;
-        }
-
-        public boolean isBlockPosition()
-        {
-            return isBlockPosition;
-        }
-    }
-
     private final Signature signature;
 
-    private final Class<?> definitionClass;
-    private final Class<?> stateClass;
-    private final MethodHandle inputFunction;
-    private final MethodHandle outputFunction;
-    private final MethodHandle combineFunction;
-    private final Optional<MethodHandle> stateSerializerFactory;
-    private final List<AggregateNativeContainerType> argumentNativeContainerTypes;
-    private final List<ImplementationDependency> inputDependencies;
-    private final List<ImplementationDependency> combineDependencies;
-    private final List<ImplementationDependency> outputDependencies;
-    private final List<ImplementationDependency> stateSerializerFactoryDependencies;
-    private final List<ParameterType> inputParameterMetadataTypes;
+	private final Class<?> definitionClass;
 
-    public AggregationImplementation(
+	private final Class<?> stateClass;
+
+	private final MethodHandle inputFunction;
+
+	private final MethodHandle outputFunction;
+
+	private final MethodHandle combineFunction;
+
+	private final Optional<MethodHandle> stateSerializerFactory;
+
+	private final List<AggregateNativeContainerType> argumentNativeContainerTypes;
+
+	private final List<ImplementationDependency> inputDependencies;
+
+	private final List<ImplementationDependency> combineDependencies;
+
+	private final List<ImplementationDependency> outputDependencies;
+
+	private final List<ImplementationDependency> stateSerializerFactoryDependencies;
+
+	private final List<ParameterType> inputParameterMetadataTypes;
+
+	public AggregationImplementation(
             Signature signature,
             Class<?> definitionClass,
             Class<?> stateClass,
@@ -134,74 +123,74 @@ public class AggregationImplementation
         this.inputParameterMetadataTypes = requireNonNull(inputParameterMetadataTypes, "inputParameterMetadataTypes cannot be null");
     }
 
-    @Override
+	@Override
     public Signature getSignature()
     {
         return signature;
     }
 
-    @Override
+	@Override
     public boolean hasSpecializedTypeParameters()
     {
         return false;
     }
 
-    public Class<?> getDefinitionClass()
+	public Class<?> getDefinitionClass()
     {
         return definitionClass;
     }
 
-    public Class<?> getStateClass()
+	public Class<?> getStateClass()
     {
         return stateClass;
     }
 
-    public MethodHandle getInputFunction()
+	public MethodHandle getInputFunction()
     {
         return inputFunction;
     }
 
-    public MethodHandle getOutputFunction()
+	public MethodHandle getOutputFunction()
     {
         return outputFunction;
     }
 
-    public MethodHandle getCombineFunction()
+	public MethodHandle getCombineFunction()
     {
         return combineFunction;
     }
 
-    public Optional<MethodHandle> getStateSerializerFactory()
+	public Optional<MethodHandle> getStateSerializerFactory()
     {
         return stateSerializerFactory;
     }
 
-    public List<ImplementationDependency> getInputDependencies()
+	public List<ImplementationDependency> getInputDependencies()
     {
         return inputDependencies;
     }
 
-    public List<ImplementationDependency> getOutputDependencies()
+	public List<ImplementationDependency> getOutputDependencies()
     {
         return outputDependencies;
     }
 
-    public List<ImplementationDependency> getCombineDependencies()
+	public List<ImplementationDependency> getCombineDependencies()
     {
         return combineDependencies;
     }
 
-    public List<ImplementationDependency> getStateSerializerFactoryDependencies()
+	public List<ImplementationDependency> getStateSerializerFactoryDependencies()
     {
         return stateSerializerFactoryDependencies;
     }
 
-    public List<ParameterType> getInputParameterMetadataTypes()
+	public List<ParameterType> getInputParameterMetadataTypes()
     {
         return inputParameterMetadataTypes;
     }
 
-    public boolean areTypesAssignable(Signature boundSignature, BoundVariables variables, TypeManager typeManager)
+	public boolean areTypesAssignable(Signature boundSignature, BoundVariables variables, TypeManager typeManager)
     {
         checkState(argumentNativeContainerTypes.size() == boundSignature.getArgumentTypes().size(), "Number of argument assigned to AggregationImplementation is different than number parsed from annotations.");
 
@@ -221,6 +210,28 @@ public class AggregationImplementation
         }
 
         return true;
+    }
+
+	public static class AggregateNativeContainerType
+    {
+        private final Class<?> javaType;
+        private final boolean isBlockPosition;
+
+        public AggregateNativeContainerType(Class<?> javaType, boolean isBlockPosition)
+        {
+            this.javaType = javaType;
+            this.isBlockPosition = isBlockPosition;
+        }
+
+        public Class<?> getJavaType()
+        {
+            return javaType;
+        }
+
+        public boolean isBlockPosition()
+        {
+            return isBlockPosition;
+        }
     }
 
     public static final class Parser
@@ -346,7 +357,7 @@ public class AggregationImplementation
             ImmutableList.Builder<ParameterType> builder = ImmutableList.builder();
 
             Annotation[][] annotations = method.getParameterAnnotations();
-            String methodName = method.getDeclaringClass() + "." + method.getName();
+            String methodName = new StringBuilder().append(method.getDeclaringClass()).append(".").append(method.getName()).toString();
 
             checkArgument(method.getParameterCount() > 0, "At least @AggregationState argument is required for each of aggregation functions.");
 
@@ -495,11 +506,10 @@ public class AggregationImplementation
             int found = 0;
             for (Annotation[] annotations : method.getParameterAnnotations()) {
                 for (Annotation annotation : annotations) {
-                    if (annotation instanceof AggregationState) {
-                        if (found++ == id) {
-                            return currentParamId;
-                        }
-                    }
+                    boolean condition = annotation instanceof AggregationState && found++ == id;
+					if (condition) {
+					    return currentParamId;
+					}
                 }
                 currentParamId++;
             }

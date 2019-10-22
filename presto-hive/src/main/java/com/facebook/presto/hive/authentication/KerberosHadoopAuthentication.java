@@ -28,7 +28,12 @@ public class KerberosHadoopAuthentication
 {
     private final KerberosAuthentication kerberosAuthentication;
 
-    public static KerberosHadoopAuthentication createKerberosHadoopAuthentication(KerberosAuthentication kerberosAuthentication, HdfsConfigurationInitializer initializer)
+    private KerberosHadoopAuthentication(KerberosAuthentication kerberosAuthentication)
+    {
+        this.kerberosAuthentication = requireNonNull(kerberosAuthentication, "kerberosAuthentication is null");
+    }
+
+	public static KerberosHadoopAuthentication createKerberosHadoopAuthentication(KerberosAuthentication kerberosAuthentication, HdfsConfigurationInitializer initializer)
     {
         Configuration configuration = getInitialConfiguration();
         initializer.updateConfiguration(configuration);
@@ -43,12 +48,7 @@ public class KerberosHadoopAuthentication
         return new KerberosHadoopAuthentication(kerberosAuthentication);
     }
 
-    private KerberosHadoopAuthentication(KerberosAuthentication kerberosAuthentication)
-    {
-        this.kerberosAuthentication = requireNonNull(kerberosAuthentication, "kerberosAuthentication is null");
-    }
-
-    @Override
+	@Override
     public UserGroupInformation getUserGroupInformation()
     {
         Subject subject = kerberosAuthentication.getSubject();

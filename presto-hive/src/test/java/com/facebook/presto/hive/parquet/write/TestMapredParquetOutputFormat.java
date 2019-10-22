@@ -56,10 +56,10 @@ public class TestMapredParquetOutputFormat
             Progressable progress)
             throws IOException
     {
-        if (schema.isPresent()) {
-            DataWritableWriteSupport.setSchema(schema.get(), jobConf);
-            return getParquerRecordWriterWrapper(realOutputFormat, jobConf, finalOutPath.toString(), progress, tableProperties);
-        }
-        return super.getHiveRecordWriter(jobConf, finalOutPath, valueClass, isCompressed, tableProperties, progress);
+        if (!schema.isPresent()) {
+			return super.getHiveRecordWriter(jobConf, finalOutPath, valueClass, isCompressed, tableProperties, progress);
+		}
+		DataWritableWriteSupport.setSchema(schema.get(), jobConf);
+		return getParquerRecordWriterWrapper(realOutputFormat, jobConf, finalOutPath.toString(), progress, tableProperties);
     }
 }

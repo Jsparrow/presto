@@ -33,7 +33,31 @@ class WindowOperatorStats
     private final long totalIndexesCount;
     private final long totalPartitionsCount;
 
-    public static WindowOperatorStats create(WindowInfo info)
+    private WindowOperatorStats(
+            double partitionRowsSumSquaredDiffs,
+            double positionsInIndexesSumSquaredDiffs,
+            double sizeOfIndexesSumSquaredDiffs,
+            double indexCountPerDriverSumSquaredDiffs,
+            double rowCountPerDriverSumSquaredDiffs,
+            long totalRowCount,
+            long totalIndexesCount,
+            long totalPartitionsCount,
+            int activeDrivers,
+            int totalDrivers)
+    {
+        this.partitionRowsSumSquaredDiffs = partitionRowsSumSquaredDiffs;
+        this.positionsInIndexesSumSquaredDiffs = positionsInIndexesSumSquaredDiffs;
+        this.sizeOfIndexesSumSquaredDiffs = sizeOfIndexesSumSquaredDiffs;
+        this.indexCountPerDriverSumSquaredDiffs = indexCountPerDriverSumSquaredDiffs;
+        this.rowCountPerDriverSumSquaredDiffs = rowCountPerDriverSumSquaredDiffs;
+        this.totalRowCount = totalRowCount;
+        this.totalIndexesCount = totalIndexesCount;
+        this.totalPartitionsCount = totalPartitionsCount;
+        this.activeDrivers = activeDrivers;
+        this.totalDrivers = totalDrivers;
+    }
+
+	public static WindowOperatorStats create(WindowInfo info)
     {
         checkArgument(info.getWindowInfos().size() > 0, "WindowInfo cannot have empty list of DriverWindowInfos");
 
@@ -94,7 +118,7 @@ class WindowOperatorStats
                 totalDrivers);
     }
 
-    private static boolean isMeaningful(DriverWindowInfo windowInfo)
+	private static boolean isMeaningful(DriverWindowInfo windowInfo)
     {
         // We are filtering out windowInfos without rows.
         //
@@ -123,31 +147,7 @@ class WindowOperatorStats
         return windowInfo.getTotalRowsCount() > 0;
     }
 
-    private WindowOperatorStats(
-            double partitionRowsSumSquaredDiffs,
-            double positionsInIndexesSumSquaredDiffs,
-            double sizeOfIndexesSumSquaredDiffs,
-            double indexCountPerDriverSumSquaredDiffs,
-            double rowCountPerDriverSumSquaredDiffs,
-            long totalRowCount,
-            long totalIndexesCount,
-            long totalPartitionsCount,
-            int activeDrivers,
-            int totalDrivers)
-    {
-        this.partitionRowsSumSquaredDiffs = partitionRowsSumSquaredDiffs;
-        this.positionsInIndexesSumSquaredDiffs = positionsInIndexesSumSquaredDiffs;
-        this.sizeOfIndexesSumSquaredDiffs = sizeOfIndexesSumSquaredDiffs;
-        this.indexCountPerDriverSumSquaredDiffs = indexCountPerDriverSumSquaredDiffs;
-        this.rowCountPerDriverSumSquaredDiffs = rowCountPerDriverSumSquaredDiffs;
-        this.totalRowCount = totalRowCount;
-        this.totalIndexesCount = totalIndexesCount;
-        this.totalPartitionsCount = totalPartitionsCount;
-        this.activeDrivers = activeDrivers;
-        this.totalDrivers = totalDrivers;
-    }
-
-    @Override
+	@Override
     public WindowOperatorStats mergeWith(WindowOperatorStats other)
     {
         return new WindowOperatorStats(
@@ -163,37 +163,37 @@ class WindowOperatorStats
                 totalDrivers + other.totalDrivers);
     }
 
-    public double getIndexSizeStdDev()
+	public double getIndexSizeStdDev()
     {
         return Math.sqrt(sizeOfIndexesSumSquaredDiffs / totalIndexesCount);
     }
 
-    public double getIndexPositionsStdDev()
+	public double getIndexPositionsStdDev()
     {
         return Math.sqrt(positionsInIndexesSumSquaredDiffs / totalIndexesCount);
     }
 
-    public double getIndexCountPerDriverStdDev()
+	public double getIndexCountPerDriverStdDev()
     {
         return Math.sqrt(indexCountPerDriverSumSquaredDiffs / activeDrivers);
     }
 
-    public double getPartitionRowsStdDev()
+	public double getPartitionRowsStdDev()
     {
         return Math.sqrt(partitionRowsSumSquaredDiffs / totalPartitionsCount);
     }
 
-    public double getRowsPerDriverStdDev()
+	public double getRowsPerDriverStdDev()
     {
         return Math.sqrt(rowCountPerDriverSumSquaredDiffs / activeDrivers);
     }
 
-    public int getActiveDrivers()
+	public int getActiveDrivers()
     {
         return activeDrivers;
     }
 
-    public int getTotalDrivers()
+	public int getTotalDrivers()
     {
         return totalDrivers;
     }

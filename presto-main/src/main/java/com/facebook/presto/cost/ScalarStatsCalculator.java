@@ -94,7 +94,37 @@ public class ScalarStatsCalculator
         return scalarExpression.accept(new RowExpressionStatsVisitor(inputStatistics, session), null);
     }
 
-    private class RowExpressionStatsVisitor
+    private static VariableStatsEstimate estimateCoalesce(PlanNodeStatsEstimate input, VariableStatsEstimate left, VariableStatsEstimate right)
+    {
+        // Question to reviewer: do you have a method to check if fraction is empty or saturated?
+        if (left.getNullsFraction() == 0) {
+            return left;
+        }
+        else if (left.getNullsFraction() == 1.0) {
+            return right;
+        }
+        else {
+            return VariableStatsEstimate.builder()
+                    .setLowValue(min(left.getLowValue(), right.getLowValue()))
+                    .setHighValue(max(left.getHighValue(), right.getHighValue()))
+                    .setDistinctValuesCount(left.getDistinctValuesCount() +
+                            min(right.getDistinctValuesCount(), input.getOutputRowCount() * left.getNullsFraction()))
+                    .setNullsFraction(left.getNullsFraction() * right.getNullsFraction())
+                    // TODO check if dataSize estimation method is correct
+                    .setAverageRowSize(max(left.getAverageRowSize(), right.getAverageRowSize()))
+                    .build();
+        }
+    }
+
+	private static VariableStatsEstimate nullStatsEstimate()
+    {
+        return VariableStatsEstimate.builder()
+                .setDistinctValuesCount(0)
+                .setNullsFraction(1)
+                .build();
+    }
+
+	private class RowExpressionStatsVisitor
             implements RowExpressionVisitor<VariableStatsEstimate, Void>
     {
         private final PlanNodeStatsEstimate input;
@@ -176,20 +206,20 @@ public class ScalarStatsCalculator
         @Override
         public VariableStatsEstimate visitSpecialForm(SpecialFormExpression specialForm, Void context)
         {
-            if (specialForm.getForm().equals(COALESCE)) {
-                VariableStatsEstimate result = null;
-                for (RowExpression operand : specialForm.getArguments()) {
-                    VariableStatsEstimate operandEstimates = operand.accept(this, context);
-                    if (result != null) {
-                        result = estimateCoalesce(input, result, operandEstimates);
-                    }
-                    else {
-                        result = operandEstimates;
-                    }
-                }
-                return requireNonNull(result, "result is null");
-            }
-            return VariableStatsEstimate.unknown();
+            if (specialForm.getForm() != COALESCE) {
+				return VariableStatsEstimate.unknown();
+			}
+			VariableStatsEstimate result = null;
+			for (RowExpression operand : specialForm.getArguments()) {
+			    VariableStatsEstimate operandEstimates = operand.accept(this, context);
+			    if (result != null) {
+			        result = estimateCoalesce(input, result, operandEstimates);
+			    }
+			    else {
+			        result = operandEstimates;
+			    }
+			}
+			return requireNonNull(result, "result is null");
         }
 
         private VariableStatsEstimate computeCastStatistics(CallExpression call, Void context)
@@ -260,11 +290,11 @@ public class ScalarStatsCalculator
             if (isNaN(leftLow) || isNaN(leftHigh) || isNaN(rightLow) || isNaN(rightHigh)) {
                 result.setLowValue(NaN).setHighValue(NaN);
             }
-            else if (operatorType.equals(DIVIDE) && rightLow < 0 && rightHigh > 0) {
+            else if (operatorType == DIVIDE && rightLow < 0 && rightHigh > 0) {
                 result.setLowValue(Double.NEGATIVE_INFINITY)
                         .setHighValue(Double.POSITIVE_INFINITY);
             }
-            else if (operatorType.equals(MODULUS)) {
+            else if (operatorType == MODULUS) {
                 double maxDivisor = max(abs(rightLow), abs(rightHigh));
                 if (leftHigh <= 0) {
                     result.setLowValue(max(-maxDivisor, leftLow))
@@ -540,35 +570,5 @@ public class ScalarStatsCalculator
             }
             return requireNonNull(result, "result is null");
         }
-    }
-
-    private static VariableStatsEstimate estimateCoalesce(PlanNodeStatsEstimate input, VariableStatsEstimate left, VariableStatsEstimate right)
-    {
-        // Question to reviewer: do you have a method to check if fraction is empty or saturated?
-        if (left.getNullsFraction() == 0) {
-            return left;
-        }
-        else if (left.getNullsFraction() == 1.0) {
-            return right;
-        }
-        else {
-            return VariableStatsEstimate.builder()
-                    .setLowValue(min(left.getLowValue(), right.getLowValue()))
-                    .setHighValue(max(left.getHighValue(), right.getHighValue()))
-                    .setDistinctValuesCount(left.getDistinctValuesCount() +
-                            min(right.getDistinctValuesCount(), input.getOutputRowCount() * left.getNullsFraction()))
-                    .setNullsFraction(left.getNullsFraction() * right.getNullsFraction())
-                    // TODO check if dataSize estimation method is correct
-                    .setAverageRowSize(max(left.getAverageRowSize(), right.getAverageRowSize()))
-                    .build();
-        }
-    }
-
-    private static VariableStatsEstimate nullStatsEstimate()
-    {
-        return VariableStatsEstimate.builder()
-                .setDistinctValuesCount(0)
-                .setNullsFraction(1)
-                .build();
     }
 }

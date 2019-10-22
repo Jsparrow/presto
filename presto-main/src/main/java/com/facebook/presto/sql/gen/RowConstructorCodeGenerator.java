@@ -58,7 +58,7 @@ public class RowConstructorCodeGenerator
         for (int i = 0; i < arguments.size(); ++i) {
             Type fieldType = types.get(i);
             Variable field = scope.createTempVariable(fieldType.getJavaType());
-            block.comment("Clean wasNull and Generate + " + i + "-th field of row");
+            block.comment(new StringBuilder().append("Clean wasNull and Generate + ").append(i).append("-th field of row").toString());
             block.append(context.wasNull().set(constantFalse()));
             block.append(context.generate(arguments.get(i), Optional.empty()));
             block.putVariable(field);

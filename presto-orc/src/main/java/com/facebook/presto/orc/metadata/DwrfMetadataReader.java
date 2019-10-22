@@ -185,7 +185,7 @@ public class DwrfMetadataReader
 
         ImmutableList.Builder<ColumnEncoding> resultBuilder = ImmutableList.builder();
 
-        for (Map.Entry<Integer, List<DwrfProto.ColumnEncoding>> entry : groupedColumnEncodings.entrySet()) {
+        groupedColumnEncodings.entrySet().forEach(entry -> {
             OrcType type = types.get(entry.getKey());
 
             DwrfProto.ColumnEncoding columnEncoding = entry.getValue().get(0);
@@ -194,7 +194,7 @@ public class DwrfMetadataReader
                             toColumnEncodingKind(type.getOrcTypeKind(), columnEncoding.getKind()),
                             columnEncoding.getDictionarySize(),
                             toAdditionalSequenceEncodings(entry.getValue(), type)));
-        }
+        });
 
         return resultBuilder.build();
     }
@@ -241,12 +241,8 @@ public class DwrfMetadataReader
     private Map<String, Slice> toUserMetadata(List<DwrfProto.UserMetadataItem> metadataList)
     {
         ImmutableMap.Builder<String, Slice> mapBuilder = ImmutableMap.builder();
-        for (DwrfProto.UserMetadataItem item : metadataList) {
-            // skip static metadata added by the writer framework
-            if (!STATIC_METADATA.containsKey(item.getName())) {
-                mapBuilder.put(item.getName(), byteStringToSlice(item.getValue()));
-            }
-        }
+        // skip static metadata added by the writer framework
+		metadataList.stream().filter(item -> !STATIC_METADATA.containsKey(item.getName())).forEach(item -> mapBuilder.put(item.getName(), byteStringToSlice(item.getValue())));
         return mapBuilder.build();
     }
 

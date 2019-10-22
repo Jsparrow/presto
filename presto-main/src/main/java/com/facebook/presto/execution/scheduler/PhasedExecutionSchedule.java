@@ -69,11 +69,7 @@ public class PhasedExecutionSchedule
 
         // create a mutable list of mutable sets of stages, so we can remove completed stages
         schedulePhases = new ArrayList<>();
-        for (Set<PlanFragmentId> phase : phases) {
-            schedulePhases.add(phase.stream()
-                    .map(stagesByFragmentId::get)
-                    .collect(Collectors.toCollection(HashSet::new)));
-        }
+        phases.forEach(phase -> schedulePhases.add(phase.stream().map(stagesByFragmentId::get).collect(Collectors.toCollection(HashSet::new))));
     }
 
     @Override
@@ -134,9 +130,7 @@ public class PhasedExecutionSchedule
         fragments.forEach(fragment -> graph.addVertex(fragment.getId()));
 
         Visitor visitor = new Visitor(fragments, graph);
-        for (PlanFragment fragment : fragments) {
-            visitor.processFragment(fragment.getId());
-        }
+        fragments.forEach(fragment -> visitor.processFragment(fragment.getId()));
 
         // Computes all the strongly connected components of the directed graph.
         // These are the "phases" which hold the set of fragments that must be started
@@ -144,16 +138,12 @@ public class PhasedExecutionSchedule
         List<Set<PlanFragmentId>> components = new StrongConnectivityInspector<>(graph).stronglyConnectedSets();
 
         Map<PlanFragmentId, Set<PlanFragmentId>> componentMembership = new HashMap<>();
-        for (Set<PlanFragmentId> component : components) {
-            for (PlanFragmentId planFragmentId : component) {
-                componentMembership.put(planFragmentId, component);
-            }
-        }
+        components.forEach(component -> component.forEach(planFragmentId -> componentMembership.put(planFragmentId, component)));
 
         // build graph of components (phases)
         DirectedGraph<Set<PlanFragmentId>, DefaultEdge> componentGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
         components.forEach(componentGraph::addVertex);
-        for (DefaultEdge edge : graph.edgeSet()) {
+        graph.edgeSet().forEach(edge -> {
             PlanFragmentId source = graph.getEdgeSource(edge);
             PlanFragmentId target = graph.getEdgeTarget(edge);
 
@@ -162,7 +152,7 @@ public class PhasedExecutionSchedule
             if (!from.equals(to)) { // the topological order iterator below doesn't include vertices that have self-edges, so don't add them
                 componentGraph.addEdge(from, to);
             }
-        }
+        });
 
         List<Set<PlanFragmentId>> schedulePhases = ImmutableList.copyOf(new TopologicalOrderIterator<>(componentGraph));
         return schedulePhases;
@@ -228,11 +218,7 @@ public class PhasedExecutionSchedule
             Set<PlanFragmentId> buildSources = build.accept(this, currentFragmentId);
             Set<PlanFragmentId> probeSources = probe.accept(this, currentFragmentId);
 
-            for (PlanFragmentId buildSource : buildSources) {
-                for (PlanFragmentId probeSource : probeSources) {
-                    graph.addEdge(buildSource, probeSource);
-                }
-            }
+            buildSources.forEach(buildSource -> probeSources.forEach(probeSource -> graph.addEdge(buildSource, probeSource)));
 
             return ImmutableSet.<PlanFragmentId>builder()
                     .addAll(buildSources)
@@ -319,11 +305,7 @@ public class PhasedExecutionSchedule
 
         private void addEdges(Set<PlanFragmentId> sourceFragments, Set<PlanFragmentId> targetFragments)
         {
-            for (PlanFragmentId targetFragment : targetFragments) {
-                for (PlanFragmentId sourceFragment : sourceFragments) {
-                    graph.addEdge(sourceFragment, targetFragment);
-                }
-            }
+            targetFragments.forEach(targetFragment -> sourceFragments.forEach(sourceFragment -> graph.addEdge(sourceFragment, targetFragment)));
         }
     }
 }

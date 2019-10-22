@@ -168,7 +168,7 @@ public class ConnectorManager
             return;
         }
 
-        for (Map.Entry<ConnectorId, MaterializedConnector> entry : connectors.entrySet()) {
+        connectors.entrySet().forEach(entry -> {
             Connector connector = entry.getValue().getConnector();
             try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
                 connector.shutdown();
@@ -176,7 +176,7 @@ public class ConnectorManager
             catch (Throwable t) {
                 log.error(t, "Error shutting down connector: %s", entry.getKey());
             }
-        }
+        });
     }
 
     public synchronized void addConnectorFactory(ConnectorFactory connectorFactory)
@@ -327,15 +327,16 @@ public class ConnectorManager
         metadataManager.getSessionPropertyManager().removeConnectorSessionProperties(connectorId);
 
         MaterializedConnector materializedConnector = connectors.remove(connectorId);
-        if (materializedConnector != null) {
-            Connector connector = materializedConnector.getConnector();
-            try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
-                connector.shutdown();
-            }
-            catch (Throwable t) {
-                log.error(t, "Error shutting down connector: %s", connectorId);
-            }
-        }
+        if (materializedConnector == null) {
+			return;
+		}
+		Connector connector = materializedConnector.getConnector();
+		try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(connector.getClass().getClassLoader())) {
+		    connector.shutdown();
+		}
+		catch (Throwable t) {
+		    log.error(t, "Error shutting down connector: %s", connectorId);
+		}
     }
 
     private Connector createConnector(ConnectorId connectorId, ConnectorFactory factory, Map<String, String> properties)

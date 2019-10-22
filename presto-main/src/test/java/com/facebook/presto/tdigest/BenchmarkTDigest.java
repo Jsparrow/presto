@@ -64,7 +64,72 @@ public class BenchmarkTDigest
     private static final int NUMBER_OF_ENTRIES = 1_000_000;
     private static final int STANDARD_COMPRESSION_FACTOR = 100;
 
-    @State(Scope.Thread)
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OperationsPerInvocation(NUMBER_OF_ENTRIES)
+    public TDigest benchmarkInsertsT(Data data)
+    {
+        TDigest digest = createTDigest(STANDARD_COMPRESSION_FACTOR);
+        int k = 1_000_000 / NUMBER_OF_ENTRIES;
+        for (int i = 0; i < k; i++) {
+            for (long value : data.normalDistribution1) {
+                digest.add(value);
+            }
+        }
+
+        return digest;
+    }
+
+	@Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public double benchmarkQuantilesT(DigestWithQuantile data)
+    {
+        return data.digest1.getQuantile(data.quantile);
+    }
+
+	@Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public TDigest benchmarkCopyT(Digest data)
+    {
+        TDigest copy = createTDigest(data.digest1.getCompressionFactor());
+        copy.merge(data.digest1);
+        return copy;
+    }
+
+	@Benchmark @BenchmarkMode(Mode.AverageTime)
+    public TDigest benchmarkMergeT(Digest data)
+    {
+        TDigest merged = createTDigest(data.digest1.serialize());
+        merged.merge(data.digest2);
+        return merged;
+    }
+
+	@Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public TDigest benchmarkDeserializeT(Digest data)
+    {
+        return createTDigest(data.serializedDigest1);
+    }
+
+	@Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public Slice benchmarkSerializeT(Digest data)
+    {
+        return data.digest1.serialize();
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkTDigest.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class Data
     {
         private long[] normalDistribution1;
@@ -134,70 +199,5 @@ public class BenchmarkTDigest
         // allows testing how fast different quantiles can be computed
         @Param({"0.0001", "0.01", "0.2500", "0.5000", "0.7500", "0.9999"})
         float quantile;
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    @OperationsPerInvocation(NUMBER_OF_ENTRIES)
-    public TDigest benchmarkInsertsT(Data data)
-    {
-        TDigest digest = createTDigest(STANDARD_COMPRESSION_FACTOR);
-        int k = 1_000_000 / NUMBER_OF_ENTRIES;
-        for (int i = 0; i < k; i++) {
-            for (long value : data.normalDistribution1) {
-                digest.add(value);
-            }
-        }
-
-        return digest;
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    public double benchmarkQuantilesT(DigestWithQuantile data)
-    {
-        return data.digest1.getQuantile(data.quantile);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    public TDigest benchmarkCopyT(Digest data)
-    {
-        TDigest copy = createTDigest(data.digest1.getCompressionFactor());
-        copy.merge(data.digest1);
-        return copy;
-    }
-
-    @Benchmark @BenchmarkMode(Mode.AverageTime)
-    public TDigest benchmarkMergeT(Digest data)
-    {
-        TDigest merged = createTDigest(data.digest1.serialize());
-        merged.merge(data.digest2);
-        return merged;
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    public TDigest benchmarkDeserializeT(Digest data)
-    {
-        return createTDigest(data.serializedDigest1);
-    }
-
-    @Benchmark
-    @BenchmarkMode(Mode.AverageTime)
-    public Slice benchmarkSerializeT(Digest data)
-    {
-        return data.digest1.serialize();
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkTDigest.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

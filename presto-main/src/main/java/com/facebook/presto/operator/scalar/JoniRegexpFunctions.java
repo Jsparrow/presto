@@ -40,10 +40,14 @@ import static com.facebook.presto.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMEN
 import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class JoniRegexpFunctions
 {
-    private JoniRegexpFunctions()
+    private static final Logger logger = LoggerFactory.getLogger(JoniRegexpFunctions.class);
+
+	private JoniRegexpFunctions()
     {
     }
 
@@ -139,7 +143,8 @@ public final class JoniRegexpFunctions
                         backref = pattern.nameToBackrefNumber(groupName, 0, groupName.length, region);
                     }
                     catch (ValueException e) {
-                        throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Illegal replacement sequence: unknown group { " + new String(groupName, StandardCharsets.UTF_8) + " }");
+                        logger.error(e.getMessage(), e);
+						throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("Illegal replacement sequence: unknown group { ").append(new String(groupName, StandardCharsets.UTF_8)).append(" }").toString());
                     }
                     idx++;
                 }

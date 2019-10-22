@@ -213,8 +213,7 @@ public enum CassandraType
                     checkTypeArguments(cassandraType, 2, typeArguments);
                     return NullableValue.of(nativeType, utf8Slice(buildMapValue(row, i, typeArguments.get(0), typeArguments.get(1))));
                 default:
-                    throw new IllegalStateException("Handling of type " + cassandraType
-                            + " is not implemented");
+                    throw new IllegalStateException(new StringBuilder().append("Handling of type ").append(cassandraType).append(" is not implemented").toString());
             }
         }
     }
@@ -269,12 +268,12 @@ public enum CassandraType
     {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
-        for (Object value : collection) {
+        collection.forEach(value -> {
             if (sb.length() > 1) {
                 sb.append(",");
             }
             sb.append(objectToString(value, elemType));
-        }
+        });
         sb.append("]");
         return sb.toString();
     }
@@ -283,8 +282,7 @@ public enum CassandraType
             List<CassandraType> typeArguments)
     {
         if (typeArguments == null || typeArguments.size() != expectedSize) {
-            throw new IllegalArgumentException("Wrong number of type arguments " + typeArguments
-                    + " for " + type);
+            throw new IllegalArgumentException(new StringBuilder().append("Wrong number of type arguments ").append(typeArguments).append(" for ").append(type).toString());
         }
     }
 
@@ -325,8 +323,7 @@ public enum CassandraType
                 case CUSTOM:
                     return Bytes.toHexString(row.getBytesUnsafe(i));
                 default:
-                    throw new IllegalStateException("Handling of type " + cassandraType
-                            + " is not implemented");
+                    throw new IllegalStateException(new StringBuilder().append("Handling of type ").append(cassandraType).append(" is not implemented").toString());
             }
         }
     }
@@ -357,7 +354,7 @@ public enum CassandraType
             case DECIMAL:
                 return object.toString();
             default:
-                throw new IllegalStateException("Handling of type " + elemType + " is not implemented");
+                throw new IllegalStateException(new StringBuilder().append("Handling of type ").append(elemType).append(" is not implemented").toString());
         }
     }
 

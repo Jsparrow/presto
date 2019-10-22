@@ -43,6 +43,8 @@ import static com.facebook.presto.spi.type.TypeUtils.readNativeValue;
 import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static com.facebook.presto.util.Reflection.methodHandle;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MapSubscriptOperator
         extends SqlOperator
@@ -172,7 +174,8 @@ public class MapSubscriptOperator
 
     private static class MissingKeyExceptionFactory
     {
-        private final InterpretedFunctionInvoker functionInvoker;
+        private final Logger logger = LoggerFactory.getLogger(MissingKeyExceptionFactory.class);
+		private final InterpretedFunctionInvoker functionInvoker;
         private final FunctionHandle castFunction;
 
         public MissingKeyExceptionFactory(FunctionManager functionManager, Type keyType)
@@ -184,6 +187,7 @@ public class MapSubscriptOperator
                 castFunction = functionManager.lookupCast(CAST, keyType.getTypeSignature(), VARCHAR.getTypeSignature());
             }
             catch (PrestoException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
             this.castFunction = castFunction;
         }
@@ -196,6 +200,7 @@ public class MapSubscriptOperator
                     return new PrestoException(INVALID_FUNCTION_ARGUMENT, format("Key not present in map: %s", varcharValue.toStringUtf8()));
                 }
                 catch (RuntimeException ignored) {
+					logger.error(ignored.getMessage(), ignored);
                 }
             }
             return new PrestoException(INVALID_FUNCTION_ARGUMENT, "Key not present in map");

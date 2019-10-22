@@ -153,12 +153,11 @@ public class ColumnCardinalityCache
 
                 // If the smallest cardinality is present and below the threshold, set the earlyReturn flag
                 Optional<Entry<Long, AccumuloColumnConstraint>> smallestCardinality = cardinalityToConstraints.entries().stream().findFirst();
-                if (smallestCardinality.isPresent()) {
-                    if (smallestCardinality.get().getKey() <= earlyReturnThreshold) {
-                        LOG.info("Cardinality %s, is below threshold. Returning early while other tasks finish", smallestCardinality);
-                        earlyReturn = true;
-                    }
-                }
+                boolean condition = smallestCardinality.isPresent() && smallestCardinality.get().getKey() <= earlyReturnThreshold;
+				if (condition) {
+				    LOG.info("Cardinality %s, is below threshold. Returning early while other tasks finish", smallestCardinality);
+				    earlyReturn = true;
+				}
             }
             while (!earlyReturn && cardinalityToConstraints.entries().size() < numTasks);
         }

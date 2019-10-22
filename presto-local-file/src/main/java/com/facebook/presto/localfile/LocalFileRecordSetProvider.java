@@ -45,9 +45,7 @@ public class LocalFileRecordSetProvider
         LocalFileSplit localFileSplit = (LocalFileSplit) split;
 
         ImmutableList.Builder<LocalFileColumnHandle> handles = ImmutableList.builder();
-        for (ColumnHandle handle : columns) {
-            handles.add((LocalFileColumnHandle) handle);
-        }
+        columns.forEach(handle -> handles.add((LocalFileColumnHandle) handle));
 
         return new LocalFileRecordSet(localFileTables, localFileSplit, handles.build());
     }

@@ -20,24 +20,6 @@ import static org.testng.Assert.assertEquals;
 
 public class TestSchemaEmulation
 {
-    private static class Input
-    {
-        final String tableNamePrefix;
-        final String kuduTableName;
-        final boolean valid;
-        final String prestoSchema;
-        final String prestoTable;
-
-        Input(String tableNamePrefix, String kuduTableName, boolean valid, String prestoSchema, String prestoTable)
-        {
-            this.tableNamePrefix = tableNamePrefix;
-            this.kuduTableName = kuduTableName;
-            this.valid = valid;
-            this.prestoSchema = prestoSchema;
-            this.prestoTable = prestoTable;
-        }
-    }
-
     private Input[] testInputs = new Input[] {
             new Input(null, "table1", true, "default", "table1"),
             new Input(null, "x.y", true, "default", "x.y"),
@@ -57,7 +39,7 @@ public class TestSchemaEmulation
             new Input("presto::", "presto::default.y", false, null, null),
     };
 
-    @Test
+	@Test
     public void testFromRawToRaw()
     {
         for (Input input : testInputs) {
@@ -70,6 +52,24 @@ public class TestSchemaEmulation
                 String raw = emulation.toRawName(schemaTableName);
                 assertEquals(raw, input.kuduTableName);
             }
+        }
+    }
+
+	private static class Input
+    {
+        final String tableNamePrefix;
+        final String kuduTableName;
+        final boolean valid;
+        final String prestoSchema;
+        final String prestoTable;
+
+        Input(String tableNamePrefix, String kuduTableName, boolean valid, String prestoSchema, String prestoTable)
+        {
+            this.tableNamePrefix = tableNamePrefix;
+            this.kuduTableName = kuduTableName;
+            this.valid = valid;
+            this.prestoSchema = prestoSchema;
+            this.prestoTable = prestoTable;
         }
     }
 }

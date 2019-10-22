@@ -61,10 +61,7 @@ public class TpcdsTableStatisticsFactory
 
         if (rowCount > 0) {
             Map<String, ColumnStatisticsData> columnsData = statisticsData.getColumns();
-            for (ColumnHandle handle : columnHandles) {
-                TpcdsColumnHandle columnHandle = (TpcdsColumnHandle) handle;
-                tableStatistics.setColumnStatistics(columnHandle, toColumnStatistics(columnsData.get(columnHandle.getColumnName()), columnHandle.getType(), rowCount));
-            }
+            columnHandles.stream().map(handle -> (TpcdsColumnHandle) handle).forEach(columnHandle -> tableStatistics.setColumnStatistics(columnHandle, toColumnStatistics(columnsData.get(columnHandle.getColumnName()), columnHandle.getType(), rowCount)));
         }
 
         return tableStatistics.build();

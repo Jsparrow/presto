@@ -49,7 +49,7 @@ public final class MemorySplitManager
         List<MemoryDataFragment> dataFragments = layout.getDataFragments();
 
         ImmutableList.Builder<ConnectorSplit> splits = ImmutableList.builder();
-        for (MemoryDataFragment dataFragment : dataFragments) {
+        dataFragments.forEach(dataFragment -> {
             for (int i = 0; i < splitsPerNode; i++) {
                 splits.add(
                         new MemorySplit(
@@ -59,7 +59,7 @@ public final class MemorySplitManager
                                 dataFragment.getHostAddress(),
                                 dataFragment.getRows()));
             }
-        }
+        });
         return new FixedSplitSource(splits.build());
     }
 }

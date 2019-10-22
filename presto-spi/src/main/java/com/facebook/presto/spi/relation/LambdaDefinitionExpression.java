@@ -75,7 +75,7 @@ public final class LambdaDefinitionExpression
     @Override
     public String toString()
     {
-        return "(" + String.join(",", arguments) + ") -> " + body;
+        return new StringBuilder().append("(").append(String.join(",", arguments)).append(") -> ").append(body).toString();
     }
 
     @Override

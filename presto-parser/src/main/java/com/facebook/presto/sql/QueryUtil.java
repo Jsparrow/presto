@@ -81,9 +81,7 @@ public final class QueryUtil
     public static Select selectList(List<Expression> expressions)
     {
         ImmutableList.Builder<SelectItem> items = ImmutableList.builder();
-        for (Expression expression : expressions) {
-            items.add(new SingleColumn(expression));
-        }
+        expressions.forEach(expression -> items.add(new SingleColumn(expression)));
         return new Select(false, items.build());
     }
 

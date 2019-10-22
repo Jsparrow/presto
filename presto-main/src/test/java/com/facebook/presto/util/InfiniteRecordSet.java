@@ -116,7 +116,7 @@ public class InfiniteRecordSet
             if (value instanceof String) {
                 return Slices.utf8Slice((String) value);
             }
-            throw new IllegalArgumentException("Field " + field + " is not a String, but is a " + value.getClass().getName());
+            throw new IllegalArgumentException(new StringBuilder().append("Field ").append(field).append(" is not a String, but is a ").append(value.getClass().getName()).toString());
         }
 
         @Override

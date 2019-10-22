@@ -61,9 +61,7 @@ public final class TestingBlockEncodingSerde
         addBlockEncoding(new RunLengthBlockEncoding());
         addBlockEncoding(new LazyBlockEncoding());
 
-        for (BlockEncoding blockEncoding : requireNonNull(blockEncodings, "blockEncodings is null")) {
-            addBlockEncoding(blockEncoding);
-        }
+        requireNonNull(blockEncodings, "blockEncodings is null").forEach(this::addBlockEncoding);
     }
 
     public void addBlockEncoding(BlockEncoding blockEncoding)

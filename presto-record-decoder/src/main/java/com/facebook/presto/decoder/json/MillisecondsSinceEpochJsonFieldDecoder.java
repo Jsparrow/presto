@@ -31,6 +31,8 @@ import static com.facebook.presto.spi.type.TimestampWithTimeZoneType.TIMESTAMP_W
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Milliseconds since the epoch date format decoder.
@@ -61,7 +63,9 @@ public class MillisecondsSinceEpochJsonFieldDecoder
     public static class MillisecondsSinceEpochJsonValueProvider
             extends AbstractDateTimeJsonValueProvider
     {
-        public MillisecondsSinceEpochJsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
+        private final Logger logger = LoggerFactory.getLogger(MillisecondsSinceEpochJsonValueProvider.class);
+
+		public MillisecondsSinceEpochJsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
         {
             super(value, columnHandle);
         }
@@ -77,7 +81,8 @@ public class MillisecondsSinceEpochJsonFieldDecoder
                     return parseLong(value.asText());
                 }
                 catch (NumberFormatException e) {
-                    throw new PrestoException(
+                    logger.error(e.getMessage(), e);
+					throw new PrestoException(
                             DECODER_CONVERSION_NOT_SUPPORTED,
                             format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
                 }

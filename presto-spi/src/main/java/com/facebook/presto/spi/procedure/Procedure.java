@@ -43,9 +43,7 @@ public class Procedure
         this.methodHandle = requireNonNull(methodHandle, "methodHandle is null");
 
         Set<String> names = new HashSet<>();
-        for (Argument argument : arguments) {
-            checkArgument(names.add(argument.getName()), "Duplicate argument name: " + argument.getName());
-        }
+        arguments.forEach(argument -> checkArgument(names.add(argument.getName()), "Duplicate argument name: " + argument.getName()));
 
         checkArgument(!methodHandle.isVarargsCollector(), "Method must have fixed arity");
         checkArgument(methodHandle.type().returnType() == void.class, "Method must return void");
@@ -89,7 +87,21 @@ public class Procedure
                 .toString();
     }
 
-    public static class Argument
+    private static String checkNotNullOrEmpty(String value, String name)
+    {
+        requireNonNull(value, name + " is null");
+        checkArgument(!value.isEmpty(), name + " is empty");
+        return value;
+    }
+
+	private static void checkArgument(boolean assertion, String message)
+    {
+        if (!assertion) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
+	public static class Argument
     {
         private final String name;
         private final TypeSignature type;
@@ -118,21 +130,7 @@ public class Procedure
         @Override
         public String toString()
         {
-            return name + " " + type;
-        }
-    }
-
-    private static String checkNotNullOrEmpty(String value, String name)
-    {
-        requireNonNull(value, name + " is null");
-        checkArgument(!value.isEmpty(), name + " is empty");
-        return value;
-    }
-
-    private static void checkArgument(boolean assertion, String message)
-    {
-        if (!assertion) {
-            throw new IllegalArgumentException(message);
+            return new StringBuilder().append(name).append(" ").append(type).toString();
         }
     }
 }

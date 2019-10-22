@@ -114,23 +114,25 @@ public final class AggregationTestUtils
         // Do not use this directly. Always use the other assertAggregation.
         assertFunctionEquals(isEqual, testDescription, aggregation(function, pages), expectedValue);
         assertFunctionEquals(isEqual, testDescription, partialAggregation(function, pages), expectedValue);
-        if (pages.length > 0) {
-            assertFunctionEquals(isEqual, testDescription, groupedAggregation(isEqual, function, pages), expectedValue);
-            assertFunctionEquals(isEqual, testDescription, groupedPartialAggregation(isEqual, function, pages), expectedValue);
-            assertFunctionEquals(isEqual, testDescription, distinctAggregation(function, pages), expectedValue);
-        }
+        if (pages.length <= 0) {
+			return;
+		}
+		assertFunctionEquals(isEqual, testDescription, groupedAggregation(isEqual, function, pages), expectedValue);
+		assertFunctionEquals(isEqual, testDescription, groupedPartialAggregation(isEqual, function, pages), expectedValue);
+		assertFunctionEquals(isEqual, testDescription, distinctAggregation(function, pages), expectedValue);
     }
 
     private static void assertFunctionEquals(BiFunction<Object, Object, Boolean> isEqual, String testDescription, Object actualValue, Object expectedValue)
     {
-        if (!isEqual.apply(actualValue, expectedValue)) {
-            StringBuilder sb = new StringBuilder();
-            if (testDescription != null) {
-                sb.append(String.format("Test: %s, ", testDescription));
-            }
-            sb.append(String.format("Expected: %s, actual: %s", expectedValue, actualValue));
-            fail(sb.toString());
-        }
+        if (isEqual.apply(actualValue, expectedValue)) {
+			return;
+		}
+		StringBuilder sb = new StringBuilder();
+		if (testDescription != null) {
+		    sb.append(String.format("Test: %s, ", testDescription));
+		}
+		sb.append(String.format("Expected: %s, actual: %s", expectedValue, actualValue));
+		fail(sb.toString());
     }
 
     public static Object distinctAggregation(InternalAggregationFunction function, Page... pages)

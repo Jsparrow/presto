@@ -32,22 +32,12 @@ public class HiveBasicStatistics
     private final OptionalLong inMemoryDataSizeInBytes;
     private final OptionalLong onDiskDataSizeInBytes;
 
-    public static HiveBasicStatistics createEmptyStatistics()
-    {
-        return new HiveBasicStatistics(OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
-    }
-
-    public static HiveBasicStatistics createZeroStatistics()
-    {
-        return new HiveBasicStatistics(0, 0, 0, 0);
-    }
-
     public HiveBasicStatistics(long fileCount, long rowCount, long inMemoryDataSizeInBytes, long onDiskDataSizeInBytes)
     {
         this(OptionalLong.of(fileCount), OptionalLong.of(rowCount), OptionalLong.of(inMemoryDataSizeInBytes), OptionalLong.of(onDiskDataSizeInBytes));
     }
 
-    @JsonCreator
+	@JsonCreator
     public HiveBasicStatistics(
             @JsonProperty("fileCount") OptionalLong fileCount,
             @JsonProperty("rowCount") OptionalLong rowCount,
@@ -60,31 +50,41 @@ public class HiveBasicStatistics
         this.onDiskDataSizeInBytes = requireNonNull(onDiskDataSizeInBytes, "onDiskDataSizeInBytes is null");
     }
 
-    @JsonProperty
+	public static HiveBasicStatistics createEmptyStatistics()
+    {
+        return new HiveBasicStatistics(OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
+    }
+
+	public static HiveBasicStatistics createZeroStatistics()
+    {
+        return new HiveBasicStatistics(0, 0, 0, 0);
+    }
+
+	@JsonProperty
     public OptionalLong getFileCount()
     {
         return fileCount;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getRowCount()
     {
         return rowCount;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getInMemoryDataSizeInBytes()
     {
         return inMemoryDataSizeInBytes;
     }
 
-    @JsonProperty
+	@JsonProperty
     public OptionalLong getOnDiskDataSizeInBytes()
     {
         return onDiskDataSizeInBytes;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -100,13 +100,13 @@ public class HiveBasicStatistics
                 Objects.equals(onDiskDataSizeInBytes, that.onDiskDataSizeInBytes);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(fileCount, rowCount, inMemoryDataSizeInBytes, onDiskDataSizeInBytes);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

@@ -29,23 +29,21 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestStateMachine
 {
-    private enum State
-    {
-        BREAKFAST, LUNCH, DINNER
-    }
+    private static final Logger logger = LoggerFactory.getLogger(TestStateMachine.class);
+	private final ExecutorService executor = newCachedThreadPool(daemonThreadsNamed("test-%s"));
 
-    private final ExecutorService executor = newCachedThreadPool(daemonThreadsNamed("test-%s"));
-
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
     {
         executor.shutdownNow();
     }
 
-    @Test
+	@Test
     public void testNullState()
             throws Exception
     {
@@ -54,6 +52,7 @@ public class TestStateMachine
             fail("expected a NullPointerException");
         }
         catch (NullPointerException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
 
         StateMachine<State> stateMachine = new StateMachine<>("test", executor, State.BREAKFAST);
@@ -64,6 +63,7 @@ public class TestStateMachine
                 fail("expected a NullPointerException");
             }
             catch (NullPointerException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
 
@@ -73,6 +73,7 @@ public class TestStateMachine
                 fail("expected a NullPointerException");
             }
             catch (NullPointerException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
 
@@ -82,6 +83,7 @@ public class TestStateMachine
                 fail("expected a NullPointerException");
             }
             catch (NullPointerException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
 
@@ -91,6 +93,7 @@ public class TestStateMachine
                 fail("expected a NullPointerException");
             }
             catch (NullPointerException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
 
@@ -100,11 +103,12 @@ public class TestStateMachine
                 fail("expected a NullPointerException");
             }
             catch (NullPointerException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
     }
 
-    @Test
+	@Test
     public void testSet()
             throws Exception
     {
@@ -127,12 +131,13 @@ public class TestStateMachine
                 fail("expected IllegalStateException");
             }
             catch (IllegalStateException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
         assertNoStateChange(stateMachine, () -> stateMachine.set(State.DINNER));
     }
 
-    @Test
+	@Test
     public void testCompareAndSet()
             throws Exception
     {
@@ -163,12 +168,13 @@ public class TestStateMachine
                 fail("expected IllegalStateException");
             }
             catch (IllegalStateException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
         assertNoStateChange(stateMachine, () -> stateMachine.compareAndSet(State.DINNER, State.DINNER));
     }
 
-    @Test
+	@Test
     public void testSetIf()
             throws Exception
     {
@@ -214,13 +220,14 @@ public class TestStateMachine
                 fail("expected IllegalStateException");
             }
             catch (IllegalStateException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         });
         assertNoStateChange(stateMachine, () -> stateMachine.setIf(State.LUNCH, currentState -> false));
         assertNoStateChange(stateMachine, () -> stateMachine.setIf(State.DINNER, currentState -> true));
     }
 
-    private static void assertStateChange(StateMachine<State> stateMachine, StateChanger stateChange, State expectedState)
+	private static void assertStateChange(StateMachine<State> stateMachine, StateChanger stateChange, State expectedState)
             throws Exception
     {
         State initialState = stateMachine.get();
@@ -242,7 +249,7 @@ public class TestStateMachine
         }
     }
 
-    private static void assertNoStateChange(StateMachine<State> stateMachine, StateChanger stateChange)
+	private static void assertNoStateChange(StateMachine<State> stateMachine, StateChanger stateChange)
     {
         State initialState = stateMachine.get();
         ListenableFuture<State> futureChange = stateMachine.getStateChange(initialState);
@@ -269,7 +276,7 @@ public class TestStateMachine
         listenerChange.cancel(true);
     }
 
-    private static SettableFuture<State> addTestListener(StateMachine<State> stateMachine)
+	private static SettableFuture<State> addTestListener(StateMachine<State> stateMachine)
     {
         State initialState = stateMachine.get();
         SettableFuture<Boolean> initialStateNotified = SettableFuture.create();
@@ -295,7 +302,12 @@ public class TestStateMachine
         return stateChanged;
     }
 
-    private interface StateChanger
+	private enum State
+    {
+        BREAKFAST, LUNCH, DINNER
+    }
+
+	private interface StateChanger
     {
         void run();
     }

@@ -50,11 +50,15 @@ import static java.nio.file.Files.isDirectory;
 import static java.util.Locale.ENGLISH;
 import static java.util.stream.Collectors.joining;
 import static org.testng.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractCostBasedPlanTest
         extends BasePlanTest
 {
-    public AbstractCostBasedPlanTest(LocalQueryRunnerSupplier supplier)
+    private static final Logger logger = LoggerFactory.getLogger(AbstractCostBasedPlanTest.class);
+
+	public AbstractCostBasedPlanTest(LocalQueryRunnerSupplier supplier)
     {
         super(supplier);
     }
@@ -94,7 +98,7 @@ public abstract class AbstractCostBasedPlanTest
                                     getQueryPlanResourcePath(queryResourcePath));
                             createParentDirs(queryPlanWritePath.toFile());
                             write(generateQueryPlan(read(queryResourcePath)).getBytes(UTF_8), queryPlanWritePath.toFile());
-                            System.out.println("Generated expected plan for query: " + queryResourcePath);
+                            logger.info("Generated expected plan for query: " + queryResourcePath);
                         }
                         catch (IOException e) {
                             throw new UncheckedIOException(e);

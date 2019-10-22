@@ -861,9 +861,7 @@ public class TestLogicalPlanner
 
         // orders is naturally partitioned, AssignUniqueId should not overwrite its natural partitioning
         assertPlanWithSession(
-                "SELECT COUNT(COUNT) " +
-                        "FROM (SELECT o1.orderkey orderkey, (SELECT COUNT(*) FROM orders o2 WHERE o2.orderkey > o1.orderkey) COUNT FROM orders o1) " +
-                        "GROUP BY orderkey",
+                new StringBuilder().append("SELECT COUNT(COUNT) ").append("FROM (SELECT o1.orderkey orderkey, (SELECT COUNT(*) FROM orders o2 WHERE o2.orderkey > o1.orderkey) COUNT FROM orders o1) ").append("GROUP BY orderkey").toString(),
                 broadcastJoin,
                 false,
                 joinBuildSideWithRemoteExchange,
@@ -959,13 +957,7 @@ public class TestLogicalPlanner
     @Test
     public void testEqualityInference()
     {
-        assertPlan("" +
-                        "SELECT l.comment, p.partkey " +
-                        "FROM lineitem l " +
-                        "JOIN partsupp p " +
-                        "ON l.suppkey = p.suppkey " +
-                        "AND l.partkey = p.partkey " +
-                        "WHERE l.partkey = 42",
+        assertPlan(new StringBuilder().append("").append("SELECT l.comment, p.partkey ").append("FROM lineitem l ").append("JOIN partsupp p ").append("ON l.suppkey = p.suppkey ").append("AND l.partkey = p.partkey ").append("WHERE l.partkey = 42").toString(),
                 anyTree(
                         join(INNER, ImmutableList.of(equiJoinClause("l_suppkey", "p_suppkey")),
                                 anyTree(
@@ -976,13 +968,7 @@ public class TestLogicalPlanner
                                         filter(
                                                 "p_partkey = 42",
                                                 tableScan("partsupp", ImmutableMap.of("p_partkey", "partkey", "p_suppkey", "suppkey")))))));
-        assertPlan("" +
-                        "SELECT l.comment, p.partkey " +
-                        "FROM lineitem l " +
-                        "JOIN partsupp p " +
-                        "ON l.suppkey = p.suppkey " +
-                        "AND l.comment = p.comment " +
-                        "WHERE l.comment = '42'",
+        assertPlan(new StringBuilder().append("").append("SELECT l.comment, p.partkey ").append("FROM lineitem l ").append("JOIN partsupp p ").append("ON l.suppkey = p.suppkey ").append("AND l.comment = p.comment ").append("WHERE l.comment = '42'").toString(),
                 anyTree(
                         join(INNER, ImmutableList.of(equiJoinClause("l_suppkey", "p_suppkey")),
                                 anyTree(

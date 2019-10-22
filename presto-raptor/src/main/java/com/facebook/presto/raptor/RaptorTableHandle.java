@@ -149,7 +149,8 @@ public final class RaptorTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + schemaName + ":" + tableName + ":" + tableId;
+        return new StringBuilder().append(connectorId).append(":").append(schemaName).append(":").append(tableName).append(":")
+				.append(tableId).toString();
     }
 
     @Override

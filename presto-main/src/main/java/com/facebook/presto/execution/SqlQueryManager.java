@@ -522,14 +522,14 @@ public class SqlQueryManager
      */
     private void enforceCpuLimits()
     {
-        for (QueryExecution query : queryTracker.getAllQueries()) {
+        queryTracker.getAllQueries().forEach(query -> {
             Duration cpuTime = query.getTotalCpuTime();
             Duration sessionLimit = getQueryMaxCpuTime(query.getSession());
             Duration limit = Ordering.natural().min(maxQueryCpuTime, sessionLimit);
             if (cpuTime.compareTo(limit) > 0) {
                 query.fail(new ExceededCpuLimitException(limit));
             }
-        }
+        });
     }
 
     private void addStatsListeners(QueryExecution queryExecution)

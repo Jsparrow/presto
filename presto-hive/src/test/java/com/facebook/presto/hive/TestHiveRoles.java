@@ -49,9 +49,7 @@ public class TestHiveRoles
     @AfterMethod
     public void afterMethod()
     {
-        for (String role : listRoles()) {
-            executeFromAdmin("DROP ROLE " + role);
-        }
+        listRoles().forEach(role -> executeFromAdmin("DROP ROLE " + role));
     }
 
     @Test

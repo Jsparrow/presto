@@ -123,17 +123,17 @@ public class ElasticsearchQueryBuilder
     private QueryBuilder buildSearchQuery()
     {
         BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
-        for (ElasticsearchColumnHandle column : columns) {
+        columns.forEach(column -> {
             BoolQueryBuilder columnQueryBuilder = new BoolQueryBuilder();
             Type type = column.getColumnType();
-            if (tupleDomain.getDomains().isPresent()) {
-                Domain domain = tupleDomain.getDomains().get().get(column);
+            tupleDomain.getDomains().ifPresent(value -> {
+                Domain domain = value.get(column);
                 if (domain != null) {
                     columnQueryBuilder.should(buildPredicate(column.getColumnJsonPath(), domain, type));
                 }
-            }
+            });
             boolQueryBuilder.must(columnQueryBuilder);
-        }
+        });
         if (boolQueryBuilder.hasClauses()) {
             return boolQueryBuilder;
         }
@@ -150,12 +150,11 @@ public class ElasticsearchQueryBuilder
             return boolQueryBuilder;
         }
 
-        if (domain.getValues().isAll()) {
-            boolQueryBuilder.must(new ExistsQueryBuilder(columnName));
-            return boolQueryBuilder;
-        }
-
-        return buildTermQuery(boolQueryBuilder, columnName, domain, type);
+        if (!domain.getValues().isAll()) {
+			return buildTermQuery(boolQueryBuilder, columnName, domain, type);
+		}
+		boolQueryBuilder.must(new ExistsQueryBuilder(columnName));
+		return boolQueryBuilder;
     }
 
     private QueryBuilder buildTermQuery(BoolQueryBuilder queryBuilder, String columnName, Domain domain, Type type)

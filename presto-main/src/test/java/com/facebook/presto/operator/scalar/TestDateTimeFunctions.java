@@ -35,14 +35,14 @@ public class TestDateTimeFunctions
     @Test
     public void testToIso8601ForTimestampWithoutTimeZone()
     {
-        assertFunction("to_iso8601(" + TIMESTAMP_LITERAL + ")", createVarcharType(35), TIMESTAMP_ISO8601_STRING_NO_TIME_ZONE);
+        assertFunction(new StringBuilder().append("to_iso8601(").append(TIMESTAMP_LITERAL).append(")").toString(), createVarcharType(35), TIMESTAMP_ISO8601_STRING_NO_TIME_ZONE);
     }
 
     @Test
     public void testFormatDateCannotImplicitlyAddTimeZoneToTimestampLiteral()
     {
         assertInvalidFunction(
-                "format_datetime(" + TIMESTAMP_LITERAL + ", 'YYYY/MM/dd HH:mm ZZZZ')",
+                new StringBuilder().append("format_datetime(").append(TIMESTAMP_LITERAL).append(", 'YYYY/MM/dd HH:mm ZZZZ')").toString(),
                 "format_datetime for TIMESTAMP type, cannot use 'Z' nor 'z' in format, as this type does not contain TZ information");
     }
 

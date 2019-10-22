@@ -22,22 +22,13 @@ import static java.util.Objects.requireNonNull;
 
 public class ColumnEncoding
 {
-    public enum ColumnEncodingKind
-    {
-        DIRECT,
-        DICTIONARY,
-        DIRECT_V2,
-        DICTIONARY_V2,
-        DWRF_DIRECT,
-        DWRF_MAP_FLAT,
-    }
-
     public static final int DEFAULT_SEQUENCE_ID = 0;
 
-    private final ColumnEncodingKind columnEncodingKind;
-    private final int dictionarySize;
+	private final ColumnEncodingKind columnEncodingKind;
 
-    // DWRF supports the concept of sequences.
+	private final int dictionarySize;
+
+	// DWRF supports the concept of sequences.
     // A column can be modeled as multiple sequences that are independently encoded.
     // For example, for a flat map column, each key will have a
     // separate value stream with its own column encoding.
@@ -46,34 +37,34 @@ public class ColumnEncoding
     // Sorted so that when we iterate over the map the DwrfSequenceEncodings are returned in ascending Sequence ID order
     private final Optional<SortedMap<Integer, DwrfSequenceEncoding>> additionalSequenceEncodings;
 
-    public ColumnEncoding(ColumnEncodingKind columnEncodingKind, int dictionarySize)
+	public ColumnEncoding(ColumnEncodingKind columnEncodingKind, int dictionarySize)
     {
         this(columnEncodingKind, dictionarySize, Optional.empty());
     }
 
-    public ColumnEncoding(ColumnEncodingKind columnEncodingKind, int dictionarySize, Optional<SortedMap<Integer, DwrfSequenceEncoding>> additionalSequenceEncodings)
+	public ColumnEncoding(ColumnEncodingKind columnEncodingKind, int dictionarySize, Optional<SortedMap<Integer, DwrfSequenceEncoding>> additionalSequenceEncodings)
     {
         this.columnEncodingKind = requireNonNull(columnEncodingKind, "columnEncodingKind is null");
         this.dictionarySize = dictionarySize;
         this.additionalSequenceEncodings = additionalSequenceEncodings;
     }
 
-    public ColumnEncodingKind getColumnEncodingKind()
+	public ColumnEncodingKind getColumnEncodingKind()
     {
         return columnEncodingKind;
     }
 
-    public int getDictionarySize()
+	public int getDictionarySize()
     {
         return dictionarySize;
     }
 
-    public Optional<SortedMap<Integer, DwrfSequenceEncoding>> getAdditionalSequenceEncodings()
+	public Optional<SortedMap<Integer, DwrfSequenceEncoding>> getAdditionalSequenceEncodings()
     {
         return additionalSequenceEncodings;
     }
 
-    public ColumnEncoding getColumnEncoding(int sequence)
+	public ColumnEncoding getColumnEncoding(int sequence)
     {
         if (sequence == 0) {
             return this;
@@ -94,7 +85,7 @@ public class ColumnEncoding
         return sequenceEncoding.getValueEncoding();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -102,5 +93,15 @@ public class ColumnEncoding
                 .add("dictionarySize", dictionarySize)
                 .add("additionalSequenceEncodings", additionalSequenceEncodings)
                 .toString();
+    }
+
+	public enum ColumnEncodingKind
+    {
+        DIRECT,
+        DICTIONARY,
+        DIRECT_V2,
+        DICTIONARY_V2,
+        DWRF_DIRECT,
+        DWRF_MAP_FLAT,
     }
 }

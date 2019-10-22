@@ -214,13 +214,7 @@ public class TestProxyServer
         try (Connection connection = createConnection();
                 Statement statement = connection.createStatement()) {
             assertEquals(statement.executeUpdate("CREATE SCHEMA blackhole.test"), 0);
-            assertEquals(statement.executeUpdate("CREATE TABLE blackhole.test.slow (x bigint) " +
-                    "WITH (" +
-                    "   split_count = 1, " +
-                    "   pages_per_split = 1, " +
-                    "   rows_per_page = 1, " +
-                    "   page_processing_delay = '1m'" +
-                    ")"), 0);
+            assertEquals(statement.executeUpdate(new StringBuilder().append("CREATE TABLE blackhole.test.slow (x bigint) ").append("WITH (").append("   split_count = 1, ").append("   pages_per_split = 1, ").append("   rows_per_page = 1, ").append("   page_processing_delay = '1m'").append(")").toString()), 0);
         }
     }
 

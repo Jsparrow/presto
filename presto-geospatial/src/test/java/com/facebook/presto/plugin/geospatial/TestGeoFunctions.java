@@ -203,9 +203,7 @@ public class TestGeoFunctions
         // something approximately like `ST_Buffer(ST_Centroid(geometry))`.
         assertFunction("ST_IsEmpty(ST_Buffer(ST_Buffer(ST_Point(177.50102959662, 64.726807421691), 0.0000000001), 0.00005))",
                 BOOLEAN, true);
-        assertFunction("ST_IsEmpty(ST_Buffer(ST_GeometryFromText(" +
-                "'POLYGON ((177.0 64.0, 177.0000000001 64.0, 177.0000000001 64.0000000001, 177.0 64.0000000001, 177.0 64.0))'" +
-                "), 0.01))", BOOLEAN, true);
+        assertFunction(new StringBuilder().append("ST_IsEmpty(ST_Buffer(ST_GeometryFromText(").append("'POLYGON ((177.0 64.0, 177.0000000001 64.0, 177.0000000001 64.0000000001, 177.0 64.0000000001, 177.0 64.0))'").append("), 0.01))").toString(), BOOLEAN, true);
     }
 
     @Test
@@ -348,12 +346,12 @@ public class TestGeoFunctions
 
     private void assertSimpleGeometry(String text)
     {
-        assertFunction("ST_IsSimple(ST_GeometryFromText('" + text + "'))", BOOLEAN, true);
+        assertFunction(new StringBuilder().append("ST_IsSimple(ST_GeometryFromText('").append(text).append("'))").toString(), BOOLEAN, true);
     }
 
     private void assertNotSimpleGeometry(String text)
     {
-        assertFunction("ST_IsSimple(ST_GeometryFromText('" + text + "'))", BOOLEAN, false);
+        assertFunction(new StringBuilder().append("ST_IsSimple(ST_GeometryFromText('").append(text).append("'))").toString(), BOOLEAN, false);
     }
 
     @Test
@@ -383,7 +381,7 @@ public class TestGeoFunctions
         assertFunction("ST_AsText(simplify_geometry(ST_GeometryFromText('POLYGON ((1 0, 1 1, 2 1, 2 3, 3 3, 3 1, 4 1, 4 0, 1 0))'), 0.5))", VARCHAR, "POLYGON ((1 0, 4 0, 4 1, 3 1, 3 3, 2 3, 2 1, 1 1, 1 0))");
 
         // Negative distance tolerance is invalid.
-        assertInvalidFunction("ST_AsText(simplify_geometry(ST_GeometryFromText('" + "POLYGON ((1 0, 1 1, 2 1, 2 3, 3 3, 3 1, 4 1, 4 0, 1 0))" + "'), -0.5))", "distanceTolerance is negative");
+        assertInvalidFunction(new StringBuilder().append("ST_AsText(simplify_geometry(ST_GeometryFromText('").append("POLYGON ((1 0, 1 1, 2 1, 2 3, 3 3, 3 1, 4 1, 4 0, 1 0))").append("'), -0.5))").toString(), "distanceTolerance is negative");
     }
 
     @Test
@@ -428,14 +426,14 @@ public class TestGeoFunctions
 
     private void assertValidGeometry(String wkt)
     {
-        assertFunction("ST_IsValid(ST_GeometryFromText('" + wkt + "'))", BOOLEAN, true);
-        assertFunction("geometry_invalid_reason(ST_GeometryFromText('" + wkt + "'))", VARCHAR, null);
+        assertFunction(new StringBuilder().append("ST_IsValid(ST_GeometryFromText('").append(wkt).append("'))").toString(), BOOLEAN, true);
+        assertFunction(new StringBuilder().append("geometry_invalid_reason(ST_GeometryFromText('").append(wkt).append("'))").toString(), VARCHAR, null);
     }
 
     private void assertInvalidGeometry(String wkt, String reason)
     {
-        assertFunction("ST_IsValid(ST_GeometryFromText('" + wkt + "'))", BOOLEAN, false);
-        assertFunction("geometry_invalid_reason(ST_GeometryFromText('" + wkt + "'))", VARCHAR, reason);
+        assertFunction(new StringBuilder().append("ST_IsValid(ST_GeometryFromText('").append(wkt).append("'))").toString(), BOOLEAN, false);
+        assertFunction(new StringBuilder().append("geometry_invalid_reason(ST_GeometryFromText('").append(wkt).append("'))").toString(), VARCHAR, reason);
     }
 
     @Test
@@ -579,7 +577,7 @@ public class TestGeoFunctions
     private void assertSTPoints(String wkt, String... expected)
     {
         assertFunction(String.format("transform(ST_Points(ST_GeometryFromText('%s')), x -> ST_AsText(x))", wkt), new ArrayType(VARCHAR),
-                Arrays.stream(expected).map(s -> "POINT (" + s + ")").collect(Collectors.toList()));
+                Arrays.stream(expected).map(s -> new StringBuilder().append("POINT (").append(s).append(")").toString()).collect(Collectors.toList()));
     }
 
     @Test
@@ -704,7 +702,7 @@ public class TestGeoFunctions
 
     private void assertEnvelopeIntersection(String envelope, String otherEnvelope, String intersection)
     {
-        assertFunction("ST_AsText(ST_Intersection(ST_Envelope(ST_GeometryFromText('" + envelope + "')), ST_Envelope(ST_GeometryFromText('" + otherEnvelope + "'))))", VARCHAR, intersection);
+        assertFunction(new StringBuilder().append("ST_AsText(ST_Intersection(ST_Envelope(ST_GeometryFromText('").append(envelope).append("')), ST_Envelope(ST_GeometryFromText('").append(otherEnvelope).append("'))))").toString(), VARCHAR, intersection);
     }
 
     @Test
@@ -797,7 +795,7 @@ public class TestGeoFunctions
 
     private void assertSTNumGeometries(String wkt, int expected)
     {
-        assertFunction("ST_NumGeometries(ST_GeometryFromText('" + wkt + "'))", INTEGER, expected);
+        assertFunction(new StringBuilder().append("ST_NumGeometries(ST_GeometryFromText('").append(wkt).append("'))").toString(), INTEGER, expected);
     }
 
     @Test
@@ -823,16 +821,10 @@ public class TestGeoFunctions
                         "GEOMETRYCOLLECTION (LINESTRING (0 5, 5 5), POLYGON ((1 1, 3 1, 3 3, 1 3, 1 1)))");
 
         // empty geometry
-        for (String emptyWkt : emptyWkts) {
-            for (String simpleWkt : simpleWkts) {
-                assertUnion(emptyWkt, simpleWkt, simpleWkt);
-            }
-        }
+		emptyWkts.forEach(emptyWkt -> simpleWkts.forEach(simpleWkt -> assertUnion(emptyWkt, simpleWkt, simpleWkt)));
 
         // self union
-        for (String simpleWkt : simpleWkts) {
-            assertUnion(simpleWkt, simpleWkt, simpleWkt);
-        }
+		simpleWkts.forEach(simpleWkt -> assertUnion(simpleWkt, simpleWkt, simpleWkt));
 
         // touching union
         assertUnion("POINT (1 2)", "MULTIPOINT ((1 2), (3 4))", "MULTIPOINT ((1 2), (3 4))");
@@ -919,7 +911,7 @@ public class TestGeoFunctions
 
     private void assertSTGeometryN(String wkt, int index, String expected)
     {
-        assertFunction("ST_ASText(ST_GeometryN(ST_GeometryFromText('" + wkt + "')," + index + "))", VARCHAR, expected);
+        assertFunction(new StringBuilder().append("ST_ASText(ST_GeometryN(ST_GeometryFromText('").append(wkt).append("'),").append(index).append("))").toString(), VARCHAR, expected);
     }
 
     @Test

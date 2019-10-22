@@ -23,6 +23,7 @@ import static com.facebook.presto.spi.type.IntegerType.INTEGER;
 import static com.facebook.presto.spi.type.VarcharType.createVarcharType;
 import static com.facebook.presto.type.UnknownType.UNKNOWN;
 import static java.util.Arrays.asList;
+import java.util.Collections;
 public class TestArrayNgramsFunction
 
         extends AbstractTestFunctions
@@ -94,7 +95,7 @@ public class TestArrayNgramsFunction
                 ImmutableList.of("\u5E0C\u671B", "\u671B")));
 
         assertFunction("ngrams(ARRAY[], 2)", new ArrayType(new ArrayType(UNKNOWN)), ImmutableList.of(
-                asList()));
+                Collections.emptyList()));
         assertFunction("ngrams(ARRAY[''], 2)", new ArrayType(new ArrayType(createVarcharType(0))), ImmutableList.of(
                 ImmutableList.of("")));
         assertFunction("ngrams(ARRAY['', ''], 2)", new ArrayType(new ArrayType(createVarcharType(0))), ImmutableList.of(

@@ -24,30 +24,30 @@ import static java.lang.String.format;
 public class ExceededMemoryLimitException
         extends PrestoException
 {
-    public static ExceededMemoryLimitException exceededGlobalUserLimit(DataSize maxMemory)
+    private ExceededMemoryLimitException(StandardErrorCode errorCode, String message)
+    {
+        super(errorCode, message);
+    }
+
+	public static ExceededMemoryLimitException exceededGlobalUserLimit(DataSize maxMemory)
     {
         return new ExceededMemoryLimitException(EXCEEDED_GLOBAL_MEMORY_LIMIT, format("Query exceeded distributed user memory limit of %s", maxMemory));
     }
 
-    public static ExceededMemoryLimitException exceededGlobalTotalLimit(DataSize maxMemory)
+	public static ExceededMemoryLimitException exceededGlobalTotalLimit(DataSize maxMemory)
     {
         return new ExceededMemoryLimitException(EXCEEDED_GLOBAL_MEMORY_LIMIT, format("Query exceeded distributed total memory limit of %s", maxMemory));
     }
 
-    public static ExceededMemoryLimitException exceededLocalUserMemoryLimit(DataSize maxMemory, String additionalFailureInfo)
+	public static ExceededMemoryLimitException exceededLocalUserMemoryLimit(DataSize maxMemory, String additionalFailureInfo)
     {
         return new ExceededMemoryLimitException(EXCEEDED_LOCAL_MEMORY_LIMIT,
                 format("Query exceeded per-node user memory limit of %s [%s]", maxMemory, additionalFailureInfo));
     }
 
-    public static ExceededMemoryLimitException exceededLocalTotalMemoryLimit(DataSize maxMemory, String additionalFailureInfo)
+	public static ExceededMemoryLimitException exceededLocalTotalMemoryLimit(DataSize maxMemory, String additionalFailureInfo)
     {
         return new ExceededMemoryLimitException(EXCEEDED_LOCAL_MEMORY_LIMIT,
                 format("Query exceeded per-node total memory limit of %s [%s]", maxMemory, additionalFailureInfo));
-    }
-
-    private ExceededMemoryLimitException(StandardErrorCode errorCode, String message)
-    {
-        super(errorCode, message);
     }
 }

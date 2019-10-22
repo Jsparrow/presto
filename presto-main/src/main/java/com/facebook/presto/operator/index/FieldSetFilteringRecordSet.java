@@ -49,16 +49,16 @@ public class FieldSetFilteringRecordSet
 
         ImmutableList.Builder<Set<Field>> fieldSetsBuilder = ImmutableList.builder();
         List<Type> columnTypes = delegate.getColumnTypes();
-        for (Set<Integer> fieldSet : requireNonNull(fieldSets, "fieldSets is null")) {
+        requireNonNull(fieldSets, "fieldSets is null").forEach(fieldSet -> {
             ImmutableSet.Builder<Field> fieldSetBuilder = ImmutableSet.builder();
-            for (int field : fieldSet) {
-                fieldSetBuilder.add(new Field(
-                        field,
-                        functionManager.getScalarFunctionImplementation(
-                                functionManager.resolveOperator(OperatorType.EQUAL, fromTypes(columnTypes.get(field), columnTypes.get(field)))).getMethodHandle()));
-            }
+            fieldSet.stream().mapToInt(Integer::valueOf).forEach(field -> fieldSetBuilder
+					.add(new Field(field,
+							functionManager
+									.getScalarFunctionImplementation(functionManager.resolveOperator(OperatorType.EQUAL,
+											fromTypes(columnTypes.get(field), columnTypes.get(field))))
+									.getMethodHandle())));
             fieldSetsBuilder.add(fieldSetBuilder.build());
-        }
+        });
         this.fieldSets = fieldSetsBuilder.build();
     }
 
@@ -139,12 +139,7 @@ public class FieldSetFilteringRecordSet
 
         private static boolean fieldSetsEqual(RecordCursor cursor, List<Set<Field>> fieldSets)
         {
-            for (Set<Field> fieldSet : fieldSets) {
-                if (!fieldsEquals(cursor, fieldSet)) {
-                    return false;
-                }
-            }
-            return true;
+            return fieldSets.stream().allMatch(fieldSet -> fieldsEquals(cursor, fieldSet));
         }
 
         private static boolean fieldsEquals(RecordCursor cursor, Set<Field> fields)

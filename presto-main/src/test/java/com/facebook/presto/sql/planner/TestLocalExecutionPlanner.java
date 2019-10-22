@@ -50,7 +50,7 @@ public class TestLocalExecutionPlanner
     public void testCompilerFailure()
     {
         // structure the query this way to avoid stack overflow when parsing
-        String inner = "(" + Joiner.on(" + ").join(nCopies(100, "rand()")) + ")";
+        String inner = new StringBuilder().append("(").append(Joiner.on(" + ").join(nCopies(100, "rand()"))).append(")").toString();
         String outer = Joiner.on(" + ").join(nCopies(100, inner));
         assertFails("SELECT " + outer, COMPILER_ERROR);
     }

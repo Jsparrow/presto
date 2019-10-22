@@ -94,37 +94,34 @@ public final class ApproximateLongPercentileArrayAggregations
 
         BlockBuilder blockBuilder = out.beginBlockEntry();
 
-        for (int i = 0; i < percentiles.size(); i++) {
-            Double percentile = percentiles.get(i);
-            BIGINT.writeLong(blockBuilder, digest.getQuantile(percentile));
-        }
+        percentiles.forEach(percentile -> BIGINT.writeLong(blockBuilder, digest.getQuantile(percentile)));
 
         out.closeEntry();
     }
 
     private static void initializePercentilesArray(@AggregationState DigestAndPercentileArrayState state, Block percentilesArrayBlock)
     {
-        if (state.getPercentiles() == null) {
-            ImmutableList.Builder<Double> percentilesListBuilder = ImmutableList.builder();
-
-            for (int i = 0; i < percentilesArrayBlock.getPositionCount(); i++) {
-                checkCondition(!percentilesArrayBlock.isNull(i), INVALID_FUNCTION_ARGUMENT, "Percentile cannot be null");
-                double percentile = DOUBLE.getDouble(percentilesArrayBlock, i);
-                checkCondition(0 <= percentile && percentile <= 1, INVALID_FUNCTION_ARGUMENT, "Percentile must be between 0 and 1");
-                percentilesListBuilder.add(percentile);
-            }
-
-            state.setPercentiles(percentilesListBuilder.build());
-        }
+        if (state.getPercentiles() != null) {
+			return;
+		}
+		ImmutableList.Builder<Double> percentilesListBuilder = ImmutableList.builder();
+		for (int i = 0; i < percentilesArrayBlock.getPositionCount(); i++) {
+		    checkCondition(!percentilesArrayBlock.isNull(i), INVALID_FUNCTION_ARGUMENT, "Percentile cannot be null");
+		    double percentile = DOUBLE.getDouble(percentilesArrayBlock, i);
+		    checkCondition(0 <= percentile && percentile <= 1, INVALID_FUNCTION_ARGUMENT, "Percentile must be between 0 and 1");
+		    percentilesListBuilder.add(percentile);
+		}
+		state.setPercentiles(percentilesListBuilder.build());
     }
 
     private static void initializeDigest(@AggregationState DigestAndPercentileArrayState state)
     {
         QuantileDigest digest = state.getDigest();
-        if (digest == null) {
-            digest = new QuantileDigest(0.01);
-            state.setDigest(digest);
-            state.addMemoryUsage(digest.estimatedInMemorySizeInBytes());
-        }
+        if (digest != null) {
+			return;
+		}
+		digest = new QuantileDigest(0.01);
+		state.setDigest(digest);
+		state.addMemoryUsage(digest.estimatedInMemorySizeInBytes());
     }
 }

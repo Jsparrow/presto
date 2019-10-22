@@ -53,42 +53,6 @@ public class FixedDoubleBreakdownHistogram
     private double[] weights;
     private long[] counts;
 
-    public static class Bucket
-    {
-        private final double left;
-        private final double right;
-        private final double weight;
-        private final long count;
-
-        public double getLeft()
-        {
-            return left;
-        }
-
-        public double getRight()
-        {
-            return right;
-        }
-
-        public double getWeight()
-        {
-            return weight;
-        }
-
-        public long getCount()
-        {
-            return count;
-        }
-
-        public Bucket(double left, double right, double weight, long count)
-        {
-            this.left = left;
-            this.right = right;
-            this.weight = weight;
-            this.count = count;
-        }
-    }
-
     public FixedDoubleBreakdownHistogram(int bucketCount, double min, double max)
     {
         validateParameters(bucketCount, min, max);
@@ -100,7 +64,7 @@ public class FixedDoubleBreakdownHistogram
         this.counts = new long[0];
     }
 
-    private FixedDoubleBreakdownHistogram(FixedDoubleBreakdownHistogram other)
+	private FixedDoubleBreakdownHistogram(FixedDoubleBreakdownHistogram other)
     {
         this.bucketCount = other.bucketCount;
         this.min = other.min;
@@ -110,7 +74,7 @@ public class FixedDoubleBreakdownHistogram
         this.counts = Arrays.copyOf(other.counts, other.counts.length);
     }
 
-    private FixedDoubleBreakdownHistogram(
+	private FixedDoubleBreakdownHistogram(
             int bucketCount,
             double min,
             double max,
@@ -127,27 +91,27 @@ public class FixedDoubleBreakdownHistogram
         this.counts = requireNonNull(counts, "counts is null");
     }
 
-    public int getBucketCount()
+	public int getBucketCount()
     {
         return bucketCount;
     }
 
-    public double getMin()
+	public double getMin()
     {
         return min;
     }
 
-    public double getMax()
+	public double getMax()
     {
         return max;
     }
 
-    public double getWidth()
+	public double getWidth()
     {
         return (max - min) / bucketCount;
     }
 
-    public long estimatedInMemorySize()
+	public long estimatedInMemorySize()
     {
         return INSTANCE_SIZE +
                 SizeOf.sizeOf(indices) +
@@ -155,7 +119,7 @@ public class FixedDoubleBreakdownHistogram
                 SizeOf.sizeOf(counts);
     }
 
-    public int getRequiredBytesForSerialization()
+	public int getRequiredBytesForSerialization()
     {
         return SizeOf.SIZE_OF_INT + // bucketCount
                 2 * SizeOf.SIZE_OF_DOUBLE + // min, max
@@ -164,7 +128,7 @@ public class FixedDoubleBreakdownHistogram
                         (SizeOf.SIZE_OF_INT + SizeOf.SIZE_OF_DOUBLE + SizeOf.SIZE_OF_LONG); // indices, weights, counts
     }
 
-    public static FixedDoubleBreakdownHistogram deserialize(SliceInput input)
+	public static FixedDoubleBreakdownHistogram deserialize(SliceInput input)
     {
         int bucketCount = input.readInt();
         double min = input.readDouble();
@@ -181,7 +145,7 @@ public class FixedDoubleBreakdownHistogram
         return new FixedDoubleBreakdownHistogram(bucketCount, min, max, indices, weights, counts);
     }
 
-    public void serialize(SliceOutput out)
+	public void serialize(SliceOutput out)
     {
         out.appendInt(bucketCount);
         out.appendDouble(min);
@@ -192,24 +156,24 @@ public class FixedDoubleBreakdownHistogram
         IntStream.range(0, indices.length).forEach(i -> out.appendLong(counts[i]));
     }
 
-    public void add(double value)
+	public void add(double value)
     {
         add(value, 1.0);
     }
 
-    public void add(double value, double weight)
+	public void add(double value, double weight)
     {
         add(value, weight, 1);
     }
 
-    public void add(double value, double weight, long count)
+	public void add(double value, double weight, long count)
     {
         int logicalBucketIndex = getIndexForValue(bucketCount, min, max, value);
 
         add(logicalBucketIndex, weight, count);
     }
 
-    private void add(int logicalBucketIndex, double weight, long count)
+	private void add(int logicalBucketIndex, double weight, long count)
     {
         int foundIndex = lowerBoundBinarySearch(logicalBucketIndex, weight);
         if (foundIndex < indices.length && indices[foundIndex] == logicalBucketIndex && weights[foundIndex] == weight) {
@@ -236,7 +200,7 @@ public class FixedDoubleBreakdownHistogram
         counts = newCounts;
     }
 
-    public void mergeWith(FixedDoubleBreakdownHistogram other)
+	public void mergeWith(FixedDoubleBreakdownHistogram other)
     {
         checkArgument(
                 bucketCount == other.bucketCount,
@@ -253,7 +217,8 @@ public class FixedDoubleBreakdownHistogram
         }
     }
 
-    public Iterator<Bucket> iterator()
+	@Override
+	public Iterator<Bucket> iterator()
     {
         return new Iterator<Bucket>() {
             private int currentIndex;
@@ -288,12 +253,13 @@ public class FixedDoubleBreakdownHistogram
         };
     }
 
-    public FixedDoubleBreakdownHistogram clone()
+	@Override
+	public FixedDoubleBreakdownHistogram clone()
     {
         return new FixedDoubleBreakdownHistogram(this);
     }
 
-    private int lowerBoundBinarySearch(int logicalBucketIndex, double weight)
+	private int lowerBoundBinarySearch(int logicalBucketIndex, double weight)
     {
         int count = indices.length;
         int first = 0;
@@ -310,5 +276,41 @@ public class FixedDoubleBreakdownHistogram
             }
         }
         return first;
+    }
+
+	public static class Bucket
+    {
+        private final double left;
+        private final double right;
+        private final double weight;
+        private final long count;
+
+        public Bucket(double left, double right, double weight, long count)
+        {
+            this.left = left;
+            this.right = right;
+            this.weight = weight;
+            this.count = count;
+        }
+
+		public double getLeft()
+        {
+            return left;
+        }
+
+		public double getRight()
+        {
+            return right;
+        }
+
+		public double getWeight()
+        {
+            return weight;
+        }
+
+		public long getCount()
+        {
+            return count;
+        }
     }
 }

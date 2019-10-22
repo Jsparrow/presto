@@ -26,18 +26,9 @@ import java.util.Set;
 
 public interface MetadataDao
 {
-    String TABLE_INFORMATION_SELECT = "" +
-            "SELECT t.table_id, t.distribution_id, d.distribution_name, d.bucket_count, t.temporal_column_id, t.organization_enabled\n" +
-            "FROM tables t\n" +
-            "LEFT JOIN distributions d ON (t.distribution_id = d.distribution_id)\n";
+    String TABLE_INFORMATION_SELECT = new StringBuilder().append("").append("SELECT t.table_id, t.distribution_id, d.distribution_name, d.bucket_count, t.temporal_column_id, t.organization_enabled\n").append("FROM tables t\n").append("LEFT JOIN distributions d ON (t.distribution_id = d.distribution_id)\n").toString();
 
-    String TABLE_COLUMN_SELECT = "" +
-            "SELECT t.schema_name, t.table_name,\n" +
-            "  c.column_id, c.column_name, c.data_type, c.ordinal_position,\n" +
-            "  c.bucket_ordinal_position, c.sort_ordinal_position,\n" +
-            "  t.temporal_column_id = c.column_id AS temporal\n" +
-            "FROM tables t\n" +
-            "JOIN columns c ON (t.table_id = c.table_id)\n";
+    String TABLE_COLUMN_SELECT = new StringBuilder().append("").append("SELECT t.schema_name, t.table_name,\n").append("  c.column_id, c.column_name, c.data_type, c.ordinal_position,\n").append("  c.bucket_ordinal_position, c.sort_ordinal_position,\n").append("  t.temporal_column_id = c.column_id AS temporal\n").append("FROM tables t\n").append("JOIN columns c ON (t.table_id = c.table_id)\n").toString();
 
     @SqlQuery(TABLE_INFORMATION_SELECT +
             "WHERE t.table_id = :tableId")

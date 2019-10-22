@@ -20,13 +20,13 @@ import com.google.common.annotations.Beta;
 public class SmileBodyGenerator<T>
         extends StaticBodyGenerator
 {
-    public static <T> SmileBodyGenerator<T> smileBodyGenerator(SmileCodec<T> smileCodec, T instance)
-    {
-        return new SmileBodyGenerator<>(smileCodec, instance);
-    }
-
     private SmileBodyGenerator(SmileCodec<T> smileCodec, T instance)
     {
         super(smileCodec.toBytes(instance));
+    }
+
+	public static <T> SmileBodyGenerator<T> smileBodyGenerator(SmileCodec<T> smileCodec, T instance)
+    {
+        return new SmileBodyGenerator<>(smileCodec, instance);
     }
 }

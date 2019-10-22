@@ -216,11 +216,7 @@ public class BridgingHiveMetastore
                 throw new PrestoException(NOT_SUPPORTED, "Renaming partition columns is not supported");
             }
         }
-        for (FieldSchema fieldSchema : table.getSd().getCols()) {
-            if (fieldSchema.getName().equals(oldColumnName)) {
-                fieldSchema.setName(newColumnName);
-            }
-        }
+        table.getSd().getCols().stream().filter(fieldSchema -> fieldSchema.getName().equals(oldColumnName)).forEach(fieldSchema -> fieldSchema.setName(newColumnName));
         alterTable(databaseName, tableName, table);
     }
 
@@ -270,10 +266,10 @@ public class BridgingHiveMetastore
                 .map(ThriftMetastoreUtil::fromMetastoreApiPartition)
                 .collect(Collectors.toMap(Partition::getValues, identity()));
         ImmutableMap.Builder<String, Optional<Partition>> resultBuilder = ImmutableMap.builder();
-        for (Map.Entry<String, List<String>> entry : partitionNameToPartitionValuesMap.entrySet()) {
+        partitionNameToPartitionValuesMap.entrySet().forEach(entry -> {
             Partition partition = partitionValuesToPartitionMap.get(entry.getValue());
             resultBuilder.put(entry.getKey(), Optional.ofNullable(partition));
-        }
+        });
         return resultBuilder.build();
     }
 

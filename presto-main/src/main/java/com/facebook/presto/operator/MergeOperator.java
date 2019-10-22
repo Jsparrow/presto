@@ -44,7 +44,147 @@ import static java.util.Objects.requireNonNull;
 public class MergeOperator
         implements SourceOperator, Closeable
 {
-    public static class MergeOperatorFactory
+    private final OperatorContext operatorContext;
+	private final PlanNodeId sourceId;
+	private final TaskExchangeClientManager taskExchangeClientManager;
+	private final PagesSerde pagesSerde;
+	private final PageWithPositionComparator comparator;
+	private final List<Integer> outputChannels;
+	private final List<Type> outputTypes;
+	private final SettableFuture<Void> blockedOnSplits = SettableFuture.create();
+	private final List<WorkProcessor<Page>> pageProducers = new ArrayList<>();
+	private final Closer closer = Closer.create();
+	private WorkProcessor<Page> mergedPages;
+	private boolean closed;
+
+	public MergeOperator(
+            OperatorContext operatorContext,
+            PlanNodeId sourceId,
+            TaskExchangeClientManager taskExchangeClientManager,
+            PagesSerde pagesSerde,
+            PageWithPositionComparator comparator,
+            List<Integer> outputChannels,
+            List<Type> outputTypes)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.sourceId = requireNonNull(sourceId, "sourceId is null");
+        this.taskExchangeClientManager = requireNonNull(taskExchangeClientManager, "taskExchangeClientManager is null");
+        this.pagesSerde = requireNonNull(pagesSerde, "pagesSerde is null");
+        this.comparator = requireNonNull(comparator, "comparator is null");
+        this.outputChannels = requireNonNull(outputChannels, "outputChannels is null");
+        this.outputTypes = requireNonNull(outputTypes, "outputTypes is null");
+    }
+
+	@Override
+    public PlanNodeId getSourceId()
+    {
+        return sourceId;
+    }
+
+	@Override
+    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
+    {
+        requireNonNull(split, "split is null");
+        checkArgument(split.getConnectorSplit() instanceof RemoteSplit, "split is not a remote split");
+        checkState(!blockedOnSplits.isDone(), "noMoreSplits has been called already");
+
+        RemoteSplit remoteSplit = (RemoteSplit) split.getConnectorSplit();
+        ExchangeClient exchangeClient = closer.register(taskExchangeClientManager.createExchangeClient(operatorContext.localSystemMemoryContext()));
+        exchangeClient.addLocation(remoteSplit.getLocation(), remoteSplit.getRemoteSourceTaskId());
+        exchangeClient.noMoreLocations();
+        pageProducers.add(exchangeClient.pages()
+                .map(serializedPage -> {
+                    operatorContext.recordRawInput(serializedPage.getSizeInBytes(), serializedPage.getPositionCount());
+                    return pagesSerde.deserialize(serializedPage);
+                }));
+
+        return Optional::empty;
+    }
+
+	@Override
+    public void noMoreSplits()
+    {
+        mergedPages = mergeSortedPages(
+                pageProducers,
+                comparator,
+                outputChannels,
+                outputTypes,
+                (pageBuilder, pageWithPosition) -> pageBuilder.isFull(),
+                false,
+                operatorContext.aggregateUserMemoryContext(),
+                operatorContext.getDriverContext().getYieldSignal());
+        blockedOnSplits.set(null);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        close();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return closed || (mergedPages != null && mergedPages.isFinished());
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        if (!blockedOnSplits.isDone()) {
+            return blockedOnSplits;
+        }
+
+        if (mergedPages.isBlocked()) {
+            return mergedPages.getBlockedFuture();
+        }
+
+        return NOT_BLOCKED;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (closed || mergedPages == null || !mergedPages.process() || mergedPages.isFinished()) {
+            return null;
+        }
+
+        Page page = mergedPages.getResult();
+        operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
+        return page;
+    }
+
+	@Override
+    public void close()
+    {
+        try {
+            closer.close();
+            closed = true;
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+	public static class MergeOperatorFactory
             implements SourceOperatorFactory
     {
         private final int operatorId;
@@ -108,149 +248,6 @@ public class MergeOperator
         public void noMoreOperators()
         {
             closed = true;
-        }
-    }
-
-    private final OperatorContext operatorContext;
-    private final PlanNodeId sourceId;
-    private final TaskExchangeClientManager taskExchangeClientManager;
-    private final PagesSerde pagesSerde;
-    private final PageWithPositionComparator comparator;
-    private final List<Integer> outputChannels;
-    private final List<Type> outputTypes;
-
-    private final SettableFuture<Void> blockedOnSplits = SettableFuture.create();
-
-    private final List<WorkProcessor<Page>> pageProducers = new ArrayList<>();
-    private final Closer closer = Closer.create();
-
-    private WorkProcessor<Page> mergedPages;
-    private boolean closed;
-
-    public MergeOperator(
-            OperatorContext operatorContext,
-            PlanNodeId sourceId,
-            TaskExchangeClientManager taskExchangeClientManager,
-            PagesSerde pagesSerde,
-            PageWithPositionComparator comparator,
-            List<Integer> outputChannels,
-            List<Type> outputTypes)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.sourceId = requireNonNull(sourceId, "sourceId is null");
-        this.taskExchangeClientManager = requireNonNull(taskExchangeClientManager, "taskExchangeClientManager is null");
-        this.pagesSerde = requireNonNull(pagesSerde, "pagesSerde is null");
-        this.comparator = requireNonNull(comparator, "comparator is null");
-        this.outputChannels = requireNonNull(outputChannels, "outputChannels is null");
-        this.outputTypes = requireNonNull(outputTypes, "outputTypes is null");
-    }
-
-    @Override
-    public PlanNodeId getSourceId()
-    {
-        return sourceId;
-    }
-
-    @Override
-    public Supplier<Optional<UpdatablePageSource>> addSplit(Split split)
-    {
-        requireNonNull(split, "split is null");
-        checkArgument(split.getConnectorSplit() instanceof RemoteSplit, "split is not a remote split");
-        checkState(!blockedOnSplits.isDone(), "noMoreSplits has been called already");
-
-        RemoteSplit remoteSplit = (RemoteSplit) split.getConnectorSplit();
-        ExchangeClient exchangeClient = closer.register(taskExchangeClientManager.createExchangeClient(operatorContext.localSystemMemoryContext()));
-        exchangeClient.addLocation(remoteSplit.getLocation(), remoteSplit.getRemoteSourceTaskId());
-        exchangeClient.noMoreLocations();
-        pageProducers.add(exchangeClient.pages()
-                .map(serializedPage -> {
-                    operatorContext.recordRawInput(serializedPage.getSizeInBytes(), serializedPage.getPositionCount());
-                    return pagesSerde.deserialize(serializedPage);
-                }));
-
-        return Optional::empty;
-    }
-
-    @Override
-    public void noMoreSplits()
-    {
-        mergedPages = mergeSortedPages(
-                pageProducers,
-                comparator,
-                outputChannels,
-                outputTypes,
-                (pageBuilder, pageWithPosition) -> pageBuilder.isFull(),
-                false,
-                operatorContext.aggregateUserMemoryContext(),
-                operatorContext.getDriverContext().getYieldSignal());
-        blockedOnSplits.set(null);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        close();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return closed || (mergedPages != null && mergedPages.isFinished());
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        if (!blockedOnSplits.isDone()) {
-            return blockedOnSplits;
-        }
-
-        if (mergedPages.isBlocked()) {
-            return mergedPages.getBlockedFuture();
-        }
-
-        return NOT_BLOCKED;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException(getClass().getName() + " can not take input");
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (closed || mergedPages == null || !mergedPages.process() || mergedPages.isFinished()) {
-            return null;
-        }
-
-        Page page = mergedPages.getResult();
-        operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
-        return page;
-    }
-
-    @Override
-    public void close()
-    {
-        try {
-            closer.close();
-            closed = true;
-        }
-        catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 }

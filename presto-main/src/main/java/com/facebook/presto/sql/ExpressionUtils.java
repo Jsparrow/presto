@@ -70,15 +70,14 @@ public final class ExpressionUtils
 
     public static List<Expression> extractPredicates(LogicalBinaryExpression.Operator operator, Expression expression)
     {
-        if (expression instanceof LogicalBinaryExpression && ((LogicalBinaryExpression) expression).getOperator() == operator) {
-            LogicalBinaryExpression logicalBinaryExpression = (LogicalBinaryExpression) expression;
-            return ImmutableList.<Expression>builder()
-                    .addAll(extractPredicates(operator, logicalBinaryExpression.getLeft()))
-                    .addAll(extractPredicates(operator, logicalBinaryExpression.getRight()))
-                    .build();
-        }
-
-        return ImmutableList.of(expression);
+        if (!(expression instanceof LogicalBinaryExpression && ((LogicalBinaryExpression) expression).getOperator() == operator)) {
+			return ImmutableList.of(expression);
+		}
+		LogicalBinaryExpression logicalBinaryExpression = (LogicalBinaryExpression) expression;
+		return ImmutableList.<Expression>builder()
+		        .addAll(extractPredicates(operator, logicalBinaryExpression.getLeft()))
+		        .addAll(extractPredicates(operator, logicalBinaryExpression.getRight()))
+		        .build();
     }
 
     public static Expression and(Expression... expressions)
@@ -268,9 +267,7 @@ public final class ExpressionUtils
                 }
 
                 ImmutableList.Builder<Expression> nullConjuncts = ImmutableList.builder();
-                for (VariableReferenceExpression variable : variables) {
-                    nullConjuncts.add(new IsNullPredicate(new SymbolReference(variable.getName())));
-                }
+                variables.forEach(variable -> nullConjuncts.add(new IsNullPredicate(new SymbolReference(variable.getName()))));
 
                 resultDisjunct.add(and(nullConjuncts.build()));
             }
@@ -288,7 +285,7 @@ public final class ExpressionUtils
         Set<Expression> seen = new HashSet<>();
 
         ImmutableList.Builder<Expression> result = ImmutableList.builder();
-        for (Expression expression : expressions) {
+        expressions.forEach(expression -> {
             if (!ExpressionDeterminismEvaluator.isDeterministic(expression)) {
                 result.add(expression);
             }
@@ -296,7 +293,7 @@ public final class ExpressionUtils
                 result.add(expression);
                 seen.add(expression);
             }
-        }
+        });
 
         return result.build();
     }

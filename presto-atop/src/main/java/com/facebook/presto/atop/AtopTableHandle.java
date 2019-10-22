@@ -69,6 +69,6 @@ public class AtopTableHandle
     @Override
     public String toString()
     {
-        return schema + ":" + table;
+        return new StringBuilder().append(schema).append(":").append(table).toString();
     }
 }

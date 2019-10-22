@@ -70,7 +70,7 @@ public class ParametricAggregation
         Signature boundSignature = applyBoundVariables(getSignature(), variables, arity);
 
         // Find implementation matching arguments
-        AggregationImplementation concreteImplementation = findMatchingImplementation(boundSignature, variables, typeManager, functionManager);
+        AggregationImplementation concreteImplementation = findMatchingImplementation(boundSignature, variables, typeManager);
 
         // Build argument and return Types from signatures
         List<Type> inputTypes = boundSignature.getArgumentTypes().stream().map(typeManager::getType).collect(toImmutableList());
@@ -131,7 +131,7 @@ public class ParametricAggregation
         return details.getDescription().orElse("");
     }
 
-    private AggregationImplementation findMatchingImplementation(Signature boundSignature, BoundVariables variables, TypeManager typeManager, FunctionManager functionManager)
+    private AggregationImplementation findMatchingImplementation(Signature boundSignature, BoundVariables variables, TypeManager typeManager)
     {
         Optional<AggregationImplementation> foundImplementation = Optional.empty();
         if (implementations.getExactImplementations().containsKey(boundSignature)) {

@@ -20,31 +20,26 @@ import static java.util.Objects.requireNonNull;
 
 public class PrincipalSpecification
 {
-    public enum Type
-    {
-        UNSPECIFIED, USER, ROLE
-    }
-
     private final Type type;
-    private final Identifier name;
+	private final Identifier name;
 
-    public PrincipalSpecification(Type type, Identifier name)
+	public PrincipalSpecification(Type type, Identifier name)
     {
         this.type = requireNonNull(type, "type is null");
         this.name = requireNonNull(name, "name is null");
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Identifier getName()
+	public Identifier getName()
     {
         return name;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -58,18 +53,23 @@ public class PrincipalSpecification
                 Objects.equals(name, that.name);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, name);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .add("name", name)
                 .toString();
+    }
+
+	public enum Type
+    {
+        UNSPECIFIED, USER, ROLE
     }
 }

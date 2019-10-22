@@ -30,35 +30,35 @@ public class StageExecutionId
     private final StageId stageId;
     private final int id;
 
-    @JsonCreator
-    public static StageExecutionId valueOf(String stageExecutionAttemptId)
-    {
-        return valueOf(parseDottedId(stageExecutionAttemptId, 3, "stageExecutionAttemptId"));
-    }
-
-    public static StageExecutionId valueOf(List<String> ids)
-    {
-        checkArgument(ids.size() == 3, "Expected 3 ids but got: %s", ids);
-        return new StageExecutionId(new StageId(new QueryId(ids.get(0)), parseInt(ids.get(1))), parseInt(ids.get(2)));
-    }
-
     public StageExecutionId(StageId stageId, int id)
     {
         this.stageId = requireNonNull(stageId, "stageId is null");
         this.id = id;
     }
 
-    public StageId getStageId()
+	@JsonCreator
+    public static StageExecutionId valueOf(String stageExecutionAttemptId)
+    {
+        return valueOf(parseDottedId(stageExecutionAttemptId, 3, "stageExecutionAttemptId"));
+    }
+
+	public static StageExecutionId valueOf(List<String> ids)
+    {
+        checkArgument(ids.size() == 3, "Expected 3 ids but got: %s", ids);
+        return new StageExecutionId(new StageId(new QueryId(ids.get(0)), parseInt(ids.get(1))), parseInt(ids.get(2)));
+    }
+
+	public StageId getStageId()
     {
         return stageId;
     }
 
-    public int getId()
+	public int getId()
     {
         return id;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -72,16 +72,16 @@ public class StageExecutionId
                 Objects.equals(stageId, that.stageId);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(stageId, id);
     }
 
-    @Override
+	@Override
     @JsonValue
     public String toString()
     {
-        return stageId + "." + id;
+        return new StringBuilder().append(stageId).append(".").append(id).toString();
     }
 }

@@ -383,13 +383,11 @@ final class ShowQueriesRewrite
         }
 
         private static <T> Expression getExpression(PropertyMetadata<T> property, Object value)
-                throws PrestoException
         {
             return toExpression(property.encode(property.getJavaType().cast(value)));
         }
 
         private static Expression toExpression(Object value)
-                throws PrestoException
         {
             if (value instanceof String) {
                 return new StringLiteral(value.toString());
@@ -523,15 +521,12 @@ final class ShowQueriesRewrite
         protected Node visitShowFunctions(ShowFunctions node, Void context)
         {
             ImmutableList.Builder<Expression> rows = ImmutableList.builder();
-            for (SqlFunction function : metadata.listFunctions()) {
-                rows.add(row(
-                        new StringLiteral(function.getSignature().getNameSuffix()),
-                        new StringLiteral(function.getSignature().getReturnType().toString()),
-                        new StringLiteral(Joiner.on(", ").join(function.getSignature().getArgumentTypes())),
-                        new StringLiteral(getFunctionType(function)),
-                        function.isDeterministic() ? TRUE_LITERAL : FALSE_LITERAL,
-                        new StringLiteral(nullToEmpty(function.getDescription()))));
-            }
+            metadata.listFunctions().forEach(function -> rows.add(row(new StringLiteral(function.getSignature().getNameSuffix()),
+					new StringLiteral(function.getSignature().getReturnType().toString()),
+					new StringLiteral(Joiner.on(", ").join(function.getSignature().getArgumentTypes())),
+					new StringLiteral(getFunctionType(function)),
+					function.isDeterministic() ? TRUE_LITERAL : FALSE_LITERAL,
+					new StringLiteral(nullToEmpty(function.getDescription())))));
 
             Map<String, String> columns = ImmutableMap.<String, String>builder()
                     .put("function_name", "Function")

@@ -52,9 +52,7 @@ public class CompactionSetCreator
         Collection<Collection<ShardIndexInfo>> shardsByDaysBuckets = getShardsByDaysBuckets(tableInfo, shards, temporalFunction);
 
         ImmutableSet.Builder<OrganizationSet> compactionSets = ImmutableSet.builder();
-        for (Collection<ShardIndexInfo> shardInfos : shardsByDaysBuckets) {
-            compactionSets.addAll(buildCompactionSets(tableInfo, ImmutableSet.copyOf(shardInfos)));
-        }
+        shardsByDaysBuckets.forEach(shardInfos -> compactionSets.addAll(buildCompactionSets(tableInfo, ImmutableSet.copyOf(shardInfos))));
         return compactionSets.build();
     }
 

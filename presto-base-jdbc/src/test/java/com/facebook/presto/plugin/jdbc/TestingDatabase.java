@@ -57,14 +57,8 @@ final class TestingDatabase
         connection.createStatement().execute("CREATE SCHEMA example");
 
         connection.createStatement().execute("CREATE TABLE example.numbers(text varchar primary key, text_short varchar(32), value bigint)");
-        connection.createStatement().execute("INSERT INTO example.numbers(text, text_short, value) VALUES " +
-                "('one', 'one', 1)," +
-                "('two', 'two', 2)," +
-                "('three', 'three', 3)," +
-                "('ten', 'ten', 10)," +
-                "('eleven', 'eleven', 11)," +
-                "('twelve', 'twelve', 12)" +
-                "");
+        connection.createStatement().execute(new StringBuilder().append("INSERT INTO example.numbers(text, text_short, value) VALUES ").append("('one', 'one', 1),").append("('two', 'two', 2),").append("('three', 'three', 3),").append("('ten', 'ten', 10),").append("('eleven', 'eleven', 11),").append("('twelve', 'twelve', 12)").append("")
+				.toString());
         connection.createStatement().execute("CREATE TABLE example.view_source(id varchar primary key)");
         connection.createStatement().execute("CREATE VIEW example.view AS SELECT id FROM example.view_source");
         connection.createStatement().execute("CREATE SCHEMA tpch");
@@ -112,9 +106,7 @@ final class TestingDatabase
         checkArgument(columns != null, "table not found: %s.%s", schemaName, tableName);
 
         ImmutableMap.Builder<String, JdbcColumnHandle> columnHandles = ImmutableMap.builder();
-        for (JdbcColumnHandle column : columns) {
-            columnHandles.put(column.getColumnMetadata().getName(), column);
-        }
+        columns.forEach(column -> columnHandles.put(column.getColumnMetadata().getName(), column));
         return columnHandles.build();
     }
 }

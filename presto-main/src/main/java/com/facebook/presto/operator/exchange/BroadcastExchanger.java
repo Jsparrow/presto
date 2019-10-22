@@ -41,9 +41,7 @@ class BroadcastExchanger
 
         PageReference pageReference = new PageReference(page, buffers.size(), () -> memoryManager.updateMemoryUsage(-page.getRetainedSizeInBytes()));
 
-        for (Consumer<PageReference> buffer : buffers) {
-            buffer.accept(pageReference);
-        }
+        buffers.forEach(buffer -> buffer.accept(pageReference));
     }
 
     @Override

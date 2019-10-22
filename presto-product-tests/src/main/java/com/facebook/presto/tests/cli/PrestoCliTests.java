@@ -40,6 +40,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.apache.commons.lang3.StringUtils;
 
 public class PrestoCliTests
         extends PrestoCliLauncher
@@ -85,7 +86,8 @@ public class PrestoCliTests
             throws IOException
     {}
 
-    @AfterTestWithContext
+    @Override
+	@AfterTestWithContext
     public void stopPresto()
             throws InterruptedException
     {
@@ -156,7 +158,7 @@ public class PrestoCliTests
         launchPrestoCliWithServerArgument("--execute", sql);
         assertThat(trimLines(presto.readRemainingOutputLines())).isEmpty();
 
-        assertThatThrownBy(() -> presto.waitForWithTimeoutAndKill()).hasMessage("Child process exited with non-zero code: 1");
+        assertThatThrownBy(presto::waitForWithTimeoutAndKill).hasMessage("Child process exited with non-zero code: 1");
     }
 
     @Test(groups = CLI, timeOut = TIMEOUT)
@@ -169,7 +171,7 @@ public class PrestoCliTests
             launchPrestoCliWithServerArgument("--file", file.file().getAbsolutePath());
             assertThat(trimLines(presto.readRemainingOutputLines())).isEmpty();
 
-            assertThatThrownBy(() -> presto.waitForWithTimeoutAndKill()).hasMessage("Child process exited with non-zero code: 1");
+            assertThatThrownBy(presto::waitForWithTimeoutAndKill).hasMessage("Child process exited with non-zero code: 1");
         }
     }
 
@@ -181,7 +183,7 @@ public class PrestoCliTests
         launchPrestoCliWithServerArgument("--execute", sql, "--ignore-errors");
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
 
-        assertThatThrownBy(() -> presto.waitForWithTimeoutAndKill()).hasMessage("Child process exited with non-zero code: 1");
+        assertThatThrownBy(presto::waitForWithTimeoutAndKill).hasMessage("Child process exited with non-zero code: 1");
     }
 
     @Test(groups = CLI, timeOut = TIMEOUT)
@@ -194,7 +196,7 @@ public class PrestoCliTests
             launchPrestoCliWithServerArgument("--file", file.file().getAbsolutePath(), "--ignore-errors");
             assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
 
-            assertThatThrownBy(() -> presto.waitForWithTimeoutAndKill()).hasMessage("Child process exited with non-zero code: 1");
+            assertThatThrownBy(presto::waitForWithTimeoutAndKill).hasMessage("Child process exited with non-zero code: 1");
         }
     }
 
@@ -340,14 +342,14 @@ public class PrestoCliTests
 
     private static String removePrefix(String line)
     {
-        int i = line.indexOf(':');
-        return (i >= 0) ? line.substring(i + 1).trim() : line;
+        int i = StringUtils.indexOf(line, ':');
+        return (i >= 0) ? StringUtils.trim(line.substring(i + 1)) : line;
     }
 
     public static List<String> squeezeLines(List<String> lines)
     {
         return lines.stream()
-                .map(line -> line.replaceAll(" +\\| +", "|").trim())
+                .map(line -> StringUtils.trim(line.replaceAll(" +\\| +", "|")))
                 .collect(toList());
     }
 }

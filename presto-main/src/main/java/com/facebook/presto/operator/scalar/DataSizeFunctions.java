@@ -28,10 +28,14 @@ import static com.facebook.presto.spi.StandardErrorCode.NUMERIC_VALUE_OUT_OF_RAN
 import static com.facebook.presto.spi.type.Decimals.encodeUnscaledValue;
 import static java.lang.Character.isDigit;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class DataSizeFunctions
 {
-    private DataSizeFunctions() {}
+    private static final Logger logger = LoggerFactory.getLogger(DataSizeFunctions.class);
+
+	private DataSizeFunctions() {}
 
     @Description("converts data size string to bytes")
     @ScalarFunction("parse_presto_data_size")
@@ -63,7 +67,8 @@ public final class DataSizeFunctions
             return encodeUnscaledValue(bytes);
         }
         catch (ArithmeticException e) {
-            throw new PrestoException(NUMERIC_VALUE_OUT_OF_RANGE, format("Value out of range: '%s' ('%sB')", dataSize, bytes));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(NUMERIC_VALUE_OUT_OF_RANGE, format("Value out of range: '%s' ('%sB')", dataSize, bytes));
         }
     }
 
@@ -73,7 +78,8 @@ public final class DataSizeFunctions
             return new BigDecimal(value);
         }
         catch (NumberFormatException e) {
-            throw invalidDataSize(dataSize);
+            logger.error(e.getMessage(), e);
+			throw invalidDataSize(dataSize);
         }
     }
 

@@ -91,7 +91,7 @@ public class BenchmarkCPUCounters
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
                 .threads(getInteger("threads", 1))
-                .include(".*" + BenchmarkCPUCounters.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkCPUCounters.class.getSimpleName()).append(".*").toString())
                 .build();
 
         new Runner(options).run();

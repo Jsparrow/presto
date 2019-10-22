@@ -32,11 +32,6 @@ public final class TableStatistics
     private final Estimate rowCount;
     private final Map<ColumnHandle, ColumnStatistics> columnStatistics;
 
-    public static TableStatistics empty()
-    {
-        return EMPTY;
-    }
-
     public TableStatistics(Estimate rowCount, Map<ColumnHandle, ColumnStatistics> columnStatistics)
     {
         this.rowCount = requireNonNull(rowCount, "rowCount can not be null");
@@ -46,19 +41,24 @@ public final class TableStatistics
         this.columnStatistics = unmodifiableMap(requireNonNull(columnStatistics, "columnStatistics can not be null"));
     }
 
-    @JsonProperty
+	public static TableStatistics empty()
+    {
+        return EMPTY;
+    }
+
+	@JsonProperty
     public Estimate getRowCount()
     {
         return rowCount;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<ColumnHandle, ColumnStatistics> getColumnStatistics()
     {
         return columnStatistics;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -72,27 +72,24 @@ public final class TableStatistics
                 Objects.equals(columnStatistics, that.columnStatistics);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(rowCount, columnStatistics);
     }
 
-    @Override
+	@Override
     public String toString()
     {
-        return "TableStatistics{" +
-                "rowCount=" + rowCount +
-                ", columnStatistics=" + columnStatistics +
-                '}';
+        return new StringBuilder().append("TableStatistics{").append("rowCount=").append(rowCount).append(", columnStatistics=").append(columnStatistics).append('}').toString();
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public static final class Builder
+	public static final class Builder
     {
         private Estimate rowCount = Estimate.unknown();
         private Map<ColumnHandle, ColumnStatistics> columnStatisticsMap = new LinkedHashMap<>();

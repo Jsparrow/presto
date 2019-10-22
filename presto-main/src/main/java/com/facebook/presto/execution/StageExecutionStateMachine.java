@@ -422,12 +422,10 @@ public class StageExecutionStateMachine
             minFullGcSec = min(minFullGcSec, gcSec);
             maxFullGcSec = max(maxFullGcSec, gcSec);
 
-            for (PipelineStats pipeline : taskStats.getPipelines()) {
-                for (OperatorStats operatorStats : pipeline.getOperatorSummaries()) {
-                    String id = pipeline.getPipelineId() + "." + operatorStats.getOperatorId();
-                    operatorToStats.compute(id, (k, v) -> v == null ? operatorStats : v.add(operatorStats));
-                }
-            }
+            taskStats.getPipelines().forEach(pipeline -> pipeline.getOperatorSummaries().forEach(operatorStats -> {
+				String id = new StringBuilder().append(pipeline.getPipelineId()).append(".").append(operatorStats.getOperatorId()).toString();
+				operatorToStats.compute(id, (k, v) -> v == null ? operatorStats : v.add(operatorStats));
+			}));
         }
 
         StageExecutionStats stageExecutionStats = new StageExecutionStats(

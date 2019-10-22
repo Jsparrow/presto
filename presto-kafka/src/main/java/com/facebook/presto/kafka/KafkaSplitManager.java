@@ -206,7 +206,7 @@ public class KafkaSplitManager
 
         if (offsetResponse.hasError()) {
             short errorCode = offsetResponse.errorCode(topicName, partitionId);
-            throw new RuntimeException("could not fetch data from Kafka, error code is '" + errorCode + "'");
+            throw new RuntimeException(new StringBuilder().append("could not fetch data from Kafka, error code is '").append(errorCode).append("'").toString());
         }
 
         return offsetResponse.offsets(topicName, partitionId);

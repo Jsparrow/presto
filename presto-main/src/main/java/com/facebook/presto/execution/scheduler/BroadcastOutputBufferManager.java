@@ -56,9 +56,7 @@ class BroadcastOutputBufferManager
             OutputBuffers originalOutputBuffers = outputBuffers;
 
             // Note: it does not matter which partition id the task is using, in broadcast all tasks read from the same partition
-            for (OutputBufferId newBuffer : newBuffers) {
-                outputBuffers = outputBuffers.withBuffer(newBuffer, BROADCAST_PARTITION_ID);
-            }
+			newBuffers.forEach(newBuffer -> outputBuffers = outputBuffers.withBuffer(newBuffer, BROADCAST_PARTITION_ID));
 
             if (noMoreBuffers) {
                 outputBuffers = outputBuffers.withNoMoreBufferIds();

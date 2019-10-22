@@ -126,7 +126,29 @@ public class BenchmarkSTContains
         return deserializeEnvelope(data.geometry);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws IOException, RunnerException
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        BenchmarkSTContains benchmark = new BenchmarkSTContains();
+        if (!((Boolean) benchmark.stContainsInnerPoint(data)).booleanValue()) {
+            throw new IllegalStateException("ST_Contains for inner point expected to return true, got false.");
+        }
+
+        if (((Boolean) benchmark.stContainsOuterPointInEnvelope(data)).booleanValue()) {
+            throw new IllegalStateException("ST_Contains for outer point expected to return false, got true.");
+        }
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSTContains.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice geometry;
@@ -154,27 +176,5 @@ public class BenchmarkSTContains
             outerOgcPointInEnvelope = (OGCPoint) deserialize(outerPointInEnvelope);
             outerOgcPointNotInEnvelope = (OGCPoint) deserialize(outerPointNotInEnvelope);
         }
-    }
-
-    public static void main(String[] args)
-            throws IOException, RunnerException
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        BenchmarkSTContains benchmark = new BenchmarkSTContains();
-        if (!((Boolean) benchmark.stContainsInnerPoint(data)).booleanValue()) {
-            throw new IllegalStateException("ST_Contains for inner point expected to return true, got false.");
-        }
-
-        if (((Boolean) benchmark.stContainsOuterPointInEnvelope(data)).booleanValue()) {
-            throw new IllegalStateException("ST_Contains for outer point expected to return false, got true.");
-        }
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSTContains.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

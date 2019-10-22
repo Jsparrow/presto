@@ -156,7 +156,7 @@ final class HiveBucketing
                         long secondsAndNanos = (Math.floorDiv(millisSinceEpoch, 1000L) << 30) + Math.floorMod(millisSinceEpoch, 1000);
                         return (int) ((secondsAndNanos >>> 32) ^ secondsAndNanos);
                     default:
-                        throw new UnsupportedOperationException("Computation of Hive bucket hashCode is not supported for Hive primitive category: " + primitiveCategory.toString() + ".");
+                        throw new UnsupportedOperationException(new StringBuilder().append("Computation of Hive bucket hashCode is not supported for Hive primitive category: ").append(primitiveCategory.toString()).append(".").toString());
                 }
             }
             case LIST: {
@@ -169,7 +169,7 @@ final class HiveBucketing
             }
             default:
                 // TODO: support more types, e.g. ROW
-                throw new UnsupportedOperationException("Computation of Hive bucket hashCode is not supported for Hive category: " + type.getCategory().toString() + ".");
+                throw new UnsupportedOperationException(new StringBuilder().append("Computation of Hive bucket hashCode is not supported for Hive category: ").append(type.getCategory().toString()).append(".").toString());
         }
     }
 
@@ -215,7 +215,7 @@ final class HiveBucketing
                         long secondsAndNanos = (Math.floorDiv(millisSinceEpoch, 1000L) << 30) + Math.floorMod(millisSinceEpoch, 1000);
                         return (int) ((secondsAndNanos >>> 32) ^ secondsAndNanos);
                     default:
-                        throw new UnsupportedOperationException("Computation of Hive bucket hashCode is not supported for Hive primitive category: " + primitiveCategory.toString() + ".");
+                        throw new UnsupportedOperationException(new StringBuilder().append("Computation of Hive bucket hashCode is not supported for Hive primitive category: ").append(primitiveCategory.toString()).append(".").toString());
                 }
             }
             case LIST: {
@@ -226,7 +226,7 @@ final class HiveBucketing
             }
             default:
                 // TODO: support more types, e.g. ROW
-                throw new UnsupportedOperationException("Computation of Hive bucket hashCode is not supported for Hive category: " + type.getCategory().toString() + ".");
+                throw new UnsupportedOperationException(new StringBuilder().append("Computation of Hive bucket hashCode is not supported for Hive category: ").append(type.getCategory().toString()).append(".").toString());
         }
     }
 
@@ -329,9 +329,7 @@ final class HiveBucketing
 
         List<String> bucketColumns = table.getStorage().getBucketProperty().get().getBucketedBy();
         Map<String, HiveType> hiveTypes = new HashMap<>();
-        for (Column column : table.getDataColumns()) {
-            hiveTypes.put(column.getName(), column.getType());
-        }
+        table.getDataColumns().forEach(column -> hiveTypes.put(column.getName(), column.getType()));
 
         // Verify the bucket column types are supported
         for (String column : bucketColumns) {
@@ -342,12 +340,12 @@ final class HiveBucketing
 
         // Get bindings for bucket columns
         Map<String, Object> bucketBindings = new HashMap<>();
-        for (Entry<ColumnHandle, NullableValue> entry : bindings.entrySet()) {
+        bindings.entrySet().forEach(entry -> {
             HiveColumnHandle colHandle = (HiveColumnHandle) entry.getKey();
             if (!entry.getValue().isNull() && bucketColumns.contains(colHandle.getName())) {
                 bucketBindings.put(colHandle.getName(), entry.getValue().getValue());
             }
-        }
+        });
 
         // Check that we have bindings for all bucket columns
         if (bucketBindings.size() != bucketColumns.size()) {

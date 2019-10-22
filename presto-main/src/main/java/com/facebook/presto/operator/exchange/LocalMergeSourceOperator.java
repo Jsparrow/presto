@@ -40,7 +40,85 @@ import static java.util.Objects.requireNonNull;
 public class LocalMergeSourceOperator
         implements Operator
 {
-    public static class LocalMergeSourceOperatorFactory
+    private final OperatorContext operatorContext;
+	private final List<LocalExchangeSource> sources;
+	private final WorkProcessor<Page> mergedPages;
+
+	public LocalMergeSourceOperator(OperatorContext operatorContext, List<LocalExchangeSource> sources, List<Type> types, PageWithPositionComparator comparator)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.sources = requireNonNull(sources, "sources is null");
+        List<WorkProcessor<Page>> pageProducers = sources.stream()
+                .map(LocalExchangeSource::pages)
+                .collect(toImmutableList());
+        mergedPages = mergeSortedPages(
+                pageProducers,
+                requireNonNull(comparator, "comparator is null"),
+                types,
+                operatorContext.aggregateUserMemoryContext(),
+                operatorContext.getDriverContext().getYieldSignal());
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        sources.forEach(LocalExchangeSource::finish);
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return mergedPages.isFinished();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        if (mergedPages.isBlocked()) {
+            return mergedPages.getBlockedFuture();
+        }
+
+        return NOT_BLOCKED;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!mergedPages.process() || mergedPages.isFinished()) {
+            return null;
+        }
+
+        Page page = mergedPages.getResult();
+        operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
+        return page;
+    }
+
+	@Override
+    public void close()
+            throws IOException
+    {
+        sources.forEach(LocalExchangeSource::close);
+    }
+
+	public static class LocalMergeSourceOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -97,83 +175,5 @@ public class LocalMergeSourceOperator
         {
             throw new UnsupportedOperationException("Source operator factories can not be duplicated");
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final List<LocalExchangeSource> sources;
-    private final WorkProcessor<Page> mergedPages;
-
-    public LocalMergeSourceOperator(OperatorContext operatorContext, List<LocalExchangeSource> sources, List<Type> types, PageWithPositionComparator comparator)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.sources = requireNonNull(sources, "sources is null");
-        List<WorkProcessor<Page>> pageProducers = sources.stream()
-                .map(LocalExchangeSource::pages)
-                .collect(toImmutableList());
-        mergedPages = mergeSortedPages(
-                pageProducers,
-                requireNonNull(comparator, "comparator is null"),
-                types,
-                operatorContext.aggregateUserMemoryContext(),
-                operatorContext.getDriverContext().getYieldSignal());
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        sources.forEach(LocalExchangeSource::finish);
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return mergedPages.isFinished();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        if (mergedPages.isBlocked()) {
-            return mergedPages.getBlockedFuture();
-        }
-
-        return NOT_BLOCKED;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!mergedPages.process() || mergedPages.isFinished()) {
-            return null;
-        }
-
-        Page page = mergedPages.getResult();
-        operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
-        return page;
-    }
-
-    @Override
-    public void close()
-            throws IOException
-    {
-        sources.forEach(LocalExchangeSource::close);
     }
 }

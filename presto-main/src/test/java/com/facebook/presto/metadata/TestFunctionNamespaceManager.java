@@ -41,10 +41,14 @@ import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFunctionNamespaceManager
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestFunctionNamespaceManager.class);
+
+	@Test
     public void testCreateFunction()
     {
         InMemoryFunctionNamespaceManager functionNamespaceManager = createFunctionNamespaceManager();
@@ -61,7 +65,7 @@ public class TestFunctionNamespaceManager
                 ImmutableSet.copyOf(functionNamespaceManager.listFunctions()),
                 ImmutableSet.of(versioned(FUNCTION_POWER_TOWER_DOUBLE_UPDATED, 2), versioned(FUNCTION_POWER_TOWER_INT, 1)));
 
-        System.out.println(FUNCTION_POWER_TOWER_DOUBLE);
+        logger.info(String.valueOf(FUNCTION_POWER_TOWER_DOUBLE));
     }
 
     @Test

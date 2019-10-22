@@ -38,38 +38,21 @@ public class TestGroupingSets
     public void testPredicateOverGroupingKeysWithEmptyGroupingSet()
     {
         assertions.assertQuery(
-                "WITH t AS (" +
-                        "    SELECT a" +
-                        "    FROM (" +
-                        "        VALUES 1, 2" +
-                        "    ) AS u(a)" +
-                        "    GROUP BY GROUPING SETS ((), (a))" +
-                        ")" +
-                        "SELECT * " +
-                        "FROM t " +
-                        "WHERE a IS NOT NULL",
+                new StringBuilder().append("WITH t AS (").append("    SELECT a").append("    FROM (").append("        VALUES 1, 2").append("    ) AS u(a)").append("    GROUP BY GROUPING SETS ((), (a))").append(")")
+						.append("SELECT * ").append("FROM t ").append("WHERE a IS NOT NULL").toString(),
                 "VALUES 1, 2");
     }
 
     @Test
     public void testDistinctWithMixedReferences()
     {
-        assertions.assertQuery("" +
-                        "SELECT a " +
-                        "FROM (VALUES 1) t(a) " +
-                        "GROUP BY DISTINCT ROLLUP(a, t.a)",
+        assertions.assertQuery(new StringBuilder().append("").append("SELECT a ").append("FROM (VALUES 1) t(a) ").append("GROUP BY DISTINCT ROLLUP(a, t.a)").toString(),
                 "VALUES (1), (NULL)");
 
-        assertions.assertQuery("" +
-                        "SELECT a " +
-                        "FROM (VALUES 1) t(a) " +
-                        "GROUP BY DISTINCT GROUPING SETS ((a), (t.a))",
+        assertions.assertQuery(new StringBuilder().append("").append("SELECT a ").append("FROM (VALUES 1) t(a) ").append("GROUP BY DISTINCT GROUPING SETS ((a), (t.a))").toString(),
                 "VALUES 1");
 
-        assertions.assertQuery("" +
-                        "SELECT a " +
-                        "FROM (VALUES 1) t(a) " +
-                        "GROUP BY DISTINCT a, GROUPING SETS ((), (t.a))",
+        assertions.assertQuery(new StringBuilder().append("").append("SELECT a ").append("FROM (VALUES 1) t(a) ").append("GROUP BY DISTINCT a, GROUPING SETS ((), (t.a))").toString(),
                 "VALUES 1");
     }
 }

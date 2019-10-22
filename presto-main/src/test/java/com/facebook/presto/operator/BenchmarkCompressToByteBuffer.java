@@ -61,7 +61,17 @@ public class BenchmarkCompressToByteBuffer
         data.COMPRESSOR.compress((byte[]) data.slice.getBase(), 0, data.slice.length(), data.bytes, 0, data.MAX_COMPRESSED_SIZE);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkCompressToByteBuffer.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private static final Random RANDOM = new Random(0);
@@ -86,15 +96,5 @@ public class BenchmarkCompressToByteBuffer
                 System.arraycopy(randomBytes, 0, byteValues, i * runLength, runLength);
             }
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkCompressToByteBuffer.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -126,7 +126,7 @@ public class TestSqlParserErrorHandling
             fail("Expected parsing to fail");
         }
         catch (ParsingException e) {
-            assertEquals(e.getMessage(), error, "Error message mismatch for query:\n\n" + sql + "\n\n");
+            assertEquals(e.getMessage(), error, new StringBuilder().append("Error message mismatch for query:\n\n").append(sql).append("\n\n").toString());
         }
     }
 
@@ -138,7 +138,7 @@ public class TestSqlParserErrorHandling
             fail("Expected parsing to fail");
         }
         catch (ParsingException e) {
-            assertEquals(e.getMessage(), error, "Error message mismatch for expression:\n\n" + sql + "\n\n");
+            assertEquals(e.getMessage(), error, new StringBuilder().append("Error message mismatch for expression:\n\n").append(sql).append("\n\n").toString());
         }
     }
 

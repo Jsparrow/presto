@@ -35,26 +35,25 @@ public class FullSmileResponseHandler<T>
         implements ResponseHandler<FullSmileResponseHandler.SmileResponse<T>, RuntimeException>
 {
     private static final MediaType MEDIA_TYPE_SMILE = MediaType.create("application", "x-jackson-smile");
+	private final SmileCodec<T> smileCodec;
 
-    public static <T> FullSmileResponseHandler<T> createFullSmileResponseHandler(SmileCodec<T> smileCodec)
-    {
-        return new FullSmileResponseHandler<>(smileCodec);
-    }
-
-    private final SmileCodec<T> smileCodec;
-
-    private FullSmileResponseHandler(SmileCodec<T> smileCodec)
+	private FullSmileResponseHandler(SmileCodec<T> smileCodec)
     {
         this.smileCodec = smileCodec;
     }
 
-    @Override
+	public static <T> FullSmileResponseHandler<T> createFullSmileResponseHandler(SmileCodec<T> smileCodec)
+    {
+        return new FullSmileResponseHandler<>(smileCodec);
+    }
+
+	@Override
     public SmileResponse<T> handleException(Request request, Exception exception)
     {
         throw propagate(request, exception);
     }
 
-    @Override
+	@Override
     public SmileResponse<T> handle(Request request, Response response)
     {
         byte[] bytes = readResponseBytes(response);
@@ -65,7 +64,7 @@ public class FullSmileResponseHandler<T>
         return new SmileResponse<>(response.getStatusCode(), response.getStatusMessage(), response.getHeaders(), smileCodec, bytes);
     }
 
-    private static byte[] readResponseBytes(Response response)
+	private static byte[] readResponseBytes(Response response)
     {
         try {
             return toByteArray(response.getInputStream());
@@ -116,7 +115,7 @@ public class FullSmileResponseHandler<T>
                 value = smileCodec.fromSmile(smileBytes);
             }
             catch (IllegalArgumentException e) {
-                exception = new IllegalArgumentException("Unable to create " + smileCodec.getType() + " from SMILE response", e);
+                exception = new IllegalArgumentException(new StringBuilder().append("Unable to create ").append(smileCodec.getType()).append(" from SMILE response").toString(), e);
             }
 
             this.hasValue = (exception == null);
@@ -164,7 +163,8 @@ public class FullSmileResponseHandler<T>
             return hasValue;
         }
 
-        public T getValue()
+        @Override
+		public T getValue()
         {
             if (!hasValue) {
                 throw new IllegalStateException("Response does not contain a SMILE value", exception);

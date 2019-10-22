@@ -557,10 +557,11 @@ public class SliceDictionaryColumnWriter
         totalValueCount = 0;
         totalNonNullValueCount = 0;
 
-        if (directEncoded) {
-            directEncoded = false;
-            directColumnWriter.reset();
-        }
+        if (!directEncoded) {
+			return;
+		}
+		directEncoded = false;
+		directColumnWriter.reset();
     }
 
     private StringStatisticsBuilder newStringStatisticsBuilder()

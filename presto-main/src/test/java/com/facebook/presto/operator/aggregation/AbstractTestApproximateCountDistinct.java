@@ -41,20 +41,20 @@ import static org.testng.Assert.assertEquals;
 
 public abstract class AbstractTestApproximateCountDistinct
 {
-    public abstract InternalAggregationFunction getAggregationFunction();
-
-    public abstract Type getValueType();
-
-    public abstract Object randomValue();
-
     protected static final FunctionManager functionManager = MetadataManager.createTestMetadataManager().getFunctionManager();
 
-    protected int getUniqueValuesCount()
+	public abstract InternalAggregationFunction getAggregationFunction();
+
+	public abstract Type getValueType();
+
+	public abstract Object randomValue();
+
+	protected int getUniqueValuesCount()
     {
         return 20000;
     }
 
-    @DataProvider(name = "provideStandardErrors")
+	@DataProvider(name = "provideStandardErrors")
     public Object[][] provideStandardErrors()
     {
         return new Object[][] {
@@ -63,42 +63,37 @@ public abstract class AbstractTestApproximateCountDistinct
         };
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testNoPositions(double maxStandardError)
     {
         assertCount(ImmutableList.of(), maxStandardError, 0);
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testSinglePosition(double maxStandardError)
     {
         assertCount(ImmutableList.of(randomValue()), maxStandardError, 1);
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testAllPositionsNull(double maxStandardError)
     {
         assertCount(Collections.nCopies(100, null), maxStandardError, 0);
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testMixedNullsAndNonNulls(double maxStandardError)
     {
         int uniques = getUniqueValuesCount();
         List<Object> baseline = createRandomSample(uniques, (int) (uniques * 1.5));
 
-        // Randomly insert nulls
-        // We need to retain the preexisting order to ensure that the HLL can generate the same estimates.
-        Iterator<Object> iterator = baseline.iterator();
         List<Object> mixed = new ArrayList<>();
-        while (iterator.hasNext()) {
-            mixed.add(ThreadLocalRandom.current().nextBoolean() ? null : iterator.next());
-        }
+        baseline.forEach(aBaseline -> mixed.add(ThreadLocalRandom.current().nextBoolean() ? null : aBaseline));
 
         assertCount(mixed, maxStandardError, estimateGroupByCount(baseline, maxStandardError));
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testMultiplePositions(double maxStandardError)
     {
         DescriptiveStatistics stats = new DescriptiveStatistics();
@@ -118,7 +113,7 @@ public abstract class AbstractTestApproximateCountDistinct
         assertLessThan(stats.getStandardDeviation(), 1.0e-2 + maxStandardError);
     }
 
-    @Test(dataProvider = "provideStandardErrors")
+	@Test(dataProvider = "provideStandardErrors")
     public void testMultiplePositionsPartial(double maxStandardError)
     {
         for (int i = 0; i < 100; ++i) {
@@ -128,7 +123,7 @@ public abstract class AbstractTestApproximateCountDistinct
         }
     }
 
-    protected void assertCount(List<?> values, double maxStandardError, long expectedCount)
+	protected void assertCount(List<?> values, double maxStandardError, long expectedCount)
     {
         if (!values.isEmpty()) {
             assertEquals(estimateGroupByCount(values, maxStandardError), expectedCount);
@@ -137,25 +132,25 @@ public abstract class AbstractTestApproximateCountDistinct
         assertEquals(estimateCountPartial(values, maxStandardError), expectedCount);
     }
 
-    private long estimateGroupByCount(List<?> values, double maxStandardError)
+	private long estimateGroupByCount(List<?> values, double maxStandardError)
     {
         Object result = AggregationTestUtils.groupedAggregation(getAggregationFunction(), createPage(values, maxStandardError));
         return (long) result;
     }
 
-    private long estimateCount(List<?> values, double maxStandardError)
+	private long estimateCount(List<?> values, double maxStandardError)
     {
         Object result = AggregationTestUtils.aggregation(getAggregationFunction(), createPage(values, maxStandardError));
         return (long) result;
     }
 
-    private long estimateCountPartial(List<?> values, double maxStandardError)
+	private long estimateCountPartial(List<?> values, double maxStandardError)
     {
         Object result = AggregationTestUtils.partialAggregation(getAggregationFunction(), createPage(values, maxStandardError));
         return (long) result;
     }
 
-    private Page createPage(List<?> values, double maxStandardError)
+	private Page createPage(List<?> values, double maxStandardError)
     {
         if (values.isEmpty()) {
             return new Page(0);
@@ -167,7 +162,7 @@ public abstract class AbstractTestApproximateCountDistinct
         }
     }
 
-    /**
+	/**
      * Produce a block with the given values in the last field.
      */
     private static Block createBlock(Type type, List<?> values)
@@ -200,7 +195,7 @@ public abstract class AbstractTestApproximateCountDistinct
         return blockBuilder.build();
     }
 
-    private List<Object> createRandomSample(int uniques, int total)
+	private List<Object> createRandomSample(int uniques, int total)
     {
         Preconditions.checkArgument(uniques <= total, "uniques (%s) must be <= total (%s)", uniques, total);
 
@@ -216,7 +211,7 @@ public abstract class AbstractTestApproximateCountDistinct
         return result;
     }
 
-    private Set<Object> makeRandomSet(int count)
+	private Set<Object> makeRandomSet(int count)
     {
         Set<Object> result = new HashSet<>();
         while (result.size() < count) {

@@ -1069,7 +1069,7 @@ public class TestExpressionDomainTranslator
     {
         Type columnType = columnValues.getType();
         Type literalType = literalValues.getType();
-        Type superType = metadata.getTypeManager().getCommonSuperType(columnType, literalType).orElseThrow(() -> new IllegalArgumentException("incompatible types in test (" + columnType + ", " + literalType + ")"));
+        Type superType = metadata.getTypeManager().getCommonSuperType(columnType, literalType).orElseThrow(() -> new IllegalArgumentException(new StringBuilder().append("incompatible types in test (").append(columnType).append(", ").append(literalType).append(")").toString()));
 
         Expression max = toExpression(literalValues.getMax(), literalType);
         Expression min = toExpression(literalValues.getMin(), literalType);
@@ -1159,10 +1159,11 @@ public class TestExpressionDomainTranslator
         testSimpleComparison(isDistinctFrom(columnExpression, integerNegative), columnName, Domain.create(ValueSet.ofRanges(Range.lessThan(columnType, columnValues.getIntegerNegative()), Range.greaterThan(columnType, columnValues.getIntegerNegative())), true));
         testSimpleComparison(isDistinctFrom(columnExpression, max), columnName, Domain.all(columnType));
         testSimpleComparison(isDistinctFrom(columnExpression, min), columnName, Domain.all(columnType));
-        if (literalValues.isFractional()) {
-            testSimpleComparison(isDistinctFrom(columnExpression, fractionalPositive), columnName, Domain.all(columnType));
-            testSimpleComparison(isDistinctFrom(columnExpression, fractionalNegative), columnName, Domain.all(columnType));
-        }
+        if (!literalValues.isFractional()) {
+			return;
+		}
+		testSimpleComparison(isDistinctFrom(columnExpression, fractionalPositive), columnName, Domain.all(columnType));
+		testSimpleComparison(isDistinctFrom(columnExpression, fractionalNegative), columnName, Domain.all(columnType));
     }
 
     @Test

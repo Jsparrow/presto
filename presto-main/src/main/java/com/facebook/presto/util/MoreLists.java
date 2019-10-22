@@ -27,14 +27,16 @@ import static java.util.Objects.requireNonNull;
 
 public class MoreLists
 {
-    public static <T> List<List<T>> listOfListsCopy(List<List<T>> lists)
+    private MoreLists() {}
+
+	public static <T> List<List<T>> listOfListsCopy(List<List<T>> lists)
     {
         return requireNonNull(lists, "lists is null").stream()
                 .map(ImmutableList::copyOf)
                 .collect(toImmutableList());
     }
 
-    public static <T> List<T> filteredCopy(List<T> elements, Predicate<T> predicate)
+	public static <T> List<T> filteredCopy(List<T> elements, Predicate<T> predicate)
     {
         requireNonNull(elements, "elements is null");
         requireNonNull(predicate, "predicate is null");
@@ -43,7 +45,7 @@ public class MoreLists
                 .collect(toImmutableList());
     }
 
-    public static <T, R> List<R> mappedCopy(List<T> elements, Function<T, R> mapper)
+	public static <T, R> List<R> mappedCopy(List<T> elements, Function<T, R> mapper)
     {
         requireNonNull(elements, "elements is null");
         requireNonNull(mapper, "mapper is null");
@@ -52,7 +54,7 @@ public class MoreLists
                 .collect(toImmutableList());
     }
 
-    public static <T> List<T> nElements(int n, IntFunction<T> function)
+	public static <T> List<T> nElements(int n, IntFunction<T> function)
     {
         checkArgument(n >= 0, "n must be greater than or equal to zero");
         requireNonNull(function, "function is null");
@@ -60,6 +62,4 @@ public class MoreLists
                 .mapToObj(function)
                 .collect(toImmutableList());
     }
-
-    private MoreLists() {}
 }

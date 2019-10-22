@@ -29,22 +29,16 @@ public class LongInputStreamV2
 {
     private static final int MIN_REPEAT_SIZE = 3;
     private static final int MAX_LITERAL_SIZE = 512;
+	private final LongBitPacker packer = new LongBitPacker();
+	private final OrcInputStream input;
+	private final boolean signed;
+	private final long[] literals = new long[MAX_LITERAL_SIZE];
+	private int numLiterals;
+	private int used;
+	private final boolean skipCorrupt;
+	private long lastReadInputCheckpoint;
 
-    private enum EncodingType
-    {
-        SHORT_REPEAT, DIRECT, PATCHED_BASE, DELTA
-    }
-
-    private final LongBitPacker packer = new LongBitPacker();
-    private final OrcInputStream input;
-    private final boolean signed;
-    private final long[] literals = new long[MAX_LITERAL_SIZE];
-    private int numLiterals;
-    private int used;
-    private final boolean skipCorrupt;
-    private long lastReadInputCheckpoint;
-
-    public LongInputStreamV2(OrcInputStream input, boolean signed, boolean skipCorrupt)
+	public LongInputStreamV2(OrcInputStream input, boolean signed, boolean skipCorrupt)
     {
         this.input = input;
         this.signed = signed;
@@ -52,7 +46,7 @@ public class LongInputStreamV2
         lastReadInputCheckpoint = input.getCheckpoint();
     }
 
-    // This comes from the Apache Hive ORC code
+	// This comes from the Apache Hive ORC code
     private void readValues()
             throws IOException
     {
@@ -79,7 +73,7 @@ public class LongInputStreamV2
         }
     }
 
-    // This comes from the Apache Hive ORC code
+	// This comes from the Apache Hive ORC code
     private void readDeltaValues(int firstByte)
             throws IOException
     {
@@ -136,7 +130,7 @@ public class LongInputStreamV2
         }
     }
 
-    // This comes from the Apache Hive ORC code
+	// This comes from the Apache Hive ORC code
     private void readPatchedBaseValues(int firstByte)
             throws IOException
     {
@@ -250,7 +244,7 @@ public class LongInputStreamV2
         }
     }
 
-    // This comes from the Apache Hive ORC code
+	// This comes from the Apache Hive ORC code
     private void readDirectValues(int firstByte)
             throws IOException
     {
@@ -276,7 +270,7 @@ public class LongInputStreamV2
         }
     }
 
-    // This comes from the Apache Hive ORC code
+	// This comes from the Apache Hive ORC code
     private void readShortRepeatValues(int firstByte)
             throws IOException
     {
@@ -303,7 +297,7 @@ public class LongInputStreamV2
         }
     }
 
-    /**
+	/**
      * Read n bytes in big endian order and convert to long.
      */
     private static long bytesToLongBE(InputStream input, int n)
@@ -320,7 +314,7 @@ public class LongInputStreamV2
         return out;
     }
 
-    @Override
+	@Override
     public long next()
             throws IOException
     {
@@ -332,13 +326,13 @@ public class LongInputStreamV2
         return literals[used++];
     }
 
-    @Override
+	@Override
     public Class<LongStreamV2Checkpoint> getCheckpointType()
     {
         return LongStreamV2Checkpoint.class;
     }
 
-    @Override
+	@Override
     public void seekToCheckpoint(LongStreamCheckpoint checkpoint)
             throws IOException
     {
@@ -357,7 +351,7 @@ public class LongInputStreamV2
         }
     }
 
-    @Override
+	@Override
     public void skip(long items)
             throws IOException
     {
@@ -371,5 +365,10 @@ public class LongInputStreamV2
             used += consume;
             items -= consume;
         }
+    }
+
+	private enum EncodingType
+    {
+        SHORT_REPEAT, DIRECT, PATCHED_BASE, DELTA
     }
 }

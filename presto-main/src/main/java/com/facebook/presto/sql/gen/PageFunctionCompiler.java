@@ -434,7 +434,7 @@ public class PageFunctionCompiler
                 .retObject();
 
         // constructor
-        generateConstructor(classDefinition, cachedInstanceBinder, compiledLambdaMap, method -> {
+        generateConstructor(classDefinition, cachedInstanceBinder, method -> {
             Variable thisVariable = method.getScope().getThis();
             method.getBody().append(thisVariable.setField(selectedPositions, newArray(type(boolean[].class), 0)));
         });
@@ -532,7 +532,6 @@ public class PageFunctionCompiler
     private static void generateConstructor(
             ClassDefinition classDefinition,
             CachedInstanceBinder cachedInstanceBinder,
-            Map<LambdaDefinitionExpression, CompiledLambda> compiledLambdaMap,
             Consumer<MethodDefinition> additionalStatements)
     {
         MethodDefinition constructorDefinition = classDefinition.declareConstructor(a(PUBLIC));
@@ -552,19 +551,13 @@ public class PageFunctionCompiler
 
     private static void declareBlockVariables(RowExpression expression, Parameter page, Scope scope, BytecodeBlock body)
     {
-        for (int channel : getInputChannels(expression)) {
-            scope.declareVariable("block_" + channel, body, page.invoke("getBlock", Block.class, constantInt(channel)));
-        }
+        getInputChannels(expression).stream().mapToInt(Integer::valueOf).forEach(channel -> scope.declareVariable("block_" + channel, body, page.invoke("getBlock", Block.class, constantInt(channel))));
     }
 
     private static List<Integer> getInputChannels(Iterable<RowExpression> expressions)
     {
         TreeSet<Integer> channels = new TreeSet<>();
-        for (RowExpression expression : Expressions.subExpressions(expressions)) {
-            if (expression instanceof InputReferenceExpression) {
-                channels.add(((InputReferenceExpression) expression).getField());
-            }
-        }
+        Expressions.subExpressions(expressions).stream().filter(expression -> expression instanceof InputReferenceExpression).forEach(expression -> channels.add(((InputReferenceExpression) expression).getField()));
         return ImmutableList.copyOf(channels);
     }
 
@@ -576,9 +569,7 @@ public class PageFunctionCompiler
     private static List<Parameter> toBlockParameters(List<Integer> inputChannels)
     {
         ImmutableList.Builder<Parameter> parameters = ImmutableList.builder();
-        for (int channel : inputChannels) {
-            parameters.add(arg("block_" + channel, Block.class));
-        }
+        inputChannels.stream().mapToInt(Integer::valueOf).forEach(channel -> parameters.add(arg("block_" + channel, Block.class)));
         return parameters.build();
     }
 

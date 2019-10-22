@@ -132,7 +132,7 @@ public class TestHivePageSink
 
     private static String makeFileName(File tempDir, HiveClientConfig config)
     {
-        return tempDir.getAbsolutePath() + "/" + config.getHiveStorageFormat().name() + "." + config.getCompressionCodec().name();
+        return new StringBuilder().append(tempDir.getAbsolutePath()).append("/").append(config.getHiveStorageFormat().name()).append(".").append(config.getCompressionCodec().name()).toString();
     }
 
     private static long writeTestFile(HiveClientConfig config, ExtendedHiveMetastore metastore, String outputPath)
@@ -208,9 +208,7 @@ public class TestHivePageSink
     {
         // materialize pages
         MaterializedResult.Builder resultBuilder = MaterializedResult.resultBuilder(session, types);
-        for (Page outputPage : pages) {
-            resultBuilder.page(outputPage);
-        }
+        pages.forEach(resultBuilder::page);
         return resultBuilder.build();
     }
 

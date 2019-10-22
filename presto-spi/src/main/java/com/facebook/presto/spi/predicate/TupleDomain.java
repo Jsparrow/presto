@@ -207,7 +207,7 @@ public final class TupleDomain<T>
         }
 
         Map<T, Domain> intersected = new LinkedHashMap<>(this.getDomains().get());
-        for (Map.Entry<T, Domain> entry : other.getDomains().get().entrySet()) {
+        other.getDomains().get().entrySet().forEach(entry -> {
             Domain intersectionDomain = intersected.get(entry.getKey());
             if (intersectionDomain == null) {
                 intersected.put(entry.getKey(), entry.getValue());
@@ -215,7 +215,7 @@ public final class TupleDomain<T>
             else {
                 intersected.put(entry.getKey(), intersectionDomain.intersect(entry.getValue()));
             }
-        }
+        });
         return withColumnDomains(intersected);
     }
 
@@ -287,26 +287,19 @@ public final class TupleDomain<T>
         // group domains by column (only for common columns)
         Map<T, List<Domain>> domainsByColumn = new LinkedHashMap<>(tupleDomains.size());
 
-        for (TupleDomain<T> domain : tupleDomains) {
-            if (!domain.isNone()) {
-                for (Map.Entry<T, Domain> entry : domain.getDomains().get().entrySet()) {
-                    if (commonColumns.contains(entry.getKey())) {
-                        List<Domain> domainForColumn = domainsByColumn.get(entry.getKey());
-                        if (domainForColumn == null) {
-                            domainForColumn = new ArrayList<>();
-                            domainsByColumn.put(entry.getKey(), domainForColumn);
-                        }
-                        domainForColumn.add(entry.getValue());
-                    }
-                }
-            }
-        }
+        tupleDomains.stream().filter(domain -> !domain.isNone()).forEach(domain -> domain.getDomains().get().entrySet().stream().filter(entry -> commonColumns.contains(entry.getKey()))
+				.forEach(entry -> {
+					List<Domain> domainForColumn = domainsByColumn.get(entry.getKey());
+					if (domainForColumn == null) {
+						domainForColumn = new ArrayList<>();
+						domainsByColumn.put(entry.getKey(), domainForColumn);
+					}
+					domainForColumn.add(entry.getValue());
+				}));
 
         // finally, do the column-wise union
         Map<T, Domain> result = new LinkedHashMap<>(domainsByColumn.size());
-        for (Map.Entry<T, List<Domain>> entry : domainsByColumn.entrySet()) {
-            result.put(entry.getKey(), Domain.union(entry.getValue()));
-        }
+        domainsByColumn.entrySet().forEach(entry -> result.put(entry.getKey(), Domain.union(entry.getValue())));
         return withColumnDomains(result);
     }
 
@@ -414,20 +407,19 @@ public final class TupleDomain<T>
     public TupleDomain<T> compact(int threshold)
     {
         Map<T, Domain> compactedDomains = new HashMap<>();
-        getDomains().ifPresent(domains -> {
-            for (Map.Entry<T, Domain> entry : domains.entrySet()) {
-                T hiveColumnHandle = entry.getKey();
-                Domain domain = entry.getValue();
-
-                ValueSet values = domain.getValues();
-                ValueSet compactValueSet = values.getValuesProcessor().<Optional<ValueSet>>transform(
-                        ranges -> ranges.getRangeCount() > threshold ? Optional.of(ValueSet.ofRanges(ranges.getSpan())) : Optional.empty(),
-                        discreteValues -> discreteValues.getValues().size() > threshold ? Optional.of(ValueSet.all(values.getType())) : Optional.empty(),
-                        allOrNone -> Optional.empty())
-                        .orElse(values);
-                compactedDomains.put(hiveColumnHandle, Domain.create(compactValueSet, domain.isNullAllowed()));
-            }
-        });
+        getDomains().ifPresent(domains -> domains.entrySet().forEach(entry -> {
+			T hiveColumnHandle = entry.getKey();
+			Domain domain = entry.getValue();
+			ValueSet values = domain.getValues();
+			ValueSet compactValueSet = values.getValuesProcessor().<Optional<ValueSet>>transform(
+					ranges -> ranges.getRangeCount() > threshold ? Optional.of(ValueSet.ofRanges(ranges.getSpan()))
+							: Optional.empty(),
+					discreteValues -> discreteValues.getValues().size() > threshold
+							? Optional.of(ValueSet.all(values.getType()))
+							: Optional.empty(),
+					allOrNone -> Optional.empty()).orElse(values);
+			compactedDomains.put(hiveColumnHandle, Domain.create(compactValueSet, domain.isNullAllowed()));
+		}));
         return TupleDomain.withColumnDomains(unmodifiableMap(compactedDomains));
     }
 

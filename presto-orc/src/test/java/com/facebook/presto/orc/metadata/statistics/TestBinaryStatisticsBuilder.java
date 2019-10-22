@@ -52,9 +52,7 @@ public class TestBinaryStatisticsBuilder
     public void testSum()
     {
         BinaryStatisticsBuilder binaryStatisticsBuilder = new BinaryStatisticsBuilder();
-        for (Slice value : ImmutableList.of(EMPTY_SLICE, FIRST_VALUE, SECOND_VALUE)) {
-            binaryStatisticsBuilder.addValue(value);
-        }
+        ImmutableList.of(EMPTY_SLICE, FIRST_VALUE, SECOND_VALUE).forEach(binaryStatisticsBuilder::addValue);
         assertBinaryStatistics(binaryStatisticsBuilder.buildColumnStatistics(), 3, EMPTY_SLICE.length() + FIRST_VALUE.length() + SECOND_VALUE.length());
     }
 

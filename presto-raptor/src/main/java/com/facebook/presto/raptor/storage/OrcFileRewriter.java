@@ -124,7 +124,7 @@ public final class OrcFileRewriter
             // Build columns for writer; keep the right ordinal
             Map<String, Type> orderedAllColumnTypes = new TreeMap<>(Comparator.comparingLong(Long::parseLong));
             orderedAllColumnTypes.putAll(allColumnTypes);
-            for (Map.Entry<String, Type> columnType : orderedAllColumnTypes.entrySet()) {
+            orderedAllColumnTypes.entrySet().forEach(columnType -> {
                 // Get the intersection of the provide columns and the actual columns
                 Integer currentColumnIndex = currentColumnIds.get(columnType.getKey());
                 if (currentColumnIndex != null) {
@@ -132,7 +132,7 @@ public final class OrcFileRewriter
                     writerColumnTypesBuilder.add(columnType.getValue());
                     writerColumnIdsBuilder.add(columnType.getKey());
                 }
-            }
+            });
 
             List<Type> writerColumnTypes = writerColumnTypesBuilder.build();
             List<String> writerColumnIds = writerColumnIdsBuilder.build();

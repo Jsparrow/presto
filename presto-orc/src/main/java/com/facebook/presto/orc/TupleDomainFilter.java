@@ -925,11 +925,11 @@ public interface TupleDomainFilter
                 }
             }
 
-            if (upper != null) {
-                int compare = compareRanges(buffer, offset, length, upper, 0, upper.length);
-                return compare < 0 || (!upperExclusive && compare == 0);
-            }
-            return true;
+            if (upper == null) {
+				return true;
+			}
+			int compare = compareRanges(buffer, offset, length, upper, 0, upper.length);
+			return compare < 0 || (!upperExclusive && compare == 0);
         }
 
         @Override
@@ -1482,7 +1482,8 @@ public interface TupleDomainFilter
             return recordTestResult(filter.testBytes(buffer, offset, length));
         }
 
-        public boolean testLength(int length)
+        @Override
+		public boolean testLength(int length)
         {
             // Returns true without advancing to the next filter because this is a pre-check followed by a test on the value,
             // which will advance the state. TODO: We could advance the state on false and not advance on true. Consider the
@@ -1520,37 +1521,44 @@ public interface TupleDomainFilter
             return recordTestResult(nonNullsAllowed[filterIndex++]);
         }
 
-        public boolean testLong(long value)
+        @Override
+		public boolean testLong(long value)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testDouble(double value)
+        @Override
+		public boolean testDouble(double value)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testFloat(float value)
+        @Override
+		public boolean testFloat(float value)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testDecimal(long low, long high)
+        @Override
+		public boolean testDecimal(long low, long high)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testBoolean(boolean value)
+        @Override
+		public boolean testBoolean(boolean value)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testBytes(byte[] buffer, int offset, int length)
+        @Override
+		public boolean testBytes(byte[] buffer, int offset, int length)
         {
             throw new UnsupportedOperationException();
         }
 
-        public boolean testLength(int length)
+        @Override
+		public boolean testLength(int length)
         {
             throw new UnsupportedOperationException();
         }

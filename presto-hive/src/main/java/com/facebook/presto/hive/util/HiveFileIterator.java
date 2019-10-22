@@ -35,21 +35,13 @@ import static java.util.Objects.requireNonNull;
 public class HiveFileIterator
         extends AbstractIterator<LocatedFileStatus>
 {
-    public enum NestedDirectoryPolicy
-    {
-        IGNORED,
-        RECURSE,
-        FAIL
-    }
-
     private final Deque<Path> paths = new ArrayDeque<>();
-    private final ListDirectoryOperation listDirectoryOperation;
-    private final NamenodeStats namenodeStats;
-    private final NestedDirectoryPolicy nestedDirectoryPolicy;
+	private final ListDirectoryOperation listDirectoryOperation;
+	private final NamenodeStats namenodeStats;
+	private final NestedDirectoryPolicy nestedDirectoryPolicy;
+	private Iterator<LocatedFileStatus> remoteIterator = Collections.emptyIterator();
 
-    private Iterator<LocatedFileStatus> remoteIterator = Collections.emptyIterator();
-
-    public HiveFileIterator(
+	public HiveFileIterator(
             Path path,
             ListDirectoryOperation listDirectoryOperation,
             NamenodeStats namenodeStats,
@@ -61,7 +53,7 @@ public class HiveFileIterator
         this.nestedDirectoryPolicy = requireNonNull(nestedDirectoryPolicy, "nestedDirectoryPolicy is null");
     }
 
-    @Override
+	@Override
     protected LocatedFileStatus computeNext()
     {
         while (true) {
@@ -96,21 +88,28 @@ public class HiveFileIterator
         }
     }
 
-    private Iterator<LocatedFileStatus> getLocatedFileStatusRemoteIterator(Path path)
+	private Iterator<LocatedFileStatus> getLocatedFileStatusRemoteIterator(Path path)
     {
         try (TimeStat.BlockTimer ignored = namenodeStats.getListLocatedStatus().time()) {
             return new FileStatusIterator(path, listDirectoryOperation, namenodeStats);
         }
     }
 
-    private LocatedFileStatus getLocatedFileStatus(Iterator<LocatedFileStatus> iterator)
+	private LocatedFileStatus getLocatedFileStatus(Iterator<LocatedFileStatus> iterator)
     {
         try (TimeStat.BlockTimer ignored = namenodeStats.getRemoteIteratorNext().time()) {
             return iterator.next();
         }
     }
 
-    private static class FileStatusIterator
+	public enum NestedDirectoryPolicy
+    {
+        IGNORED,
+        RECURSE,
+        FAIL
+    }
+
+	private static class FileStatusIterator
             implements Iterator<LocatedFileStatus>
     {
         private final Path path;

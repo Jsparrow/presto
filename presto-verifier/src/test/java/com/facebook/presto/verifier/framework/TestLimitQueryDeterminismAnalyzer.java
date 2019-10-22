@@ -43,7 +43,88 @@ import static org.testng.Assert.assertEquals;
 
 public class TestLimitQueryDeterminismAnalyzer
 {
-    private static class MockPrestoAction
+    private static final QualifiedName TABLE_NAME = QualifiedName.of("test");
+	private static final long ROW_COUNT_WITH_LIMIT = 1000;
+	private static final QueryStats QUERY_STATS = new QueryStats("id", "", false, false, 1, 2, 3, 4, 5, 0, 7, 8, 9, 10, 11, 0, Optional.empty());
+	private static final ParsingOptions PARSING_OPTIONS = ParsingOptions.builder().setDecimalLiteralTreatment(AS_DOUBLE).build();
+	private static final SqlParser sqlParser = new SqlParser(new SqlParserOptions().allowIdentifierSymbol(COLON, AT_SIGN));
+	private AtomicLong rowCount = new AtomicLong();
+	private MockPrestoAction prestoAction;
+	private LimitQueryDeterminismAnalyzer analyzer;
+
+	@BeforeMethod
+    public void setup()
+    {
+        this.prestoAction = new MockPrestoAction(rowCount);
+        this.analyzer = new LimitQueryDeterminismAnalyzer(prestoAction, new VerifierConfig());
+    }
+
+	@Test
+    public void testNotRun()
+    {
+        // Unsupported statement types
+        assertEquals(analyze("CREATE TABLE test (x varchar, ds varhcar) WITH (partitioned_by = ARRAY[\"ds\"])"), NOT_RUN);
+        assertEquals(analyze("SELECT * FROM source LIMIT 10"), NOT_RUN);
+
+        // Order by clause
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source UNION ALL SELECT * FROM source ORDER BY 1 LIMIT 1000"), NOT_RUN);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source ORDER BY 1 LIMIT 1000"), NOT_RUN);
+
+        // not outer limit clause
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source UNION ALL SELECT * FROM source"), NOT_RUN);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source"), NOT_RUN);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM (SELECT * FROM source LIMIT 1000)"), NOT_RUN);
+    }
+
+	@Test
+    public void testNonDeterministic()
+    {
+        rowCount.set(1001);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), NON_DETERMINISTIC);
+        assertRowCountQuery("SELECT count(1) FROM (SELECT * FROM source)");
+
+        assertEquals(analyze("CREATE TABLE test AS (WITH f AS (select * from g) ((SELECT * FROM source UNION ALL SELECT * FROM source LIMIT 1000)))"), NON_DETERMINISTIC);
+        assertRowCountQuery("SELECT count(1) FROM (WITH f AS (select * from g) SELECT * FROM source UNION ALL SELECT * FROM source)");
+
+        assertEquals(analyze("CREATE TABLE test AS (WITH f AS (select * from g) (SELECT * FROM source LIMIT 1000))"), NON_DETERMINISTIC);
+        assertRowCountQuery("SELECT count(1) FROM (WITH f AS (select * from g) SELECT * FROM source)");
+    }
+
+	@Test
+    public void testDeterministic()
+    {
+        rowCount.set(1000);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), DETERMINISTIC);
+    }
+
+	@Test
+    public void testFailedDataChanged()
+    {
+        rowCount.set(999);
+        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), FAILED_DATA_CHANGED);
+    }
+
+	private Analysis analyze(String query)
+    {
+        return analyzer.analyze(
+                new QueryBundle(
+                        Optional.of(TABLE_NAME),
+                        ImmutableList.of(),
+                        sqlParser.createStatement(query, PARSING_OPTIONS),
+                        ImmutableList.of(),
+                        CONTROL),
+                ROW_COUNT_WITH_LIMIT);
+    }
+
+	private void assertRowCountQuery(String expectedQuery)
+    {
+        Statement expectedStatement = sqlParser.createStatement(expectedQuery, PARSING_OPTIONS);
+        Statement actualStatement = prestoAction.getLastStatement();
+        String actualQuery = formatSql(actualStatement, Optional.empty());
+        assertEquals(actualStatement, expectedStatement, format("expected:\n[%s]\nbut found:\n[%s]", formatSql(expectedStatement, Optional.empty()), actualQuery));
+    }
+
+	private static class MockPrestoAction
             implements PrestoAction
     {
         private final AtomicLong rowCount;
@@ -72,87 +153,5 @@ public class TestLimitQueryDeterminismAnalyzer
         {
             return lastStatement;
         }
-    }
-
-    private static final QualifiedName TABLE_NAME = QualifiedName.of("test");
-    private static final long ROW_COUNT_WITH_LIMIT = 1000;
-    private static final QueryStats QUERY_STATS = new QueryStats("id", "", false, false, 1, 2, 3, 4, 5, 0, 7, 8, 9, 10, 11, 0, Optional.empty());
-    private static final ParsingOptions PARSING_OPTIONS = ParsingOptions.builder().setDecimalLiteralTreatment(AS_DOUBLE).build();
-    private static final SqlParser sqlParser = new SqlParser(new SqlParserOptions().allowIdentifierSymbol(COLON, AT_SIGN));
-
-    private AtomicLong rowCount = new AtomicLong();
-    private MockPrestoAction prestoAction;
-    private LimitQueryDeterminismAnalyzer analyzer;
-
-    @BeforeMethod
-    public void setup()
-    {
-        this.prestoAction = new MockPrestoAction(rowCount);
-        this.analyzer = new LimitQueryDeterminismAnalyzer(prestoAction, new VerifierConfig());
-    }
-
-    @Test
-    public void testNotRun()
-    {
-        // Unsupported statement types
-        assertEquals(analyze("CREATE TABLE test (x varchar, ds varhcar) WITH (partitioned_by = ARRAY[\"ds\"])"), NOT_RUN);
-        assertEquals(analyze("SELECT * FROM source LIMIT 10"), NOT_RUN);
-
-        // Order by clause
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source UNION ALL SELECT * FROM source ORDER BY 1 LIMIT 1000"), NOT_RUN);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source ORDER BY 1 LIMIT 1000"), NOT_RUN);
-
-        // not outer limit clause
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source UNION ALL SELECT * FROM source"), NOT_RUN);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source"), NOT_RUN);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM (SELECT * FROM source LIMIT 1000)"), NOT_RUN);
-    }
-
-    @Test
-    public void testNonDeterministic()
-    {
-        rowCount.set(1001);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), NON_DETERMINISTIC);
-        assertRowCountQuery("SELECT count(1) FROM (SELECT * FROM source)");
-
-        assertEquals(analyze("CREATE TABLE test AS (WITH f AS (select * from g) ((SELECT * FROM source UNION ALL SELECT * FROM source LIMIT 1000)))"), NON_DETERMINISTIC);
-        assertRowCountQuery("SELECT count(1) FROM (WITH f AS (select * from g) SELECT * FROM source UNION ALL SELECT * FROM source)");
-
-        assertEquals(analyze("CREATE TABLE test AS (WITH f AS (select * from g) (SELECT * FROM source LIMIT 1000))"), NON_DETERMINISTIC);
-        assertRowCountQuery("SELECT count(1) FROM (WITH f AS (select * from g) SELECT * FROM source)");
-    }
-
-    @Test
-    public void testDeterministic()
-    {
-        rowCount.set(1000);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), DETERMINISTIC);
-    }
-
-    @Test
-    public void testFailedDataChanged()
-    {
-        rowCount.set(999);
-        assertEquals(analyze("INSERT INTO test SELECT * FROM source LIMIT 1000"), FAILED_DATA_CHANGED);
-    }
-
-    private Analysis analyze(String query)
-    {
-        return analyzer.analyze(
-                new QueryBundle(
-                        Optional.of(TABLE_NAME),
-                        ImmutableList.of(),
-                        sqlParser.createStatement(query, PARSING_OPTIONS),
-                        ImmutableList.of(),
-                        CONTROL),
-                ROW_COUNT_WITH_LIMIT);
-    }
-
-    private void assertRowCountQuery(String expectedQuery)
-    {
-        Statement expectedStatement = sqlParser.createStatement(expectedQuery, PARSING_OPTIONS);
-        Statement actualStatement = prestoAction.getLastStatement();
-        String actualQuery = formatSql(actualStatement, Optional.empty());
-        assertEquals(actualStatement, expectedStatement, format("expected:\n[%s]\nbut found:\n[%s]", formatSql(expectedStatement, Optional.empty()), actualQuery));
     }
 }

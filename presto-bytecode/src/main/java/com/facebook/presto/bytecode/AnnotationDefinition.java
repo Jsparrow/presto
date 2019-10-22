@@ -151,12 +151,12 @@ public class AnnotationDefinition
     {
         if (value instanceof List) {
             // todo verify list contains single type
-            for (Object v : (List<Object>) value) {
+			((List<Object>) value).forEach(v -> {
                 Preconditions.checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
                 if (v instanceof List) {
                     isValidType(value);
                 }
-            }
+            });
         }
         else {
             Preconditions.checkArgument(ALLOWED_TYPES.contains(value.getClass()), "Invalid value type %s", value.getClass());
@@ -193,11 +193,11 @@ public class AnnotationDefinition
 
     private void visit(AnnotationVisitor visitor)
     {
-        for (Entry<String, Object> entry : values.entrySet()) {
+        values.entrySet().forEach(entry -> {
             String name = entry.getKey();
             Object value = entry.getValue();
             visit(visitor, name, value);
-        }
+        });
     }
 
     private static void visit(AnnotationVisitor visitor, String name, Object value)
@@ -221,9 +221,7 @@ public class AnnotationDefinition
         }
         else if (value instanceof List) {
             AnnotationVisitor arrayVisitor = visitor.visitArray(name);
-            for (Object element : (List<?>) value) {
-                visit(arrayVisitor, null, element);
-            }
+            ((List<?>) value).forEach(element -> visit(arrayVisitor, null, element));
             arrayVisitor.visitEnd();
         }
         else {

@@ -66,19 +66,11 @@ public class TestArrayReduceFunction
     public void testTwoValueState()
     {
         assertFunction(
-                "reduce(" +
-                        "ARRAY [5, 20, 50], " +
-                        "CAST(ROW(0, 0) AS ROW(sum BIGINT, count INTEGER)), " +
-                        "(s, x) -> CAST(ROW(x + s.sum, s.count + 1) AS ROW(sum BIGINT, count INTEGER)), " +
-                        "s -> s.sum / s.count)",
+                new StringBuilder().append("reduce(").append("ARRAY [5, 20, 50], ").append("CAST(ROW(0, 0) AS ROW(sum BIGINT, count INTEGER)), ").append("(s, x) -> CAST(ROW(x + s.sum, s.count + 1) AS ROW(sum BIGINT, count INTEGER)), ").append("s -> s.sum / s.count)").toString(),
                 BIGINT,
                 25L);
         assertFunction(
-                "reduce(" +
-                        "ARRAY [5, 6, 10, 20], " +
-                        "CAST(ROW(0.0E0, 0) AS ROW(sum DOUBLE, count INTEGER)), " +
-                        "(s, x) -> CAST(ROW(x + s.sum, s.count + 1) AS ROW(sum DOUBLE, count INTEGER)), " +
-                        "s -> s.sum / s.count)",
+                new StringBuilder().append("reduce(").append("ARRAY [5, 6, 10, 20], ").append("CAST(ROW(0.0E0, 0) AS ROW(sum DOUBLE, count INTEGER)), ").append("(s, x) -> CAST(ROW(x + s.sum, s.count + 1) AS ROW(sum DOUBLE, count INTEGER)), ").append("s -> s.sum / s.count)").toString(),
                 DOUBLE,
                 10.25);
     }

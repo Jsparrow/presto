@@ -46,11 +46,15 @@ import static com.facebook.presto.sql.analyzer.SemanticErrorCode.TYPE_MISMATCH;
 import static com.facebook.presto.type.UnknownType.UNKNOWN;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.util.Locale.ENGLISH;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AddColumnTask
         implements DataDefinitionTask<AddColumn>
 {
-    @Override
+    private static final Logger logger = LoggerFactory.getLogger(AddColumnTask.class);
+
+	@Override
     public String getName()
     {
         return "ADD COLUMN";
@@ -79,7 +83,8 @@ public class AddColumnTask
             type = metadata.getType(parseTypeSignature(element.getType()));
         }
         catch (IllegalArgumentException e) {
-            throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", element.getType(), element.getName());
+            logger.error(e.getMessage(), e);
+			throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", element.getType(), element.getName());
         }
         if (type.equals(UNKNOWN)) {
             throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", element.getType(), element.getName());

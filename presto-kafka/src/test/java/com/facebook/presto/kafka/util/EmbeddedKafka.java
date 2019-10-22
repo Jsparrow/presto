@@ -49,18 +49,6 @@ public class EmbeddedKafka
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicBoolean stopped = new AtomicBoolean();
 
-    public static EmbeddedKafka createEmbeddedKafka()
-            throws IOException
-    {
-        return new EmbeddedKafka(new EmbeddedZookeeper(), new Properties());
-    }
-
-    public static EmbeddedKafka createEmbeddedKafka(Properties overrideProperties)
-            throws IOException
-    {
-        return new EmbeddedKafka(new EmbeddedZookeeper(), overrideProperties);
-    }
-
     EmbeddedKafka(EmbeddedZookeeper zookeeper, Properties overrideProperties)
             throws IOException
     {
@@ -90,33 +78,47 @@ public class EmbeddedKafka
         this.kafka = new KafkaServerStartable(config);
     }
 
-    public void start()
-            throws InterruptedException, IOException
+	public static EmbeddedKafka createEmbeddedKafka()
+            throws IOException
     {
-        if (!started.getAndSet(true)) {
-            zookeeper.start();
-            kafka.startup();
-        }
+        return new EmbeddedKafka(new EmbeddedZookeeper(), new Properties());
     }
 
-    @Override
+	public static EmbeddedKafka createEmbeddedKafka(Properties overrideProperties)
+            throws IOException
+    {
+        return new EmbeddedKafka(new EmbeddedZookeeper(), overrideProperties);
+    }
+
+	public void start()
+            throws InterruptedException, IOException
+    {
+        if (started.getAndSet(true)) {
+			return;
+		}
+		zookeeper.start();
+		kafka.startup();
+    }
+
+	@Override
     public void close()
             throws IOException
     {
-        if (started.get() && !stopped.getAndSet(true)) {
-            kafka.shutdown();
-            kafka.awaitShutdown();
-            zookeeper.close();
-            deleteRecursively(kafkaDataDir.toPath(), ALLOW_INSECURE);
-        }
+        if (!(started.get() && !stopped.getAndSet(true))) {
+			return;
+		}
+		kafka.shutdown();
+		kafka.awaitShutdown();
+		zookeeper.close();
+		deleteRecursively(kafkaDataDir.toPath(), ALLOW_INSECURE);
     }
 
-    public void createTopics(String... topics)
+	public void createTopics(String... topics)
     {
         createTopics(2, 1, new Properties(), topics);
     }
 
-    public void createTopics(int partitions, int replication, Properties topicProperties, String... topics)
+	public void createTopics(int partitions, int replication, Properties topicProperties, String... topics)
     {
         checkState(started.get() && !stopped.get(), "not started!");
 
@@ -131,7 +133,7 @@ public class EmbeddedKafka
         }
     }
 
-    public CloseableProducer<Long, Object> createProducer()
+	public CloseableProducer<Long, Object> createProducer()
     {
         Map<String, String> properties = ImmutableMap.<String, String>builder()
                 .put("metadata.broker.list", getConnectString())
@@ -145,7 +147,27 @@ public class EmbeddedKafka
         return new CloseableProducer<>(producerConfig);
     }
 
-    public static class CloseableProducer<K, V>
+	public int getZookeeperPort()
+    {
+        return zookeeper.getPort();
+    }
+
+	public int getPort()
+    {
+        return port;
+    }
+
+	public String getConnectString()
+    {
+        return "localhost:" + Integer.toString(port);
+    }
+
+	public String getZookeeperConnectString()
+    {
+        return zookeeper.getConnectString();
+    }
+
+	public static class CloseableProducer<K, V>
             extends Producer<K, V>
             implements AutoCloseable
     {
@@ -153,25 +175,5 @@ public class EmbeddedKafka
         {
             super(config);
         }
-    }
-
-    public int getZookeeperPort()
-    {
-        return zookeeper.getPort();
-    }
-
-    public int getPort()
-    {
-        return port;
-    }
-
-    public String getConnectString()
-    {
-        return "localhost:" + Integer.toString(port);
-    }
-
-    public String getZookeeperConnectString()
-    {
-        return zookeeper.getConnectString();
     }
 }

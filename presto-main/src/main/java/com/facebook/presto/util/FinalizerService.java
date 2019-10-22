@@ -67,10 +67,11 @@ public class FinalizerService
             finalizerTask.cancel(true);
             finalizerTask = null;
         }
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+        if (executor == null) {
+			return;
+		}
+		executor.shutdownNow();
+		executor = null;
     }
 
     /**

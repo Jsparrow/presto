@@ -146,7 +146,7 @@ final class RowExpressionVerifier
     @Override
     protected Boolean visitIsNullPredicate(IsNullPredicate expected, RowExpression actual)
     {
-        if (!(actual instanceof SpecialFormExpression) || !((SpecialFormExpression) actual).getForm().equals(IS_NULL)) {
+        if (!(actual instanceof SpecialFormExpression) || ((SpecialFormExpression) actual).getForm() != IS_NULL) {
             return false;
         }
 
@@ -162,7 +162,7 @@ final class RowExpressionVerifier
 
         RowExpression argument = ((CallExpression) actual).getArguments().get(0);
 
-        if (!(argument instanceof SpecialFormExpression) || !((SpecialFormExpression) argument).getForm().equals(IS_NULL)) {
+        if (!(argument instanceof SpecialFormExpression) || ((SpecialFormExpression) argument).getForm() != IS_NULL) {
             return false;
         }
 
@@ -172,7 +172,7 @@ final class RowExpressionVerifier
     @Override
     protected Boolean visitInPredicate(InPredicate expected, RowExpression actual)
     {
-        if (actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm().equals(IN)) {
+        if (actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm() == IN) {
             List<RowExpression> arguments = ((SpecialFormExpression) actual).getArguments();
             if (expected.getValueList() instanceof InListExpression) {
                 return process(expected.getValue(), arguments.get(0)) && process(((InListExpression) expected.getValueList()).getValues(), arguments.subList(1, arguments.size()));
@@ -207,7 +207,8 @@ final class RowExpressionVerifier
             }
             OperatorType actualOperatorType = functionMetadata.getOperatorType().get();
             OperatorType expectedOperatorType = getOperatorType(expected.getOperator());
-            if (expectedOperatorType.equals(actualOperatorType)) {
+            // TODO support other comparison operators
+			if (expectedOperatorType == actualOperatorType) {
                 if (actualOperatorType == EQUAL) {
                     return (process(expected.getLeft(), ((CallExpression) actual).getArguments().get(0)) && process(expected.getRight(), ((CallExpression) actual).getArguments().get(1)))
                             || (process(expected.getLeft(), ((CallExpression) actual).getArguments().get(1)) && process(expected.getRight(), ((CallExpression) actual).getArguments().get(0)));
@@ -260,7 +261,7 @@ final class RowExpressionVerifier
             }
             OperatorType actualOperatorType = functionMetadata.getOperatorType().get();
             OperatorType expectedOperatorType = getOperatorType(expected.getOperator());
-            if (expectedOperatorType.equals(actualOperatorType)) {
+            if (expectedOperatorType == actualOperatorType) {
                 return process(expected.getLeft(), ((CallExpression) actual).getArguments().get(0)) && process(expected.getRight(), ((CallExpression) actual).getArguments().get(1));
             }
         }
@@ -364,11 +365,11 @@ final class RowExpressionVerifier
                 return expected.getValue().equals(((Slice) value).toStringUtf8());
             }
         }
-        if (actual instanceof ConstantExpression && actual.getType().getJavaType() == Slice.class) {
-            String actualString = (String) LiteralInterpreter.evaluate(TEST_SESSION.toConnectorSession(), (ConstantExpression) actual);
-            return expected.getValue().equals(actualString);
-        }
-        return false;
+        if (!(actual instanceof ConstantExpression && actual.getType().getJavaType() == Slice.class)) {
+			return false;
+		}
+		String actualString = (String) LiteralInterpreter.evaluate(TEST_SESSION.toConnectorSession(), (ConstantExpression) actual);
+		return expected.getValue().equals(actualString);
     }
 
     @Override
@@ -418,25 +419,25 @@ final class RowExpressionVerifier
     @Override
     protected Boolean visitCoalesceExpression(CoalesceExpression expected, RowExpression actual)
     {
-        if (!(actual instanceof SpecialFormExpression) || !(((SpecialFormExpression) actual).getForm().equals(COALESCE))) {
+        if (!(actual instanceof SpecialFormExpression) || !(((SpecialFormExpression) actual).getForm() == COALESCE)) {
             return false;
         }
 
         SpecialFormExpression actualCoalesce = (SpecialFormExpression) actual;
-        if (expected.getOperands().size() == actualCoalesce.getArguments().size()) {
-            boolean verified = true;
-            for (int i = 0; i < expected.getOperands().size(); i++) {
-                verified &= process(expected.getOperands().get(i), actualCoalesce.getArguments().get(i));
-            }
-            return verified;
-        }
-        return false;
+        if (expected.getOperands().size() != actualCoalesce.getArguments().size()) {
+			return false;
+		}
+		boolean verified = true;
+		for (int i = 0; i < expected.getOperands().size(); i++) {
+		    verified &= process(expected.getOperands().get(i), actualCoalesce.getArguments().get(i));
+		}
+		return verified;
     }
 
     @Override
     protected Boolean visitSimpleCaseExpression(SimpleCaseExpression expected, RowExpression actual)
     {
-        if (!(actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm().equals(SWITCH))) {
+        if (!(actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm() == SWITCH)) {
             return false;
         }
         SpecialFormExpression actualCase = (SpecialFormExpression) actual;
@@ -447,7 +448,7 @@ final class RowExpressionVerifier
         List<RowExpression> whenClauses;
         Optional<RowExpression> elseValue;
         RowExpression last = actualCase.getArguments().get(actualCase.getArguments().size() - 1);
-        if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm().equals(WHEN)) {
+        if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm() == WHEN) {
             whenClauses = actualCase.getArguments().subList(1, actualCase.getArguments().size());
             elseValue = Optional.empty();
         }
@@ -466,7 +467,7 @@ final class RowExpressionVerifier
     @Override
     protected Boolean visitWhenClause(WhenClause expected, RowExpression actual)
     {
-        if (!(actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm().equals(WHEN))) {
+        if (!(actual instanceof SpecialFormExpression && ((SpecialFormExpression) actual).getForm() == WHEN)) {
             return false;
         }
         SpecialFormExpression actualWhenClause = (SpecialFormExpression) actual;

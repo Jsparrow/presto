@@ -109,7 +109,7 @@ public class AccumuloSplit
     @JsonIgnore
     public String getFullTableName()
     {
-        return (this.getSchema().equals("default") ? "" : this.getSchema() + ".") + this.getTable();
+        return ("default".equals(this.getSchema()) ? "" : this.getSchema() + ".") + this.getTable();
     }
 
     @JsonProperty

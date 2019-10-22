@@ -86,7 +86,7 @@ public class RaptorSplitManager
         this.nodeSupplier = requireNonNull(nodeSupplier, "nodeSupplier is null");
         this.shardManager = requireNonNull(shardManager, "shardManager is null");
         this.backupAvailable = backupAvailable;
-        this.executor = newCachedThreadPool(daemonThreadsNamed("raptor-split-" + connectorId + "-%s"));
+        this.executor = newCachedThreadPool(daemonThreadsNamed(new StringBuilder().append("raptor-split-").append(connectorId).append("-%s").toString()));
     }
 
     @PreDestroy

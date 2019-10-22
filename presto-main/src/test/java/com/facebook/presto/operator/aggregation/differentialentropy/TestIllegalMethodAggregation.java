@@ -27,10 +27,14 @@ import static com.facebook.presto.spi.type.BigintType.BIGINT;
 import static com.facebook.presto.spi.type.DoubleType.DOUBLE;
 import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static com.facebook.presto.sql.analyzer.TypeSignatureProvider.fromTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestIllegalMethodAggregation
 {
-    @Test(
+    private static final Logger logger = LoggerFactory.getLogger(TestIllegalMethodAggregation.class);
+
+	@Test(
             expectedExceptions = PrestoException.class,
             expectedExceptionsMessageRegExp = "In differential_entropy UDF, invalid method: no_such_method")
     public void testIllegalMethod()
@@ -59,7 +63,7 @@ public class TestIllegalMethodAggregation
                         "differential_entropy",
                         fromTypes(BIGINT, DOUBLE, DOUBLE, VARCHAR, DOUBLE, DOUBLE)));
         createStringsBlock((String) null);
-        System.out.println("foo");
+        logger.info("foo");
         aggregation(
                 function,
                 createLongsBlock(200),

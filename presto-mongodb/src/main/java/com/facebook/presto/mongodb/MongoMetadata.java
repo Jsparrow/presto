@@ -100,9 +100,7 @@ public class MongoMetadata
         ImmutableList.Builder<SchemaTableName> tableNames = ImmutableList.builder();
 
         for (String schemaName : listSchemas(session, schemaNameOrNull)) {
-            for (String tableName : mongoSession.getAllTables(schemaName)) {
-                tableNames.add(new SchemaTableName(schemaName, tableName.toLowerCase(ENGLISH)));
-            }
+            mongoSession.getAllTables(schemaName).forEach(tableName -> tableNames.add(new SchemaTableName(schemaName, tableName.toLowerCase(ENGLISH))));
         }
         return tableNames.build();
     }
@@ -114,9 +112,7 @@ public class MongoMetadata
         List<MongoColumnHandle> columns = mongoSession.getTable(table.getSchemaTableName()).getColumns();
 
         ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
-        for (MongoColumnHandle columnHandle : columns) {
-            columnHandles.put(columnHandle.getName(), columnHandle);
-        }
+        columns.forEach(columnHandle -> columnHandles.put(columnHandle.getName(), columnHandle));
         return columnHandles.build();
     }
 
@@ -125,14 +121,14 @@ public class MongoMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix)) {
+        listTables(session, prefix).forEach(tableName -> {
             try {
                 columns.put(tableName, getTableMetadata(session, tableName).getColumns());
             }
             catch (NotFoundException e) {
                 // table disappeared during listing operation
             }
-        }
+        });
         return columns.build();
     }
 

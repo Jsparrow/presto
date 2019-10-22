@@ -50,33 +50,14 @@ public class KafkaSmokeTest
 
     private static final String SIMPLE_KEY_AND_VALUE_TABLE_NAME = "simple_key_and_value";
     private static final String SIMPLE_KEY_AND_VALUE_TOPIC_NAME = "simple_key_and_value";
+	private static final String ALL_DATATYPES_RAW_TABLE_NAME = "all_datatypes_raw";
+	private static final String ALL_DATATYPES_RAW_TOPIC_NAME = "all_datatypes_raw";
+	private static final String ALL_DATATYPES_CSV_TABLE_NAME = "all_datatypes_csv";
+	private static final String ALL_DATATYPES_CSV_TOPIC_NAME = "all_datatypes_csv";
+	private static final String ALL_DATATYPES_JSON_TABLE_NAME = "all_datatypes_json";
+	private static final String ALL_DATATYPES_JSON_TOPIC_NAME = "all_datatypes_json";
 
-    // kafka-connectors requires tables to be predefined in presto configuration
-    // the requirements here will be used to verify that table actually exists and to
-    // create topics and propagate them with data
-
-    private static class SimpleKeyAndValueTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return immutableTable(new KafkaTableDefinition(
-                    SCHEMA_NAME + "." + SIMPLE_KEY_AND_VALUE_TABLE_NAME,
-                    SIMPLE_KEY_AND_VALUE_TOPIC_NAME,
-                    new ListKafkaDataSource(ImmutableList.of(
-                            new KafkaMessage(
-                                    contentsBuilder().appendUTF8("jasio,1").build(),
-                                    contentsBuilder().appendUTF8("ania,2").build()),
-                            new KafkaMessage(
-                                    contentsBuilder().appendUTF8("piotr,3").build(),
-                                    contentsBuilder().appendUTF8("kasia,4").build()))),
-                    1,
-                    1));
-        }
-    }
-
-    @Test(groups = {KAFKA})
+	@Test(groups = {KAFKA})
     @Requires(SimpleKeyAndValueTable.class)
     public void testSelectSimpleKeyAndValue()
     {
@@ -90,45 +71,7 @@ public class KafkaSmokeTest
                 row("piotr", 3, "kasia", 4));
     }
 
-    private static final String ALL_DATATYPES_RAW_TABLE_NAME = "all_datatypes_raw";
-    private static final String ALL_DATATYPES_RAW_TOPIC_NAME = "all_datatypes_raw";
-
-    private static class AllDataTypesRawTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return immutableTable(new KafkaTableDefinition(
-                    SCHEMA_NAME + "." + ALL_DATATYPES_RAW_TABLE_NAME,
-                    ALL_DATATYPES_RAW_TOPIC_NAME,
-                    new ListKafkaDataSource(ImmutableList.of(
-                            new KafkaMessage(
-                                    contentsBuilder()
-                                            .appendUTF8("jasio")
-                                            .appendBytes(0x1)
-                                            .appendBytes(0x2, 0x3)
-                                            .appendBytes(0x4, 0x5, 0x6, 0x7)
-                                            .appendBytes(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf)
-                                            .appendBytes(0x10)
-                                            .appendBytes(0x11, 0x12)
-                                            .appendBytes(0x13, 0x14, 0x15, 0x16)
-                                            .appendBytes(0x17)
-                                            .appendBytes(0x18, 0x19)
-                                            .appendBytes(0x1a)
-                                            .appendIntBigEndian(floatToIntBits(0.13f))
-                                            .appendLongBigEndian(doubleToRawLongBits(0.45))
-                                            .appendBytes(0x1b)
-                                            .appendBytes(0x1c, 0x1d)
-                                            .appendBytes(0x1e, 0x1f, 0x20, 0x21)
-                                            .appendBytes(0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29)
-                                            .build()))),
-                    1,
-                    1));
-        }
-    }
-
-    @Test(groups = {KAFKA})
+	@Test(groups = {KAFKA})
     @Requires(AllDataTypesRawTable.class)
     public void testSelectAllRawTable()
     {
@@ -176,30 +119,7 @@ public class KafkaSmokeTest
                 true));
     }
 
-    private static final String ALL_DATATYPES_CSV_TABLE_NAME = "all_datatypes_csv";
-    private static final String ALL_DATATYPES_CSV_TOPIC_NAME = "all_datatypes_csv";
-
-    private static class AllDataTypesCsvTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return immutableTable(new KafkaTableDefinition(
-                    SCHEMA_NAME + "." + ALL_DATATYPES_CSV_TABLE_NAME,
-                    ALL_DATATYPES_CSV_TOPIC_NAME,
-                    new ListKafkaDataSource(ImmutableList.of(
-                            utf8KafkaMessage("jasio,9223372036854775807,2147483647,32767,127,1234567890.123456789,true"),
-                            utf8KafkaMessage("stasio,-9223372036854775808,-2147483648,-32768,-128,-1234567890.123456789,blah"),
-                            utf8KafkaMessage(",,,,,,"),
-                            utf8KafkaMessage("krzysio,9223372036854775807,2147483647,32767,127,1234567890.123456789,false,extra,fields"),
-                            utf8KafkaMessage("kasia,9223372036854775807,2147483647,32767"))),
-                    1,
-                    1));
-        }
-    }
-
-    @Test(groups = {KAFKA})
+	@Test(groups = {KAFKA})
     @Requires(AllDataTypesCsvTable.class)
     public void testSelectAllCsvTable()
     {
@@ -225,56 +145,7 @@ public class KafkaSmokeTest
                 row("kasia", 9223372036854775807L, 2147483647, 32767, null, null, null));
     }
 
-    private static final String ALL_DATATYPES_JSON_TABLE_NAME = "all_datatypes_json";
-    private static final String ALL_DATATYPES_JSON_TOPIC_NAME = "all_datatypes_json";
-
-    private static class AllDataTypesJsonTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return immutableTable(new KafkaTableDefinition(
-                    SCHEMA_NAME + "." + ALL_DATATYPES_JSON_TABLE_NAME,
-                    ALL_DATATYPES_JSON_TOPIC_NAME,
-                    new ListKafkaDataSource(ImmutableList.of(
-                            utf8KafkaMessage("{" +
-                                    "\"j_varchar\"                              : \"ala ma kota\"                    ," +
-                                    "\"j_bigint\"                               : \"9223372036854775807\"            ," +
-                                    "\"j_integer\"                              : \"2147483647\"                     ," +
-                                    "\"j_smallint\"                             : \"32767\"                          ," +
-                                    "\"j_tinyint\"                              : \"127\"                            ," +
-                                    "\"j_double\"                               : \"1234567890.123456789\"           ," +
-                                    "\"j_boolean\"                              : \"true\"                           ," +
-                                    "\"j_timestamp_milliseconds_since_epoch\"   : \"1518182116000\"                  ," +
-                                    "\"j_timestamp_seconds_since_epoch\"        : \"1518182117\"                     ," +
-                                    "\"j_timestamp_iso8601\"                    : \"2018-02-09T13:15:18\"            ," +
-                                    "\"j_timestamp_rfc2822\"                    : \"Fri Feb 09 13:15:19 Z 2018\"     ," +
-                                    "\"j_timestamp_custom\"                     : \"02/2018/09 13:15:20\"            ," +
-                                    "\"j_date_iso8601\"                         : \"2018-02-11\"                     ," +
-                                    "\"j_date_rfc2822\"                         : \"Mon Feb 12 13:15:16 Z 2018\"     ," +
-                                    "\"j_date_custom\"                          : \"2018/13/02\"                     ," +
-                                    "\"j_time_milliseconds_since_epoch\"        : \"47716000\"                       ," +
-                                    "\"j_time_seconds_since_epoch\"             : \"47717\"                          ," +
-                                    "\"j_time_iso8601\"                         : \"13:15:18\"                       ," +
-                                    "\"j_time_rfc2822\"                         : \"Thu Jan 01 13:15:19 Z 1970\"     ," +
-                                    "\"j_time_custom\"                          : \"15:13:20\"                       ," +
-                                    "\"j_timestamptz_milliseconds_since_epoch\" : \"1518182116000\"                  ," +
-                                    "\"j_timestamptz_seconds_since_epoch\"      : \"1518182117\"                     ," +
-                                    "\"j_timestamptz_iso8601\"                  : \"2018-02-09T13:15:18Z\"           ," +
-                                    "\"j_timestamptz_rfc2822\"                  : \"Fri Feb 09 13:15:19 Z 2018\"     ," +
-                                    "\"j_timestamptz_custom\"                   : \"02/2018/09 13:15:20\"            ," +
-                                    "\"j_timetz_milliseconds_since_epoch\"      : \"47716000\"                       ," +
-                                    "\"j_timetz_seconds_since_epoch\"           : \"47717\"                          ," +
-                                    "\"j_timetz_iso8601\"                       : \"13:15:18Z\"                      ," +
-                                    "\"j_timetz_rfc2822\"                       : \"Thu Jan 01 13:15:19 Z 1970\"     ," +
-                                    "\"j_timetz_custom\"                        : \"15:13:20\"                       }"))),
-                    1,
-                    1));
-        }
-    }
-
-    @Test(groups = {KAFKA})
+	@Test(groups = {KAFKA})
     @Requires(AllDataTypesJsonTable.class)
     public void testSelectAllJsonTable()
     {
@@ -348,8 +219,108 @@ public class KafkaSmokeTest
                 Time.valueOf(LocalTime.of(18, 45, 20))));
     }
 
-    private static KafkaMessage utf8KafkaMessage(String val)
+	private static KafkaMessage utf8KafkaMessage(String val)
     {
         return new KafkaMessage(contentsBuilder().appendUTF8(val).build());
+    }
+
+    // kafka-connectors requires tables to be predefined in presto configuration
+    // the requirements here will be used to verify that table actually exists and to
+    // create topics and propagate them with data
+
+    private static class SimpleKeyAndValueTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return immutableTable(new KafkaTableDefinition(
+                    new StringBuilder().append(SCHEMA_NAME).append(".").append(SIMPLE_KEY_AND_VALUE_TABLE_NAME).toString(),
+                    SIMPLE_KEY_AND_VALUE_TOPIC_NAME,
+                    new ListKafkaDataSource(ImmutableList.of(
+                            new KafkaMessage(
+                                    contentsBuilder().appendUTF8("jasio,1").build(),
+                                    contentsBuilder().appendUTF8("ania,2").build()),
+                            new KafkaMessage(
+                                    contentsBuilder().appendUTF8("piotr,3").build(),
+                                    contentsBuilder().appendUTF8("kasia,4").build()))),
+                    1,
+                    1));
+        }
+    }
+
+    private static class AllDataTypesRawTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return immutableTable(new KafkaTableDefinition(
+                    new StringBuilder().append(SCHEMA_NAME).append(".").append(ALL_DATATYPES_RAW_TABLE_NAME).toString(),
+                    ALL_DATATYPES_RAW_TOPIC_NAME,
+                    new ListKafkaDataSource(ImmutableList.of(
+                            new KafkaMessage(
+                                    contentsBuilder()
+                                            .appendUTF8("jasio")
+                                            .appendBytes(0x1)
+                                            .appendBytes(0x2, 0x3)
+                                            .appendBytes(0x4, 0x5, 0x6, 0x7)
+                                            .appendBytes(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf)
+                                            .appendBytes(0x10)
+                                            .appendBytes(0x11, 0x12)
+                                            .appendBytes(0x13, 0x14, 0x15, 0x16)
+                                            .appendBytes(0x17)
+                                            .appendBytes(0x18, 0x19)
+                                            .appendBytes(0x1a)
+                                            .appendIntBigEndian(floatToIntBits(0.13f))
+                                            .appendLongBigEndian(doubleToRawLongBits(0.45))
+                                            .appendBytes(0x1b)
+                                            .appendBytes(0x1c, 0x1d)
+                                            .appendBytes(0x1e, 0x1f, 0x20, 0x21)
+                                            .appendBytes(0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29)
+                                            .build()))),
+                    1,
+                    1));
+        }
+    }
+
+    private static class AllDataTypesCsvTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return immutableTable(new KafkaTableDefinition(
+                    new StringBuilder().append(SCHEMA_NAME).append(".").append(ALL_DATATYPES_CSV_TABLE_NAME).toString(),
+                    ALL_DATATYPES_CSV_TOPIC_NAME,
+                    new ListKafkaDataSource(ImmutableList.of(
+                            utf8KafkaMessage("jasio,9223372036854775807,2147483647,32767,127,1234567890.123456789,true"),
+                            utf8KafkaMessage("stasio,-9223372036854775808,-2147483648,-32768,-128,-1234567890.123456789,blah"),
+                            utf8KafkaMessage(",,,,,,"),
+                            utf8KafkaMessage("krzysio,9223372036854775807,2147483647,32767,127,1234567890.123456789,false,extra,fields"),
+                            utf8KafkaMessage("kasia,9223372036854775807,2147483647,32767"))),
+                    1,
+                    1));
+        }
+    }
+
+    private static class AllDataTypesJsonTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return immutableTable(new KafkaTableDefinition(
+                    new StringBuilder().append(SCHEMA_NAME).append(".").append(ALL_DATATYPES_JSON_TABLE_NAME).toString(),
+                    ALL_DATATYPES_JSON_TOPIC_NAME,
+                    new ListKafkaDataSource(ImmutableList.of(
+                            utf8KafkaMessage(new StringBuilder().append("{").append("\"j_varchar\"                              : \"ala ma kota\"                    ,").append("\"j_bigint\"                               : \"9223372036854775807\"            ,").append("\"j_integer\"                              : \"2147483647\"                     ,").append("\"j_smallint\"                             : \"32767\"                          ,").append("\"j_tinyint\"                              : \"127\"                            ,")
+									.append("\"j_double\"                               : \"1234567890.123456789\"           ,").append("\"j_boolean\"                              : \"true\"                           ,").append("\"j_timestamp_milliseconds_since_epoch\"   : \"1518182116000\"                  ,").append("\"j_timestamp_seconds_since_epoch\"        : \"1518182117\"                     ,").append("\"j_timestamp_iso8601\"                    : \"2018-02-09T13:15:18\"            ,").append("\"j_timestamp_rfc2822\"                    : \"Fri Feb 09 13:15:19 Z 2018\"     ,").append("\"j_timestamp_custom\"                     : \"02/2018/09 13:15:20\"            ,")
+									.append("\"j_date_iso8601\"                         : \"2018-02-11\"                     ,").append("\"j_date_rfc2822\"                         : \"Mon Feb 12 13:15:16 Z 2018\"     ,").append("\"j_date_custom\"                          : \"2018/13/02\"                     ,").append("\"j_time_milliseconds_since_epoch\"        : \"47716000\"                       ,").append("\"j_time_seconds_since_epoch\"             : \"47717\"                          ,").append("\"j_time_iso8601\"                         : \"13:15:18\"                       ,").append("\"j_time_rfc2822\"                         : \"Thu Jan 01 13:15:19 Z 1970\"     ,")
+									.append("\"j_time_custom\"                          : \"15:13:20\"                       ,").append("\"j_timestamptz_milliseconds_since_epoch\" : \"1518182116000\"                  ,").append("\"j_timestamptz_seconds_since_epoch\"      : \"1518182117\"                     ,").append("\"j_timestamptz_iso8601\"                  : \"2018-02-09T13:15:18Z\"           ,").append("\"j_timestamptz_rfc2822\"                  : \"Fri Feb 09 13:15:19 Z 2018\"     ,").append("\"j_timestamptz_custom\"                   : \"02/2018/09 13:15:20\"            ,").append("\"j_timetz_milliseconds_since_epoch\"      : \"47716000\"                       ,")
+									.append("\"j_timetz_seconds_since_epoch\"           : \"47717\"                          ,").append("\"j_timetz_iso8601\"                       : \"13:15:18Z\"                      ,").append("\"j_timetz_rfc2822\"                       : \"Thu Jan 01 13:15:19 Z 1970\"     ,").append("\"j_timetz_custom\"                        : \"15:13:20\"                       }").toString()))),
+                    1,
+                    1));
+        }
     }
 }

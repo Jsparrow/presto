@@ -56,46 +56,46 @@ import static org.joda.time.DateTimeZone.UTC;
 
 public final class StandardReadMappings
 {
-    private StandardReadMappings() {}
-
     private static final ISOChronology UTC_CHRONOLOGY = ISOChronology.getInstanceUTC();
 
-    public static ReadMapping booleanReadMapping()
+	private StandardReadMappings() {}
+
+	public static ReadMapping booleanReadMapping()
     {
         return ReadMapping.booleanReadMapping(BOOLEAN, ResultSet::getBoolean);
     }
 
-    public static ReadMapping tinyintReadMapping()
+	public static ReadMapping tinyintReadMapping()
     {
         return longReadMapping(TINYINT, ResultSet::getByte);
     }
 
-    public static ReadMapping smallintReadMapping()
+	public static ReadMapping smallintReadMapping()
     {
         return longReadMapping(SMALLINT, ResultSet::getShort);
     }
 
-    public static ReadMapping integerReadMapping()
+	public static ReadMapping integerReadMapping()
     {
         return longReadMapping(INTEGER, ResultSet::getInt);
     }
 
-    public static ReadMapping bigintReadMapping()
+	public static ReadMapping bigintReadMapping()
     {
         return longReadMapping(BIGINT, ResultSet::getLong);
     }
 
-    public static ReadMapping realReadMapping()
+	public static ReadMapping realReadMapping()
     {
         return longReadMapping(REAL, (resultSet, columnIndex) -> floatToRawIntBits(resultSet.getFloat(columnIndex)));
     }
 
-    public static ReadMapping doubleReadMapping()
+	public static ReadMapping doubleReadMapping()
     {
         return ReadMapping.doubleReadMapping(DOUBLE, ResultSet::getDouble);
     }
 
-    public static ReadMapping decimalReadMapping(DecimalType decimalType)
+	public static ReadMapping decimalReadMapping(DecimalType decimalType)
     {
         // JDBC driver can return BigDecimal with lower scale than column's scale when there are trailing zeroes
         int scale = decimalType.getScale();
@@ -105,23 +105,23 @@ public final class StandardReadMappings
         return sliceReadMapping(decimalType, (resultSet, columnIndex) -> encodeScaledValue(resultSet.getBigDecimal(columnIndex), scale));
     }
 
-    public static ReadMapping charReadMapping(CharType charType)
+	public static ReadMapping charReadMapping(CharType charType)
     {
         requireNonNull(charType, "charType is null");
         return sliceReadMapping(charType, (resultSet, columnIndex) -> utf8Slice(CharMatcher.is(' ').trimTrailingFrom(resultSet.getString(columnIndex))));
     }
 
-    public static ReadMapping varcharReadMapping(VarcharType varcharType)
+	public static ReadMapping varcharReadMapping(VarcharType varcharType)
     {
         return sliceReadMapping(varcharType, (resultSet, columnIndex) -> utf8Slice(resultSet.getString(columnIndex)));
     }
 
-    public static ReadMapping varbinaryReadMapping()
+	public static ReadMapping varbinaryReadMapping()
     {
         return sliceReadMapping(VARBINARY, (resultSet, columnIndex) -> wrappedBuffer(resultSet.getBytes(columnIndex)));
     }
 
-    public static ReadMapping dateReadMapping()
+	public static ReadMapping dateReadMapping()
     {
         return longReadMapping(DATE, (resultSet, columnIndex) -> {
             /*
@@ -140,7 +140,7 @@ public final class StandardReadMappings
         });
     }
 
-    public static ReadMapping timeReadMapping()
+	public static ReadMapping timeReadMapping()
     {
         return longReadMapping(TIME, (resultSet, columnIndex) -> {
             /*
@@ -153,7 +153,7 @@ public final class StandardReadMappings
         });
     }
 
-    public static ReadMapping timestampReadMapping()
+	public static ReadMapping timestampReadMapping()
     {
         return longReadMapping(TIMESTAMP, (resultSet, columnIndex) -> {
             /*
@@ -167,7 +167,7 @@ public final class StandardReadMappings
         });
     }
 
-    public static Optional<ReadMapping> jdbcTypeToPrestoType(JdbcTypeHandle type)
+	public static Optional<ReadMapping> jdbcTypeToPrestoType(JdbcTypeHandle type)
     {
         int columnSize = type.getColumnSize();
         switch (type.getJdbcType()) {

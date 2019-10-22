@@ -31,13 +31,9 @@ import static com.facebook.presto.sqlfunction.RoutineCharacteristics.NullCallCla
 
 public class SqlInvokedRegularFunctionTestUtils
 {
-    private SqlInvokedRegularFunctionTestUtils()
-    {
-    }
-
     public static final FullyQualifiedName POWER_TOWER = FullyQualifiedName.of("unittest.memory.power_tower");
 
-    public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_DOUBLE = new SqlInvokedRegularFunction(
+	public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_DOUBLE = new SqlInvokedRegularFunction(
             POWER_TOWER,
             ImmutableList.of(new SqlParameter("x", parseTypeSignature(DOUBLE))),
             parseTypeSignature(DOUBLE),
@@ -46,7 +42,7 @@ public class SqlInvokedRegularFunctionTestUtils
             "pow(x, x)",
             Optional.empty());
 
-    public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_DOUBLE_UPDATED = new SqlInvokedRegularFunction(
+	public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_DOUBLE_UPDATED = new SqlInvokedRegularFunction(
             POWER_TOWER,
             ImmutableList.of(new SqlParameter("x", parseTypeSignature(DOUBLE))),
             parseTypeSignature(DOUBLE),
@@ -55,7 +51,7 @@ public class SqlInvokedRegularFunctionTestUtils
             "pow(x, x)",
             Optional.empty());
 
-    public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_INT = new SqlInvokedRegularFunction(
+	public static final SqlInvokedRegularFunction FUNCTION_POWER_TOWER_INT = new SqlInvokedRegularFunction(
             POWER_TOWER,
             ImmutableList.of(new SqlParameter("x", parseTypeSignature(INTEGER))),
             parseTypeSignature(INTEGER),
@@ -63,4 +59,8 @@ public class SqlInvokedRegularFunctionTestUtils
             new RoutineCharacteristics(SQL, DETERMINISTIC, RETURNS_NULL_ON_NULL_INPUT),
             "pow(x, x)",
             Optional.empty());
+
+	private SqlInvokedRegularFunctionTestUtils()
+    {
+    }
 }

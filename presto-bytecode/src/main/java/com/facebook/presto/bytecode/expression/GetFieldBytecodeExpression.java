@@ -94,9 +94,9 @@ class GetFieldBytecodeExpression
     protected String formatOneLine()
     {
         if (instance == null) {
-            return declaringClass.getSimpleName() + "." + name;
+            return new StringBuilder().append(declaringClass.getSimpleName()).append(".").append(name).toString();
         }
-        return instance + "." + name;
+        return new StringBuilder().append(instance).append(".").append(name).toString();
     }
 
     @Override

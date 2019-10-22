@@ -142,7 +142,7 @@ public final class SessionPropertyManager
                     property.isHidden()));
         }
 
-        for (Entry<String, ConnectorId> entry : new TreeMap<>(catalogs).entrySet()) {
+        new TreeMap<>(catalogs).entrySet().forEach(entry -> {
             String catalog = entry.getKey();
             ConnectorId connectorId = entry.getValue();
             Map<String, String> connectorProperties = session.getConnectorProperties(connectorId);
@@ -154,14 +154,14 @@ public final class SessionPropertyManager
                 sessionPropertyValues.add(new SessionPropertyValue(
                         value,
                         defaultValue,
-                        catalog + "." + property.getName(),
+                        new StringBuilder().append(catalog).append(".").append(property.getName()).toString(),
                         Optional.of(catalog),
                         property.getName(),
                         property.getDescription(),
                         property.getSqlType().getDisplayName(),
                         property.isHidden()));
             }
-        }
+        });
 
         return sessionPropertyValues.build();
     }
@@ -176,7 +176,7 @@ public final class SessionPropertyManager
 
     public <T> T decodeCatalogPropertyValue(ConnectorId connectorId, String catalogName, String propertyName, @Nullable String propertyValue, Class<T> type)
     {
-        String fullPropertyName = catalogName + "." + propertyName;
+        String fullPropertyName = new StringBuilder().append(catalogName).append(".").append(propertyName).toString();
         PropertyMetadata<?> property = getConnectorSessionPropertyMetadata(connectorId, propertyName)
                 .orElseThrow(() -> new PrestoException(INVALID_SESSION_PROPERTY, "Unknown session property " + fullPropertyName));
 
@@ -193,7 +193,7 @@ public final class SessionPropertyManager
 
     public void validateCatalogSessionProperty(ConnectorId connectorId, String catalogName, String propertyName, String propertyValue)
     {
-        String fullPropertyName = catalogName + "." + propertyName;
+        String fullPropertyName = new StringBuilder().append(catalogName).append(".").append(propertyName).toString();
         PropertyMetadata<?> propertyMetadata = getConnectorSessionPropertyMetadata(connectorId, propertyName)
                 .orElseThrow(() -> new PrestoException(INVALID_SESSION_PROPERTY, "Unknown session property " + fullPropertyName));
 

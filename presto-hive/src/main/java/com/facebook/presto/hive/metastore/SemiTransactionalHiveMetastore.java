@@ -280,9 +280,7 @@ public class SemiTransactionalHiveMetastore
         }
         else {
             ImmutableMap.Builder<List<String>, Optional<Partition>> modifiedPartitionMapBuilder = ImmutableMap.builder();
-            for (Map.Entry<List<String>, Action<PartitionAndMore>> entry : partitionActionMap.entrySet()) {
-                modifiedPartitionMapBuilder.put(entry.getKey(), getPartitionFromPartitionAction(entry.getValue()));
-            }
+            partitionActionMap.entrySet().forEach(entry -> modifiedPartitionMapBuilder.put(entry.getKey(), getPartitionFromPartitionAction(entry.getValue())));
             modifiedPartitionMap = modifiedPartitionMapBuilder.build();
         }
         return new HivePageSinkMetadata(
@@ -450,7 +448,7 @@ public class SemiTransactionalHiveMetastore
         setShared();
         SchemaTableName schemaTableName = new SchemaTableName(databaseName, tableName);
         Action<TableAndMore> oldTableAction = tableActions.get(schemaTableName);
-        if (oldTableAction == null || oldTableAction.getData().getTable().getTableType().equals(TEMPORARY_TABLE)) {
+        if (oldTableAction == null || oldTableAction.getData().getTable().getTableType() == TEMPORARY_TABLE) {
             Table table = getTable(databaseName, tableName)
                     .orElseThrow(() -> new TableNotFoundException(schemaTableName));
             PartitionStatistics currentStatistics = getTableStatistics(databaseName, tableName);
@@ -491,7 +489,7 @@ public class SemiTransactionalHiveMetastore
         if (!table.isPresent()) {
             throw new TableNotFoundException(schemaTableName);
         }
-        if (!table.get().getTableType().equals(MANAGED_TABLE)) {
+        if (table.get().getTableType() != MANAGED_TABLE) {
             throw new PrestoException(NOT_SUPPORTED, "Cannot delete from non-managed Hive table");
         }
         if (!table.get().getPartitionColumns().isEmpty()) {
@@ -581,14 +579,11 @@ public class SemiTransactionalHiveMetastore
         // add newly-added partitions to the results from underlying metastore
         if (!partitionActionsOfTable.isEmpty()) {
             List<String> columnNames = table.get().getPartitionColumns().stream().map(Column::getName).collect(Collectors.toList());
-            for (Action<PartitionAndMore> partitionAction : partitionActionsOfTable.values()) {
-                if (partitionAction.getType() == ActionType.ADD) {
-                    List<String> values = partitionAction.getData().getPartition().getValues();
-                    if (!parts.isPresent() || partitionValuesMatch(values, parts.get())) {
-                        resultBuilder.add(makePartName(columnNames, values));
-                    }
-                }
-            }
+            partitionActionsOfTable.values().stream().filter(partitionAction -> partitionAction.getType() == ActionType.ADD).map(partitionAction -> partitionAction.getData().getPartition().getValues()).forEach(values -> {
+				if (!parts.isPresent() || partitionValuesMatch(values, parts.get())) {
+			        resultBuilder.add(makePartName(columnNames, values));
+			    }
+			});
         }
         return Optional.of(resultBuilder.build());
     }
@@ -1061,7 +1056,449 @@ public class SemiTransactionalHiveMetastore
         }
     }
 
-    private class Committer
+    @GuardedBy("this")
+    private void rollbackShared()
+    {
+        checkHoldsLock();
+
+        deleteTemporaryTableDirectories(declaredIntentionsToWrite, hdfsEnvironment);
+        deleteTempPathRootDirectory(declaredIntentionsToWrite, hdfsEnvironment);
+
+        for (DeclaredIntentionToWrite declaredIntentionToWrite : declaredIntentionsToWrite) {
+            switch (declaredIntentionToWrite.getMode()) {
+                case STAGE_AND_MOVE_TO_TARGET_DIRECTORY:
+                case DIRECT_TO_TARGET_NEW_DIRECTORY: {
+                    if (skipTargetCleanupOnRollback && declaredIntentionToWrite.getMode() == DIRECT_TO_TARGET_NEW_DIRECTORY) {
+                        break;
+                    }
+                    // Note: For STAGE_AND_MOVE_TO_TARGET_DIRECTORY there is no need to cleanup the target directory as it will only be written
+                    // to during the commit call and the commit call cleans up after failures.
+                    Path rootPath = declaredIntentionToWrite.getStagingPathRoot();
+
+                    // In the case of DIRECT_TO_TARGET_NEW_DIRECTORY, if the directory is not guaranteed to be unique
+                    // for the query, it is possible that another query or compute engine may see the directory, wrote
+                    // data to it, and exported it through metastore. Therefore it may be argued that cleanup of staging
+                    // directories must be carried out conservatively. To be safe, we only delete files that start with
+                    // the unique prefix for queries in this transaction.
+
+                    recursiveDeleteFilesAndLog(
+                            declaredIntentionToWrite.getContext(),
+                            rootPath,
+                            ImmutableList.of(declaredIntentionToWrite.getFilePrefix()),
+                            true,
+                            format("staging/target_new directory rollback for table %s", declaredIntentionToWrite.getSchemaTableName()));
+                    break;
+                }
+                case DIRECT_TO_TARGET_EXISTING_DIRECTORY: {
+                    Set<Path> pathsToClean = new HashSet<>();
+
+                    // Check the base directory of the declared intention
+                    // * existing partition may also be in this directory
+                    // * this is where new partitions are created
+                    Path baseDirectory = declaredIntentionToWrite.getStagingPathRoot();
+                    pathsToClean.add(baseDirectory);
+
+                    SchemaTableName schemaTableName = declaredIntentionToWrite.getSchemaTableName();
+                    Optional<Table> table = delegate.getTable(schemaTableName.getSchemaName(), schemaTableName.getTableName());
+                    if (table.isPresent()) {
+                        // check every existing partition that is outside for the base directory
+                        if (!table.get().getPartitionColumns().isEmpty()) {
+                            List<String> partitionNames = delegate.getPartitionNames(schemaTableName.getSchemaName(), schemaTableName.getTableName())
+                                    .orElse(ImmutableList.of());
+                            for (List<String> partitionNameBatch : Iterables.partition(partitionNames, 10)) {
+                                Collection<Optional<Partition>> partitions = delegate.getPartitionsByNames(schemaTableName.getSchemaName(), schemaTableName.getTableName(), partitionNameBatch).values();
+                                partitions.stream()
+                                        .filter(Optional::isPresent)
+                                        .map(Optional::get)
+                                        .map(partition -> partition.getStorage().getLocation())
+                                        .map(Path::new)
+                                        .filter(path -> !isSameOrParent(baseDirectory, path))
+                                        .forEach(pathsToClean::add);
+                            }
+                        }
+                    }
+                    else {
+                        logCleanupFailure(
+                                "Error rolling back write to table %s.%s. Data directory may contain temporary data. Table was dropped in another transaction.",
+                                schemaTableName.getSchemaName(),
+                                schemaTableName.getTableName());
+                    }
+
+                    // TODO: It is a known deficiency that some empty directory does not get cleaned up in S3.
+					// We can not delete any of the directories here since we do not know who created them.
+					// delete any file that starts with the unique prefix of this query
+					pathsToClean.forEach(path -> recursiveDeleteFilesAndLog(declaredIntentionToWrite.getContext(), path,
+							ImmutableList.of(declaredIntentionToWrite.getFilePrefix()), false,
+							format("target_existing directory rollback for table %s", schemaTableName)));
+
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException("Unknown write mode");
+            }
+        }
+    }
+
+	private static void deleteTemporaryTableDirectories(List<DeclaredIntentionToWrite> declaredIntentionsToWrite, HdfsEnvironment hdfsEnvironment)
+    {
+        declaredIntentionsToWrite.stream().filter(DeclaredIntentionToWrite::isTemporaryTable).forEach(declaredIntentionToWrite -> deleteRecursivelyIfExists(declaredIntentionToWrite.getContext(), hdfsEnvironment,
+				declaredIntentionToWrite.getStagingPathRoot()));
+    }
+
+	private static void deleteTempPathRootDirectory(List<DeclaredIntentionToWrite> declaredIntentionsToWrite, HdfsEnvironment hdfsEnvironment)
+    {
+        declaredIntentionsToWrite.forEach(declaredIntentionToWrite -> declaredIntentionToWrite.getTempPathRoot().ifPresent(
+				value -> deleteRecursivelyIfExists(declaredIntentionToWrite.getContext(), hdfsEnvironment, value)));
+    }
+
+	@VisibleForTesting
+    public synchronized void testOnlyCheckIsReadOnly()
+    {
+        if (state != State.EMPTY) {
+            throw new AssertionError("Test did not commit or rollback");
+        }
+    }
+
+	@VisibleForTesting
+    public void testOnlyThrowOnCleanupFailures()
+    {
+        throwOnCleanupFailure = true;
+    }
+
+	@GuardedBy("this")
+    private void checkReadable()
+    {
+        checkHoldsLock();
+
+        switch (state) {
+            case EMPTY:
+            case SHARED_OPERATION_BUFFERED:
+                return;
+            case EXCLUSIVE_OPERATION_BUFFERED:
+                throw new PrestoException(NOT_SUPPORTED, "Unsupported combination of operations in a single transaction");
+            case FINISHED:
+                throw new IllegalStateException("Tried to access metastore after transaction has been committed/aborted");
+        }
+    }
+
+	@GuardedBy("this")
+    private void setShared()
+    {
+        checkHoldsLock();
+
+        checkReadable();
+        state = State.SHARED_OPERATION_BUFFERED;
+    }
+
+	@GuardedBy("this")
+    private void setExclusive(ExclusiveOperation exclusiveOperation)
+    {
+        checkHoldsLock();
+
+        if (state != State.EMPTY) {
+            throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Unsupported combination of operations in a single transaction");
+        }
+        state = State.EXCLUSIVE_OPERATION_BUFFERED;
+        bufferedExclusiveOperation = exclusiveOperation;
+    }
+
+	@GuardedBy("this")
+    private void checkNoPartitionAction(String databaseName, String tableName)
+    {
+        checkHoldsLock();
+
+        Map<List<String>, Action<PartitionAndMore>> partitionActionsOfTable = partitionActions.get(new SchemaTableName(databaseName, tableName));
+        if (partitionActionsOfTable != null && !partitionActionsOfTable.isEmpty()) {
+            throw new PrestoException(NOT_SUPPORTED, "Cannot make schema changes to a table/view with modified partitions in the same transaction");
+        }
+    }
+
+	private static boolean isSameOrParent(Path parent, Path child)
+    {
+        int parentDepth = parent.depth();
+        int childDepth = child.depth();
+        if (parentDepth > childDepth) {
+            return false;
+        }
+        for (int i = childDepth; i > parentDepth; i--) {
+            child = child.getParent();
+        }
+        return parent.equals(child);
+    }
+
+	private void logCleanupFailure(String format, Object... args)
+    {
+        if (throwOnCleanupFailure) {
+            throw new RuntimeException(format(format, args));
+        }
+        log.warn(format, args);
+    }
+
+	private void logCleanupFailure(Throwable t, String format, Object... args)
+    {
+        if (throwOnCleanupFailure) {
+            throw new RuntimeException(format(format, args), t);
+        }
+        log.warn(t, format, args);
+    }
+
+	private static void asyncRename(
+            HdfsEnvironment hdfsEnvironment,
+            ListeningExecutorService executor,
+            AtomicBoolean cancelled,
+            List<ListenableFuture<?>> fileRenameFutures,
+            HdfsContext context,
+            Path currentPath,
+            Path targetPath,
+            List<String> fileNames)
+    {
+        FileSystem fileSystem = getFileSystem(hdfsEnvironment, context, currentPath);
+        for (String fileName : fileNames) {
+            Path source = new Path(currentPath, fileName);
+            Path target = new Path(targetPath, fileName);
+            fileRenameFutures.add(executor.submit(() -> {
+                if (cancelled.get()) {
+                    return;
+                }
+                renameFile(fileSystem, source, target);
+            }));
+        }
+    }
+
+	private void recursiveDeleteFilesAndLog(HdfsContext context, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories, String reason)
+    {
+        RecursiveDeleteResult recursiveDeleteResult = recursiveDeleteFiles(
+                hdfsEnvironment,
+                context,
+                directory,
+                filePrefixes,
+                deleteEmptyDirectories);
+        if (!recursiveDeleteResult.getNotDeletedEligibleItems().isEmpty()) {
+            logCleanupFailure(
+                    "Error deleting directory %s for %s. Some eligible items can not be deleted: %s.",
+                    directory.toString(),
+                    reason,
+                    recursiveDeleteResult.getNotDeletedEligibleItems());
+        }
+        else if (deleteEmptyDirectories && !recursiveDeleteResult.isDirectoryNoLongerExists()) {
+            logCleanupFailure(
+                    "Error deleting directory %s for %s. Can not delete the directory.",
+                    directory.toString(),
+                    reason);
+        }
+    }
+
+	/**
+     * Attempt to recursively remove eligible files and/or directories in {@code directory}.
+     * <p>
+     * When {@code filePrefixes} is not present, all files (but not necessarily directories) will be
+     * ineligible. If all files shall be deleted, you can use an empty string as {@code filePrefixes}.
+     * <p>
+     * When {@code deleteEmptySubDirectory} is true, any empty directory (including directories that
+     * were originally empty, and directories that become empty after files prefixed with
+     * {@code filePrefixes} are deleted) will be eligible.
+     * <p>
+     * This method will not delete anything that's neither a directory nor a file.
+     *
+     * @param filePrefixes prefix of files that should be deleted
+     * @param deleteEmptyDirectories whether empty directories should be deleted
+     */
+    private static RecursiveDeleteResult recursiveDeleteFiles(HdfsEnvironment hdfsEnvironment, HdfsContext context, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories)
+    {
+        FileSystem fileSystem;
+        try {
+            fileSystem = hdfsEnvironment.getFileSystem(context, directory);
+
+            if (!fileSystem.exists(directory)) {
+                return new RecursiveDeleteResult(true, ImmutableList.of());
+            }
+        }
+        catch (IOException e) {
+            ImmutableList.Builder<String> notDeletedItems = ImmutableList.builder();
+            notDeletedItems.add(directory.toString() + "/**");
+            return new RecursiveDeleteResult(false, notDeletedItems.build());
+        }
+
+        return doRecursiveDeleteFiles(fileSystem, directory, filePrefixes, deleteEmptyDirectories);
+    }
+
+	private static RecursiveDeleteResult doRecursiveDeleteFiles(FileSystem fileSystem, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories)
+    {
+        // don't delete hidden presto directories
+        if (directory.getName().startsWith(".presto")) {
+            return new RecursiveDeleteResult(false, ImmutableList.of());
+        }
+
+        FileStatus[] allFiles;
+        try {
+            allFiles = fileSystem.listStatus(directory);
+        }
+        catch (IOException e) {
+            ImmutableList.Builder<String> notDeletedItems = ImmutableList.builder();
+            notDeletedItems.add(directory.toString() + "/**");
+            return new RecursiveDeleteResult(false, notDeletedItems.build());
+        }
+
+        boolean allDescendentsDeleted = true;
+        ImmutableList.Builder<String> notDeletedEligibleItems = ImmutableList.builder();
+        for (FileStatus fileStatus : allFiles) {
+            if (fileStatus.isFile()) {
+                Path filePath = fileStatus.getPath();
+                String fileName = filePath.getName();
+                boolean eligible = false;
+                // never delete presto dot files
+                if (!fileName.startsWith(".presto")) {
+                    // file name that starts with ".tmp.presto" is staging file, see HiveWriterFactory#createWriter.
+                    eligible = filePrefixes.stream().anyMatch(prefix ->
+                            fileName.startsWith(prefix) || fileName.startsWith(".tmp.presto." + prefix));
+                }
+                if (eligible) {
+                    if (!deleteIfExists(fileSystem, filePath, false)) {
+                        allDescendentsDeleted = false;
+                        notDeletedEligibleItems.add(filePath.toString());
+                    }
+                }
+                else {
+                    allDescendentsDeleted = false;
+                }
+            }
+            else if (fileStatus.isDirectory()) {
+                RecursiveDeleteResult subResult = doRecursiveDeleteFiles(fileSystem, fileStatus.getPath(), filePrefixes, deleteEmptyDirectories);
+                if (!subResult.isDirectoryNoLongerExists()) {
+                    allDescendentsDeleted = false;
+                }
+                if (!subResult.getNotDeletedEligibleItems().isEmpty()) {
+                    notDeletedEligibleItems.addAll(subResult.getNotDeletedEligibleItems());
+                }
+            }
+            else {
+                allDescendentsDeleted = false;
+                notDeletedEligibleItems.add(fileStatus.getPath().toString());
+            }
+        }
+        if (!(allDescendentsDeleted && deleteEmptyDirectories)) {
+			return new RecursiveDeleteResult(false, notDeletedEligibleItems.build());
+		}
+		verify(notDeletedEligibleItems.build().isEmpty());
+		if (!deleteIfExists(fileSystem, directory, false)) {
+		    return new RecursiveDeleteResult(false, ImmutableList.of(directory.toString() + "/"));
+		}
+		return new RecursiveDeleteResult(true, ImmutableList.of());
+    }
+
+	/**
+     * Attempts to remove the file or empty directory.
+     *
+     * @return true if the location no longer exists
+     */
+    private static boolean deleteIfExists(FileSystem fileSystem, Path path, boolean recursive)
+    {
+        try {
+            // attempt to delete the path
+            if (fileSystem.delete(path, recursive)) {
+                return true;
+            }
+
+            // delete failed
+            // check if path still exists
+            return !fileSystem.exists(path);
+        }
+        catch (FileNotFoundException ignored) {
+            // path was already removed or never existed
+            return true;
+        }
+        catch (IOException ignored) {
+        }
+        return false;
+    }
+
+	/**
+     * Attempts to remove the file or empty directory.
+     *
+     * @return true if the location no longer exists
+     */
+    private static boolean deleteRecursivelyIfExists(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path path)
+    {
+        FileSystem fileSystem;
+        try {
+            fileSystem = hdfsEnvironment.getFileSystem(context, path);
+        }
+        catch (IOException ignored) {
+            return false;
+        }
+
+        return deleteIfExists(fileSystem, path, true);
+    }
+
+	private static void renameDirectory(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path source, Path target, Runnable runWhenPathDoesntExist)
+    {
+        if (pathExists(context, hdfsEnvironment, target)) {
+            throw new PrestoException(HIVE_PATH_ALREADY_EXISTS,
+                    format("Unable to rename from %s to %s: target directory already exists", source, target));
+        }
+
+        if (!pathExists(context, hdfsEnvironment, target.getParent())) {
+            createDirectory(context, hdfsEnvironment, target.getParent());
+        }
+
+        // The runnable will assume that if rename fails, it will be okay to delete the directory (if the directory is empty).
+        // This is not technically true because a race condition still exists.
+        runWhenPathDoesntExist.run();
+
+        try {
+            if (!hdfsEnvironment.getFileSystem(context, source).rename(source, target)) {
+                throw new PrestoException(HIVE_FILESYSTEM_ERROR, format("Failed to rename %s to %s: rename returned false", source, target));
+            }
+        }
+        catch (IOException e) {
+            throw new PrestoException(HIVE_FILESYSTEM_ERROR, format("Failed to rename %s to %s", source, target), e);
+        }
+    }
+
+	private static Optional<String> getPrestoQueryId(Table table)
+    {
+        return Optional.ofNullable(table.getParameters().get(PRESTO_QUERY_ID_NAME));
+    }
+
+	private static Optional<String> getPrestoQueryId(Partition partition)
+    {
+        return Optional.ofNullable(partition.getParameters().get(PRESTO_QUERY_ID_NAME));
+    }
+
+	private void checkHoldsLock()
+    {
+        // This method serves a similar purpose at runtime as GuardedBy on method serves during static analysis.
+        // This method should not have significant performance impact. If it does, it may be reasonably to remove this method.
+        // This intentionally does not use checkState.
+        if (!Thread.holdsLock(this)) {
+            throw new IllegalStateException(format("Thread must hold a lock on the %s", getClass().getSimpleName()));
+        }
+    }
+
+	private enum State
+    {
+        EMPTY,
+        SHARED_OPERATION_BUFFERED,
+        EXCLUSIVE_OPERATION_BUFFERED,
+        FINISHED,
+    }
+
+	private enum ActionType
+    {
+        DROP,
+        ADD,
+        ALTER,
+        INSERT_EXISTING
+    }
+
+	private enum TableSource
+    {
+        CREATED_IN_THIS_TRANSACTION,
+        PRE_EXISTING_TABLE,
+        // RECREATED_IN_THIS_TRANSACTION is a possible case, but it is not supported with the current implementation
+    }
+
+	private class Committer
     {
         private final AtomicBoolean fileRenameCancelled = new AtomicBoolean(false);
         private final List<ListenableFuture<?>> fileRenameFutures = new ArrayList<>();
@@ -1111,12 +1548,21 @@ public class SemiTransactionalHiveMetastore
 
             Table table = tableAndMore.getTable();
 
-            if (table.getTableType().equals(TEMPORARY_TABLE)) {
+            // do not commit a temporary table to the metastore
+			if (table.getTableType() == TEMPORARY_TABLE) {
                 // do not commit a temporary table to the metastore
                 return;
             }
 
-            if (table.getTableType().equals(MANAGED_TABLE)) {
+            // CREATE TABLE AS SELECT unpartitioned table
+			// Target path and current path are the same. Therefore, directory move is not needed.
+			// CREATE TABLE AS SELECT partitioned table, or
+			// CREATE TABLE partitioned/unpartitioned table (without data)
+			// It is okay to skip directory creation when currentPath is equal to targetPath
+			// because the directory may have been created when creating partition directories.
+			// However, it is important to note that the two being equal does not guarantee
+			// a directory had been created.
+			if (table.getTableType() == MANAGED_TABLE) {
                 String targetLocation = table.getStorage().getLocation();
                 checkArgument(!targetLocation.isEmpty(), "target location is empty");
                 Optional<Path> currentPath = tableAndMore.getCurrentLocation();
@@ -1173,7 +1619,8 @@ public class SemiTransactionalHiveMetastore
 
             Table table = tableAndMore.getTable();
 
-            if (table.getTableType().equals(TEMPORARY_TABLE)) {
+            // do not commit a temporary table to the metastore
+			if (table.getTableType() == TEMPORARY_TABLE) {
                 // do not commit a temporary table to the metastore
                 return;
             }
@@ -1223,7 +1670,7 @@ public class SemiTransactionalHiveMetastore
             // Otherwise,
             // * Remember we will need to delete the location of the old partition at the end if transaction successfully commits
             if (targetLocation.equals(oldPartitionLocation)) {
-                Path oldPartitionStagingPath = new Path(oldPartitionPath.getParent(), "_temp_" + oldPartitionPath.getName() + "_" + context.getQueryId());
+                Path oldPartitionStagingPath = new Path(oldPartitionPath.getParent(), new StringBuilder().append("_temp_").append(oldPartitionPath.getName()).append("_").append(context.getQueryId()).toString());
                 renameDirectory(
                         context,
                         hdfsEnvironment,
@@ -1335,23 +1782,18 @@ public class SemiTransactionalHiveMetastore
 
         private void executeCleanupTasksForAbort(List<String> filePrefixes)
         {
-            for (DirectoryCleanUpTask cleanUpTask : cleanUpTasksForAbort) {
-                recursiveDeleteFilesAndLog(cleanUpTask.getContext(), cleanUpTask.getPath(), filePrefixes, cleanUpTask.isDeleteEmptyDirectory(), "temporary directory commit abort");
-            }
+            cleanUpTasksForAbort.forEach(cleanUpTask -> recursiveDeleteFilesAndLog(cleanUpTask.getContext(), cleanUpTask.getPath(), filePrefixes,
+					cleanUpTask.isDeleteEmptyDirectory(), "temporary directory commit abort"));
         }
 
         private void executeDeletionTasksForFinish()
         {
-            for (DirectoryDeletionTask deletionTask : deletionTasksForFinish) {
-                if (!deleteRecursivelyIfExists(deletionTask.getContext(), hdfsEnvironment, deletionTask.getPath())) {
-                    logCleanupFailure("Error deleting directory %s", deletionTask.getPath().toString());
-                }
-            }
+            deletionTasksForFinish.stream().filter(deletionTask -> !deleteRecursivelyIfExists(deletionTask.getContext(), hdfsEnvironment, deletionTask.getPath())).forEach(deletionTask -> logCleanupFailure("Error deleting directory %s", deletionTask.getPath().toString()));
         }
 
         private void executeRenameTasksForAbort()
         {
-            for (DirectoryRenameTask directoryRenameTask : renameTasksForAbort) {
+            renameTasksForAbort.forEach(directoryRenameTask -> {
                 try {
                     // Ignore the task if the source directory doesn't exist.
                     // This is probably because the original rename that we are trying to undo here never succeeded.
@@ -1362,7 +1804,7 @@ public class SemiTransactionalHiveMetastore
                 catch (Throwable throwable) {
                     logCleanupFailure(throwable, "failed to undo rename of partition directory: %s to %s", directoryRenameTask.getRenameFrom(), directoryRenameTask.getRenameTo());
                 }
-            }
+            });
         }
 
         private void deleteEmptyStagingDirectories(List<DeclaredIntentionToWrite> declaredIntentionsToWrite)
@@ -1398,35 +1840,27 @@ public class SemiTransactionalHiveMetastore
 
         private void executeAddTableOperations()
         {
-            for (CreateTableOperation addTableOperation : addTableOperations) {
-                addTableOperation.run(delegate);
-            }
+            addTableOperations.forEach(addTableOperation -> addTableOperation.run(delegate));
         }
 
         private void executeAlterPartitionOperations()
         {
-            for (AlterPartitionOperation alterPartitionOperation : alterPartitionOperations) {
-                alterPartitionOperation.run(delegate);
-            }
+            alterPartitionOperations.forEach(alterPartitionOperation -> alterPartitionOperation.run(delegate));
         }
 
         private void executeAddPartitionOperations()
         {
-            for (PartitionAdder partitionAdder : partitionAdders.values()) {
-                partitionAdder.execute();
-            }
+            partitionAdders.values().forEach(SemiTransactionalHiveMetastore.PartitionAdder::execute);
         }
 
         private void executeUpdateStatisticsOperations()
         {
-            for (UpdateStatisticsOperation operation : updateStatisticsOperations) {
-                operation.run(delegate);
-            }
+            updateStatisticsOperations.forEach(operation -> operation.run(delegate));
         }
 
         private void undoAddPartitionOperations()
         {
-            for (PartitionAdder partitionAdder : partitionAdders.values()) {
+            partitionAdders.values().forEach(partitionAdder -> {
                 List<List<String>> partitionsFailedToRollback = partitionAdder.rollback();
                 if (!partitionsFailedToRollback.isEmpty()) {
                     logCleanupFailure("Failed to rollback: add_partition for partitions %s.%s %s",
@@ -1434,43 +1868,43 @@ public class SemiTransactionalHiveMetastore
                             partitionAdder.getTableName(),
                             partitionsFailedToRollback.stream());
                 }
-            }
+            });
         }
 
         private void undoAddTableOperations()
         {
-            for (CreateTableOperation addTableOperation : addTableOperations) {
+            addTableOperations.forEach(addTableOperation -> {
                 try {
                     addTableOperation.undo(delegate);
                 }
                 catch (Throwable throwable) {
                     logCleanupFailure(throwable, "failed to rollback: %s", addTableOperation.getDescription());
                 }
-            }
+            });
         }
 
         private void undoAlterPartitionOperations()
         {
-            for (AlterPartitionOperation alterPartitionOperation : alterPartitionOperations) {
+            alterPartitionOperations.forEach(alterPartitionOperation -> {
                 try {
                     alterPartitionOperation.undo(delegate);
                 }
                 catch (Throwable throwable) {
                     logCleanupFailure(throwable, "failed to rollback: %s", alterPartitionOperation.getDescription());
                 }
-            }
+            });
         }
 
         private void undoUpdateStatisticsOperations()
         {
-            for (UpdateStatisticsOperation operation : updateStatisticsOperations) {
+            updateStatisticsOperations.forEach(operation -> {
                 try {
                     operation.undo(delegate);
                 }
                 catch (Throwable throwable) {
                     logCleanupFailure(throwable, "failed to rollback: %s", operation.getDescription());
                 }
-            }
+            });
         }
 
         private void executeIrreversibleMetastoreOperations()
@@ -1491,483 +1925,28 @@ public class SemiTransactionalHiveMetastore
                     }
                 }
             }
-            if (!suppressedExceptions.isEmpty()) {
-                StringBuilder message = new StringBuilder();
-                if (deleteOnly && !anySucceeded) {
-                    message.append("The following metastore delete operations failed: ");
-                }
-                else {
-                    message.append("The transaction didn't commit cleanly. All operations other than the following delete operations were completed: ");
-                }
-                Joiner.on("; ").appendTo(message, failedIrreversibleOperationDescriptions);
-
-                PrestoException prestoException = new PrestoException(HIVE_METASTORE_ERROR, message.toString());
-                suppressedExceptions.forEach(prestoException::addSuppressed);
-                throw prestoException;
-            }
+            if (suppressedExceptions.isEmpty()) {
+				return;
+			}
+			StringBuilder message = new StringBuilder();
+			if (deleteOnly && !anySucceeded) {
+			    message.append("The following metastore delete operations failed: ");
+			}
+			else {
+			    message.append("The transaction didn't commit cleanly. All operations other than the following delete operations were completed: ");
+			}
+			Joiner.on("; ").appendTo(message, failedIrreversibleOperationDescriptions);
+			PrestoException prestoException = new PrestoException(HIVE_METASTORE_ERROR, message.toString());
+			suppressedExceptions.forEach(prestoException::addSuppressed);
+			throw prestoException;
         }
 
         private List<String> extractFilePrefixes(List<DeclaredIntentionToWrite> declaredIntentionsToWrite)
         {
             Set<String> filePrefixSet = new HashSet<>();
-            for (DeclaredIntentionToWrite declaredIntentionToWrite : declaredIntentionsToWrite) {
-                filePrefixSet.add(declaredIntentionToWrite.getFilePrefix());
-            }
+            declaredIntentionsToWrite.forEach(declaredIntentionToWrite -> filePrefixSet.add(declaredIntentionToWrite.getFilePrefix()));
             return ImmutableList.copyOf(filePrefixSet);
         }
-    }
-
-    @GuardedBy("this")
-    private void rollbackShared()
-    {
-        checkHoldsLock();
-
-        deleteTemporaryTableDirectories(declaredIntentionsToWrite, hdfsEnvironment);
-        deleteTempPathRootDirectory(declaredIntentionsToWrite, hdfsEnvironment);
-
-        for (DeclaredIntentionToWrite declaredIntentionToWrite : declaredIntentionsToWrite) {
-            switch (declaredIntentionToWrite.getMode()) {
-                case STAGE_AND_MOVE_TO_TARGET_DIRECTORY:
-                case DIRECT_TO_TARGET_NEW_DIRECTORY: {
-                    if (skipTargetCleanupOnRollback && declaredIntentionToWrite.getMode() == DIRECT_TO_TARGET_NEW_DIRECTORY) {
-                        break;
-                    }
-                    // Note: For STAGE_AND_MOVE_TO_TARGET_DIRECTORY there is no need to cleanup the target directory as it will only be written
-                    // to during the commit call and the commit call cleans up after failures.
-                    Path rootPath = declaredIntentionToWrite.getStagingPathRoot();
-
-                    // In the case of DIRECT_TO_TARGET_NEW_DIRECTORY, if the directory is not guaranteed to be unique
-                    // for the query, it is possible that another query or compute engine may see the directory, wrote
-                    // data to it, and exported it through metastore. Therefore it may be argued that cleanup of staging
-                    // directories must be carried out conservatively. To be safe, we only delete files that start with
-                    // the unique prefix for queries in this transaction.
-
-                    recursiveDeleteFilesAndLog(
-                            declaredIntentionToWrite.getContext(),
-                            rootPath,
-                            ImmutableList.of(declaredIntentionToWrite.getFilePrefix()),
-                            true,
-                            format("staging/target_new directory rollback for table %s", declaredIntentionToWrite.getSchemaTableName()));
-                    break;
-                }
-                case DIRECT_TO_TARGET_EXISTING_DIRECTORY: {
-                    Set<Path> pathsToClean = new HashSet<>();
-
-                    // Check the base directory of the declared intention
-                    // * existing partition may also be in this directory
-                    // * this is where new partitions are created
-                    Path baseDirectory = declaredIntentionToWrite.getStagingPathRoot();
-                    pathsToClean.add(baseDirectory);
-
-                    SchemaTableName schemaTableName = declaredIntentionToWrite.getSchemaTableName();
-                    Optional<Table> table = delegate.getTable(schemaTableName.getSchemaName(), schemaTableName.getTableName());
-                    if (table.isPresent()) {
-                        // check every existing partition that is outside for the base directory
-                        if (!table.get().getPartitionColumns().isEmpty()) {
-                            List<String> partitionNames = delegate.getPartitionNames(schemaTableName.getSchemaName(), schemaTableName.getTableName())
-                                    .orElse(ImmutableList.of());
-                            for (List<String> partitionNameBatch : Iterables.partition(partitionNames, 10)) {
-                                Collection<Optional<Partition>> partitions = delegate.getPartitionsByNames(schemaTableName.getSchemaName(), schemaTableName.getTableName(), partitionNameBatch).values();
-                                partitions.stream()
-                                        .filter(Optional::isPresent)
-                                        .map(Optional::get)
-                                        .map(partition -> partition.getStorage().getLocation())
-                                        .map(Path::new)
-                                        .filter(path -> !isSameOrParent(baseDirectory, path))
-                                        .forEach(pathsToClean::add);
-                            }
-                        }
-                    }
-                    else {
-                        logCleanupFailure(
-                                "Error rolling back write to table %s.%s. Data directory may contain temporary data. Table was dropped in another transaction.",
-                                schemaTableName.getSchemaName(),
-                                schemaTableName.getTableName());
-                    }
-
-                    // delete any file that starts with the unique prefix of this query
-                    for (Path path : pathsToClean) {
-                        // TODO: It is a known deficiency that some empty directory does not get cleaned up in S3.
-                        // We can not delete any of the directories here since we do not know who created them.
-                        recursiveDeleteFilesAndLog(
-                                declaredIntentionToWrite.getContext(),
-                                path,
-                                ImmutableList.of(declaredIntentionToWrite.getFilePrefix()),
-                                false,
-                                format("target_existing directory rollback for table %s", schemaTableName));
-                    }
-
-                    break;
-                }
-                default:
-                    throw new UnsupportedOperationException("Unknown write mode");
-            }
-        }
-    }
-
-    private static void deleteTemporaryTableDirectories(List<DeclaredIntentionToWrite> declaredIntentionsToWrite, HdfsEnvironment hdfsEnvironment)
-    {
-        for (DeclaredIntentionToWrite declaredIntentionToWrite : declaredIntentionsToWrite) {
-            if (declaredIntentionToWrite.isTemporaryTable()) {
-                deleteRecursivelyIfExists(declaredIntentionToWrite.getContext(), hdfsEnvironment, declaredIntentionToWrite.getStagingPathRoot());
-            }
-        }
-    }
-
-    private static void deleteTempPathRootDirectory(List<DeclaredIntentionToWrite> declaredIntentionsToWrite, HdfsEnvironment hdfsEnvironment)
-    {
-        for (DeclaredIntentionToWrite declaredIntentionToWrite : declaredIntentionsToWrite) {
-            if (declaredIntentionToWrite.getTempPathRoot().isPresent()) {
-                deleteRecursivelyIfExists(declaredIntentionToWrite.getContext(), hdfsEnvironment, declaredIntentionToWrite.getTempPathRoot().get());
-            }
-        }
-    }
-
-    @VisibleForTesting
-    public synchronized void testOnlyCheckIsReadOnly()
-    {
-        if (state != State.EMPTY) {
-            throw new AssertionError("Test did not commit or rollback");
-        }
-    }
-
-    @VisibleForTesting
-    public void testOnlyThrowOnCleanupFailures()
-    {
-        throwOnCleanupFailure = true;
-    }
-
-    @GuardedBy("this")
-    private void checkReadable()
-    {
-        checkHoldsLock();
-
-        switch (state) {
-            case EMPTY:
-            case SHARED_OPERATION_BUFFERED:
-                return;
-            case EXCLUSIVE_OPERATION_BUFFERED:
-                throw new PrestoException(NOT_SUPPORTED, "Unsupported combination of operations in a single transaction");
-            case FINISHED:
-                throw new IllegalStateException("Tried to access metastore after transaction has been committed/aborted");
-        }
-    }
-
-    @GuardedBy("this")
-    private void setShared()
-    {
-        checkHoldsLock();
-
-        checkReadable();
-        state = State.SHARED_OPERATION_BUFFERED;
-    }
-
-    @GuardedBy("this")
-    private void setExclusive(ExclusiveOperation exclusiveOperation)
-    {
-        checkHoldsLock();
-
-        if (state != State.EMPTY) {
-            throw new PrestoException(StandardErrorCode.NOT_SUPPORTED, "Unsupported combination of operations in a single transaction");
-        }
-        state = State.EXCLUSIVE_OPERATION_BUFFERED;
-        bufferedExclusiveOperation = exclusiveOperation;
-    }
-
-    @GuardedBy("this")
-    private void checkNoPartitionAction(String databaseName, String tableName)
-    {
-        checkHoldsLock();
-
-        Map<List<String>, Action<PartitionAndMore>> partitionActionsOfTable = partitionActions.get(new SchemaTableName(databaseName, tableName));
-        if (partitionActionsOfTable != null && !partitionActionsOfTable.isEmpty()) {
-            throw new PrestoException(NOT_SUPPORTED, "Cannot make schema changes to a table/view with modified partitions in the same transaction");
-        }
-    }
-
-    private static boolean isSameOrParent(Path parent, Path child)
-    {
-        int parentDepth = parent.depth();
-        int childDepth = child.depth();
-        if (parentDepth > childDepth) {
-            return false;
-        }
-        for (int i = childDepth; i > parentDepth; i--) {
-            child = child.getParent();
-        }
-        return parent.equals(child);
-    }
-
-    private void logCleanupFailure(String format, Object... args)
-    {
-        if (throwOnCleanupFailure) {
-            throw new RuntimeException(format(format, args));
-        }
-        log.warn(format, args);
-    }
-
-    private void logCleanupFailure(Throwable t, String format, Object... args)
-    {
-        if (throwOnCleanupFailure) {
-            throw new RuntimeException(format(format, args), t);
-        }
-        log.warn(t, format, args);
-    }
-
-    private static void asyncRename(
-            HdfsEnvironment hdfsEnvironment,
-            ListeningExecutorService executor,
-            AtomicBoolean cancelled,
-            List<ListenableFuture<?>> fileRenameFutures,
-            HdfsContext context,
-            Path currentPath,
-            Path targetPath,
-            List<String> fileNames)
-    {
-        FileSystem fileSystem = getFileSystem(hdfsEnvironment, context, currentPath);
-        for (String fileName : fileNames) {
-            Path source = new Path(currentPath, fileName);
-            Path target = new Path(targetPath, fileName);
-            fileRenameFutures.add(executor.submit(() -> {
-                if (cancelled.get()) {
-                    return;
-                }
-                renameFile(fileSystem, source, target);
-            }));
-        }
-    }
-
-    private void recursiveDeleteFilesAndLog(HdfsContext context, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories, String reason)
-    {
-        RecursiveDeleteResult recursiveDeleteResult = recursiveDeleteFiles(
-                hdfsEnvironment,
-                context,
-                directory,
-                filePrefixes,
-                deleteEmptyDirectories);
-        if (!recursiveDeleteResult.getNotDeletedEligibleItems().isEmpty()) {
-            logCleanupFailure(
-                    "Error deleting directory %s for %s. Some eligible items can not be deleted: %s.",
-                    directory.toString(),
-                    reason,
-                    recursiveDeleteResult.getNotDeletedEligibleItems());
-        }
-        else if (deleteEmptyDirectories && !recursiveDeleteResult.isDirectoryNoLongerExists()) {
-            logCleanupFailure(
-                    "Error deleting directory %s for %s. Can not delete the directory.",
-                    directory.toString(),
-                    reason);
-        }
-    }
-
-    /**
-     * Attempt to recursively remove eligible files and/or directories in {@code directory}.
-     * <p>
-     * When {@code filePrefixes} is not present, all files (but not necessarily directories) will be
-     * ineligible. If all files shall be deleted, you can use an empty string as {@code filePrefixes}.
-     * <p>
-     * When {@code deleteEmptySubDirectory} is true, any empty directory (including directories that
-     * were originally empty, and directories that become empty after files prefixed with
-     * {@code filePrefixes} are deleted) will be eligible.
-     * <p>
-     * This method will not delete anything that's neither a directory nor a file.
-     *
-     * @param filePrefixes prefix of files that should be deleted
-     * @param deleteEmptyDirectories whether empty directories should be deleted
-     */
-    private static RecursiveDeleteResult recursiveDeleteFiles(HdfsEnvironment hdfsEnvironment, HdfsContext context, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories)
-    {
-        FileSystem fileSystem;
-        try {
-            fileSystem = hdfsEnvironment.getFileSystem(context, directory);
-
-            if (!fileSystem.exists(directory)) {
-                return new RecursiveDeleteResult(true, ImmutableList.of());
-            }
-        }
-        catch (IOException e) {
-            ImmutableList.Builder<String> notDeletedItems = ImmutableList.builder();
-            notDeletedItems.add(directory.toString() + "/**");
-            return new RecursiveDeleteResult(false, notDeletedItems.build());
-        }
-
-        return doRecursiveDeleteFiles(fileSystem, directory, filePrefixes, deleteEmptyDirectories);
-    }
-
-    private static RecursiveDeleteResult doRecursiveDeleteFiles(FileSystem fileSystem, Path directory, List<String> filePrefixes, boolean deleteEmptyDirectories)
-    {
-        // don't delete hidden presto directories
-        if (directory.getName().startsWith(".presto")) {
-            return new RecursiveDeleteResult(false, ImmutableList.of());
-        }
-
-        FileStatus[] allFiles;
-        try {
-            allFiles = fileSystem.listStatus(directory);
-        }
-        catch (IOException e) {
-            ImmutableList.Builder<String> notDeletedItems = ImmutableList.builder();
-            notDeletedItems.add(directory.toString() + "/**");
-            return new RecursiveDeleteResult(false, notDeletedItems.build());
-        }
-
-        boolean allDescendentsDeleted = true;
-        ImmutableList.Builder<String> notDeletedEligibleItems = ImmutableList.builder();
-        for (FileStatus fileStatus : allFiles) {
-            if (fileStatus.isFile()) {
-                Path filePath = fileStatus.getPath();
-                String fileName = filePath.getName();
-                boolean eligible = false;
-                // never delete presto dot files
-                if (!fileName.startsWith(".presto")) {
-                    // file name that starts with ".tmp.presto" is staging file, see HiveWriterFactory#createWriter.
-                    eligible = filePrefixes.stream().anyMatch(prefix ->
-                            fileName.startsWith(prefix) || fileName.startsWith(".tmp.presto." + prefix));
-                }
-                if (eligible) {
-                    if (!deleteIfExists(fileSystem, filePath, false)) {
-                        allDescendentsDeleted = false;
-                        notDeletedEligibleItems.add(filePath.toString());
-                    }
-                }
-                else {
-                    allDescendentsDeleted = false;
-                }
-            }
-            else if (fileStatus.isDirectory()) {
-                RecursiveDeleteResult subResult = doRecursiveDeleteFiles(fileSystem, fileStatus.getPath(), filePrefixes, deleteEmptyDirectories);
-                if (!subResult.isDirectoryNoLongerExists()) {
-                    allDescendentsDeleted = false;
-                }
-                if (!subResult.getNotDeletedEligibleItems().isEmpty()) {
-                    notDeletedEligibleItems.addAll(subResult.getNotDeletedEligibleItems());
-                }
-            }
-            else {
-                allDescendentsDeleted = false;
-                notDeletedEligibleItems.add(fileStatus.getPath().toString());
-            }
-        }
-        if (allDescendentsDeleted && deleteEmptyDirectories) {
-            verify(notDeletedEligibleItems.build().isEmpty());
-            if (!deleteIfExists(fileSystem, directory, false)) {
-                return new RecursiveDeleteResult(false, ImmutableList.of(directory.toString() + "/"));
-            }
-            return new RecursiveDeleteResult(true, ImmutableList.of());
-        }
-        return new RecursiveDeleteResult(false, notDeletedEligibleItems.build());
-    }
-
-    /**
-     * Attempts to remove the file or empty directory.
-     *
-     * @return true if the location no longer exists
-     */
-    private static boolean deleteIfExists(FileSystem fileSystem, Path path, boolean recursive)
-    {
-        try {
-            // attempt to delete the path
-            if (fileSystem.delete(path, recursive)) {
-                return true;
-            }
-
-            // delete failed
-            // check if path still exists
-            return !fileSystem.exists(path);
-        }
-        catch (FileNotFoundException ignored) {
-            // path was already removed or never existed
-            return true;
-        }
-        catch (IOException ignored) {
-        }
-        return false;
-    }
-
-    /**
-     * Attempts to remove the file or empty directory.
-     *
-     * @return true if the location no longer exists
-     */
-    private static boolean deleteRecursivelyIfExists(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path path)
-    {
-        FileSystem fileSystem;
-        try {
-            fileSystem = hdfsEnvironment.getFileSystem(context, path);
-        }
-        catch (IOException ignored) {
-            return false;
-        }
-
-        return deleteIfExists(fileSystem, path, true);
-    }
-
-    private static void renameDirectory(HdfsContext context, HdfsEnvironment hdfsEnvironment, Path source, Path target, Runnable runWhenPathDoesntExist)
-    {
-        if (pathExists(context, hdfsEnvironment, target)) {
-            throw new PrestoException(HIVE_PATH_ALREADY_EXISTS,
-                    format("Unable to rename from %s to %s: target directory already exists", source, target));
-        }
-
-        if (!pathExists(context, hdfsEnvironment, target.getParent())) {
-            createDirectory(context, hdfsEnvironment, target.getParent());
-        }
-
-        // The runnable will assume that if rename fails, it will be okay to delete the directory (if the directory is empty).
-        // This is not technically true because a race condition still exists.
-        runWhenPathDoesntExist.run();
-
-        try {
-            if (!hdfsEnvironment.getFileSystem(context, source).rename(source, target)) {
-                throw new PrestoException(HIVE_FILESYSTEM_ERROR, format("Failed to rename %s to %s: rename returned false", source, target));
-            }
-        }
-        catch (IOException e) {
-            throw new PrestoException(HIVE_FILESYSTEM_ERROR, format("Failed to rename %s to %s", source, target), e);
-        }
-    }
-
-    private static Optional<String> getPrestoQueryId(Table table)
-    {
-        return Optional.ofNullable(table.getParameters().get(PRESTO_QUERY_ID_NAME));
-    }
-
-    private static Optional<String> getPrestoQueryId(Partition partition)
-    {
-        return Optional.ofNullable(partition.getParameters().get(PRESTO_QUERY_ID_NAME));
-    }
-
-    private void checkHoldsLock()
-    {
-        // This method serves a similar purpose at runtime as GuardedBy on method serves during static analysis.
-        // This method should not have significant performance impact. If it does, it may be reasonably to remove this method.
-        // This intentionally does not use checkState.
-        if (!Thread.holdsLock(this)) {
-            throw new IllegalStateException(format("Thread must hold a lock on the %s", getClass().getSimpleName()));
-        }
-    }
-
-    private enum State
-    {
-        EMPTY,
-        SHARED_OPERATION_BUFFERED,
-        EXCLUSIVE_OPERATION_BUFFERED,
-        FINISHED,
-    }
-
-    private enum ActionType
-    {
-        DROP,
-        ADD,
-        ALTER,
-        INSERT_EXISTING
-    }
-
-    private enum TableSource
-    {
-        CREATED_IN_THIS_TRANSACTION,
-        PRE_EXISTING_TABLE,
-        // RECREATED_IN_THIS_TRANSACTION is a possible case, but it is not supported with the current implementation
     }
 
     public static class Action<T>
@@ -2476,14 +2455,9 @@ public class SemiTransactionalHiveMetastore
                 return false;
             }
 
-            for (Column existingColumn : existingTableColumns) {
-                if (newTableColumns.stream()
-                        .noneMatch(newColumn -> newColumn.getName().equals(existingColumn.getName())
-                                && newColumn.getType().equals(existingColumn.getType()))) {
-                    return false;
-                }
-            }
-            return true;
+            return existingTableColumns.stream().noneMatch(existingColumn -> newTableColumns.stream()
+			        .noneMatch(newColumn -> newColumn.getName().equals(existingColumn.getName())
+			                && newColumn.getType().equals(existingColumn.getType())));
         }
 
         public void undo(ExtendedHiveMetastore metastore)
@@ -2634,9 +2608,7 @@ public class SemiTransactionalHiveMetastore
             for (List<PartitionWithStatistics> batch : batchedPartitions) {
                 try {
                     metastore.addPartitions(schemaName, tableName, batch);
-                    for (PartitionWithStatistics partition : batch) {
-                        createdPartitionValues.add(partition.getPartition().getValues());
-                    }
+                    batch.forEach(partition -> createdPartitionValues.add(partition.getPartition().getValues()));
                 }
                 catch (Throwable t) {
                     // Add partition to the created list conservatively.
@@ -2679,7 +2651,7 @@ public class SemiTransactionalHiveMetastore
         {
             // drop created partitions
             List<List<String>> partitionsFailedToRollback = new ArrayList<>();
-            for (List<String> createdPartitionValue : createdPartitionValues) {
+            createdPartitionValues.forEach(createdPartitionValue -> {
                 try {
                     metastore.dropPartition(schemaName, tableName, createdPartitionValue, false);
                 }
@@ -2690,7 +2662,7 @@ public class SemiTransactionalHiveMetastore
                 catch (Throwable t) {
                     partitionsFailedToRollback.add(createdPartitionValue);
                 }
-            }
+            });
             createdPartitionValues = partitionsFailedToRollback;
             return partitionsFailedToRollback;
         }

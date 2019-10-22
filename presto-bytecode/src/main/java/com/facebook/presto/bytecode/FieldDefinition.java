@@ -102,9 +102,7 @@ public class FieldDefinition
             return;
         }
 
-        for (AnnotationDefinition annotation : annotations) {
-            annotation.visitFieldAnnotation(fieldVisitor);
-        }
+        annotations.forEach(annotation -> annotation.visitFieldAnnotation(fieldVisitor));
 
         fieldVisitor.visitEnd();
     }

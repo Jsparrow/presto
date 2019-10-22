@@ -205,9 +205,8 @@ public class OrcMetadataReader
         OrcProto.BloomFilterIndex bloomFilter = OrcProto.BloomFilterIndex.parseFrom(input);
         List<OrcProto.BloomFilter> bloomFilterList = bloomFilter.getBloomFilterList();
         ImmutableList.Builder<HiveBloomFilter> builder = ImmutableList.builder();
-        for (OrcProto.BloomFilter orcBloomFilter : bloomFilterList) {
-            builder.add(new HiveBloomFilter(orcBloomFilter.getBitsetList(), orcBloomFilter.getBitsetCount() * 64, orcBloomFilter.getNumHashFunctions()));
-        }
+        bloomFilterList.forEach(orcBloomFilter -> builder.add(new HiveBloomFilter(orcBloomFilter.getBitsetList(), orcBloomFilter.getBitsetCount() * 64,
+				orcBloomFilter.getNumHashFunctions())));
         return builder.build();
     }
 
@@ -289,9 +288,7 @@ public class OrcMetadataReader
     private static Map<String, Slice> toUserMetadata(List<OrcProto.UserMetadataItem> metadataList)
     {
         ImmutableMap.Builder<String, Slice> mapBuilder = ImmutableMap.builder();
-        for (OrcProto.UserMetadataItem item : metadataList) {
-            mapBuilder.put(item.getName(), byteStringToSlice(item.getValue()));
-        }
+        metadataList.forEach(item -> mapBuilder.put(item.getName(), byteStringToSlice(item.getValue())));
         return mapBuilder.build();
     }
 

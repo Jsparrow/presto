@@ -144,12 +144,11 @@ public class TupleDomainFilterUtils
             }
         }
 
-        if (includesTrue && includesFalse) {
-            checkArgument(!nullAllowed, "Unexpected range of ALL values");
-            return IS_NOT_NULL;
-        }
-
-        return BooleanValue.of(includesTrue, nullAllowed);
+        if (!(includesTrue && includesFalse)) {
+			return BooleanValue.of(includesTrue, nullAllowed);
+		}
+		checkArgument(!nullAllowed, "Unexpected range of ALL values");
+		return IS_NOT_NULL;
     }
 
     private static TupleDomainFilter createRangeFilter(Type type, Range range, boolean nullAllowed)

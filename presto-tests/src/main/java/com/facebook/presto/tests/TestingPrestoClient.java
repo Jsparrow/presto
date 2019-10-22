@@ -74,11 +74,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.transform;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestingPrestoClient
         extends AbstractTestingPrestoClient<MaterializedResult>
 {
-    private static final DateTimeFormatter timeWithUtcZoneFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS 'UTC'"); // UTC zone would be printed as "Z" in "XXX" format
+    private static final Logger logger = LoggerFactory.getLogger(TestingPrestoClient.class);
+	private static final DateTimeFormatter timeWithUtcZoneFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS 'UTC'"); // UTC zone would be printed as "Z" in "XXX" format
     private static final DateTimeFormatter timeWithZoneOffsetFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS XXX");
 
     private static final DateTimeFormatter timestampWithTimeZoneFormat = DateTimeFormatter.ofPattern(SqlTimestampWithTimeZone.JSON_FORMAT);
@@ -92,63 +95,6 @@ public class TestingPrestoClient
     protected ResultsSession<MaterializedResult> getResultSession(Session session)
     {
         return new MaterializedResultSession();
-    }
-
-    private class MaterializedResultSession
-            implements ResultsSession<MaterializedResult>
-    {
-        private final ImmutableList.Builder<MaterializedRow> rows = ImmutableList.builder();
-
-        private final AtomicReference<List<Type>> types = new AtomicReference<>();
-
-        private final AtomicReference<Optional<String>> updateType = new AtomicReference<>(Optional.empty());
-        private final AtomicReference<OptionalLong> updateCount = new AtomicReference<>(OptionalLong.empty());
-        private final AtomicReference<List<PrestoWarning>> warnings = new AtomicReference<>(ImmutableList.of());
-
-        @Override
-        public void setUpdateType(String type)
-        {
-            updateType.set(Optional.of(type));
-        }
-
-        @Override
-        public void setUpdateCount(long count)
-        {
-            updateCount.set(OptionalLong.of(count));
-        }
-
-        @Override
-        public void setWarnings(List<PrestoWarning> warnings)
-        {
-            this.warnings.set(warnings);
-        }
-
-        @Override
-        public void addResults(QueryStatusInfo statusInfo, QueryData data)
-        {
-            if (types.get() == null && statusInfo.getColumns() != null) {
-                types.set(getTypes(statusInfo.getColumns()));
-            }
-
-            if (data.getData() != null) {
-                checkState(types.get() != null, "data received without types");
-                rows.addAll(transform(data.getData(), dataToRow(types.get())));
-            }
-        }
-
-        @Override
-        public MaterializedResult build(Map<String, String> setSessionProperties, Set<String> resetSessionProperties)
-        {
-            checkState(types.get() != null, "never received types for the query");
-            return new MaterializedResult(
-                    rows.build(),
-                    types.get(),
-                    setSessionProperties,
-                    resetSessionProperties,
-                    updateType.get(),
-                    updateCount.get(),
-                    warnings.get());
-        }
     }
 
     private static Function<List<Object>, MaterializedRow> dataToRow(final List<Type> types)
@@ -165,7 +111,7 @@ public class TestingPrestoClient
         };
     }
 
-    private static Object convertToRowValue(Type type, Object value)
+	private static Object convertToRowValue(Type type, Object value)
     {
         if (value == null) {
             return null;
@@ -213,7 +159,8 @@ public class TestingPrestoClient
                 return timeWithUtcZoneFormat.parse(((String) value), LocalTime::from).atOffset(ZoneOffset.UTC);
             }
             catch (DateTimeParseException e) {
-                return timeWithZoneOffsetFormat.parse(((String) value), OffsetTime::from);
+                logger.error(e.getMessage(), e);
+				return timeWithZoneOffsetFormat.parse(((String) value), OffsetTime::from);
             }
         }
         else if (TIMESTAMP.equals(type)) {
@@ -250,11 +197,69 @@ public class TestingPrestoClient
         else if (type instanceof DecimalType) {
             return new BigDecimal((String) value);
         }
-        else if (type.getTypeSignature().getBase().equals("ObjectId")) {
+        else if ("ObjectId".equals(type.getTypeSignature().getBase())) {
             return value;
         }
         else {
             throw new AssertionError("unhandled type: " + type);
+        }
+    }
+
+	private class MaterializedResultSession
+            implements ResultsSession<MaterializedResult>
+    {
+        private final ImmutableList.Builder<MaterializedRow> rows = ImmutableList.builder();
+
+        private final AtomicReference<List<Type>> types = new AtomicReference<>();
+
+        private final AtomicReference<Optional<String>> updateType = new AtomicReference<>(Optional.empty());
+        private final AtomicReference<OptionalLong> updateCount = new AtomicReference<>(OptionalLong.empty());
+        private final AtomicReference<List<PrestoWarning>> warnings = new AtomicReference<>(ImmutableList.of());
+
+        @Override
+        public void setUpdateType(String type)
+        {
+            updateType.set(Optional.of(type));
+        }
+
+        @Override
+        public void setUpdateCount(long count)
+        {
+            updateCount.set(OptionalLong.of(count));
+        }
+
+        @Override
+        public void setWarnings(List<PrestoWarning> warnings)
+        {
+            this.warnings.set(warnings);
+        }
+
+        @Override
+        public void addResults(QueryStatusInfo statusInfo, QueryData data)
+        {
+            if (types.get() == null && statusInfo.getColumns() != null) {
+                types.set(getTypes(statusInfo.getColumns()));
+            }
+
+            if (data.getData() == null) {
+				return;
+			}
+			checkState(types.get() != null, "data received without types");
+			rows.addAll(transform(data.getData(), dataToRow(types.get())));
+        }
+
+        @Override
+        public MaterializedResult build(Map<String, String> setSessionProperties, Set<String> resetSessionProperties)
+        {
+            checkState(types.get() != null, "never received types for the query");
+            return new MaterializedResult(
+                    rows.build(),
+                    types.get(),
+                    setSessionProperties,
+                    resetSessionProperties,
+                    updateType.get(),
+                    updateCount.get(),
+                    warnings.get());
         }
     }
 }

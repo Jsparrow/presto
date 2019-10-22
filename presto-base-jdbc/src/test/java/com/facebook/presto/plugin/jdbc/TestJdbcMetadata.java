@@ -41,11 +41,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestJdbcMetadata
 {
-    private TestingDatabase database;
+    private static final Logger logger = LoggerFactory.getLogger(TestJdbcMetadata.class);
+	private TestingDatabase database;
     private JdbcMetadata metadata;
     private JdbcTableHandle tableHandle;
 
@@ -102,6 +105,7 @@ public class TestJdbcMetadata
             fail("Expected getColumnHandle of unknown table to throw a TableNotFoundException");
         }
         catch (TableNotFoundException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 
@@ -137,6 +141,7 @@ public class TestJdbcMetadata
             fail("Expected getTableMetadata of unknown table to throw a TableNotFoundException");
         }
         catch (TableNotFoundException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 

@@ -36,10 +36,14 @@ import static com.facebook.presto.spi.type.StandardTypes.VARCHAR;
 import static com.facebook.presto.util.Reflection.methodHandle;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KillQueryProcedure
 {
-    private static final MethodHandle KILL_QUERY = methodHandle(KillQueryProcedure.class, "killQuery", String.class, String.class);
+    private static final Logger logger = LoggerFactory.getLogger(KillQueryProcedure.class);
+
+	private static final MethodHandle KILL_QUERY = methodHandle(KillQueryProcedure.class, "killQuery", String.class, String.class);
 
     private final QueryManager queryManager;
 
@@ -70,7 +74,8 @@ public class KillQueryProcedure
             }
         }
         catch (NoSuchElementException e) {
-            throw new PrestoException(NOT_FOUND, "Target query not found: " + queryId);
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(NOT_FOUND, "Target query not found: " + queryId);
         }
     }
 

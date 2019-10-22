@@ -118,15 +118,8 @@ public class FileStorageService
     public Set<UUID> getStorageShards()
     {
         ImmutableSet.Builder<UUID> shards = ImmutableSet.builder();
-        for (File level1 : listFiles(baseStorageDir, FileStorageService::isHexDirectory)) {
-            for (File level2 : listFiles(level1, FileStorageService::isHexDirectory)) {
-                for (File file : listFiles(level2, path -> true)) {
-                    if (file.isFile()) {
-                        uuidFromFileName(file.getName()).ifPresent(shards::add);
-                    }
-                }
-            }
-        }
+        listFiles(baseStorageDir, FileStorageService::isHexDirectory).forEach(level1 -> listFiles(level1, FileStorageService::isHexDirectory).forEach(level2 -> listFiles(level2, path -> true).stream()
+				.filter(File::isFile).forEach(file -> uuidFromFileName(file.getName()).ifPresent(shards::add))));
         return shards.build();
     }
 
@@ -162,16 +155,13 @@ public class FileStorageService
     {
         List<File> files = listFiles(baseStagingDir, null);
         if (!files.isEmpty()) {
-            new Thread(() -> {
-                for (File file : files) {
-                    try {
-                        Files.deleteIfExists(file.toPath());
-                    }
-                    catch (IOException e) {
-                        log.warn(e, "Failed to delete file: %s", file.getAbsolutePath());
-                    }
-                }
-            }, "background-staging-delete").start();
+            new Thread(() -> files.forEach(file -> {
+				try {
+					Files.deleteIfExists(file.toPath());
+				} catch (IOException e) {
+					log.warn(e, "Failed to delete file: %s", file.getAbsolutePath());
+				}
+			}), "background-staging-delete").start();
         }
     }
 
@@ -215,11 +205,11 @@ public class FileStorageService
 
     private static Optional<UUID> uuidFromFileName(String name)
     {
-        if (name.endsWith(FILE_EXTENSION)) {
-            name = name.substring(0, name.length() - FILE_EXTENSION.length());
-            return uuidFromString(name);
-        }
-        return Optional.empty();
+        if (!name.endsWith(FILE_EXTENSION)) {
+			return Optional.empty();
+		}
+		name = name.substring(0, name.length() - FILE_EXTENSION.length());
+		return uuidFromString(name);
     }
 
     private static Optional<UUID> uuidFromString(String value)

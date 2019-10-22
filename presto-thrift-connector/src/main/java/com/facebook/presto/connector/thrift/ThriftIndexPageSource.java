@@ -120,11 +120,10 @@ public class ThriftIndexPageSource
         requireNonNull(outputColumns, "outputColumns is null");
         ImmutableList.Builder<String> outputColumnNames = new ImmutableList.Builder<>();
         ImmutableList.Builder<Type> outputColumnTypes = new ImmutableList.Builder<>();
-        for (ColumnHandle columnHandle : outputColumns) {
-            ThriftColumnHandle thriftColumnHandle = (ThriftColumnHandle) columnHandle;
-            outputColumnNames.add(thriftColumnHandle.getColumnName());
-            outputColumnTypes.add(thriftColumnHandle.getColumnType());
-        }
+        outputColumns.stream().map(columnHandle -> (ThriftColumnHandle) columnHandle).forEach(thriftColumnHandle -> {
+			outputColumnNames.add(thriftColumnHandle.getColumnName());
+			outputColumnTypes.add(thriftColumnHandle.getColumnType());
+		});
         this.outputColumnNames = outputColumnNames.build();
         this.outputColumnTypes = outputColumnTypes.build();
 

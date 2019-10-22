@@ -155,14 +155,12 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
         ImmutableSet.Builder<Integer> presentColumns = ImmutableSet.builder();
         ImmutableMap.Builder<Integer, Type> presentColumnsAndTypes = ImmutableMap.builder();
         OrcType root = types.get(0);
-        for (Map.Entry<Integer, Type> entry : includedColumns.entrySet()) {
-            // an old file can have less columns since columns can be added
-            // after the file was written
-            if (entry.getKey() >= 0 && entry.getKey() < root.getFieldCount()) {
-                presentColumns.add(entry.getKey());
-                presentColumnsAndTypes.put(entry.getKey(), entry.getValue());
-            }
-        }
+        // an old file can have less columns since columns can be added
+		// after the file was written
+		includedColumns.entrySet().stream().filter(entry -> entry.getKey() >= 0 && entry.getKey() < root.getFieldCount()).forEach(entry -> {
+		    presentColumns.add(entry.getKey());
+		    presentColumnsAndTypes.put(entry.getKey(), entry.getValue());
+		});
         this.presentColumns = presentColumns.build();
 
         this.maxBlockBytes = requireNonNull(maxBlockSize, "maxBlockSize is null").toBytes();
@@ -180,7 +178,7 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
             }
             stripeInfos.add(new StripeInfo(fileStripes.get(i), stats));
         }
-        Collections.sort(stripeInfos, comparingLong(info -> info.getStripe().getOffset()));
+        stripeInfos.sort(comparingLong(info -> info.getStripe().getOffset()));
 
         long totalRowCount = 0;
         long fileRowCount = 0;
@@ -248,14 +246,15 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
 
     protected void updateMaxCombinedBytesPerRow(int columnIndex, Block block)
     {
-        if (block.getPositionCount() > 0) {
-            long bytesPerCell = block.getSizeInBytes() / block.getPositionCount();
-            if (maxBytesPerCell[columnIndex] < bytesPerCell) {
-                maxCombinedBytesPerRow = maxCombinedBytesPerRow - maxBytesPerCell[columnIndex] + bytesPerCell;
-                maxBytesPerCell[columnIndex] = bytesPerCell;
-                adjustMaxBatchSize(maxCombinedBytesPerRow);
-            }
-        }
+        if (block.getPositionCount() <= 0) {
+			return;
+		}
+		long bytesPerCell = block.getSizeInBytes() / block.getPositionCount();
+		if (maxBytesPerCell[columnIndex] < bytesPerCell) {
+		    maxCombinedBytesPerRow = maxCombinedBytesPerRow - maxBytesPerCell[columnIndex] + bytesPerCell;
+		    maxBytesPerCell[columnIndex] = bytesPerCell;
+		    adjustMaxBatchSize(maxCombinedBytesPerRow);
+		}
     }
 
     protected T[] getStreamReaders()
@@ -288,12 +287,7 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
         if (dataSource instanceof CachingOrcDataSource) {
             return dataSource;
         }
-        for (StripeInformation stripe : stripes) {
-            if (stripe.getTotalLength() > tinyStripeThreshold.toBytes()) {
-                return dataSource;
-            }
-        }
-        return new CachingOrcDataSource(dataSource, createTinyStripesRangeFinder(stripes, maxMergeDistance, tinyStripeThreshold));
+        return stripes.stream().filter(stripe -> stripe.getTotalLength() > tinyStripeThreshold.toBytes()).findFirst().map(stripe -> dataSource).orElse(new CachingOrcDataSource(dataSource, createTinyStripesRangeFinder(stripes, maxMergeDistance, tinyStripeThreshold)));
     }
 
     /**
@@ -359,10 +353,11 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
             }
             validateWrite(validation -> validation.getChecksum().getStripeHash() == actualChecksum.getStripeHash(), "Invalid stripes checksum");
         }
-        if (fileStatisticsValidation.isPresent()) {
-            List<ColumnStatistics> columnStatistics = fileStatisticsValidation.get().build();
-            writeValidation.get().validateFileStatistics(orcDataSource.getId(), columnStatistics);
-        }
+        if (!fileStatisticsValidation.isPresent()) {
+			return;
+		}
+		List<ColumnStatistics> columnStatistics = fileStatisticsValidation.get().build();
+		writeValidation.get().validateFileStatistics(orcDataSource.getId(), columnStatistics);
     }
 
     public boolean isColumnPresent(int hiveColumnIndex)
@@ -380,14 +375,13 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
     {
         nextRowInGroup = 0;
 
-        if (currentRowGroup >= 0) {
-            if (rowGroupStatisticsValidation.isPresent()) {
-                OrcWriteValidation.StatisticsValidation statisticsValidation = rowGroupStatisticsValidation.get();
-                long offset = stripes.get(currentStripe).getOffset();
-                writeValidation.get().validateRowGroupStatistics(orcDataSource.getId(), offset, currentRowGroup, statisticsValidation.build());
-                statisticsValidation.reset();
-            }
-        }
+        boolean condition = currentRowGroup >= 0 && rowGroupStatisticsValidation.isPresent();
+		if (condition) {
+		    OrcWriteValidation.StatisticsValidation statisticsValidation = rowGroupStatisticsValidation.get();
+		    long offset = stripes.get(currentStripe).getOffset();
+		    writeValidation.get().validateRowGroupStatistics(orcDataSource.getId(), offset, currentRowGroup, statisticsValidation.build());
+		    statisticsValidation.reset();
+		}
         while (!rowGroups.hasNext() && currentStripe < stripes.size()) {
             advanceToNextStripe();
             currentRowGroup = -1;
@@ -441,15 +435,14 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
         filePosition += currentBatchSize;
         currentPosition += currentBatchSize;
 
-        // if next row is within the current group return
-        if (nextRowInGroup >= currentGroupRowCount) {
-            // attempt to advance to next row group
-            if (!advanceToNextRowGroup()) {
-                filePosition = fileRowCount;
-                currentPosition = totalRowCount;
-                return -1;
-            }
-        }
+        boolean condition = nextRowInGroup >= currentGroupRowCount && !advanceToNextRowGroup();
+		// attempt to advance to next row group
+		// if next row is within the current group return
+        if (condition) {
+		    filePosition = fileRowCount;
+		    currentPosition = totalRowCount;
+		    return -1;
+		}
 
         // We will grow currentBatchSize by BATCH_SIZE_GROWTH_FACTOR starting from initialBatchSize to maxBatchSize or
         // the number of rows left in this rowgroup, whichever is smaller. maxBatchSize is adjusted according to the
@@ -473,14 +466,13 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
         currentStripeSystemMemoryContext = systemMemoryUsage.newAggregatedMemoryContext();
         rowGroups = ImmutableList.<RowGroup>of().iterator();
 
-        if (currentStripe >= 0) {
-            if (stripeStatisticsValidation.isPresent()) {
-                OrcWriteValidation.StatisticsValidation statisticsValidation = stripeStatisticsValidation.get();
-                long offset = stripes.get(currentStripe).getOffset();
-                writeValidation.get().validateStripeStatistics(orcDataSource.getId(), offset, statisticsValidation.build());
-                statisticsValidation.reset();
-            }
-        }
+        boolean condition = currentStripe >= 0 && stripeStatisticsValidation.isPresent();
+		if (condition) {
+		    OrcWriteValidation.StatisticsValidation statisticsValidation = stripeStatisticsValidation.get();
+		    long offset = stripes.get(currentStripe).getOffset();
+		    writeValidation.get().validateStripeStatistics(orcDataSource.getId(), offset, statisticsValidation.build());
+		    statisticsValidation.reset();
+		}
 
         currentStripe++;
         if (currentStripe >= stripes.size()) {
@@ -495,18 +487,18 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
         validateWriteStripe(stripeInformation.getNumberOfRows());
 
         Stripe stripe = stripeReader.readStripe(stripeInformation, currentStripeSystemMemoryContext);
-        if (stripe != null) {
-            // Give readers access to dictionary streams
-            InputStreamSources dictionaryStreamSources = stripe.getDictionaryStreamSources();
-            List<ColumnEncoding> columnEncodings = stripe.getColumnEncodings();
-            for (StreamReader column : streamReaders) {
-                if (column != null) {
-                    column.startStripe(dictionaryStreamSources, columnEncodings);
-                }
-            }
-
-            rowGroups = stripe.getRowGroups().iterator();
-        }
+        if (stripe == null) {
+			return;
+		}
+		// Give readers access to dictionary streams
+		InputStreamSources dictionaryStreamSources = stripe.getDictionaryStreamSources();
+		List<ColumnEncoding> columnEncodings = stripe.getColumnEncodings();
+		for (StreamReader column : streamReaders) {
+		    if (column != null) {
+		        column.startStripe(dictionaryStreamSources, columnEncodings);
+		    }
+		}
+		rowGroups = stripe.getRowGroups().iterator();
     }
 
     private void validateWrite(Predicate<OrcWriteValidation> test, String messageFormat, Object... args)
@@ -519,9 +511,7 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
 
     private void validateWriteStripe(int rowCount)
     {
-        if (writeChecksumBuilder.isPresent()) {
-            writeChecksumBuilder.get().addStripe(rowCount);
-        }
+        writeChecksumBuilder.ifPresent(value -> value.addStripe(rowCount));
     }
 
     private static Map<Integer, ColumnStatistics> getStatisticsByColumnOrdinal(OrcType rootStructType, List<ColumnStatistics> fileStats)
@@ -612,12 +602,12 @@ abstract class AbstractOrcRecordReader<T extends StreamReader>
 
     protected void validateWritePageChecksum(Page page)
     {
-        if (writeChecksumBuilder.isPresent()) {
-            writeChecksumBuilder.get().addPage(page);
+        writeChecksumBuilder.ifPresent(value -> {
+            value.addPage(page);
             rowGroupStatisticsValidation.get().addPage(page);
             stripeStatisticsValidation.get().addPage(page);
             fileStatisticsValidation.get().addPage(page);
-        }
+        });
     }
 
     private static class StripeInfo

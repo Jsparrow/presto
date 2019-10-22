@@ -113,25 +113,20 @@ import static java.util.Objects.requireNonNull;
 
 public class LogicalPlanner
 {
-    public enum Stage
-    {
-        CREATED, OPTIMIZED, OPTIMIZED_AND_VALIDATED
-    }
-
     private final boolean explain;
-    private final PlanNodeIdAllocator idAllocator;
-    private final Session session;
-    private final List<PlanOptimizer> planOptimizers;
-    private final PlanSanityChecker planSanityChecker;
-    private final PlanVariableAllocator variableAllocator = new PlanVariableAllocator();
-    private final Metadata metadata;
-    private final SqlParser sqlParser;
-    private final StatisticsAggregationPlanner statisticsAggregationPlanner;
-    private final StatsCalculator statsCalculator;
-    private final CostCalculator costCalculator;
-    private final WarningCollector warningCollector;
+	private final PlanNodeIdAllocator idAllocator;
+	private final Session session;
+	private final List<PlanOptimizer> planOptimizers;
+	private final PlanSanityChecker planSanityChecker;
+	private final PlanVariableAllocator variableAllocator = new PlanVariableAllocator();
+	private final Metadata metadata;
+	private final SqlParser sqlParser;
+	private final StatisticsAggregationPlanner statisticsAggregationPlanner;
+	private final StatsCalculator statsCalculator;
+	private final CostCalculator costCalculator;
+	private final WarningCollector warningCollector;
 
-    public LogicalPlanner(
+	public LogicalPlanner(
             boolean explain,
             Session session,
             List<PlanOptimizer> planOptimizers,
@@ -145,7 +140,7 @@ public class LogicalPlanner
         this(explain, session, planOptimizers, DISTRIBUTED_PLAN_SANITY_CHECKER, idAllocator, metadata, sqlParser, statsCalculator, costCalculator, warningCollector);
     }
 
-    public LogicalPlanner(
+	public LogicalPlanner(
             boolean explain,
             Session session,
             List<PlanOptimizer> planOptimizers,
@@ -170,12 +165,12 @@ public class LogicalPlanner
         this.warningCollector = requireNonNull(warningCollector, "warningCollector is null");
     }
 
-    public Plan plan(Analysis analysis)
+	public Plan plan(Analysis analysis)
     {
         return plan(analysis, Stage.OPTIMIZED_AND_VALIDATED);
     }
 
-    public Plan plan(Analysis analysis, Stage stage)
+	public Plan plan(Analysis analysis, Stage stage)
     {
         PlanNode root = planStatement(analysis, analysis.getStatement());
 
@@ -197,33 +192,33 @@ public class LogicalPlanner
         return new Plan(root, types, computeStats(root, types));
     }
 
-    private StatsAndCosts computeStats(PlanNode root, TypeProvider types)
+	private StatsAndCosts computeStats(PlanNode root, TypeProvider types)
     {
-        if (explain || isPrintStatsForNonJoinQuery(session) ||
+        if (!(explain || isPrintStatsForNonJoinQuery(session) ||
                 PlanNodeSearcher.searchFrom(root).where(node ->
-                    (node instanceof JoinNode) || (node instanceof SemiJoinNode)).matches()) {
-            StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, types);
-            CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.empty(), session, types);
-            return StatsAndCosts.create(root, statsProvider, costProvider);
-        }
-        return StatsAndCosts.empty();
+                    (node instanceof JoinNode) || (node instanceof SemiJoinNode)).matches())) {
+			return StatsAndCosts.empty();
+		}
+		StatsProvider statsProvider = new CachingStatsProvider(statsCalculator, session, types);
+		CostProvider costProvider = new CachingCostProvider(costCalculator, statsProvider, Optional.empty(), session, types);
+		return StatsAndCosts.create(root, statsProvider, costProvider);
     }
 
-    public PlanNode planStatement(Analysis analysis, Statement statement)
+	public PlanNode planStatement(Analysis analysis, Statement statement)
     {
-        if (statement instanceof CreateTableAsSelect && analysis.isCreateTableAsSelectNoOp()) {
-            checkState(analysis.getCreateTableDestination().isPresent(), "Table destination is missing");
-            VariableReferenceExpression variable = variableAllocator.newVariable("rows", BIGINT);
-            PlanNode source = new ValuesNode(
-                    idAllocator.getNextId(),
-                    ImmutableList.of(variable),
-                    ImmutableList.of(ImmutableList.of(constant(0L, BIGINT))));
-            return new OutputNode(idAllocator.getNextId(), source, ImmutableList.of("rows"), ImmutableList.of(variable));
-        }
-        return createOutputPlan(planStatementWithoutOutput(analysis, statement), analysis);
+        if (!(statement instanceof CreateTableAsSelect && analysis.isCreateTableAsSelectNoOp())) {
+			return createOutputPlan(planStatementWithoutOutput(analysis, statement), analysis);
+		}
+		checkState(analysis.getCreateTableDestination().isPresent(), "Table destination is missing");
+		VariableReferenceExpression variable = variableAllocator.newVariable("rows", BIGINT);
+		PlanNode source = new ValuesNode(
+		        idAllocator.getNextId(),
+		        ImmutableList.of(variable),
+		        ImmutableList.of(ImmutableList.of(constant(0L, BIGINT))));
+		return new OutputNode(idAllocator.getNextId(), source, ImmutableList.of("rows"), ImmutableList.of(variable));
     }
 
-    private RelationPlan planStatementWithoutOutput(Analysis analysis, Statement statement)
+	private RelationPlan planStatementWithoutOutput(Analysis analysis, Statement statement)
     {
         if (statement instanceof CreateTableAsSelect) {
             if (analysis.isCreateTableAsSelectNoOp()) {
@@ -252,7 +247,7 @@ public class LogicalPlanner
         }
     }
 
-    private RelationPlan createExplainAnalyzePlan(Analysis analysis, Explain statement)
+	private RelationPlan createExplainAnalyzePlan(Analysis analysis, Explain statement)
     {
         RelationPlan underlyingPlan = planStatementWithoutOutput(analysis, statement.getStatement());
         PlanNode root = underlyingPlan.getRoot();
@@ -262,7 +257,7 @@ public class LogicalPlanner
         return new RelationPlan(root, scope, ImmutableList.of(outputVariable));
     }
 
-    private RelationPlan createAnalyzePlan(Analysis analysis, Analyze analyzeStatement)
+	private RelationPlan createAnalyzePlan(Analysis analysis, Analyze analyzeStatement)
     {
         TableHandle targetTable = analysis.getAnalyzeTarget().get();
 
@@ -272,12 +267,12 @@ public class LogicalPlanner
         ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> variableToColumnHandle = ImmutableMap.builder();
         ImmutableMap.Builder<String, VariableReferenceExpression> columnNameToVariable = ImmutableMap.builder();
         TableMetadata tableMetadata = metadata.getTableMetadata(session, targetTable);
-        for (ColumnMetadata column : tableMetadata.getColumns()) {
+        tableMetadata.getColumns().forEach(column -> {
             VariableReferenceExpression variable = variableAllocator.newVariable(column.getName(), column.getType());
             tableScanOutputsBuilder.add(variable);
             variableToColumnHandle.put(variable, columnHandles.get(column.getName()));
             columnNameToVariable.put(column.getName(), variable);
-        }
+        });
 
         List<VariableReferenceExpression> tableScanOutputs = tableScanOutputsBuilder.build();
         TableStatisticsMetadata tableStatisticsMetadata = metadata.getStatisticsCollectionMetadata(
@@ -306,7 +301,7 @@ public class LogicalPlanner
         return new RelationPlan(planNode, analysis.getScope(analyzeStatement), planNode.getOutputVariables());
     }
 
-    private RelationPlan createTableCreationPlan(Analysis analysis, Query query)
+	private RelationPlan createTableCreationPlan(Analysis analysis, Query query)
     {
         QualifiedObjectName destination = analysis.getCreateTableDestination().get();
 
@@ -336,7 +331,7 @@ public class LogicalPlanner
                 statisticsMetadata);
     }
 
-    private RelationPlan createInsertPlan(Analysis analysis, Insert insertStatement)
+	private RelationPlan createInsertPlan(Analysis analysis, Insert insertStatement)
     {
         Analysis.Insert insert = analysis.getInsert().get();
 
@@ -399,7 +394,7 @@ public class LogicalPlanner
                 statisticsMetadata);
     }
 
-    private RelationPlan createTableWriterPlan(
+	private RelationPlan createTableWriterPlan(
             Analysis analysis,
             RelationPlan plan,
             WriterTarget target,
@@ -491,7 +486,7 @@ public class LogicalPlanner
         return new RelationPlan(commitNode, analysis.getRootScope(), commitNode.getOutputVariables());
     }
 
-    private RelationPlan createDeletePlan(Analysis analysis, Delete node)
+	private RelationPlan createDeletePlan(Analysis analysis, Delete node)
     {
         DeleteNode deleteNode = new QueryPlanner(analysis, variableAllocator, idAllocator, buildLambdaDeclarationToVariableMap(analysis, variableAllocator), metadata, session)
                 .plan(node);
@@ -507,7 +502,7 @@ public class LogicalPlanner
         return new RelationPlan(commitNode, analysis.getScope(node), commitNode.getOutputVariables());
     }
 
-    private PlanNode createOutputPlan(RelationPlan plan, Analysis analysis)
+	private PlanNode createOutputPlan(RelationPlan plan, Analysis analysis)
     {
         ImmutableList.Builder<VariableReferenceExpression> outputs = ImmutableList.builder();
         ImmutableList.Builder<String> names = ImmutableList.builder();
@@ -528,13 +523,13 @@ public class LogicalPlanner
         return new OutputNode(idAllocator.getNextId(), plan.getRoot(), names.build(), outputs.build());
     }
 
-    private RelationPlan createRelationPlan(Analysis analysis, Query query)
+	private RelationPlan createRelationPlan(Analysis analysis, Query query)
     {
         return new RelationPlanner(analysis, variableAllocator, idAllocator, buildLambdaDeclarationToVariableMap(analysis, variableAllocator), metadata, session)
                 .process(query, null);
     }
 
-    private ConnectorTableMetadata createTableMetadata(QualifiedObjectName table, List<ColumnMetadata> columns, Map<String, Expression> propertyExpressions, List<Expression> parameters, Optional<String> comment)
+	private ConnectorTableMetadata createTableMetadata(QualifiedObjectName table, List<ColumnMetadata> columns, Map<String, Expression> propertyExpressions, List<Expression> parameters, Optional<String> comment)
     {
         ConnectorId connectorId = metadata.getCatalogHandle(session, table.getCatalogName())
                 .orElseThrow(() -> new PrestoException(NOT_FOUND, "Catalog does not exist: " + table.getCatalogName()));
@@ -550,7 +545,7 @@ public class LogicalPlanner
         return new ConnectorTableMetadata(table.asSchemaTableName(), columns, properties, comment);
     }
 
-    private static List<ColumnMetadata> getOutputTableColumns(RelationPlan plan, Optional<List<Identifier>> columnAliases)
+	private static List<ColumnMetadata> getOutputTableColumns(RelationPlan plan, Optional<List<Identifier>> columnAliases)
     {
         ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
         int aliasPosition = 0;
@@ -562,7 +557,7 @@ public class LogicalPlanner
         return columns.build();
     }
 
-    private static Map<NodeRef<LambdaArgumentDeclaration>, VariableReferenceExpression> buildLambdaDeclarationToVariableMap(Analysis analysis, PlanVariableAllocator variableAllocator)
+	private static Map<NodeRef<LambdaArgumentDeclaration>, VariableReferenceExpression> buildLambdaDeclarationToVariableMap(Analysis analysis, PlanVariableAllocator variableAllocator)
     {
         Map<NodeRef<LambdaArgumentDeclaration>, VariableReferenceExpression> resultMap = new LinkedHashMap<>();
         for (Entry<NodeRef<Expression>, Type> entry : analysis.getTypes().entrySet()) {
@@ -576,5 +571,10 @@ public class LogicalPlanner
             resultMap.put(lambdaArgumentDeclaration, variableAllocator.newVariable(lambdaArgumentDeclaration.getNode(), entry.getValue()));
         }
         return resultMap;
+    }
+
+	public enum Stage
+    {
+        CREATED, OPTIMIZED, OPTIMIZED_AND_VALIDATED
     }
 }

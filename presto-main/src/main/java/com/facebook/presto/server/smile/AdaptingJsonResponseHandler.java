@@ -45,14 +45,12 @@ public class AdaptingJsonResponseHandler<T>
 
     @Override
     public BaseResponse<T> handleException(Request request, Exception exception)
-            throws RuntimeException
     {
         return wrapJsonResponse(jsonResponseHandler.handleException(request, exception));
     }
 
     @Override
     public BaseResponse<T> handle(Request request, Response response)
-            throws RuntimeException
     {
         return wrapJsonResponse(jsonResponseHandler.handle(request, response));
     }

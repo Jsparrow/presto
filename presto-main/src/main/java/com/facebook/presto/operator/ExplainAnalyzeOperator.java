@@ -34,7 +34,123 @@ import static java.util.Objects.requireNonNull;
 public class ExplainAnalyzeOperator
         implements Operator
 {
-    public static class ExplainAnalyzeOperatorFactory
+    private final OperatorContext operatorContext;
+	private final QueryPerformanceFetcher queryPerformanceFetcher;
+	private final FunctionManager functionManager;
+	private final boolean verbose;
+	private boolean finishing;
+	private boolean outputConsumed;
+
+	public ExplainAnalyzeOperator(
+            OperatorContext operatorContext,
+            QueryPerformanceFetcher queryPerformanceFetcher,
+            FunctionManager functionManager,
+            boolean verbose)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.queryPerformanceFetcher = requireNonNull(queryPerformanceFetcher, "queryPerformanceFetcher is null");
+        this.functionManager = requireNonNull(functionManager, "functionManager is null");
+        this.verbose = verbose;
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && outputConsumed;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finishing;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(needsInput());
+
+        // Ignore the input
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!finishing) {
+            return null;
+        }
+
+        QueryInfo queryInfo = queryPerformanceFetcher.getQueryInfo(operatorContext.getDriverContext().getTaskId().getQueryId());
+        checkState(queryInfo.getOutputStage().isPresent(), "Output stage is missing");
+        checkState(queryInfo.getOutputStage().get().getSubStages().size() == 1, "Expected one sub stage of explain node");
+
+        if (!hasFinalStageInfo(queryInfo.getOutputStage().get())) {
+            return null;
+        }
+
+        String plan = textDistributedPlan(queryInfo.getOutputStage().get().getSubStages().get(0), functionManager, operatorContext.getSession(), verbose);
+        BlockBuilder builder = VARCHAR.createBlockBuilder(null, 1);
+        VARCHAR.writeString(builder, plan);
+
+        outputConsumed = true;
+        return new Page(builder.build());
+    }
+
+	private boolean hasFinalStageInfo(StageInfo stageInfo)
+    {
+        boolean isFinalStageInfo = isFinalStageInfo(stageInfo);
+        if (!isFinalStageInfo) {
+            try {
+                TimeUnit.MILLISECONDS.sleep(100);
+            }
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return isFinalStageInfo(stageInfo);
+    }
+
+	private boolean isFinalStageInfo(StageInfo stageInfo)
+    {
+        List<StageInfo> subStages = getSubStagesOf(operatorContext.getDriverContext().getTaskId().getStageExecutionId().getStageId(), stageInfo);
+        return subStages.stream().allMatch(StageInfo::isFinalStageInfo);
+    }
+
+	private static List<StageInfo> getSubStagesOf(StageId stageId, StageInfo rootStage)
+    {
+        ImmutableList.Builder<StageInfo> collector = ImmutableList.builder();
+        getSubStages(stageId, rootStage, collector, false);
+        return collector.build();
+    }
+
+	private static void getSubStages(StageId stageId, StageInfo rootStage, ImmutableList.Builder<StageInfo> collector, boolean add)
+    {
+        if (rootStage.getStageId().equals(stageId)) {
+            add = true;
+        }
+        List<StageInfo> subStages = rootStage.getSubStages();
+        for (StageInfo subStage : subStages) {
+            getSubStages(stageId, subStage, collector, add);
+        }
+
+        if (add && !rootStage.getStageId().equals(stageId)) {
+            collector.add(rootStage);
+        }
+    }
+
+	public static class ExplainAnalyzeOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -76,122 +192,6 @@ public class ExplainAnalyzeOperator
         public OperatorFactory duplicate()
         {
             return new ExplainAnalyzeOperatorFactory(operatorId, planNodeId, queryPerformanceFetcher, functionManager, verbose);
-        }
-    }
-
-    private final OperatorContext operatorContext;
-    private final QueryPerformanceFetcher queryPerformanceFetcher;
-    private final FunctionManager functionManager;
-    private final boolean verbose;
-    private boolean finishing;
-    private boolean outputConsumed;
-
-    public ExplainAnalyzeOperator(
-            OperatorContext operatorContext,
-            QueryPerformanceFetcher queryPerformanceFetcher,
-            FunctionManager functionManager,
-            boolean verbose)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.queryPerformanceFetcher = requireNonNull(queryPerformanceFetcher, "queryPerformanceFetcher is null");
-        this.functionManager = requireNonNull(functionManager, "functionManager is null");
-        this.verbose = verbose;
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && outputConsumed;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finishing;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(needsInput());
-
-        // Ignore the input
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!finishing) {
-            return null;
-        }
-
-        QueryInfo queryInfo = queryPerformanceFetcher.getQueryInfo(operatorContext.getDriverContext().getTaskId().getQueryId());
-        checkState(queryInfo.getOutputStage().isPresent(), "Output stage is missing");
-        checkState(queryInfo.getOutputStage().get().getSubStages().size() == 1, "Expected one sub stage of explain node");
-
-        if (!hasFinalStageInfo(queryInfo.getOutputStage().get())) {
-            return null;
-        }
-
-        String plan = textDistributedPlan(queryInfo.getOutputStage().get().getSubStages().get(0), functionManager, operatorContext.getSession(), verbose);
-        BlockBuilder builder = VARCHAR.createBlockBuilder(null, 1);
-        VARCHAR.writeString(builder, plan);
-
-        outputConsumed = true;
-        return new Page(builder.build());
-    }
-
-    private boolean hasFinalStageInfo(StageInfo stageInfo)
-    {
-        boolean isFinalStageInfo = isFinalStageInfo(stageInfo);
-        if (!isFinalStageInfo) {
-            try {
-                TimeUnit.MILLISECONDS.sleep(100);
-            }
-            catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return isFinalStageInfo(stageInfo);
-    }
-
-    private boolean isFinalStageInfo(StageInfo stageInfo)
-    {
-        List<StageInfo> subStages = getSubStagesOf(operatorContext.getDriverContext().getTaskId().getStageExecutionId().getStageId(), stageInfo);
-        return subStages.stream().allMatch(StageInfo::isFinalStageInfo);
-    }
-
-    private static List<StageInfo> getSubStagesOf(StageId stageId, StageInfo rootStage)
-    {
-        ImmutableList.Builder<StageInfo> collector = ImmutableList.builder();
-        getSubStages(stageId, rootStage, collector, false);
-        return collector.build();
-    }
-
-    private static void getSubStages(StageId stageId, StageInfo rootStage, ImmutableList.Builder<StageInfo> collector, boolean add)
-    {
-        if (rootStage.getStageId().equals(stageId)) {
-            add = true;
-        }
-        List<StageInfo> subStages = rootStage.getSubStages();
-        for (StageInfo subStage : subStages) {
-            getSubStages(stageId, subStage, collector, add);
-        }
-
-        if (add && !rootStage.getStageId().equals(stageId)) {
-            collector.add(rootStage);
         }
     }
 }

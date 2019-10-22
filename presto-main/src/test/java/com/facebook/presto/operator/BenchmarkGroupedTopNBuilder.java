@@ -56,7 +56,46 @@ public class BenchmarkGroupedTopNBuilder
     private static final int SHIP_DATE = 2;
     private static final int QUANTITY = 3;
 
-    @State(Scope.Thread)
+    @Benchmark
+    public List<Page> topN(BenchmarkData data)
+    {
+        data.getTopNBuilder().processPage(data.getPage()).process();
+        return ImmutableList.copyOf(data.getTopNBuilder().buildResult());
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkGroupedTopNBuilder().topN(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGroupedTopNBuilder.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	private static Page createInputPage(int positions, List<Type> types)
+    {
+        PageBuilder pageBuilder = new PageBuilder(types);
+        LineItemGenerator lineItemGenerator = new LineItemGenerator(1, 1, 1);
+        Iterator<LineItem> iterator = lineItemGenerator.iterator();
+        for (int i = 0; i < positions; i++) {
+            pageBuilder.declarePosition();
+
+            LineItem lineItem = iterator.next();
+            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(EXTENDED_PRICE), lineItem.getExtendedPrice());
+            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(DISCOUNT), lineItem.getDiscount());
+            DATE.writeLong(pageBuilder.getBlockBuilder(SHIP_DATE), lineItem.getShipDate());
+            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(QUANTITY), lineItem.getQuantity());
+        }
+        return pageBuilder.build();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private final List<Type> types = ImmutableList.of(DOUBLE, DOUBLE, VARCHAR, DOUBLE);
@@ -90,44 +129,5 @@ public class BenchmarkGroupedTopNBuilder
         {
             return page;
         }
-    }
-
-    @Benchmark
-    public List<Page> topN(BenchmarkData data)
-    {
-        data.getTopNBuilder().processPage(data.getPage()).process();
-        return ImmutableList.copyOf(data.getTopNBuilder().buildResult());
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkGroupedTopNBuilder().topN(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGroupedTopNBuilder.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
-    }
-
-    private static Page createInputPage(int positions, List<Type> types)
-    {
-        PageBuilder pageBuilder = new PageBuilder(types);
-        LineItemGenerator lineItemGenerator = new LineItemGenerator(1, 1, 1);
-        Iterator<LineItem> iterator = lineItemGenerator.iterator();
-        for (int i = 0; i < positions; i++) {
-            pageBuilder.declarePosition();
-
-            LineItem lineItem = iterator.next();
-            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(EXTENDED_PRICE), lineItem.getExtendedPrice());
-            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(DISCOUNT), lineItem.getDiscount());
-            DATE.writeLong(pageBuilder.getBlockBuilder(SHIP_DATE), lineItem.getShipDate());
-            DOUBLE.writeDouble(pageBuilder.getBlockBuilder(QUANTITY), lineItem.getQuantity());
-        }
-        return pageBuilder.build();
     }
 }

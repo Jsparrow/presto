@@ -51,21 +51,6 @@ public class ClassGenerator
     private final Writer output;
     private final Optional<Path> dumpClassPath;
 
-    public static ClassGenerator classGenerator(ClassLoader parentClassLoader)
-    {
-        return classGenerator(parentClassLoader, ImmutableMap.of());
-    }
-
-    public static ClassGenerator classGenerator(ClassLoader parentClassLoader, Map<Long, MethodHandle> callSiteBindings)
-    {
-        return classGenerator(new DynamicClassLoader(parentClassLoader, callSiteBindings));
-    }
-
-    public static ClassGenerator classGenerator(DynamicClassLoader classLoader)
-    {
-        return new ClassGenerator(classLoader, false, false, false, nullWriter(), Optional.empty());
-    }
-
     private ClassGenerator(
             DynamicClassLoader classLoader,
             boolean fakeLineNumbers,
@@ -82,43 +67,58 @@ public class ClassGenerator
         this.dumpClassPath = requireNonNull(dumpClassPath, "dumpClassPath is null");
     }
 
-    public ClassGenerator fakeLineNumbers(boolean fakeLineNumbers)
+	public static ClassGenerator classGenerator(ClassLoader parentClassLoader)
+    {
+        return classGenerator(parentClassLoader, ImmutableMap.of());
+    }
+
+	public static ClassGenerator classGenerator(ClassLoader parentClassLoader, Map<Long, MethodHandle> callSiteBindings)
+    {
+        return classGenerator(new DynamicClassLoader(parentClassLoader, callSiteBindings));
+    }
+
+	public static ClassGenerator classGenerator(DynamicClassLoader classLoader)
+    {
+        return new ClassGenerator(classLoader, false, false, false, nullWriter(), Optional.empty());
+    }
+
+	public ClassGenerator fakeLineNumbers(boolean fakeLineNumbers)
     {
         return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
     }
 
-    public ClassGenerator runAsmVerifier(boolean runAsmVerifier)
+	public ClassGenerator runAsmVerifier(boolean runAsmVerifier)
     {
         return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
     }
 
-    public ClassGenerator dumpRawBytecode(boolean dumpRawBytecode)
+	public ClassGenerator dumpRawBytecode(boolean dumpRawBytecode)
     {
         return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
     }
 
-    public ClassGenerator outputTo(Writer output)
+	public ClassGenerator outputTo(Writer output)
     {
         return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
     }
 
-    public ClassGenerator dumpClassFilesTo(Path dumpClassPath)
+	public ClassGenerator dumpClassFilesTo(Path dumpClassPath)
     {
         return dumpClassFilesTo(Optional.of(dumpClassPath));
     }
 
-    public ClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
+	public ClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
     {
         return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
     }
 
-    public <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType)
+	public <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType)
     {
         Map<String, Class<?>> classes = defineClasses(ImmutableList.of(classDefinition));
         return getOnlyElement(classes.values()).asSubclass(superType);
     }
 
-    public Map<String, Class<?>> defineClasses(List<ClassDefinition> classDefinitions)
+	public Map<String, Class<?>> defineClasses(List<ClassDefinition> classDefinitions)
     {
         ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinitions, classLoader);
         Map<String, byte[]> bytecodes = new LinkedHashMap<>();
@@ -164,10 +164,7 @@ public class ClassGenerator
         }));
 
         if (dumpRawBytecode) {
-            for (byte[] bytecode : bytecodes.values()) {
-                ClassReader classReader = new ClassReader(bytecode);
-                classReader.accept(new TraceClassVisitor(new PrintWriter(output)), ClassReader.EXPAND_FRAMES);
-            }
+            bytecodes.values().stream().map(ClassReader::new).forEach(classReader -> classReader.accept(new TraceClassVisitor(new PrintWriter(output)), ClassReader.EXPAND_FRAMES));
         }
 
         Map<String, Class<?>> classes = classLoader.defineClasses(bytecodes);

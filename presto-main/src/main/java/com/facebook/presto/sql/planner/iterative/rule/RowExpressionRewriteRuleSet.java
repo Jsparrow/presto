@@ -58,19 +58,14 @@ import static java.util.Objects.requireNonNull;
 
 public class RowExpressionRewriteRuleSet
 {
-    public interface PlanRowExpressionRewriter
-    {
-        RowExpression rewrite(RowExpression expression, Rule.Context context);
-    }
-
     protected final PlanRowExpressionRewriter rewriter;
 
-    public RowExpressionRewriteRuleSet(PlanRowExpressionRewriter rewriter)
+	public RowExpressionRewriteRuleSet(PlanRowExpressionRewriter rewriter)
     {
         this.rewriter = requireNonNull(rewriter, "rewriter is null");
     }
 
-    public Set<Rule<?>> rules()
+	public Set<Rule<?>> rules()
     {
         return ImmutableSet.of(
                 valueRowExpressionRewriteRule(),
@@ -85,54 +80,102 @@ public class RowExpressionRewriteRuleSet
                 tableWriterRowExpressionRewriteRule());
     }
 
-    public Rule<ValuesNode> valueRowExpressionRewriteRule()
+	public Rule<ValuesNode> valueRowExpressionRewriteRule()
     {
         return new ValuesRowExpressionRewrite();
     }
 
-    public Rule<FilterNode> filterRowExpressionRewriteRule()
+	public Rule<FilterNode> filterRowExpressionRewriteRule()
     {
         return new FilterRowExpressionRewrite();
     }
 
-    public Rule<ProjectNode> projectRowExpressionRewriteRule()
+	public Rule<ProjectNode> projectRowExpressionRewriteRule()
     {
         return new ProjectRowExpressionRewrite();
     }
 
-    public Rule<ApplyNode> applyNodeRowExpressionRewriteRule()
+	public Rule<ApplyNode> applyNodeRowExpressionRewriteRule()
     {
         return new ApplyRowExpressionRewrite();
     }
 
-    public Rule<WindowNode> windowRowExpressionRewriteRule()
+	public Rule<WindowNode> windowRowExpressionRewriteRule()
     {
         return new WindowRowExpressionRewrite();
     }
 
-    public Rule<JoinNode> joinRowExpressionRewriteRule()
+	public Rule<JoinNode> joinRowExpressionRewriteRule()
     {
         return new JoinRowExpressionRewrite();
     }
 
-    public Rule<SpatialJoinNode> spatialJoinRowExpressionRewriteRule()
+	public Rule<SpatialJoinNode> spatialJoinRowExpressionRewriteRule()
     {
         return new SpatialJoinRowExpressionRewrite();
     }
 
-    public Rule<TableFinishNode> tableFinishRowExpressionRewriteRule()
+	public Rule<TableFinishNode> tableFinishRowExpressionRewriteRule()
     {
         return new TableFinishRowExpressionRewrite();
     }
 
-    public Rule<TableWriterNode> tableWriterRowExpressionRewriteRule()
+	public Rule<TableWriterNode> tableWriterRowExpressionRewriteRule()
     {
         return new TableWriterRowExpressionRewrite();
     }
 
-    public Rule<AggregationNode> aggregationRowExpressionRewriteRule()
+	public Rule<AggregationNode> aggregationRowExpressionRewriteRule()
     {
         return new AggregationRowExpressionRewrite();
+    }
+
+	private Optional<Assignments> translateAssignments(Assignments assignments, Rule.Context context)
+    {
+        Assignments.Builder builder = Assignments.builder();
+        assignments.getMap()
+                .entrySet()
+                .stream()
+                .forEach(entry -> builder.put(entry.getKey(), rewriter.rewrite(entry.getValue(), context)));
+        Assignments rewritten = builder.build();
+        if (rewritten.equals(assignments)) {
+            return Optional.empty();
+        }
+        return Optional.of(rewritten);
+    }
+
+	private Optional<StatisticAggregations> translateStatisticAggregation(StatisticAggregations statisticAggregations, Rule.Context context)
+    {
+        ImmutableMap.Builder<VariableReferenceExpression, AggregationNode.Aggregation> rewrittenAggregation = builder();
+        boolean changed = false;
+        for (Map.Entry<VariableReferenceExpression, AggregationNode.Aggregation> entry : statisticAggregations.getAggregations().entrySet()) {
+            AggregationNode.Aggregation rewritten = rewriteAggregation(entry.getValue(), context);
+            rewrittenAggregation.put(entry.getKey(), rewritten);
+            if (!rewritten.equals(entry.getValue())) {
+                changed = true;
+            }
+        }
+        if (changed) {
+            return Optional.of(new StatisticAggregations(rewrittenAggregation.build(), statisticAggregations.getGroupingVariables()));
+        }
+        return Optional.empty();
+    }
+
+	private AggregationNode.Aggregation rewriteAggregation(AggregationNode.Aggregation aggregation, Rule.Context context)
+    {
+        RowExpression rewrittenCall = rewriter.rewrite(aggregation.getCall(), context);
+        checkArgument(rewrittenCall instanceof CallExpression, "Aggregation CallExpression must be rewritten to CallExpression");
+        return new AggregationNode.Aggregation(
+                (CallExpression) rewrittenCall,
+                aggregation.getFilter().map(filter -> rewriter.rewrite(filter, context)),
+                aggregation.getOrderBy(),
+                aggregation.isDistinct(),
+                aggregation.getMask());
+    }
+
+	public interface PlanRowExpressionRewriter
+    {
+        RowExpression rewrite(RowExpression expression, Rule.Context context);
     }
 
     private final class ProjectRowExpressionRewrite
@@ -308,20 +351,6 @@ public class RowExpressionRewriteRuleSet
         }
     }
 
-    private Optional<Assignments> translateAssignments(Assignments assignments, Rule.Context context)
-    {
-        Assignments.Builder builder = Assignments.builder();
-        assignments.getMap()
-                .entrySet()
-                .stream()
-                .forEach(entry -> builder.put(entry.getKey(), rewriter.rewrite(entry.getValue(), context)));
-        Assignments rewritten = builder.build();
-        if (rewritten.equals(assignments)) {
-            return Optional.empty();
-        }
-        return Optional.of(rewritten);
-    }
-
     private final class FilterRowExpressionRewrite
             implements Rule<FilterNode>
     {
@@ -400,19 +429,19 @@ public class RowExpressionRewriteRuleSet
                 }
             }
 
-            if (changed) {
-                AggregationNode aggregationNode = new AggregationNode(
-                        node.getId(),
-                        node.getSource(),
-                        rewrittenAggregation.build(),
-                        node.getGroupingSets(),
-                        node.getPreGroupedVariables(),
-                        node.getStep(),
-                        node.getHashVariable(),
-                        node.getGroupIdVariable());
-                return Result.ofPlanNode(aggregationNode);
-            }
-            return Result.empty();
+            if (!changed) {
+				return Result.empty();
+			}
+			AggregationNode aggregationNode = new AggregationNode(
+			        node.getId(),
+			        node.getSource(),
+			        rewrittenAggregation.build(),
+			        node.getGroupingSets(),
+			        node.getPreGroupedVariables(),
+			        node.getStep(),
+			        node.getHashVariable(),
+			        node.getGroupIdVariable());
+			return Result.ofPlanNode(aggregationNode);
         }
     }
 
@@ -447,23 +476,6 @@ public class RowExpressionRewriteRuleSet
             }
             return Result.empty();
         }
-    }
-
-    private Optional<StatisticAggregations> translateStatisticAggregation(StatisticAggregations statisticAggregations, Rule.Context context)
-    {
-        ImmutableMap.Builder<VariableReferenceExpression, AggregationNode.Aggregation> rewrittenAggregation = builder();
-        boolean changed = false;
-        for (Map.Entry<VariableReferenceExpression, AggregationNode.Aggregation> entry : statisticAggregations.getAggregations().entrySet()) {
-            AggregationNode.Aggregation rewritten = rewriteAggregation(entry.getValue(), context);
-            rewrittenAggregation.put(entry.getKey(), rewritten);
-            if (!rewritten.equals(entry.getValue())) {
-                changed = true;
-            }
-        }
-        if (changed) {
-            return Optional.of(new StatisticAggregations(rewrittenAggregation.build(), statisticAggregations.getGroupingVariables()));
-        }
-        return Optional.empty();
     }
 
     private final class TableWriterRowExpressionRewrite
@@ -501,17 +513,5 @@ public class RowExpressionRewriteRuleSet
             }
             return Result.empty();
         }
-    }
-
-    private AggregationNode.Aggregation rewriteAggregation(AggregationNode.Aggregation aggregation, Rule.Context context)
-    {
-        RowExpression rewrittenCall = rewriter.rewrite(aggregation.getCall(), context);
-        checkArgument(rewrittenCall instanceof CallExpression, "Aggregation CallExpression must be rewritten to CallExpression");
-        return new AggregationNode.Aggregation(
-                (CallExpression) rewrittenCall,
-                aggregation.getFilter().map(filter -> rewriter.rewrite(filter, context)),
-                aggregation.getOrderBy(),
-                aggregation.isDistinct(),
-                aggregation.getMask());
     }
 }

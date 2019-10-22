@@ -32,11 +32,6 @@ public class TableStatisticsMetadata
     private final Set<TableStatisticType> tableStatistics;
     private final List<String> groupingColumns;
 
-    public static TableStatisticsMetadata empty()
-    {
-        return EMPTY_STATISTICS_METADATA;
-    }
-
     public TableStatisticsMetadata(
             Set<ColumnStatisticMetadata> columnStatistics,
             Set<TableStatisticType> tableStatistics,
@@ -47,22 +42,27 @@ public class TableStatisticsMetadata
         this.groupingColumns = unmodifiableList(new ArrayList<>(requireNonNull(groupingColumns, "groupingColumns is null")));
     }
 
-    public Set<ColumnStatisticMetadata> getColumnStatistics()
+	public static TableStatisticsMetadata empty()
+    {
+        return EMPTY_STATISTICS_METADATA;
+    }
+
+	public Set<ColumnStatisticMetadata> getColumnStatistics()
     {
         return columnStatistics;
     }
 
-    public Set<TableStatisticType> getTableStatistics()
+	public Set<TableStatisticType> getTableStatistics()
     {
         return tableStatistics;
     }
 
-    public List<String> getGroupingColumns()
+	public List<String> getGroupingColumns()
     {
         return groupingColumns;
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return tableStatistics.isEmpty() && columnStatistics.isEmpty();
     }

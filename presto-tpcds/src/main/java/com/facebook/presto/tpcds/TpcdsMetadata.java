@@ -51,11 +51,14 @@ import static com.facebook.presto.spi.type.VarcharType.createVarcharType;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TpcdsMetadata
         implements ConnectorMetadata
 {
-    public static final String TINY_SCHEMA_NAME = "tiny";
+    private static final Logger logger = LoggerFactory.getLogger(TpcdsMetadata.class);
+	public static final String TINY_SCHEMA_NAME = "tiny";
     public static final double TINY_SCALE_FACTOR = 0.01;
 
     public static final List<String> SCHEMA_NAMES = ImmutableList.of(
@@ -67,9 +70,7 @@ public class TpcdsMetadata
     public TpcdsMetadata()
     {
         ImmutableSet.Builder<String> tableNames = ImmutableSet.builder();
-        for (Table tpcdsTable : Table.getBaseTables()) {
-            tableNames.add(tpcdsTable.getName().toLowerCase(ENGLISH));
-        }
+        Table.getBaseTables().forEach(tpcdsTable -> tableNames.add(tpcdsTable.getName().toLowerCase(ENGLISH)));
         this.tableNames = tableNames.build();
     }
 
@@ -162,9 +163,7 @@ public class TpcdsMetadata
     public Map<String, ColumnHandle> getColumnHandles(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         ImmutableMap.Builder<String, ColumnHandle> builder = ImmutableMap.builder();
-        for (ColumnMetadata columnMetadata : getTableMetadata(session, tableHandle).getColumns()) {
-            builder.put(columnMetadata.getName(), new TpcdsColumnHandle(columnMetadata.getName(), columnMetadata.getType()));
-        }
+        getTableMetadata(session, tableHandle).getColumns().forEach(columnMetadata -> builder.put(columnMetadata.getName(), new TpcdsColumnHandle(columnMetadata.getName(), columnMetadata.getType())));
         return builder.build();
     }
 
@@ -186,14 +185,12 @@ public class TpcdsMetadata
     public Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> tableColumns = ImmutableMap.builder();
-        for (String schemaName : getSchemaNames(session, Optional.ofNullable(prefix.getSchemaName()))) {
-            for (Table tpcdsTable : Table.getBaseTables()) {
-                if (prefix.getTableName() == null || tpcdsTable.getName().equals(prefix.getTableName())) {
-                    ConnectorTableMetadata tableMetadata = getTableMetadata(schemaName, tpcdsTable);
-                    tableColumns.put(new SchemaTableName(schemaName, tpcdsTable.getName()), tableMetadata.getColumns());
-                }
-            }
-        }
+        getSchemaNames(session, Optional.ofNullable(prefix.getSchemaName())).forEach(schemaName -> Table.getBaseTables().stream().filter(
+				tpcdsTable -> prefix.getTableName() == null || tpcdsTable.getName().equals(prefix.getTableName()))
+				.forEach(tpcdsTable -> {
+					ConnectorTableMetadata tableMetadata = getTableMetadata(schemaName, tpcdsTable);
+					tableColumns.put(new SchemaTableName(schemaName, tpcdsTable.getName()), tableMetadata.getColumns());
+				}));
         return tableColumns.build();
     }
 
@@ -201,11 +198,7 @@ public class TpcdsMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> filterSchema)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (String schemaName : getSchemaNames(session, filterSchema)) {
-            for (Table tpcdsTable : Table.getBaseTables()) {
-                builder.add(new SchemaTableName(schemaName, tpcdsTable.getName()));
-            }
-        }
+        getSchemaNames(session, filterSchema).forEach(schemaName -> Table.getBaseTables().forEach(tpcdsTable -> builder.add(new SchemaTableName(schemaName, tpcdsTable.getName()))));
         return builder.build();
     }
 
@@ -239,7 +232,8 @@ public class TpcdsMetadata
             return Double.parseDouble(schemaName.substring(2));
         }
         catch (Exception ignored) {
-            return -1;
+            logger.error(ignored.getMessage(), ignored);
+			return -1;
         }
     }
 

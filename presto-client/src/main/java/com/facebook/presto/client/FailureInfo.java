@@ -109,13 +109,9 @@ public class FailureInfo
             return null;
         }
         FailureException failure = new FailureException(failureInfo.getType(), failureInfo.getMessage(), toException(failureInfo.getCause()));
-        for (FailureInfo suppressed : failureInfo.getSuppressed()) {
-            failure.addSuppressed(toException(suppressed));
-        }
+        failureInfo.getSuppressed().forEach(suppressed -> failure.addSuppressed(toException(suppressed)));
         ImmutableList.Builder<StackTraceElement> stackTraceBuilder = ImmutableList.builder();
-        for (String stack : failureInfo.getStack()) {
-            stackTraceBuilder.add(toStackTraceElement(stack));
-        }
+        failureInfo.getStack().forEach(stack -> stackTraceBuilder.add(toStackTraceElement(stack)));
         ImmutableList<StackTraceElement> stackTrace = stackTraceBuilder.build();
         failure.setStackTrace(stackTrace.toArray(new StackTraceElement[stackTrace.size()]));
         return failure;
@@ -124,21 +120,21 @@ public class FailureInfo
     public static StackTraceElement toStackTraceElement(String stack)
     {
         Matcher matcher = STACK_TRACE_PATTERN.matcher(stack);
-        if (matcher.matches()) {
-            String declaringClass = matcher.group(1);
-            String methodName = matcher.group(2);
-            String fileName = matcher.group(3);
-            int number = -1;
-            if (fileName.equals("Native Method")) {
-                fileName = null;
-                number = -2;
-            }
-            else if (matcher.group(4) != null) {
-                number = Integer.parseInt(matcher.group(4));
-            }
-            return new StackTraceElement(declaringClass, methodName, fileName, number);
-        }
-        return new StackTraceElement("Unknown", stack, null, -1);
+        if (!matcher.matches()) {
+			return new StackTraceElement("Unknown", stack, null, -1);
+		}
+		String declaringClass = matcher.group(1);
+		String methodName = matcher.group(2);
+		String fileName = matcher.group(3);
+		int number = -1;
+		if ("Native Method".equals(fileName)) {
+		    fileName = null;
+		    number = -2;
+		}
+		else if (matcher.group(4) != null) {
+		    number = Integer.parseInt(matcher.group(4));
+		}
+		return new StackTraceElement(declaringClass, methodName, fileName, number);
     }
 
     private static class FailureException
@@ -162,7 +158,7 @@ public class FailureInfo
         {
             String message = getMessage();
             if (message != null) {
-                return type + ": " + message;
+                return new StringBuilder().append(type).append(": ").append(message).toString();
             }
             return type;
         }

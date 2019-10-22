@@ -32,6 +32,8 @@ import java.util.function.Function;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DictionaryAwarePageProjection
         implements PageProjection
@@ -75,10 +77,32 @@ public class DictionaryAwarePageProjection
         return new DictionaryAwarePageProjectionWork(session, yieldSignal, page, selectedPositions);
     }
 
-    private class DictionaryAwarePageProjectionWork
+    private static int[] filterDictionaryIds(DictionaryBlock dictionaryBlock, SelectedPositions selectedPositions)
+    {
+        int[] outputIds = new int[selectedPositions.size()];
+        if (selectedPositions.isList()) {
+            int[] positions = selectedPositions.getPositions();
+            int endPosition = selectedPositions.getOffset() + selectedPositions.size();
+            int outputIndex = 0;
+            for (int position = selectedPositions.getOffset(); position < endPosition; position++) {
+                outputIds[outputIndex++] = dictionaryBlock.getId(positions[position]);
+            }
+        }
+        else {
+            int endPosition = selectedPositions.getOffset() + selectedPositions.size();
+            int outputIndex = 0;
+            for (int position = selectedPositions.getOffset(); position < endPosition; position++) {
+                outputIds[outputIndex++] = dictionaryBlock.getId(position);
+            }
+        }
+        return outputIds;
+    }
+
+	private class DictionaryAwarePageProjectionWork
             implements Work<Block>
     {
-        private final ConnectorSession session;
+        private final Logger logger = LoggerFactory.getLogger(DictionaryAwarePageProjectionWork.class);
+		private final ConnectorSession session;
         private final DriverYieldSignal yieldSignal;
         private final Block block;
         private final SelectedPositions selectedPositions;
@@ -134,7 +158,8 @@ public class DictionaryAwarePageProjection
                     lastOutputDictionary = dictionaryOutput;
                 }
                 catch (Exception ignored) {
-                    // Processing of dictionary failed, but we ignore the exception here
+                    logger.error(ignored.getMessage(), ignored);
+					// Processing of dictionary failed, but we ignore the exception here
                     // and force reprocessing of the whole block using the normal code.
                     // The second pass may not fail due to filtering.
                     // todo dictionary processing should be able to tolerate failures of unused elements
@@ -172,11 +197,11 @@ public class DictionaryAwarePageProjection
             verify(dictionaryProcessingProjectionWork == null);
             verify(fallbackProcessingProjectionWork == null);
             fallbackProcessingProjectionWork = projection.project(session, yieldSignal, new Page(block), selectedPositions);
-            if (fallbackProcessingProjectionWork.process()) {
-                result = fallbackProcessingProjectionWork.getResult();
-                return true;
-            }
-            return false;
+            if (!fallbackProcessingProjectionWork.process()) {
+				return false;
+			}
+			result = fallbackProcessingProjectionWork.getResult();
+			return true;
         }
 
         @Override
@@ -214,26 +239,5 @@ public class DictionaryAwarePageProjection
             }
             return null;
         }
-    }
-
-    private static int[] filterDictionaryIds(DictionaryBlock dictionaryBlock, SelectedPositions selectedPositions)
-    {
-        int[] outputIds = new int[selectedPositions.size()];
-        if (selectedPositions.isList()) {
-            int[] positions = selectedPositions.getPositions();
-            int endPosition = selectedPositions.getOffset() + selectedPositions.size();
-            int outputIndex = 0;
-            for (int position = selectedPositions.getOffset(); position < endPosition; position++) {
-                outputIds[outputIndex++] = dictionaryBlock.getId(positions[position]);
-            }
-        }
-        else {
-            int endPosition = selectedPositions.getOffset() + selectedPositions.size();
-            int outputIndex = 0;
-            for (int position = selectedPositions.getOffset(); position < endPosition; position++) {
-                outputIds[outputIndex++] = dictionaryBlock.getId(position);
-            }
-        }
-        return outputIds;
     }
 }

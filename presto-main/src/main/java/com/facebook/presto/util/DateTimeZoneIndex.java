@@ -26,21 +26,16 @@ import static com.facebook.presto.spi.type.TimeZoneKey.getTimeZoneKeys;
 
 public final class DateTimeZoneIndex
 {
-    private DateTimeZoneIndex()
-    {
-    }
-
     private static final DateTimeZone[] DATE_TIME_ZONES;
-    private static final ISOChronology[] CHRONOLOGIES;
-    private static final int[] FIXED_ZONE_OFFSET;
+	private static final ISOChronology[] CHRONOLOGIES;
+	private static final int[] FIXED_ZONE_OFFSET;
+	private static final int VARIABLE_ZONE = Integer.MAX_VALUE;
 
-    private static final int VARIABLE_ZONE = Integer.MAX_VALUE;
-
-    static {
+	static {
         DATE_TIME_ZONES = new DateTimeZone[MAX_TIME_ZONE_KEY + 1];
         CHRONOLOGIES = new ISOChronology[MAX_TIME_ZONE_KEY + 1];
         FIXED_ZONE_OFFSET = new int[MAX_TIME_ZONE_KEY + 1];
-        for (TimeZoneKey timeZoneKey : getTimeZoneKeys()) {
+        getTimeZoneKeys().forEach(timeZoneKey -> {
             short zoneKey = timeZoneKey.getKey();
             DateTimeZone dateTimeZone = DateTimeZone.forID(timeZoneKey.getId());
             DATE_TIME_ZONES[zoneKey] = dateTimeZone;
@@ -51,35 +46,39 @@ public final class DateTimeZoneIndex
             else {
                 FIXED_ZONE_OFFSET[zoneKey] = VARIABLE_ZONE;
             }
-        }
+        });
     }
 
-    public static ISOChronology getChronology(TimeZoneKey zoneKey)
+	private DateTimeZoneIndex()
+    {
+    }
+
+	public static ISOChronology getChronology(TimeZoneKey zoneKey)
     {
         return CHRONOLOGIES[zoneKey.getKey()];
     }
 
-    public static ISOChronology unpackChronology(long timestampWithTimeZone)
+	public static ISOChronology unpackChronology(long timestampWithTimeZone)
     {
         return getChronology(unpackZoneKey(timestampWithTimeZone));
     }
 
-    public static DateTimeZone getDateTimeZone(TimeZoneKey zoneKey)
+	public static DateTimeZone getDateTimeZone(TimeZoneKey zoneKey)
     {
         return DATE_TIME_ZONES[zoneKey.getKey()];
     }
 
-    public static DateTimeZone unpackDateTimeZone(long dateTimeWithTimeZone)
+	public static DateTimeZone unpackDateTimeZone(long dateTimeWithTimeZone)
     {
         return getDateTimeZone(unpackZoneKey(dateTimeWithTimeZone));
     }
 
-    public static long packDateTimeWithZone(DateTime dateTime)
+	public static long packDateTimeWithZone(DateTime dateTime)
     {
         return DateTimeEncoding.packDateTimeWithZone(dateTime.getMillis(), dateTime.getZone().getID());
     }
 
-    public static int extractZoneOffsetMinutes(long dateTimeWithTimeZone)
+	public static int extractZoneOffsetMinutes(long dateTimeWithTimeZone)
     {
         short zoneKey = unpackZoneKey(dateTimeWithTimeZone).getKey();
 

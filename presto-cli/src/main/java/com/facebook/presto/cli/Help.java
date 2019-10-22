@@ -19,19 +19,7 @@ public final class Help
 
     public static String getHelpText()
     {
-        return "" +
-                "Supported commands:\n" +
-                "QUIT\n" +
-                "EXPLAIN [ ( option [, ...] ) ] <query>\n" +
-                "    options: FORMAT { TEXT | GRAPHVIZ }\n" +
-                "             TYPE { LOGICAL | DISTRIBUTED }\n" +
-                "DESCRIBE <table>\n" +
-                "SHOW COLUMNS FROM <table>\n" +
-                "SHOW FUNCTIONS\n" +
-                "SHOW CATALOGS [LIKE <pattern>]\n" +
-                "SHOW SCHEMAS [FROM <catalog>] [LIKE <pattern>]\n" +
-                "SHOW TABLES [FROM <schema>] [LIKE <pattern>]\n" +
-                "USE [<catalog>.]<schema>\n" +
-                "";
+        return new StringBuilder().append("").append("Supported commands:\n").append("QUIT\n").append("EXPLAIN [ ( option [, ...] ) ] <query>\n").append("    options: FORMAT { TEXT | GRAPHVIZ }\n").append("             TYPE { LOGICAL | DISTRIBUTED }\n").append("DESCRIBE <table>\n").append("SHOW COLUMNS FROM <table>\n")
+				.append("SHOW FUNCTIONS\n").append("SHOW CATALOGS [LIKE <pattern>]\n").append("SHOW SCHEMAS [FROM <catalog>] [LIKE <pattern>]\n").append("SHOW TABLES [FROM <schema>] [LIKE <pattern>]\n").append("USE [<catalog>.]<schema>\n").append("").toString();
     }
 }

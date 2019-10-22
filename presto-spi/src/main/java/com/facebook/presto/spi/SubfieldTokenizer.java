@@ -67,11 +67,11 @@ class SubfieldTokenizer
     {
         state = State.FAILED; // temporary pessimism
         next = computeNext();
-        if (state != State.DONE) {
-            state = State.READY;
-            return true;
-        }
-        return false;
+        if (state == State.DONE) {
+			return false;
+		}
+		state = State.READY;
+		return true;
     }
 
     @Override
@@ -265,7 +265,7 @@ class SubfieldTokenizer
     @Override
     public String toString()
     {
-        return path.substring(0, index) + UNICODE_CARET + path.substring(index);
+        return new StringBuilder().append(path.substring(0, index)).append(UNICODE_CARET).append(path.substring(index)).toString();
     }
 
     private enum State {

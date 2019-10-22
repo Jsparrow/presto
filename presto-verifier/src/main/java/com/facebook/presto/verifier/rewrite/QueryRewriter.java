@@ -147,7 +147,7 @@ public class QueryRewriter
             parts.addAll(originalName.get().getOriginalParts().subList(0, originalSize - prefixSize));
         }
         parts.addAll(prefix.getOriginalParts());
-        parts.set(parts.size() - 1, prefix.getSuffix() + "_" + randomUUID().toString().replace("-", ""));
+        parts.set(parts.size() - 1, new StringBuilder().append(prefix.getSuffix()).append("_").append(randomUUID().toString().replace("-", "")).toString());
         return QualifiedName.of(parts);
     }
 
@@ -156,7 +156,7 @@ public class QueryRewriter
         ImmutableList.Builder<Identifier> aliases = ImmutableList.builder();
         Set<String> usedAliases = new HashSet<>();
 
-        for (String columnName : getColumnNames(query)) {
+        getColumnNames(query).forEach(columnName -> {
             columnName = sanitizeColumnName(columnName);
             String alias = columnName;
             int postfix = 1;
@@ -166,7 +166,7 @@ public class QueryRewriter
             }
             aliases.add(new Identifier(alias, true));
             usedAliases.add(alias);
-        }
+        });
         return aliases.build();
     }
 

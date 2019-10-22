@@ -91,9 +91,7 @@ public class OptimizerAssert
 
         if (!ImmutableSet.copyOf(plan.getOutputVariables()).equals(ImmutableSet.copyOf(actual.getOutputVariables()))) {
             fail(String.format(
-                    "%s: output schema of transformed and original plans are not equivalent\n" +
-                            "\texpected: %s\n" +
-                            "\tactual:   %s",
+                    new StringBuilder().append("%s: output schema of transformed and original plans are not equivalent\n").append("\texpected: %s\n").append("\tactual:   %s").toString(),
                     optimizer.getClass().getName(),
                     plan.getOutputVariables(),
                     actual.getOutputVariables()));

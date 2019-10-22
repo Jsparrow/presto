@@ -61,11 +61,14 @@ import static com.facebook.presto.spi.security.PrincipalType.USER;
 import static com.google.common.collect.Sets.union;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InformationSchemaPageSourceProvider
         implements ConnectorPageSourceProvider
 {
-    private final Metadata metadata;
+    private static final Logger logger = LoggerFactory.getLogger(InformationSchemaPageSourceProvider.class);
+	private final Metadata metadata;
     private final AccessControl accessControl;
 
     public InformationSchemaPageSourceProvider(Metadata metadata, AccessControl accessControl)
@@ -80,20 +83,19 @@ public class InformationSchemaPageSourceProvider
         InternalTable table = getInternalTable(session, split, columns);
 
         List<Integer> channels = new ArrayList<>();
-        for (ColumnHandle column : columns) {
-            String columnName = ((InformationSchemaColumnHandle) column).getColumnName();
-            int columnIndex = table.getColumnIndex(columnName);
-            channels.add(columnIndex);
-        }
+        columns.stream().map(column -> ((InformationSchemaColumnHandle) column).getColumnName()).forEach(columnName -> {
+			int columnIndex = table.getColumnIndex(columnName);
+			channels.add(columnIndex);
+		});
 
         ImmutableList.Builder<Page> pages = ImmutableList.builder();
-        for (Page page : table.getPages()) {
+        table.getPages().forEach(page -> {
             Block[] blocks = new Block[channels.size()];
             for (int index = 0; index < blocks.length; index++) {
                 blocks[index] = page.getBlock(channels.get(index));
             }
             pages.add(new Page(page.getPositionCount(), blocks));
-        }
+        });
         return new FixedPageSource(pages.build());
     }
 
@@ -172,11 +174,11 @@ public class InformationSchemaPageSourceProvider
     private InternalTable buildTables(Session session, Set<QualifiedTablePrefix> prefixes)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_TABLES));
-        for (QualifiedTablePrefix prefix : prefixes) {
+        prefixes.forEach(prefix -> {
             Set<SchemaTableName> tables = listTables(session, metadata, accessControl, prefix);
             Set<SchemaTableName> views = listViews(session, metadata, accessControl, prefix);
 
-            for (SchemaTableName name : union(tables, views)) {
+            union(tables, views).forEach(name -> {
                 // if table and view names overlap, the view wins
                 String type = views.contains(name) ? "VIEW" : "BASE TABLE";
                 table.add(
@@ -184,55 +186,41 @@ public class InformationSchemaPageSourceProvider
                         name.getSchemaName(),
                         name.getTableName(),
                         type);
-            }
-        }
+            });
+        });
         return table.build();
     }
 
     private InternalTable buildTablePrivileges(Session session, Set<QualifiedTablePrefix> prefixes)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_TABLE_PRIVILEGES));
-        for (QualifiedTablePrefix prefix : prefixes) {
+        prefixes.forEach(prefix -> {
             List<GrantInfo> grants = ImmutableList.copyOf(listTablePrivileges(session, metadata, accessControl, prefix));
-            for (GrantInfo grant : grants) {
-                table.add(
-                        grant.getGrantor().map(PrestoPrincipal::getName).orElse(null),
-                        grant.getGrantor().map(principal -> principal.getType().toString()).orElse(null),
-                        grant.getGrantee().getName(),
-                        grant.getGrantee().getType().toString(),
-                        prefix.getCatalogName(),
-                        grant.getSchemaTableName().getSchemaName(),
-                        grant.getSchemaTableName().getTableName(),
-                        grant.getPrivilegeInfo().getPrivilege().name(),
-                        grant.getPrivilegeInfo().isGrantOption() ? "YES" : "NO",
-                        grant.getWithHierarchy().map(withHierarchy -> withHierarchy ? "YES" : "NO").orElse(null));
-            }
-        }
+            grants.forEach(grant -> table.add(grant.getGrantor().map(PrestoPrincipal::getName).orElse(null),
+					grant.getGrantor().map(principal -> principal.getType().toString()).orElse(null),
+					grant.getGrantee().getName(), grant.getGrantee().getType().toString(), prefix.getCatalogName(),
+					grant.getSchemaTableName().getSchemaName(), grant.getSchemaTableName().getTableName(),
+					grant.getPrivilegeInfo().getPrivilege().name(),
+					grant.getPrivilegeInfo().isGrantOption() ? "YES" : "NO",
+					grant.getWithHierarchy().map(withHierarchy -> withHierarchy ? "YES" : "NO").orElse(null)));
+        });
         return table.build();
     }
 
     private InternalTable buildViews(Session session, Set<QualifiedTablePrefix> prefixes)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_VIEWS));
-        for (QualifiedTablePrefix prefix : prefixes) {
-            for (Entry<QualifiedObjectName, ViewDefinition> entry : metadata.getViews(session, prefix).entrySet()) {
-                table.add(
-                        entry.getKey().getCatalogName(),
-                        entry.getKey().getSchemaName(),
-                        entry.getKey().getObjectName(),
-                        entry.getValue().getOwner().orElse(null),
-                        entry.getValue().getOriginalSql());
-            }
-        }
+        prefixes.forEach(prefix -> metadata.getViews(session, prefix).entrySet()
+				.forEach(entry -> table.add(entry.getKey().getCatalogName(), entry.getKey().getSchemaName(),
+						entry.getKey().getObjectName(), entry.getValue().getOwner().orElse(null),
+						entry.getValue().getOriginalSql())));
         return table.build();
     }
 
     private InternalTable buildSchemata(Session session, String catalogName)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_SCHEMATA));
-        for (String schema : listSchemas(session, metadata, accessControl, catalogName)) {
-            table.add(catalogName, schema);
-        }
+        listSchemas(session, metadata, accessControl, catalogName).forEach(schema -> table.add(catalogName, schema));
         return table.build();
     }
 
@@ -244,35 +232,32 @@ public class InformationSchemaPageSourceProvider
             accessControl.checkCanShowRoles(session.getRequiredTransactionId(), session.getIdentity(), catalog);
         }
         catch (AccessDeniedException exception) {
-            return table.build();
+            logger.error(exception.getMessage(), exception);
+			return table.build();
         }
 
-        for (String role : metadata.listRoles(session, catalog)) {
-            table.add(role);
-        }
+        metadata.listRoles(session, catalog).forEach(table::add);
         return table.build();
     }
 
     private InternalTable buildApplicableRoles(Session session, String catalog)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_APPLICABLE_ROLES));
-        for (RoleGrant grant : metadata.listApplicableRoles(session, new PrestoPrincipal(USER, session.getUser()), catalog)) {
+        metadata.listApplicableRoles(session, new PrestoPrincipal(USER, session.getUser()), catalog).forEach(grant -> {
             PrestoPrincipal grantee = grant.getGrantee();
             table.add(
                     grantee.getName(),
                     grantee.getType().toString(),
                     grant.getRoleName(),
                     grant.isGrantable() ? "YES" : "NO");
-        }
+        });
         return table.build();
     }
 
     private InternalTable buildEnabledRoles(Session session, String catalog)
     {
         InternalTable.Builder table = InternalTable.builder(informationSchemaTableColumns(TABLE_ENABLED_ROLES));
-        for (String role : metadata.listEnabledRoles(session, catalog)) {
-            table.add(role);
-        }
+        metadata.listEnabledRoles(session, catalog).forEach(table::add);
         return table.build();
     }
 }

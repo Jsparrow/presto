@@ -227,20 +227,18 @@ public class TpchMetadata
             unenforcedConstraint = filterOutColumnFromPredicate(constraint.getSummary(), toColumnHandle(PartColumn.CONTAINER));
             unenforcedConstraint = filterOutColumnFromPredicate(unenforcedConstraint, toColumnHandle(PartColumn.TYPE));
         }
-        else if (tableHandle.getTableName().equals(TpchTable.LINE_ITEM.getTableName())) {
-            if (partitioningEnabled) {
-                ColumnHandle orderKeyColumn = columns.get(columnNaming.getName(LineItemColumn.ORDER_KEY));
-                tablePartitioning = Optional.of(new ConnectorTablePartitioning(
-                        new TpchPartitioningHandle(
-                                TpchTable.ORDERS.getTableName(),
-                                calculateTotalRows(OrderGenerator.SCALE_BASE, tableHandle.getScaleFactor())),
-                        ImmutableList.of(orderKeyColumn)));
-                partitioningColumns = Optional.of(ImmutableSet.of(orderKeyColumn));
-                localProperties = ImmutableList.of(
-                        new SortingProperty<>(orderKeyColumn, SortOrder.ASC_NULLS_FIRST),
-                        new SortingProperty<>(columns.get(columnNaming.getName(LineItemColumn.LINE_NUMBER)), SortOrder.ASC_NULLS_FIRST));
-            }
-        }
+        else if (tableHandle.getTableName().equals(TpchTable.LINE_ITEM.getTableName()) && partitioningEnabled) {
+		    ColumnHandle orderKeyColumn = columns.get(columnNaming.getName(LineItemColumn.ORDER_KEY));
+		    tablePartitioning = Optional.of(new ConnectorTablePartitioning(
+		            new TpchPartitioningHandle(
+		                    TpchTable.ORDERS.getTableName(),
+		                    calculateTotalRows(OrderGenerator.SCALE_BASE, tableHandle.getScaleFactor())),
+		            ImmutableList.of(orderKeyColumn)));
+		    partitioningColumns = Optional.of(ImmutableSet.of(orderKeyColumn));
+		    localProperties = ImmutableList.of(
+		            new SortingProperty<>(orderKeyColumn, SortOrder.ASC_NULLS_FIRST),
+		            new SortingProperty<>(columns.get(columnNaming.getName(LineItemColumn.LINE_NUMBER)), SortOrder.ASC_NULLS_FIRST));
+		}
 
         ConnectorTableLayout layout = new ConnectorTableLayout(
                 new TpchTableLayoutHandle(tableHandle, predicate),
@@ -300,9 +298,7 @@ public class TpchMetadata
     public Map<String, ColumnHandle> getColumnHandles(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         ImmutableMap.Builder<String, ColumnHandle> builder = ImmutableMap.builder();
-        for (ColumnMetadata columnMetadata : getTableMetadata(session, tableHandle).getColumns()) {
-            builder.put(columnMetadata.getName(), new TpchColumnHandle(columnMetadata.getName(), columnMetadata.getType()));
-        }
+        getTableMetadata(session, tableHandle).getColumns().forEach(columnMetadata -> builder.put(columnMetadata.getName(), new TpchColumnHandle(columnMetadata.getName(), columnMetadata.getType())));
         return builder.build();
     }
 
@@ -310,14 +306,14 @@ public class TpchMetadata
     public Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> tableColumns = ImmutableMap.builder();
-        for (String schemaName : getSchemaNames(session, Optional.ofNullable(prefix.getSchemaName()))) {
+        getSchemaNames(session, Optional.ofNullable(prefix.getSchemaName())).forEach(schemaName -> {
             for (TpchTable<?> tpchTable : TpchTable.getTables()) {
                 if (prefix.getTableName() == null || tpchTable.getTableName().equals(prefix.getTableName())) {
                     ConnectorTableMetadata tableMetadata = getTableMetadata(schemaName, tpchTable, columnNaming);
                     tableColumns.put(new SchemaTableName(schemaName, tpchTable.getTableName()), tableMetadata.getColumns());
                 }
             }
-        }
+        });
         return tableColumns.build();
     }
 
@@ -467,11 +463,11 @@ public class TpchMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> filterSchema)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (String schemaName : getSchemaNames(session, filterSchema)) {
+        getSchemaNames(session, filterSchema).forEach(schemaName -> {
             for (TpchTable<?> tpchTable : TpchTable.getTables()) {
                 builder.add(new SchemaTableName(schemaName, tpchTable.getTableName()));
             }
-        }
+        });
         return builder.build();
     }
 

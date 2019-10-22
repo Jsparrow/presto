@@ -25,11 +25,14 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.facebook.airlift.concurrent.MoreFutures.unmodifiableFuture;
 import static com.google.common.base.Preconditions.checkState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Pager
         extends FilterOutputStream
 {
-    public static final String ENV_PAGER = "PRESTO_PAGER";
+    private static final Logger logger = LoggerFactory.getLogger(Pager.class);
+	public static final String ENV_PAGER = "PRESTO_PAGER";
     public static final List<String> LESS = ImmutableList.of("less", "-FXRSn");
 
     private final Process process;
@@ -56,7 +59,8 @@ public class Pager
                     process.waitFor();
                 }
                 catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    logger.error(e.getMessage(), e);
+					Thread.currentThread().interrupt();
                     process.destroy();
                 }
             }
@@ -113,6 +117,7 @@ public class Pager
                 process.waitFor();
             }
             catch (InterruptedException e) {
+				logger.error(e.getMessage(), e);
                 // ignore exception because thread is exiting
             }
             finally {
@@ -156,7 +161,7 @@ public class Pager
             return new Pager(process.getOutputStream(), process);
         }
         catch (IOException e) {
-            System.err.println("ERROR: failed to open pager: " + e.getMessage());
+            logger.error("ERROR: failed to open pager: " + e.getMessage(), e);
             return createNullPager();
         }
     }

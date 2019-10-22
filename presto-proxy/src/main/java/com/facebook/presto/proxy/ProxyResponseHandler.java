@@ -30,11 +30,14 @@ import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ProxyResponseHandler
         implements ResponseHandler<ProxyResponse, RuntimeException>
 {
-    private static final MediaType MEDIA_TYPE_JSON = MediaType.create("application", "json");
+    private static final Logger logger = LoggerFactory.getLogger(ProxyResponseHandler.class);
+	private static final MediaType MEDIA_TYPE_JSON = MediaType.create("application", "json");
 
     @Override
     public ProxyResponse handleException(Request request, Exception exception)
@@ -75,7 +78,8 @@ public class ProxyResponseHandler
             return new String(toByteArray(response.getInputStream()), US_ASCII);
         }
         catch (IOException e) {
-            return "";
+            logger.error(e.getMessage(), e);
+			return "";
         }
     }
 

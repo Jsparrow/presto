@@ -42,6 +42,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
+import org.apache.commons.lang3.StringUtils;
 
 public abstract class LdapJdbcTests
         extends ProductTest
@@ -111,8 +112,8 @@ public abstract class LdapJdbcTests
     protected String prestoServer()
     {
         String prefix = "https://";
-        checkState(prestoServer.startsWith(prefix), "invalid server address: %s", prestoServer);
-        return prestoServer.substring(prefix.length());
+        checkState(StringUtils.startsWith(prestoServer, prefix), "invalid server address: %s", prestoServer);
+        return StringUtils.substring(prestoServer, prefix.length());
     }
 
     protected String getLdapUrl()

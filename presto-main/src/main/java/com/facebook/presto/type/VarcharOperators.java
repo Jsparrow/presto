@@ -40,10 +40,14 @@ import static com.facebook.presto.spi.function.OperatorType.LESS_THAN_OR_EQUAL;
 import static com.facebook.presto.spi.function.OperatorType.NOT_EQUAL;
 import static com.facebook.presto.spi.function.OperatorType.XX_HASH_64;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class VarcharOperators
 {
-    private VarcharOperators()
+    private static final Logger logger = LoggerFactory.getLogger(VarcharOperators.class);
+
+	private VarcharOperators()
     {
     }
 
@@ -156,7 +160,8 @@ public final class VarcharOperators
             return Double.parseDouble(slice.toStringUtf8());
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to DOUBLE", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to DOUBLE", slice.toStringUtf8()));
         }
     }
 
@@ -169,7 +174,8 @@ public final class VarcharOperators
             return Float.floatToIntBits(Float.parseFloat(slice.toStringUtf8()));
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to REAL", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to REAL", slice.toStringUtf8()));
         }
     }
 
@@ -182,7 +188,8 @@ public final class VarcharOperators
             return Long.parseLong(slice.toStringUtf8());
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to BIGINT", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to BIGINT", slice.toStringUtf8()));
         }
     }
 
@@ -195,7 +202,8 @@ public final class VarcharOperators
             return Integer.parseInt(slice.toStringUtf8());
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to INT", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to INT", slice.toStringUtf8()));
         }
     }
 
@@ -208,7 +216,8 @@ public final class VarcharOperators
             return Short.parseShort(slice.toStringUtf8());
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to SMALLINT", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to SMALLINT", slice.toStringUtf8()));
         }
     }
 
@@ -221,7 +230,8 @@ public final class VarcharOperators
             return Byte.parseByte(slice.toStringUtf8());
         }
         catch (Exception e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to TINYINT", slice.toStringUtf8()));
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, format("Cannot cast '%s' to TINYINT", slice.toStringUtf8()));
         }
     }
 
@@ -241,7 +251,23 @@ public final class VarcharOperators
         return xxHash64(value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @LiteralParameters("x")
+    @ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType("varchar(x)") Slice slice)
+    {
+        return XxHash64.hash(slice);
+    }
+
+	@LiteralParameters("x")
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType("varchar(x)") Slice value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class VarcharDistinctFromOperator
     {
         @LiteralParameters({"x", "y"})
@@ -283,21 +309,5 @@ public final class VarcharOperators
             }
             return !left.equals(leftPosition, 0, right, rightPosition, 0, leftLength);
         }
-    }
-
-    @LiteralParameters("x")
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType("varchar(x)") Slice slice)
-    {
-        return XxHash64.hash(slice);
-    }
-
-    @LiteralParameters("x")
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType("varchar(x)") Slice value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

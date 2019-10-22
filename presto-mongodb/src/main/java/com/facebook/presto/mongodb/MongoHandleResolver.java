@@ -53,17 +53,20 @@ public class MongoHandleResolver
         return MongoSplit.class;
     }
 
-    public Class<? extends ConnectorOutputTableHandle> getOutputTableHandleClass()
+    @Override
+	public Class<? extends ConnectorOutputTableHandle> getOutputTableHandleClass()
     {
         return MongoOutputTableHandle.class;
     }
 
-    public Class<? extends ConnectorInsertTableHandle> getInsertTableHandleClass()
+    @Override
+	public Class<? extends ConnectorInsertTableHandle> getInsertTableHandleClass()
     {
         return MongoInsertTableHandle.class;
     }
 
-    public Class<? extends ConnectorTableLayoutHandle> getTableLayoutHandleClass()
+    @Override
+	public Class<? extends ConnectorTableLayoutHandle> getTableLayoutHandleClass()
     {
         return MongoTableLayoutHandle.class;
     }

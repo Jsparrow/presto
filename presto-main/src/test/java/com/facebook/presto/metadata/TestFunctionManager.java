@@ -121,7 +121,7 @@ public class TestFunctionManager
                 .scalars(CustomFunctions.class)
                 .getFunctions()
                 .stream()
-                .filter(input -> input.getSignature().getNameSuffix().equals("custom_add"))
+                .filter(input -> "custom_add".equals(input.getSignature().getNameSuffix()))
                 .collect(toImmutableList());
 
         TypeRegistry typeManager = new TypeRegistry();
@@ -150,12 +150,12 @@ public class TestFunctionManager
         List<SqlFunction> functions = functionManager.listFunctions();
         List<String> names = transform(functions, input -> input.getSignature().getNameSuffix());
 
-        assertTrue(names.contains("length"), "Expected function names " + names + " to contain 'length'");
-        assertTrue(names.contains("stddev"), "Expected function names " + names + " to contain 'stddev'");
-        assertTrue(names.contains("rank"), "Expected function names " + names + " to contain 'rank'");
-        assertFalse(names.contains("like"), "Expected function names " + names + " not to contain 'like'");
-        assertFalse(names.contains("$internal$sum_data_size_for_stats"), "Expected function names " + names + " not to contain '$internal$sum_data_size_for_stats'");
-        assertFalse(names.contains("$internal$max_data_size_for_stats"), "Expected function names " + names + " not to contain '$internal$max_data_size_for_stats'");
+        assertTrue(names.contains("length"), new StringBuilder().append("Expected function names ").append(names).append(" to contain 'length'").toString());
+        assertTrue(names.contains("stddev"), new StringBuilder().append("Expected function names ").append(names).append(" to contain 'stddev'").toString());
+        assertTrue(names.contains("rank"), new StringBuilder().append("Expected function names ").append(names).append(" to contain 'rank'").toString());
+        assertFalse(names.contains("like"), new StringBuilder().append("Expected function names ").append(names).append(" not to contain 'like'").toString());
+        assertFalse(names.contains("$internal$sum_data_size_for_stats"), new StringBuilder().append("Expected function names ").append(names).append(" not to contain '$internal$sum_data_size_for_stats'").toString());
+        assertFalse(names.contains("$internal$max_data_size_for_stats"), new StringBuilder().append("Expected function names ").append(names).append(" not to contain '$internal$max_data_size_for_stats'").toString());
     }
 
     @Test

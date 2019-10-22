@@ -62,57 +62,6 @@ public class PagesRTreeIndex
     private final JoinFilterFunction filterFunction;
     private final Map<Integer, Rectangle> partitions;
 
-    public static final class GeometryWithPosition
-            implements HasExtent
-    {
-        private static final int INSTANCE_SIZE = ClassLayout.parseClass(GeometryWithPosition.class).instanceSize();
-
-        private final OGCGeometry ogcGeometry;
-        private final int partition;
-        private final int position;
-        private final Rectangle extent;
-
-        public GeometryWithPosition(OGCGeometry ogcGeometry, int partition, int position)
-        {
-            this(ogcGeometry, partition, position, 0.0f);
-        }
-
-        public GeometryWithPosition(OGCGeometry ogcGeometry, int partition, int position, double radius)
-        {
-            this.ogcGeometry = requireNonNull(ogcGeometry, "ogcGeometry is null");
-            this.partition = partition;
-            this.position = position;
-            this.extent = GeometryUtils.getExtent(ogcGeometry, radius);
-        }
-
-        public OGCGeometry getGeometry()
-        {
-            return ogcGeometry;
-        }
-
-        public int getPartition()
-        {
-            return partition;
-        }
-
-        public int getPosition()
-        {
-            return position;
-        }
-
-        @Override
-        public Rectangle getExtent()
-        {
-            return extent;
-        }
-
-        @Override
-        public long getEstimatedSizeInBytes()
-        {
-            return INSTANCE_SIZE + ogcGeometry.estimateMemorySize() + extent.getEstimatedSizeInBytes();
-        }
-    }
-
     public PagesRTreeIndex(
             Session session,
             LongArrayList addresses,
@@ -136,7 +85,7 @@ public class PagesRTreeIndex
         this.partitions = requireNonNull(partitions, "partitions is null");
     }
 
-    /**
+	/**
      * Returns an array of addresses from {@link PagesIndex#valueAddresses} corresponding
      * to rows with matching geometries.
      * <p>
@@ -184,7 +133,7 @@ public class PagesRTreeIndex
         return matchingPositions.toIntArray(null);
     }
 
-    private boolean testReferencePoint(Rectangle probeEnvelope, OGCGeometry buildGeometry, int partition)
+	private boolean testReferencePoint(Rectangle probeEnvelope, OGCGeometry buildGeometry, int partition)
     {
         Rectangle buildEnvelope = getExtent(buildGeometry);
         Rectangle intersection = buildEnvelope.intersection(probeEnvelope);
@@ -199,7 +148,7 @@ public class PagesRTreeIndex
         return x >= extent.getXMin() && x < extent.getXMax() && y >= extent.getYMin() && y < extent.getYMax();
     }
 
-    private double getRadius(int joinPosition)
+	private double getRadius(int joinPosition)
     {
         long joinAddress = addresses.getLong(joinPosition);
         int blockIndex = decodeSliceIndex(joinAddress);
@@ -208,13 +157,13 @@ public class PagesRTreeIndex
         return DOUBLE.getDouble(channels.get(radiusChannel).get(blockIndex), blockPosition);
     }
 
-    @Override
+	@Override
     public boolean isJoinPositionEligible(int joinPosition, int probePosition, Page probe)
     {
         return filterFunction == null || filterFunction.filter(joinPosition, probePosition, probe);
     }
 
-    @Override
+	@Override
     public void appendTo(int joinPosition, PageBuilder pageBuilder, int outputChannelOffset)
     {
         long joinAddress = addresses.getLong(joinPosition);
@@ -227,6 +176,57 @@ public class PagesRTreeIndex
             Block block = channel.get(blockIndex);
             type.appendTo(block, blockPosition, pageBuilder.getBlockBuilder(outputChannelOffset));
             outputChannelOffset++;
+        }
+    }
+
+	public static final class GeometryWithPosition
+            implements HasExtent
+    {
+        private static final int INSTANCE_SIZE = ClassLayout.parseClass(GeometryWithPosition.class).instanceSize();
+
+        private final OGCGeometry ogcGeometry;
+        private final int partition;
+        private final int position;
+        private final Rectangle extent;
+
+        public GeometryWithPosition(OGCGeometry ogcGeometry, int partition, int position)
+        {
+            this(ogcGeometry, partition, position, 0.0f);
+        }
+
+        public GeometryWithPosition(OGCGeometry ogcGeometry, int partition, int position, double radius)
+        {
+            this.ogcGeometry = requireNonNull(ogcGeometry, "ogcGeometry is null");
+            this.partition = partition;
+            this.position = position;
+            this.extent = GeometryUtils.getExtent(ogcGeometry, radius);
+        }
+
+        public OGCGeometry getGeometry()
+        {
+            return ogcGeometry;
+        }
+
+        public int getPartition()
+        {
+            return partition;
+        }
+
+        public int getPosition()
+        {
+            return position;
+        }
+
+        @Override
+        public Rectangle getExtent()
+        {
+            return extent;
+        }
+
+        @Override
+        public long getEstimatedSizeInBytes()
+        {
+            return INSTANCE_SIZE + ogcGeometry.estimateMemorySize() + extent.getEstimatedSizeInBytes();
         }
     }
 }

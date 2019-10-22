@@ -33,7 +33,72 @@ import static java.util.Objects.requireNonNull;
 public class PageConsumerOperator
         implements Operator
 {
-    public static class PageConsumerOutputFactory
+    private final OperatorContext operatorContext;
+	private final Consumer<Page> pageConsumer;
+	private final Function<Page, Page> pagePreprocessor;
+	private boolean finished;
+	private boolean closed;
+
+	public PageConsumerOperator(OperatorContext operatorContext, Consumer<Page> pageConsumer, Function<Page, Page> pagePreprocessor)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.pageConsumer = requireNonNull(pageConsumer, "pageConsumer is null");
+        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
+    }
+
+	public boolean isClosed()
+    {
+        return closed;
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!finished, "operator finished");
+
+        page = pagePreprocessor.apply(page);
+        pageConsumer.accept(page);
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	@Override
+    public void close()
+    {
+        closed = true;
+    }
+
+	public static class PageConsumerOutputFactory
             implements OutputFactory
     {
         private final Function<List<Type>, Consumer<Page>> pageConsumerFactory;
@@ -86,70 +151,5 @@ public class PageConsumerOperator
         {
             return new PageConsumerOperatorFactory(operatorId, planNodeId, pageConsumer, pagePreprocessor);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final Consumer<Page> pageConsumer;
-    private final Function<Page, Page> pagePreprocessor;
-    private boolean finished;
-    private boolean closed;
-
-    public PageConsumerOperator(OperatorContext operatorContext, Consumer<Page> pageConsumer, Function<Page, Page> pagePreprocessor)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.pageConsumer = requireNonNull(pageConsumer, "pageConsumer is null");
-        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
-    }
-
-    public boolean isClosed()
-    {
-        return closed;
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!finished, "operator finished");
-
-        page = pagePreprocessor.apply(page);
-        pageConsumer.accept(page);
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
-    }
-
-    @Override
-    public void close()
-    {
-        closed = true;
     }
 }

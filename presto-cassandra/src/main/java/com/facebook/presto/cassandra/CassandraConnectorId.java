@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import org.apache.commons.lang3.StringUtils;
 
 public class CassandraConnectorId
 {
@@ -25,7 +26,7 @@ public class CassandraConnectorId
     public CassandraConnectorId(String connectorId)
     {
         requireNonNull(connectorId, "connectorId is null");
-        checkArgument(!connectorId.isEmpty(), "connectorId is empty");
+        checkArgument(!StringUtils.isEmpty(connectorId), "connectorId is empty");
         this.connectorId = connectorId;
     }
 

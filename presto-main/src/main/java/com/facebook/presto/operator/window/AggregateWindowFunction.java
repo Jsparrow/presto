@@ -81,11 +81,12 @@ public class AggregateWindowFunction
 
     private void resetAccumulator()
     {
-        if (currentStart >= 0) {
-            accumulator = accumulatorFactory.createAccumulator();
-            currentStart = -1;
-            currentEnd = -1;
-        }
+        if (currentStart < 0) {
+			return;
+		}
+		accumulator = accumulatorFactory.createAccumulator();
+		currentStart = -1;
+		currentEnd = -1;
     }
 
     public static WindowFunctionSupplier supplier(Signature signature, final InternalAggregationFunction function)

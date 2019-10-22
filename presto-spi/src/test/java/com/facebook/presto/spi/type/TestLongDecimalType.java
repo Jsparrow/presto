@@ -55,7 +55,7 @@ public class TestLongDecimalType
     private void testCompare(String decimalA, String decimalB, int expected)
     {
         int actual = TYPE.compareTo(decimalAsBlock(decimalA), 0, decimalAsBlock(decimalB), 0);
-        assertEquals((int) signum(actual), (int) signum(expected), "bad comparison result for " + decimalA + ", " + decimalB);
+        assertEquals((int) signum(actual), (int) signum(expected), new StringBuilder().append("bad comparison result for ").append(decimalA).append(", ").append(decimalB).toString());
     }
 
     private Block decimalAsBlock(String value)

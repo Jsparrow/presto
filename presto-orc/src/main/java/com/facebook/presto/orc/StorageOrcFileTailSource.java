@@ -133,20 +133,20 @@ public class StorageOrcFileTailSource
     // This is based on the Apache Hive ORC code
     private static void checkOrcVersion(OrcDataSource orcDataSource, List<Integer> version)
     {
-        if (version.size() >= 1) {
-            int major = version.get(0);
-            int minor = 0;
-            if (version.size() > 1) {
-                minor = version.get(1);
-            }
-
-            if (major > CURRENT_MAJOR_VERSION || (major == CURRENT_MAJOR_VERSION && minor > CURRENT_MINOR_VERSION)) {
-                log.warn("ORC file %s was written by a newer Hive version %s. This file may not be readable by this version of Hive (%s.%s).",
-                        orcDataSource,
-                        Joiner.on('.').join(version),
-                        CURRENT_MAJOR_VERSION,
-                        CURRENT_MINOR_VERSION);
-            }
-        }
+        if (version.size() < 1) {
+			return;
+		}
+		int major = version.get(0);
+		int minor = 0;
+		if (version.size() > 1) {
+		    minor = version.get(1);
+		}
+		if (major > CURRENT_MAJOR_VERSION || (major == CURRENT_MAJOR_VERSION && minor > CURRENT_MINOR_VERSION)) {
+		    log.warn("ORC file %s was written by a newer Hive version %s. This file may not be readable by this version of Hive (%s.%s).",
+		            orcDataSource,
+		            Joiner.on('.').join(version),
+		            CURRENT_MAJOR_VERSION,
+		            CURRENT_MINOR_VERSION);
+		}
     }
 }

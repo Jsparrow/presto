@@ -77,14 +77,14 @@ public class TestListFilter
 
         PositionalFilter positionalFilter = listFilter.getPositionalFilter();
 
-        for (int i = 0; i < data.length; i++) {
-            for (int j = 0; j < data[i].length; j++) {
-                Integer value = data[i][j];
+        for (Integer[] aData : data) {
+            for (int j = 0; j < aData.length; j++) {
+                Integer value = aData[j];
                 boolean expectedToPass = testFilter.test(j, value);
                 assertEquals(value == null ? positionalFilter.testNull() : positionalFilter.testLong(value), expectedToPass);
                 if (!expectedToPass) {
                     assertEquals(positionalFilter.getPrecedingPositionsToFail(), j);
-                    assertEquals(positionalFilter.getSucceedingPositionsToFail(), data[i].length - j - 1);
+                    assertEquals(positionalFilter.getSucceedingPositionsToFail(), aData.length - j - 1);
                     break;
                 }
             }
@@ -152,22 +152,22 @@ public class TestListFilter
 
         PositionalFilter positionalFilter = listFilter.getChild().getPositionalFilter();
 
-        for (int i = 0; i < data.length; i++) {
+        for (Integer[][] aData : data) {
             boolean expectedToPass = true;
             int passCount = 0;
             int failCount = 0;
-            for (int j = 0; j < data[i].length; j++) {
+            for (int j = 0; j < aData.length; j++) {
                 if (!expectedToPass) {
-                    failCount += data[i][j].length;
+                    failCount += aData[j].length;
                     continue;
                 }
-                for (int k = 0; k < data[i][j].length; k++) {
-                    Integer value = data[i][j][k];
+                for (int k = 0; k < aData[j].length; k++) {
+                    Integer value = aData[j][k];
                     expectedToPass = testFilter.test(j, k, value);
                     assertEquals(value == null ? positionalFilter.testNull() : positionalFilter.testLong(value), expectedToPass);
                     if (!expectedToPass) {
                         assertEquals(positionalFilter.getPrecedingPositionsToFail(), passCount);
-                        failCount = data[i][j].length - k - 1;
+                        failCount = aData[j].length - k - 1;
                         break;
                     }
                     passCount++;

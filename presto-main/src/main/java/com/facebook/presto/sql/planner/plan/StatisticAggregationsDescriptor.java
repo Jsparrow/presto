@@ -45,11 +45,6 @@ public class StatisticAggregationsDescriptor<T>
     private final Map<TableStatisticType, T> tableStatistics;
     private final Map<ColumnStatisticMetadata, T> columnStatistics;
 
-    public static <T> StatisticAggregationsDescriptor<T> empty()
-    {
-        return StatisticAggregationsDescriptor.<T>builder().build();
-    }
-
     @JsonCreator
     public StatisticAggregationsDescriptor(
             @JsonProperty("grouping") Map<String, T> grouping,
@@ -61,19 +56,24 @@ public class StatisticAggregationsDescriptor<T>
         this.columnStatistics = ImmutableMap.copyOf(requireNonNull(columnStatistics, "columnStatistics is null"));
     }
 
-    @JsonProperty
+	public static <T> StatisticAggregationsDescriptor<T> empty()
+    {
+        return StatisticAggregationsDescriptor.<T>builder().build();
+    }
+
+	@JsonProperty
     public Map<String, T> getGrouping()
     {
         return grouping;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<TableStatisticType, T> getTableStatistics()
     {
         return tableStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     @JsonSerialize(keyUsing = ColumnStatisticMetadataKeySerializer.class)
     @JsonDeserialize(keyUsing = ColumnStatisticMetadataKeyDeserializer.class)
     public Map<ColumnStatisticMetadata, T> getColumnStatistics()
@@ -81,7 +81,7 @@ public class StatisticAggregationsDescriptor<T>
         return columnStatistics;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -96,13 +96,13 @@ public class StatisticAggregationsDescriptor<T>
                 Objects.equals(columnStatistics, that.columnStatistics);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(grouping, tableStatistics, columnStatistics);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -112,12 +112,12 @@ public class StatisticAggregationsDescriptor<T>
                 .toString();
     }
 
-    public static <B> Builder<B> builder()
+	public static <B> Builder<B> builder()
     {
         return new Builder<>();
     }
 
-    public <T2> StatisticAggregationsDescriptor<T2> map(Function<T, T2> mapper)
+	public <T2> StatisticAggregationsDescriptor<T2> map(Function<T, T2> mapper)
     {
         return new StatisticAggregationsDescriptor<>(
                 map(this.getGrouping(), mapper),
@@ -125,14 +125,14 @@ public class StatisticAggregationsDescriptor<T>
                 map(this.getColumnStatistics(), mapper));
     }
 
-    private static <K, V1, V2> Map<K, V2> map(Map<K, V1> input, Function<V1, V2> mapper)
+	private static <K, V1, V2> Map<K, V2> map(Map<K, V1> input, Function<V1, V2> mapper)
     {
         return input.entrySet()
                 .stream()
                 .collect(toImmutableMap(Map.Entry::getKey, entry -> mapper.apply(entry.getValue())));
     }
 
-    public static class Builder<T>
+	public static class Builder<T>
     {
         private final ImmutableMap.Builder<String, T> grouping = ImmutableMap.builder();
         private final ImmutableMap.Builder<TableStatisticType, T> tableStatistics = ImmutableMap.builder();
@@ -173,7 +173,7 @@ public class StatisticAggregationsDescriptor<T>
         @VisibleForTesting
         static String serialize(ColumnStatisticMetadata value)
         {
-            return value.getStatisticType().name() + ":" + value.getColumnName();
+            return new StringBuilder().append(value.getStatisticType().name()).append(":").append(value.getColumnName()).toString();
         }
     }
 

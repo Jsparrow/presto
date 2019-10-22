@@ -26,17 +26,22 @@ import static java.util.Objects.requireNonNull;
 public class Join
         extends Relation
 {
-    public Join(Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
+    private final Type type;
+	private final Relation left;
+	private final Relation right;
+	private final Optional<JoinCriteria> criteria;
+
+	public Join(Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
     {
         this(Optional.empty(), type, left, right, criteria);
     }
 
-    public Join(NodeLocation location, Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
+	public Join(NodeLocation location, Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
     {
         this(Optional.of(location), type, left, right, criteria);
     }
 
-    private Join(Optional<NodeLocation> location, Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
+	private Join(Optional<NodeLocation> location, Type type, Relation left, Relation right, Optional<JoinCriteria> criteria)
     {
         super(location);
         requireNonNull(left, "left is null");
@@ -54,43 +59,33 @@ public class Join
         this.criteria = criteria;
     }
 
-    public enum Type
-    {
-        CROSS, INNER, LEFT, RIGHT, FULL, IMPLICIT
-    }
-
-    private final Type type;
-    private final Relation left;
-    private final Relation right;
-    private final Optional<JoinCriteria> criteria;
-
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Relation getLeft()
+	public Relation getLeft()
     {
         return left;
     }
 
-    public Relation getRight()
+	public Relation getRight()
     {
         return right;
     }
 
-    public Optional<JoinCriteria> getCriteria()
+	public Optional<JoinCriteria> getCriteria()
     {
         return criteria;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitJoin(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         ImmutableList.Builder<Node> nodes = ImmutableList.builder();
@@ -101,7 +96,7 @@ public class Join
         return nodes.build();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -113,7 +108,7 @@ public class Join
                 .toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -129,9 +124,14 @@ public class Join
                 Objects.equals(criteria, join.criteria);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, left, right, criteria);
+    }
+
+	public enum Type
+    {
+        CROSS, INNER, LEFT, RIGHT, FULL, IMPLICIT
     }
 }

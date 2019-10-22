@@ -216,7 +216,7 @@ public class TableWriterNode
         @Override
         public String toString()
         {
-            return catalog + "." + tableMetadata.getTable();
+            return new StringBuilder().append(catalog).append(".").append(tableMetadata.getTable()).toString();
         }
     }
 

@@ -79,7 +79,7 @@ public class VariableStatsAssertion
     public VariableStatsAssertion emptyRange()
     {
         assertTrue(isNaN(statistics.getLowValue()) && isNaN(statistics.getHighValue()),
-                "expected empty range (NaN, NaN) but got (" + statistics.getLowValue() + ", " + statistics.getHighValue() + ") instead");
+                new StringBuilder().append("expected empty range (NaN, NaN) but got (").append(statistics.getLowValue()).append(", ").append(statistics.getHighValue()).append(") instead").toString());
         assertEquals(statistics.getDistinctValuesCount(), 0., "expected no distinctValuesCount");
         assertEquals(statistics.getAverageRowSize(), 0., "expected 0 average row size");
         assertEquals(statistics.getNullsFraction(), 1., "expected all nulls");

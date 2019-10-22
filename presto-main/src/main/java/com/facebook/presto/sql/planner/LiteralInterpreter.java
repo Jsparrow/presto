@@ -84,10 +84,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class LiteralInterpreter
 {
-    private LiteralInterpreter() {}
+    private static final Logger logger = LoggerFactory.getLogger(LiteralInterpreter.class);
+
+	private LiteralInterpreter() {}
 
     public static Object evaluate(Metadata metadata, ConnectorSession session, Expression node)
     {
@@ -150,7 +154,8 @@ public final class LiteralInterpreter
                 return new SqlTimestamp((long) node.getValue());
             }
             catch (RuntimeException e) {
-                throw new PrestoException(GENERIC_USER_ERROR, format("'%s' is not a valid timestamp literal", (String) node.getValue()));
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(GENERIC_USER_ERROR, format("'%s' is not a valid timestamp literal", (String) node.getValue()));
             }
         }
         if (type instanceof IntervalDayTimeType) {
@@ -161,7 +166,7 @@ public final class LiteralInterpreter
         }
         if (type.getJavaType().equals(Slice.class)) {
             // DO NOT ever remove toBase64. Calling toString directly on Slice whose base is not byte[] will cause JVM to crash.
-            return "'" + VarbinaryFunctions.toBase64((Slice) node.getValue()).toStringUtf8() + "'";
+            return new StringBuilder().append("'").append(VarbinaryFunctions.toBase64((Slice) node.getValue()).toStringUtf8()).append("'").toString();
         }
 
         // We should not fail at the moment; just return the raw value (block, regex, etc) to the user
@@ -176,7 +181,8 @@ public final class LiteralInterpreter
     private static class LiteralVisitor
             extends AstVisitor<Object, ConnectorSession>
     {
-        private final Metadata metadata;
+        private final Logger logger1 = LoggerFactory.getLogger(LiteralVisitor.class);
+		private final Metadata metadata;
         private final InterpretedFunctionInvoker functionInvoker;
 
         private LiteralVisitor(Metadata metadata)
@@ -251,7 +257,8 @@ public final class LiteralInterpreter
                 return functionInvoker.invoke(functionHandle, session, ImmutableList.of(utf8Slice(node.getValue())));
             }
             catch (IllegalArgumentException e) {
-                throw new SemanticException(TYPE_MISMATCH, node, "No literal form for type %s", type);
+                logger1.error(e.getMessage(), e);
+				throw new SemanticException(TYPE_MISMATCH, node, "No literal form for type %s", type);
             }
         }
 
@@ -278,7 +285,8 @@ public final class LiteralInterpreter
                 }
             }
             catch (RuntimeException e) {
-                throw new SemanticException(INVALID_LITERAL, node, "'%s' is not a valid timestamp literal", node.getValue());
+                logger1.error(e.getMessage(), e);
+				throw new SemanticException(INVALID_LITERAL, node, "'%s' is not a valid timestamp literal", node.getValue());
             }
         }
 

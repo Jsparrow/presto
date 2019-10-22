@@ -186,20 +186,21 @@ public class MemoryRevokingScheduler
 
     private synchronized void runMemoryRevoking()
     {
-        if (checkPending.getAndSet(false)) {
-            Collection<SqlTask> sqlTasks = null;
-            for (MemoryPool memoryPool : memoryPools) {
-                if (!memoryRevokingNeeded(memoryPool)) {
-                    continue;
-                }
+        if (!checkPending.getAndSet(false)) {
+			return;
+		}
+		Collection<SqlTask> sqlTasks = null;
+		for (MemoryPool memoryPool : memoryPools) {
+		    if (!memoryRevokingNeeded(memoryPool)) {
+		        continue;
+		    }
 
-                if (sqlTasks == null) {
-                    sqlTasks = requireNonNull(currentTasksSupplier.get());
-                }
+		    if (sqlTasks == null) {
+		        sqlTasks = requireNonNull(currentTasksSupplier.get());
+		    }
 
-                requestMemoryRevoking(memoryPool, sqlTasks);
-            }
-        }
+		    requestMemoryRevoking(memoryPool, sqlTasks);
+		}
     }
 
     private void requestMemoryRevoking(MemoryPool memoryPool, Collection<SqlTask> sqlTasks)

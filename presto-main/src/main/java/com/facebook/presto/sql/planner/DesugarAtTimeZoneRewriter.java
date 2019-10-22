@@ -38,14 +38,14 @@ import static java.util.Objects.requireNonNull;
 
 public class DesugarAtTimeZoneRewriter
 {
-    public static Expression rewrite(Expression expression, Map<NodeRef<Expression>, Type> expressionTypes)
+    private DesugarAtTimeZoneRewriter() {}
+
+	public static Expression rewrite(Expression expression, Map<NodeRef<Expression>, Type> expressionTypes)
     {
         return ExpressionTreeRewriter.rewriteWith(new Visitor(expressionTypes), expression, null);
     }
 
-    private DesugarAtTimeZoneRewriter() {}
-
-    public static Expression rewrite(Expression expression, Session session, Metadata metadata, SqlParser sqlParser, PlanVariableAllocator variableAllocator)
+	public static Expression rewrite(Expression expression, Session session, Metadata metadata, SqlParser sqlParser, PlanVariableAllocator variableAllocator)
     {
         requireNonNull(metadata, "metadata is null");
         requireNonNull(sqlParser, "sqlParser is null");
@@ -56,7 +56,7 @@ public class DesugarAtTimeZoneRewriter
         return new AnalyzedExpressionRewriter(session, metadata, sqlParser, variableAllocator.getTypes()).rewriteWith(Visitor::new, expression);
     }
 
-    private static class Visitor
+	private static class Visitor
             extends ExpressionRewriter<Void>
     {
         private final Map<NodeRef<Expression>, Type> expressionTypes;

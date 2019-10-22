@@ -188,22 +188,12 @@ public interface WorkProcessor<T>
         private static final TransformationState<?> NEEDS_MORE_DATE_STATE = new TransformationState<>(Type.NEEDS_MORE_DATA, true, Optional.empty(), Optional.empty());
         private static final TransformationState<?> YIELD_STATE = new TransformationState<>(Type.YIELD, false, Optional.empty(), Optional.empty());
         private static final TransformationState<?> FINISHED_STATE = new TransformationState<>(Type.FINISHED, false, Optional.empty(), Optional.empty());
+		private final Type type;
+		private final boolean needsMoreData;
+		private final Optional<T> result;
+		private final Optional<ListenableFuture<?>> blocked;
 
-        enum Type
-        {
-            NEEDS_MORE_DATA,
-            BLOCKED,
-            YIELD,
-            RESULT,
-            FINISHED
-        }
-
-        private final Type type;
-        private final boolean needsMoreData;
-        private final Optional<T> result;
-        private final Optional<ListenableFuture<?>> blocked;
-
-        private TransformationState(Type type, boolean needsMoreData, Optional<T> result, Optional<ListenableFuture<?>> blocked)
+		private TransformationState(Type type, boolean needsMoreData, Optional<T> result, Optional<ListenableFuture<?>> blocked)
         {
             this.type = requireNonNull(type, "type is null");
             this.needsMoreData = needsMoreData;
@@ -211,7 +201,7 @@ public interface WorkProcessor<T>
             this.blocked = requireNonNull(blocked, "blocked is null");
         }
 
-        /**
+		/**
          * Signals that transformation requires more data in order to continue and no result has been produced.
          * {@link #process()} will be called with a new input element or with {@link Optional#empty()} if there
          * are no more elements.
@@ -222,7 +212,7 @@ public interface WorkProcessor<T>
             return (TransformationState<T>) NEEDS_MORE_DATE_STATE;
         }
 
-        /**
+		/**
          * Signals that transformation is blocked. {@link #process()} will be called again with the same input
          * element after {@code blocked} future is done.
          */
@@ -231,7 +221,7 @@ public interface WorkProcessor<T>
             return new TransformationState<>(Type.BLOCKED, false, Optional.empty(), Optional.of(blocked));
         }
 
-        /**
+		/**
          * Signals that transformation has yielded. {@link #process()} will be called again with the same input element.
          */
         @SuppressWarnings("unchecked")
@@ -240,7 +230,7 @@ public interface WorkProcessor<T>
             return (TransformationState<T>) YIELD_STATE;
         }
 
-        /**
+		/**
          * Signals that transformation has produced a result from its input. {@link #process()} will be called again with
          * a new element or with {@link Optional#empty()} if there are no more elements.
          */
@@ -249,7 +239,7 @@ public interface WorkProcessor<T>
             return ofResult(result, true);
         }
 
-        /**
+		/**
          * Signals that transformation has produced a result. If {@code needsMoreData}, {@link #process()} will be called again
          * with a new element (or with {@link Optional#empty()} if there are no more elements). If not @{code needsMoreData},
          * {@link #process()} will be called again with the same element.
@@ -259,7 +249,7 @@ public interface WorkProcessor<T>
             return new TransformationState<>(Type.RESULT, needsMoreData, Optional.of(result), Optional.empty());
         }
 
-        /**
+		/**
          * Signals that transformation has finished. {@link #process()} method will not be called again.
          */
         @SuppressWarnings("unchecked")
@@ -268,24 +258,33 @@ public interface WorkProcessor<T>
             return (TransformationState<T>) FINISHED_STATE;
         }
 
-        Type getType()
+		Type getType()
         {
             return type;
         }
 
-        boolean isNeedsMoreData()
+		boolean isNeedsMoreData()
         {
             return needsMoreData;
         }
 
-        Optional<T> getResult()
+		Optional<T> getResult()
         {
             return result;
         }
 
-        Optional<ListenableFuture<?>> getBlocked()
+		Optional<ListenableFuture<?>> getBlocked()
         {
             return blocked;
+        }
+
+		enum Type
+        {
+            NEEDS_MORE_DATA,
+            BLOCKED,
+            YIELD,
+            RESULT,
+            FINISHED
         }
     }
 
@@ -294,27 +293,18 @@ public interface WorkProcessor<T>
     {
         private static final ProcessState<?> YIELD_STATE = new ProcessState<>(Type.YIELD, Optional.empty(), Optional.empty());
         private static final ProcessState<?> FINISHED_STATE = new ProcessState<>(Type.FINISHED, Optional.empty(), Optional.empty());
+		private final Type type;
+		private final Optional<T> result;
+		private final Optional<ListenableFuture<?>> blocked;
 
-        enum Type
-        {
-            BLOCKED,
-            YIELD,
-            RESULT,
-            FINISHED
-        }
-
-        private final Type type;
-        private final Optional<T> result;
-        private final Optional<ListenableFuture<?>> blocked;
-
-        private ProcessState(Type type, Optional<T> result, Optional<ListenableFuture<?>> blocked)
+		private ProcessState(Type type, Optional<T> result, Optional<ListenableFuture<?>> blocked)
         {
             this.type = requireNonNull(type, "type is null");
             this.result = requireNonNull(result, "result is null");
             this.blocked = requireNonNull(blocked, "blocked is null");
         }
 
-        /**
+		/**
          * Signals that process is blocked. {@link #process()} will be called again after {@code blocked} future is done.
          */
         public static <T> ProcessState<T> blocked(ListenableFuture<?> blocked)
@@ -322,7 +312,7 @@ public interface WorkProcessor<T>
             return new ProcessState<>(Type.BLOCKED, Optional.empty(), Optional.of(blocked));
         }
 
-        /**
+		/**
          * Signals that process has yielded. {@link #process()} will be called again later.
          */
         @SuppressWarnings("unchecked")
@@ -331,7 +321,7 @@ public interface WorkProcessor<T>
             return (ProcessState<T>) YIELD_STATE;
         }
 
-        /**
+		/**
          * Signals that process has produced a result. {@link #process()} will be called again.
          */
         public static <T> ProcessState<T> ofResult(T result)
@@ -339,7 +329,7 @@ public interface WorkProcessor<T>
             return new ProcessState<>(Type.RESULT, Optional.of(result), Optional.empty());
         }
 
-        /**
+		/**
          * Signals that process has finished. {@link #process()} method will not be called again.
          */
         @SuppressWarnings("unchecked")
@@ -348,19 +338,27 @@ public interface WorkProcessor<T>
             return (ProcessState<T>) FINISHED_STATE;
         }
 
-        Type getType()
+		Type getType()
         {
             return type;
         }
 
-        Optional<T> getResult()
+		Optional<T> getResult()
         {
             return result;
         }
 
-        Optional<ListenableFuture<?>> getBlocked()
+		Optional<ListenableFuture<?>> getBlocked()
         {
             return blocked;
+        }
+
+		enum Type
+        {
+            BLOCKED,
+            YIELD,
+            RESULT,
+            FINISHED
         }
     }
 }

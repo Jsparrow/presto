@@ -98,7 +98,6 @@ class RequestErrorTracker
     }
 
     public void requestFailed(Throwable reason)
-            throws PrestoException
     {
         // cancellation is not a failure
         if (reason instanceof CancellationException) {
@@ -112,10 +111,10 @@ class RequestErrorTracker
         // log failure message
         if (isExpectedError(reason)) {
             // don't print a stack for a known errors
-            log.warn("Error " + jobDescription + " %s: %s: %s", taskId, reason.getMessage(), taskUri);
+            log.warn(new StringBuilder().append("Error ").append(jobDescription).append(" %s: %s: %s").toString(), taskId, reason.getMessage(), taskUri);
         }
         else {
-            log.warn(reason, "Error " + jobDescription + " %s: %s", taskId, taskUri);
+            log.warn(reason, new StringBuilder().append("Error ").append(jobDescription).append(" %s: %s").toString(), taskId, taskUri);
         }
 
         // remember the first 10 errors
@@ -124,20 +123,21 @@ class RequestErrorTracker
         }
 
         // fail the task, if we have more than X failures in a row and more than Y seconds have passed since the last request
-        if (backoff.failure()) {
-            // it is weird to mark the task failed locally and then cancel the remote task, but there is no way to tell a remote task that it is failed
-            PrestoException exception = new PrestoTransportException(TOO_MANY_REQUESTS_FAILED,
-                    fromUri(taskUri),
-                    format("%s (%s %s - %s failures, failure duration %s, total failed request time %s)",
-                            WORKER_NODE_ERROR,
-                            jobDescription,
-                            taskUri,
-                            backoff.getFailureCount(),
-                            backoff.getFailureDuration().convertTo(SECONDS),
-                            backoff.getFailureRequestTimeTotal().convertTo(SECONDS)));
-            errorsSinceLastSuccess.forEach(exception::addSuppressed);
-            throw exception;
-        }
+		if (!backoff.failure()) {
+			return;
+		}
+		// it is weird to mark the task failed locally and then cancel the remote task, but there is no way to tell a remote task that it is failed
+		PrestoException exception = new PrestoTransportException(TOO_MANY_REQUESTS_FAILED,
+		        fromUri(taskUri),
+		        format("%s (%s %s - %s failures, failure duration %s, total failed request time %s)",
+		                WORKER_NODE_ERROR,
+		                jobDescription,
+		                taskUri,
+		                backoff.getFailureCount(),
+		                backoff.getFailureDuration().convertTo(SECONDS),
+		                backoff.getFailureRequestTimeTotal().convertTo(SECONDS)));
+		errorsSinceLastSuccess.forEach(exception::addSuppressed);
+		throw exception;
     }
 
     static void logError(Throwable t, String format, Object... args)

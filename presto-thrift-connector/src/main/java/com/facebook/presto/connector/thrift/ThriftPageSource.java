@@ -70,11 +70,10 @@ public class ThriftPageSource
         requireNonNull(columns, "columns is null");
         ImmutableList.Builder<String> columnNames = new ImmutableList.Builder<>();
         ImmutableList.Builder<Type> columnTypes = new ImmutableList.Builder<>();
-        for (ColumnHandle columnHandle : columns) {
-            ThriftColumnHandle thriftColumnHandle = (ThriftColumnHandle) columnHandle;
-            columnNames.add(thriftColumnHandle.getColumnName());
-            columnTypes.add(thriftColumnHandle.getColumnType());
-        }
+        columns.stream().map(columnHandle -> (ThriftColumnHandle) columnHandle).forEach(thriftColumnHandle -> {
+			columnNames.add(thriftColumnHandle.getColumnName());
+			columnTypes.add(thriftColumnHandle.getColumnType());
+		});
         this.columnNames = columnNames.build();
         this.columnTypes = columnTypes.build();
         this.stats = requireNonNull(stats, "stats is null");

@@ -98,10 +98,6 @@ public class TestCompletedEventWarnings
                 .stream()
                 .map(PrestoWarning::getWarningCode)
                 .collect(toImmutableSet());
-        for (WarningCode warningCode : expectedWarnings) {
-            if (!warnings.contains(warningCode)) {
-                fail("Expected warning: " + warningCode);
-            }
-        }
+        expectedWarnings.stream().filter(warningCode -> !warnings.contains(warningCode)).forEach(warningCode -> fail("Expected warning: " + warningCode));
     }
 }

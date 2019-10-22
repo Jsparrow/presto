@@ -54,19 +54,14 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionRewriteRuleSet
 {
-    public interface ExpressionRewriter
-    {
-        Expression rewrite(Expression expression, Rule.Context context);
-    }
-
     private final ExpressionRewriter rewriter;
 
-    public ExpressionRewriteRuleSet(ExpressionRewriter rewriter)
+	public ExpressionRewriteRuleSet(ExpressionRewriter rewriter)
     {
         this.rewriter = requireNonNull(rewriter, "rewriter is null");
     }
 
-    public Set<Rule<?>> rules()
+	public Set<Rule<?>> rules()
     {
         return ImmutableSet.of(
                 projectExpressionRewrite(),
@@ -77,34 +72,39 @@ public class ExpressionRewriteRuleSet
                 applyExpressionRewrite());
     }
 
-    public Rule<?> projectExpressionRewrite()
+	public Rule<?> projectExpressionRewrite()
     {
         return new ProjectExpressionRewrite(rewriter);
     }
 
-    public Rule<?> aggregationExpressionRewrite()
+	public Rule<?> aggregationExpressionRewrite()
     {
         return new AggregationExpressionRewrite(rewriter);
     }
 
-    public Rule<?> filterExpressionRewrite()
+	public Rule<?> filterExpressionRewrite()
     {
         return new FilterExpressionRewrite(rewriter);
     }
 
-    public Rule<?> joinExpressionRewrite()
+	public Rule<?> joinExpressionRewrite()
     {
         return new JoinExpressionRewrite(rewriter);
     }
 
-    public Rule<?> valuesExpressionRewrite()
+	public Rule<?> valuesExpressionRewrite()
     {
         return new ValuesExpressionRewrite(rewriter);
     }
 
-    public Rule<?> applyExpressionRewrite()
+	public Rule<?> applyExpressionRewrite()
     {
         return new ApplyExpressionRewrite(rewriter);
+    }
+
+	public interface ExpressionRewriter
+    {
+        Expression rewrite(Expression expression, Rule.Context context);
     }
 
     private static final class ProjectExpressionRewrite

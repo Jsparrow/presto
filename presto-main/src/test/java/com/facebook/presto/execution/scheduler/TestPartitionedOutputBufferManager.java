@@ -26,10 +26,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestPartitionedOutputBufferManager
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestPartitionedOutputBufferManager.class);
+
+	@Test
     public void test()
     {
         AtomicReference<OutputBuffers> outputBufferTarget = new AtomicReference<>();
@@ -51,6 +55,7 @@ public class TestPartitionedOutputBufferManager
             fail("Expected IllegalStateException");
         }
         catch (IllegalStateException e) {
+			logger.error(e.getMessage(), e);
         }
         assertOutputBuffers(outputBufferTarget.get());
 
@@ -60,6 +65,7 @@ public class TestPartitionedOutputBufferManager
             fail("Expected IllegalStateException");
         }
         catch (IllegalStateException e) {
+			logger.error(e.getMessage(), e);
         }
         assertOutputBuffers(outputBufferTarget.get());
     }

@@ -143,7 +143,27 @@ public class BenchmarkSelectiveStreamReaders
         return blocks;
     }
 
-    private abstract static class AbstractBenchmarkData
+    private static String randomAsciiString(Random random, int maxLength)
+    {
+        char[] value = new char[random.nextInt(maxLength)];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = (char) random.nextInt(Byte.MAX_VALUE);
+        }
+        return new String(value);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSelectiveStreamReaders.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	private abstract static class AbstractBenchmarkData
     {
         protected final Random random = new Random(0);
         private Type type;
@@ -384,7 +404,7 @@ public class BenchmarkSelectiveStreamReaders
             }
 
             if (getType() == VARCHAR) {
-                if (typeSignature.equals("varchar_dictionary")) {
+                if ("varchar_dictionary".equals(typeSignature)) {
                     return Strings.repeat("0", MAX_STRING_LENGTH);
                 }
                 return randomAsciiString(random, MAX_STRING_LENGTH);
@@ -392,25 +412,5 @@ public class BenchmarkSelectiveStreamReaders
 
             throw new UnsupportedOperationException("Unsupported type: " + getType());
         }
-    }
-
-    private static String randomAsciiString(Random random, int maxLength)
-    {
-        char[] value = new char[random.nextInt(maxLength)];
-        for (int i = 0; i < value.length; i++) {
-            value[i] = (char) random.nextInt(Byte.MAX_VALUE);
-        }
-        return new String(value);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSelectiveStreamReaders.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

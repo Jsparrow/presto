@@ -20,11 +20,11 @@ import static java.lang.String.format;
 
 public final class EstimateAssertion
 {
-    private EstimateAssertion() {}
-
     private static final double TOLERANCE = 0.0000001;
 
-    public static void assertEstimateEquals(double actual, double expected, String messageFormat, Object... messageObjects)
+	private EstimateAssertion() {}
+
+	public static void assertEstimateEquals(double actual, double expected, String messageFormat, Object... messageObjects)
     {
         if (isNaN(actual) && isNaN(expected)) {
             return;

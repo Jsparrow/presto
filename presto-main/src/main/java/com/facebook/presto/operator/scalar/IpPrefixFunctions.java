@@ -60,7 +60,7 @@ public final class IpPrefixFunctions
             throw new PrestoException(GENERIC_INTERNAL_ERROR, "Invalid InetAddress length: " + addressLength);
         }
 
-        return castFromVarcharToIpPrefix(utf8Slice(InetAddresses.toAddrString(address) + "/" + subnetSize));
+        return castFromVarcharToIpPrefix(utf8Slice(new StringBuilder().append(InetAddresses.toAddrString(address)).append("/").append(subnetSize).toString()));
     }
 
     @Description("IP prefix for a given IP address and subnet size")

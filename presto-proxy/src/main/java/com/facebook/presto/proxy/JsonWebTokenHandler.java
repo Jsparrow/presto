@@ -34,10 +34,13 @@ import java.util.function.Consumer;
 import static com.google.common.base.Preconditions.checkState;
 import static io.jsonwebtoken.JwsHeader.KEY_ID;
 import static java.nio.file.Files.readAllBytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonWebTokenHandler
 {
-    private final Optional<Consumer<JwtBuilder>> jwtSigner;
+    private static final Logger logger = LoggerFactory.getLogger(JsonWebTokenHandler.class);
+	private final Optional<Consumer<JwtBuilder>> jwtSigner;
     private final Optional<String> jwtKeyId;
     private final Optional<String> jwtIssuer;
     private final Optional<String> jwtAudience;
@@ -89,6 +92,7 @@ public class JsonWebTokenHandler
             throw new RuntimeException("Failed to load key file: " + file, e);
         }
         catch (GeneralSecurityException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
 
         try {

@@ -35,11 +35,6 @@ public class PartitionStatistics
     private final HiveBasicStatistics basicStatistics;
     private final Map<String, HiveColumnStatistics> columnStatistics;
 
-    public static PartitionStatistics empty()
-    {
-        return EMPTY;
-    }
-
     @JsonCreator
     public PartitionStatistics(
             @JsonProperty("basicStatistics") HiveBasicStatistics basicStatistics,
@@ -49,19 +44,24 @@ public class PartitionStatistics
         this.columnStatistics = ImmutableMap.copyOf(requireNonNull(columnStatistics, "columnStatistics can not be null"));
     }
 
-    @JsonProperty
+	public static PartitionStatistics empty()
+    {
+        return EMPTY;
+    }
+
+	@JsonProperty
     public HiveBasicStatistics getBasicStatistics()
     {
         return basicStatistics;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<String, HiveColumnStatistics> getColumnStatistics()
     {
         return columnStatistics;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -75,13 +75,13 @@ public class PartitionStatistics
                 Objects.equals(columnStatistics, that.columnStatistics);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(basicStatistics, columnStatistics);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -90,12 +90,12 @@ public class PartitionStatistics
                 .toString();
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public static class Builder
+	public static class Builder
     {
         private HiveBasicStatistics basicStatistics = HiveBasicStatistics.createEmptyStatistics();
         private Map<String, HiveColumnStatistics> columnStatistics = ImmutableMap.of();

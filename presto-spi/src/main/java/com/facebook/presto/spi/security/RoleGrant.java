@@ -77,10 +77,7 @@ public class RoleGrant
     @Override
     public String toString()
     {
-        return "RoleGrant{" +
-                "grantee=" + grantee +
-                ", roleName='" + roleName + '\'' +
-                ", grantable=" + grantable +
-                '}';
+        return new StringBuilder().append("RoleGrant{").append("grantee=").append(grantee).append(", roleName='").append(roleName).append('\'').append(", grantable=")
+				.append(grantable).append('}').toString();
     }
 }

@@ -92,7 +92,154 @@ public class BenchmarkDecimalOperators
 
     private static final SqlParser SQL_PARSER = new SqlParser();
 
-    @State(Thread)
+    @Benchmark
+    public Object castDoubleToDecimalBenchmark(CastDoubleToDecimalBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testCastDoubleToDecimalBenchmark()
+    {
+        CastDoubleToDecimalBenchmarkState state = new CastDoubleToDecimalBenchmarkState();
+        state.setup();
+        castDoubleToDecimalBenchmark(state);
+    }
+
+	@Benchmark
+    public Object castDecimalToDoubleBenchmark(CastDecimalToDoubleBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testCastDecimalToDoubleBenchmark()
+    {
+        CastDecimalToDoubleBenchmarkState state = new CastDecimalToDoubleBenchmarkState();
+        state.setup();
+        castDecimalToDoubleBenchmark(state);
+    }
+
+	@Benchmark
+    public Object castDecimalToVarcharBenchmark(CastDecimalToVarcharBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testCastDecimalToVarcharBenchmark()
+    {
+        CastDecimalToVarcharBenchmarkState state = new CastDecimalToVarcharBenchmarkState();
+        state.setup();
+        castDecimalToVarcharBenchmark(state);
+    }
+
+	@Benchmark
+    public Object additionBenchmark(AdditionBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testAdditionBenchmark()
+    {
+        AdditionBenchmarkState state = new AdditionBenchmarkState();
+        state.setup();
+        additionBenchmark(state);
+    }
+
+	@Benchmark
+    public Object multiplyBenchmark(MultiplyBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testMultiplyBenchmark()
+    {
+        MultiplyBenchmarkState state = new MultiplyBenchmarkState();
+        state.setup();
+        multiplyBenchmark(state);
+    }
+
+	@Benchmark
+    public Object divisionBenchmark(DivisionBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testDivisionBenchmark()
+    {
+        DivisionBenchmarkState state = new DivisionBenchmarkState();
+        state.setup();
+        divisionBenchmark(state);
+    }
+
+	@Benchmark
+    public Object moduloBenchmark(ModuloBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testModuloBenchmark()
+    {
+        ModuloBenchmarkState state = new ModuloBenchmarkState();
+        state.setup();
+        moduloBenchmark(state);
+    }
+
+	@Benchmark
+    public Object inequalityBenchmark(InequalityBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testInequalityBenchmark()
+    {
+        InequalityBenchmarkState state = new InequalityBenchmarkState();
+        state.setup();
+        inequalityBenchmark(state);
+    }
+
+	@Benchmark
+    public Object decimalToShortDecimalCastBenchmark(DecimalToShortDecimalCastBenchmarkState state)
+    {
+        return execute(state);
+    }
+
+	@Test
+    public void testDecimalToShortDecimalCastBenchmark()
+    {
+        DecimalToShortDecimalCastBenchmarkState state = new DecimalToShortDecimalCastBenchmarkState();
+        state.setup();
+        decimalToShortDecimalCastBenchmark(state);
+    }
+
+	private Object execute(BaseState state)
+    {
+        return ImmutableList.copyOf(
+                state.getProcessor().process(
+                        SESSION,
+                        new DriverYieldSignal(),
+                        newSimpleAggregatedMemoryContext().newLocalMemoryContext(PageProcessor.class.getSimpleName()),
+                        state.getInputPage()));
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkDecimalOperators.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class CastDoubleToDecimalBenchmarkState
             extends BaseState
     {
@@ -107,7 +254,7 @@ public class BenchmarkDecimalOperators
             addSymbol("d1", DOUBLE);
 
             String expression;
-            if (precision.equals("BIGINT")) {
+            if ("BIGINT".equals(precision)) {
                 setDoubleMaxValue(Long.MAX_VALUE);
                 expression = "CAST(d1 AS BIGINT)";
             }
@@ -118,20 +265,6 @@ public class BenchmarkDecimalOperators
             generateRandomInputPage();
             generateProcessor(expression);
         }
-    }
-
-    @Benchmark
-    public Object castDoubleToDecimalBenchmark(CastDoubleToDecimalBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testCastDoubleToDecimalBenchmark()
-    {
-        CastDoubleToDecimalBenchmarkState state = new CastDoubleToDecimalBenchmarkState();
-        state.setup();
-        castDoubleToDecimalBenchmark(state);
     }
 
     @State(Thread)
@@ -154,20 +287,6 @@ public class BenchmarkDecimalOperators
         }
     }
 
-    @Benchmark
-    public Object castDecimalToDoubleBenchmark(CastDecimalToDoubleBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testCastDecimalToDoubleBenchmark()
-    {
-        CastDecimalToDoubleBenchmarkState state = new CastDecimalToDoubleBenchmarkState();
-        state.setup();
-        castDecimalToDoubleBenchmark(state);
-    }
-
     @State(Thread)
     public static class CastDecimalToVarcharBenchmarkState
             extends BaseState
@@ -186,20 +305,6 @@ public class BenchmarkDecimalOperators
             generateRandomInputPage();
             generateProcessor(expression);
         }
-    }
-
-    @Benchmark
-    public Object castDecimalToVarcharBenchmark(CastDecimalToVarcharBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testCastDecimalToVarcharBenchmark()
-    {
-        CastDecimalToVarcharBenchmarkState state = new CastDecimalToVarcharBenchmarkState();
-        state.setup();
-        castDecimalToVarcharBenchmark(state);
     }
 
     @State(Thread)
@@ -236,20 +341,6 @@ public class BenchmarkDecimalOperators
             generateRandomInputPage();
             generateProcessor(expression);
         }
-    }
-
-    @Benchmark
-    public Object additionBenchmark(AdditionBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testAdditionBenchmark()
-    {
-        AdditionBenchmarkState state = new AdditionBenchmarkState();
-        state.setup();
-        additionBenchmark(state);
     }
 
     @State(Thread)
@@ -297,20 +388,6 @@ public class BenchmarkDecimalOperators
             generateRandomInputPage();
             generateProcessor(expression);
         }
-    }
-
-    @Benchmark
-    public Object multiplyBenchmark(MultiplyBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testMultiplyBenchmark()
-    {
-        MultiplyBenchmarkState state = new MultiplyBenchmarkState();
-        state.setup();
-        multiplyBenchmark(state);
     }
 
     @State(Thread)
@@ -366,20 +443,6 @@ public class BenchmarkDecimalOperators
         }
     }
 
-    @Benchmark
-    public Object divisionBenchmark(DivisionBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testDivisionBenchmark()
-    {
-        DivisionBenchmarkState state = new DivisionBenchmarkState();
-        state.setup();
-        divisionBenchmark(state);
-    }
-
     @State(Thread)
     public static class ModuloBenchmarkState
             extends BaseState
@@ -430,20 +493,6 @@ public class BenchmarkDecimalOperators
         }
     }
 
-    @Benchmark
-    public Object moduloBenchmark(ModuloBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testModuloBenchmark()
-    {
-        ModuloBenchmarkState state = new ModuloBenchmarkState();
-        state.setup();
-        moduloBenchmark(state);
-    }
-
     @State(Thread)
     public static class InequalityBenchmarkState
             extends BaseState
@@ -479,20 +528,6 @@ public class BenchmarkDecimalOperators
         }
     }
 
-    @Benchmark
-    public Object inequalityBenchmark(InequalityBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testInequalityBenchmark()
-    {
-        InequalityBenchmarkState state = new InequalityBenchmarkState();
-        state.setup();
-        inequalityBenchmark(state);
-    }
-
     @State(Thread)
     public static class DecimalToShortDecimalCastBenchmarkState
             extends BaseState
@@ -516,30 +551,6 @@ public class BenchmarkDecimalOperators
             generateInputPage(10000, 10000, 10000, 10000, 10000);
             generateProcessor(expression);
         }
-    }
-
-    @Benchmark
-    public Object decimalToShortDecimalCastBenchmark(DecimalToShortDecimalCastBenchmarkState state)
-    {
-        return execute(state);
-    }
-
-    @Test
-    public void testDecimalToShortDecimalCastBenchmark()
-    {
-        DecimalToShortDecimalCastBenchmarkState state = new DecimalToShortDecimalCastBenchmarkState();
-        state.setup();
-        decimalToShortDecimalCastBenchmark(state);
-    }
-
-    private Object execute(BaseState state)
-    {
-        return ImmutableList.copyOf(
-                state.getProcessor().process(
-                        SESSION,
-                        new DriverYieldSignal(),
-                        newSimpleAggregatedMemoryContext().newLocalMemoryContext(PageProcessor.class.getSimpleName()),
-                        state.getInputPage()));
     }
 
     private static class BaseState
@@ -644,16 +655,5 @@ public class BenchmarkDecimalOperators
 
             return new SqlDecimal(bigInteger, type.getPrecision(), type.getScale());
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkDecimalOperators.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

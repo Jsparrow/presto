@@ -21,16 +21,11 @@ import com.facebook.presto.spi.predicate.TupleDomain;
  */
 public interface SystemTable
 {
-    enum Distribution
-    {
-        ALL_NODES, ALL_COORDINATORS, SINGLE_COORDINATOR
-    }
-
     Distribution getDistribution();
 
-    ConnectorTableMetadata getTableMetadata();
+	ConnectorTableMetadata getTableMetadata();
 
-    /**
+	/**
      * Create a cursor for the data in this table.
      *
      * @param session the session to use for creating the data
@@ -41,7 +36,7 @@ public interface SystemTable
         throw new UnsupportedOperationException();
     }
 
-    /**
+	/**
      * Create a page source for the data in this table.
      *
      * @param session the session to use for creating the data
@@ -50,5 +45,10 @@ public interface SystemTable
     default ConnectorPageSource pageSource(ConnectorTransactionHandle transactionHandle, ConnectorSession session, TupleDomain<Integer> constraint)
     {
         throw new UnsupportedOperationException();
+    }
+
+	enum Distribution
+    {
+        ALL_NODES, ALL_COORDINATORS, SINGLE_COORDINATOR
     }
 }

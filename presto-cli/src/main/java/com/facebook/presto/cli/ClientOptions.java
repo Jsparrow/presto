@@ -140,17 +140,6 @@ public class ClientOptions
     @Option(name = "--ignore-errors", title = "ignore errors", description = "Continue processing in batch mode when an error occurs (default is to exit immediately)")
     public boolean ignoreErrors;
 
-    public enum OutputFormat
-    {
-        ALIGNED,
-        VERTICAL,
-        CSV,
-        TSV,
-        CSV_HEADER,
-        TSV_HEADER,
-        NULL
-    }
-
     public ClientSession toClientSession()
     {
         return new ClientSession(
@@ -173,7 +162,7 @@ public class ClientOptions
                 clientRequestTimeout);
     }
 
-    public static URI parseServer(String server)
+	public static URI parseServer(String server)
     {
         server = server.toLowerCase(ENGLISH);
         if (server.startsWith("http://") || server.startsWith("https://")) {
@@ -189,44 +178,51 @@ public class ClientOptions
         }
     }
 
-    public static Set<String> parseClientTags(String clientTagsString)
+	public static Set<String> parseClientTags(String clientTagsString)
     {
         Splitter splitter = Splitter.on(',').trimResults().omitEmptyStrings();
         return ImmutableSet.copyOf(splitter.split(nullToEmpty(clientTagsString)));
     }
 
-    public static Map<String, String> toProperties(List<ClientSessionProperty> sessionProperties)
+	public static Map<String, String> toProperties(List<ClientSessionProperty> sessionProperties)
     {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (ClientSessionProperty sessionProperty : sessionProperties) {
+        sessionProperties.forEach(sessionProperty -> {
             String name = sessionProperty.getName();
             if (sessionProperty.getCatalog().isPresent()) {
-                name = sessionProperty.getCatalog().get() + "." + name;
+                name = new StringBuilder().append(sessionProperty.getCatalog().get()).append(".").append(name).toString();
             }
             builder.put(name, sessionProperty.getValue());
-        }
+        });
         return builder.build();
     }
 
-    public static Map<String, String> toResourceEstimates(List<ClientResourceEstimate> estimates)
+	public static Map<String, String> toResourceEstimates(List<ClientResourceEstimate> estimates)
     {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (ClientResourceEstimate estimate : estimates) {
-            builder.put(estimate.getResource(), estimate.getEstimate());
-        }
+        estimates.forEach(estimate -> builder.put(estimate.getResource(), estimate.getEstimate()));
         return builder.build();
     }
 
-    public static Map<String, String> toExtraCredentials(List<ClientExtraCredential> extraCredentials)
+	public static Map<String, String> toExtraCredentials(List<ClientExtraCredential> extraCredentials)
     {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (ClientExtraCredential credential : extraCredentials) {
-            builder.put(credential.getName(), credential.getValue());
-        }
+        extraCredentials.forEach(credential -> builder.put(credential.getName(), credential.getValue()));
         return builder.build();
     }
 
-    public static final class ClientResourceEstimate
+	public enum OutputFormat
+    {
+        ALIGNED,
+        VERTICAL,
+        CSV,
+        TSV,
+        CSV_HEADER,
+        TSV_HEADER,
+        NULL
+    }
+
+	public static final class ClientResourceEstimate
     {
         private final String resource;
         private final String estimate;
@@ -265,7 +261,7 @@ public class ClientOptions
         @Override
         public String toString()
         {
-            return resource + '=' + estimate;
+            return new StringBuilder().append(resource).append('=').append(estimate).toString();
         }
 
         @Override
@@ -354,7 +350,8 @@ public class ClientOptions
         @Override
         public String toString()
         {
-            return (catalog.isPresent() ? catalog.get() + '.' : "") + name + '=' + value;
+            return new StringBuilder().append(catalog.isPresent() ? catalog.get() + '.' : "").append(name).append('=').append(value)
+					.toString();
         }
 
         @Override
@@ -417,7 +414,7 @@ public class ClientOptions
         @Override
         public String toString()
         {
-            return name + '=' + value;
+            return new StringBuilder().append(name).append('=').append(value).toString();
         }
 
         @Override

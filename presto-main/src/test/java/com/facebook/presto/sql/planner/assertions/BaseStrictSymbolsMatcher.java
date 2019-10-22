@@ -26,11 +26,14 @@ import static com.facebook.presto.type.UnknownType.UNKNOWN;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class BaseStrictSymbolsMatcher
         implements Matcher
 {
-    private final Function<PlanNode, Set<VariableReferenceExpression>> getActual;
+    private static final Logger logger = LoggerFactory.getLogger(BaseStrictSymbolsMatcher.class);
+	private final Function<PlanNode, Set<VariableReferenceExpression>> getActual;
 
     public BaseStrictSymbolsMatcher(Function<PlanNode, Set<VariableReferenceExpression>> getActual)
     {
@@ -45,7 +48,8 @@ public abstract class BaseStrictSymbolsMatcher
             return true;
         }
         catch (ClassCastException e) {
-            return false;
+            logger.error(e.getMessage(), e);
+			return false;
         }
     }
 

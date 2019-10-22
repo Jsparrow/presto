@@ -40,11 +40,6 @@ public class RaptorPlugin
         this(getPluginInfo());
     }
 
-    private RaptorPlugin(PluginInfo info)
-    {
-        this(info.getName(), info.getMetadataModule(), info.getBackupProviders());
-    }
-
     public RaptorPlugin(String name, Module metadataModule, Map<String, Module> backupProviders)
     {
         checkArgument(!isNullOrEmpty(name), "name is null or empty");
@@ -53,13 +48,18 @@ public class RaptorPlugin
         this.backupProviders = ImmutableMap.copyOf(requireNonNull(backupProviders, "backupProviders is null"));
     }
 
-    @Override
+	private RaptorPlugin(PluginInfo info)
+    {
+        this(info.getName(), info.getMetadataModule(), info.getBackupProviders());
+    }
+
+	@Override
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
         return ImmutableList.of(new RaptorConnectorFactory(name, metadataModule, backupProviders));
     }
 
-    private static PluginInfo getPluginInfo()
+	private static PluginInfo getPluginInfo()
     {
         ClassLoader classLoader = RaptorPlugin.class.getClassLoader();
         ServiceLoader<PluginInfo> loader = ServiceLoader.load(PluginInfo.class, classLoader);

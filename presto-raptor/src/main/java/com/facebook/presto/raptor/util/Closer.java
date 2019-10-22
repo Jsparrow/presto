@@ -21,30 +21,30 @@ public class Closer<T, X extends Exception>
     private final T delegate;
     private final Cleaner<T, X> cleaner;
 
-    public static <T, X extends Exception> Closer<T, X> closer(T delegate, Cleaner<T, X> cleaner)
-    {
-        return new Closer<>(delegate, cleaner);
-    }
-
     private Closer(T delegate, Cleaner<T, X> cleaner)
     {
         this.delegate = requireNonNull(delegate, "delegate is null");
         this.cleaner = requireNonNull(cleaner, "cleaner is null");
     }
 
-    public T get()
+	public static <T, X extends Exception> Closer<T, X> closer(T delegate, Cleaner<T, X> cleaner)
+    {
+        return new Closer<>(delegate, cleaner);
+    }
+
+	public T get()
     {
         return delegate;
     }
 
-    @Override
+	@Override
     public void close()
             throws X
     {
         cleaner.close(delegate);
     }
 
-    public interface Cleaner<T, X extends Exception>
+	public interface Cleaner<T, X extends Exception>
     {
         void close(T object)
                 throws X;

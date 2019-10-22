@@ -72,9 +72,7 @@ public class PagesSortBenchmark
     {
         PagesIndex.TestingFactory pagesIndexFactory = new PagesIndex.TestingFactory(false);
         PagesIndex pageIndex = pagesIndexFactory.newPagesIndex(data.getTypes(), data.getTotalPositions());
-        for (Page page : data.getPages()) {
-            pageIndex.addPage(page);
-        }
+        data.getPages().forEach(pageIndex::addPage);
 
         pageIndex.sort(data.getSortChannels(), data.getSortOrders());
 
@@ -93,26 +91,6 @@ public class PagesSortBenchmark
                 .mapToInt(Page::getPositionCount)
                 .sum();
         assertEquals(positionCount, state.getTotalPositions());
-    }
-
-    @State(Thread)
-    public static class PagesIndexSortBenchmarkData
-            extends BaseBenchmarkData
-    {
-        @Param("1")
-        private int numSortChannels = 1;
-
-        @Param({"1", "8"})
-        private int totalChannels = 1;
-
-        @Param({"200", "400"})
-        private int pagesCount = 200;
-
-        @Setup
-        public void setup()
-        {
-            super.setup(numSortChannels, totalChannels, 1, pagesCount);
-        }
     }
 
     @Benchmark
@@ -142,7 +120,7 @@ public class PagesSortBenchmark
         }
     }
 
-    @Test
+	@Test
     public void verifyPagesMergeSortBenchmark()
     {
         MergeSortedBenchmarkData state = new MergeSortedBenchmarkData();
@@ -154,6 +132,37 @@ public class PagesSortBenchmark
                 .mapToInt(Page::getPositionCount)
                 .sum();
         assertEquals(positionCount, state.getTotalPositions());
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(PagesSortBenchmark.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
+    public static class PagesIndexSortBenchmarkData
+            extends BaseBenchmarkData
+    {
+        @Param("1")
+        private int numSortChannels = 1;
+
+        @Param({"1", "8"})
+        private int totalChannels = 1;
+
+        @Param({"200", "400"})
+        private int pagesCount = 200;
+
+        @Setup
+        public void setup()
+        {
+            super.setup(numSortChannels, totalChannels, 1, pagesCount);
+        }
     }
 
     @State(Thread)
@@ -266,16 +275,5 @@ public class PagesSortBenchmark
         {
             return outputChannels;
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + PagesSortBenchmark.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

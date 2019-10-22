@@ -36,9 +36,7 @@ public class TestGroupingOperationRewriter
         List<Integer> groupingOrdinals = ImmutableList.of(0, 4, 8);
         List<Set<Integer>> groupingSetOrdinals = ImmutableList.of(ImmutableSet.of(1), ImmutableSet.of(7, 3, 1), ImmutableSet.of(9, 1));
 
-        for (Set<Integer> groupingSet : groupingSetOrdinals) {
-            assertEquals(calculateGrouping(groupingSet, groupingOrdinals), 7L);
-        }
+        groupingSetOrdinals.forEach(groupingSet -> assertEquals(calculateGrouping(groupingSet, groupingOrdinals), 7L));
     }
 
     @Test
@@ -47,9 +45,7 @@ public class TestGroupingOperationRewriter
         List<Integer> groupingOrdinals = ImmutableList.of(4, 6);
         List<Set<Integer>> groupingSetOrdinals = ImmutableList.of(ImmutableSet.of(4, 6));
 
-        for (Set<Integer> groupingSet : groupingSetOrdinals) {
-            assertEquals(calculateGrouping(groupingSet, groupingOrdinals), 0L);
-        }
+        groupingSetOrdinals.forEach(groupingSet -> assertEquals(calculateGrouping(groupingSet, groupingOrdinals), 0L));
     }
 
     @Test

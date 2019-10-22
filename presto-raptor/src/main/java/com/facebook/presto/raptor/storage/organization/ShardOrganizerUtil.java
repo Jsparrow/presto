@@ -79,9 +79,7 @@ public class ShardOrganizerUtil
         Optional<List<TableColumn>> sortColumns = Optional.empty();
         if (includeSortColumns) {
             sortColumns = Optional.of(metadataDao.listSortColumns(tableId));
-            for (TableColumn column : sortColumns.get()) {
-                columnsBuilder.add(minColumn(column.getColumnId()), maxColumn(column.getColumnId()));
-            }
+            sortColumns.get().forEach(column -> columnsBuilder.add(minColumn(column.getColumnId()), maxColumn(column.getColumnId())));
         }
         String columnToSelect = Joiner.on(",\n").join(columnsBuilder.build());
 
@@ -90,10 +88,7 @@ public class ShardOrganizerUtil
             for (List<ShardMetadata> partitionedShards : partition(shards, 1000)) {
                 String shardIds = Joiner.on(",").join(nCopies(partitionedShards.size(), "?"));
 
-                String sql = format("" +
-                                "SELECT %s\n" +
-                                "FROM %s\n" +
-                                "WHERE shard_id IN (%s)",
+                String sql = format(new StringBuilder().append("").append("SELECT %s\n").append("FROM %s\n").append("WHERE shard_id IN (%s)").toString(),
                         columnToSelect, shardIndexTable(tableId), shardIds);
 
                 try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -176,9 +171,7 @@ public class ShardOrganizerUtil
         }
 
         ImmutableList.Builder<Collection<ShardIndexInfo>> sets = ImmutableList.builder();
-        for (Collection<ShardIndexInfo> s : byDays) {
-            sets.addAll(Multimaps.index(s, ShardIndexInfo::getBucketNumber).asMap().values());
-        }
+        byDays.forEach(s -> sets.addAll(Multimaps.index(s, ShardIndexInfo::getBucketNumber).asMap().values()));
         return sets.build();
     }
 

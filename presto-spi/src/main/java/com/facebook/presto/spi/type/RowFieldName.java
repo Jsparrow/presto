@@ -68,7 +68,7 @@ public class RowFieldName
         if (!isDelimited()) {
             return name;
         }
-        return '"' + name.replace("\"", "\"\"") + '"';
+        return new StringBuilder().append('"').append(name.replace("\"", "\"\"")).append('"').toString();
     }
 
     @Override

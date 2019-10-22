@@ -57,188 +57,7 @@ public class TestS3SelectRecordCursor
     private static final TypeManager MOCK_TYPE_MANAGER = new TestingTypeManager();
     private static final Path MOCK_PATH = new Path("mockPath");
 
-    @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "splitSchema is null")
-    public void shouldFailOnNullSplitSchema()
-    {
-        new S3SelectRecordCursor(
-                new Configuration(),
-                MOCK_PATH,
-                MOCK_RECORD_READER,
-                100L,
-                null,
-                singletonList(MOCK_HIVE_COLUMN_HANDLE),
-                DateTimeZone.UTC,
-                MOCK_TYPE_MANAGER);
-    }
-
-    @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "columns is null")
-    public void shouldFailOnNullColumns()
-    {
-        new S3SelectRecordCursor(
-                new Configuration(),
-                MOCK_PATH,
-                MOCK_RECORD_READER,
-                100L,
-                new Properties(),
-                null,
-                DateTimeZone.UTC,
-                MOCK_TYPE_MANAGER);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{ \\}")
-    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLHasNoColumns()
-    {
-        String ddlSerializationValue = "struct article { }";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Thrift DDL should start with struct")
-    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLNotStartingWithStruct()
-    {
-        String ddlSerializationValue = "foo article { varchar article varchar }";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{varchar article\\}")
-    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLNotStartingWithStruct2()
-    {
-        String ddlSerializationValue = "struct article {varchar article}";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article varchar article varchar \\}")
-    public void shouldThrowIllegalArgumentExceptionWhenMissingOpenStartStruct()
-    {
-        String ddlSerializationValue = "struct article varchar article varchar }";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article\\{varchar article varchar author date date_pub int quantity")
-    public void shouldThrowIllegalArgumentExceptionWhenDDlFormatNotCorrect()
-    {
-        String ddlSerializationValue = "struct article{varchar article varchar author date date_pub int quantity";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{ varchar article varchar author date date_pub int quantity ")
-    public void shouldThrowIllegalArgumentExceptionWhenEndOfStructNotFound()
-    {
-        String ddlSerializationValue = "struct article { varchar article varchar author date date_pub int quantity ";
-        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
-    }
-
-    @Test
-    public void shouldFilterColumnsWhichDoesNotMatchInTheHiveTable()
-    {
-        String ddlSerializationValue = "struct article { varchar address varchar company date date_pub int quantity}";
-        String expectedDDLSerialization = "struct article { date date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test
-    public void shouldReturnOnlyQuantityColumnInTheDDl()
-    {
-        String ddlSerializationValue = "struct article { varchar address varchar company date date_pub int quantity}";
-        String expectedDDLSerialization = "struct article { int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, ARTICLE_COLUMN, QUANTITY_COLUMN),
-                buildExpectedProperties(expectedDDLSerialization, ARTICLE_COLUMN, QUANTITY_COLUMN));
-    }
-
-    @Test
-    public void shouldReturnProperties()
-    {
-        String ddlSerializationValue = "struct article { varchar article varchar author date date_pub int quantity}";
-        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test
-    public void shouldReturnPropertiesWithoutDoubleCommaInColumnsNameLastColumnNameWithEndStruct()
-    {
-        String ddlSerializationValue = "struct article { varchar article, varchar author, date date_pub, int quantity}";
-        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test
-    public void shouldReturnPropertiesWithoutDoubleCommaInColumnsNameLastColumnNameWithoutEndStruct()
-    {
-        String ddlSerializationValue = "struct article { varchar article, varchar author, date date_pub, int quantity }";
-        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test
-    public void shouldOnlyGetColumnTypeFromHiveObjectAndNotFromDDLSerialLastColumnNameWithEndStruct()
-    {
-        String ddlSerializationValue = "struct article { int article, double author, xxxx date_pub, int quantity}";
-        String expectedDDLSerialization = "struct article { int article, double author, xxxx date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test
-    public void shouldOnlyGetColumnTypeFromHiveObjectAndNotFromDDLSerialLastColumnNameWithoutEndStruct()
-    {
-        String ddlSerializationValue = "struct article { int article, double author, xxxx date_pub, int quantity }";
-        String expectedDDLSerialization = "struct article { int article, double author, xxxx date_pub, int quantity}";
-        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
-                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
-    }
-
-    @Test(expectedExceptions = NullPointerException.class)
-    public void shouldThrowNullPointerExceptionWhenColumnsIsNull()
-    {
-        updateSplitSchema(new Properties(), null);
-    }
-
-    @Test(expectedExceptions = NullPointerException.class)
-    public void shouldThrowNullPointerExceptionWhenSchemaIsNull()
-    {
-        updateSplitSchema(null, ImmutableList.of());
-    }
-
-    private Properties buildSplitSchema(String ddlSerializationValue, HiveColumnHandle... columns)
-    {
-        Properties properties = new Properties();
-        properties.put(SERIALIZATION_LIB, LAZY_SERDE_CLASS_NAME);
-        properties.put(SERIALIZATION_DDL, ddlSerializationValue);
-        return updateSplitSchema(properties, asList(columns));
-    }
-
-    private Properties buildExpectedProperties(String expectedDDLSerialization, HiveColumnHandle... expectedColumns)
-    {
-        String expectedColumnsType = getTypes(expectedColumns);
-        String expectedColumnsName = getName(expectedColumns);
-        Properties propExpected = new Properties();
-        propExpected.put(LIST_COLUMNS, expectedColumnsName);
-        propExpected.put(SERIALIZATION_LIB, LAZY_SERDE_CLASS_NAME);
-        propExpected.put(SERIALIZATION_DDL, expectedDDLSerialization);
-        propExpected.put(LIST_COLUMN_TYPES, expectedColumnsType);
-        return propExpected;
-    }
-
-    private String getName(HiveColumnHandle[] expectedColumns)
-    {
-        return Stream.of(expectedColumns)
-                .map(HiveColumnHandle::getName)
-                .collect(joining(","));
-    }
-
-    private String getTypes(HiveColumnHandle[] expectedColumns)
-    {
-        return Stream.of(expectedColumns)
-                .map(HiveColumnHandle::getHiveType)
-                .map(HiveType::getTypeInfo)
-                .map(TypeInfo::getTypeName)
-                .collect(joining(","));
-    }
-
-    private static final RecordReader<?, ?> MOCK_RECORD_READER = new RecordReader()
+	private static final RecordReader<?, ?> MOCK_RECORD_READER = new RecordReader()
     {
         @Override
         public boolean next(Object key, Object value)
@@ -276,4 +95,185 @@ public class TestS3SelectRecordCursor
             throw new UnsupportedOperationException();
         }
     };
+
+	@Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "splitSchema is null")
+    public void shouldFailOnNullSplitSchema()
+    {
+        new S3SelectRecordCursor(
+                new Configuration(),
+                MOCK_PATH,
+                MOCK_RECORD_READER,
+                100L,
+                null,
+                singletonList(MOCK_HIVE_COLUMN_HANDLE),
+                DateTimeZone.UTC,
+                MOCK_TYPE_MANAGER);
+    }
+
+	@Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "columns is null")
+    public void shouldFailOnNullColumns()
+    {
+        new S3SelectRecordCursor(
+                new Configuration(),
+                MOCK_PATH,
+                MOCK_RECORD_READER,
+                100L,
+                new Properties(),
+                null,
+                DateTimeZone.UTC,
+                MOCK_TYPE_MANAGER);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{ \\}")
+    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLHasNoColumns()
+    {
+        String ddlSerializationValue = "struct article { }";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Thrift DDL should start with struct")
+    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLNotStartingWithStruct()
+    {
+        String ddlSerializationValue = "foo article { varchar article varchar }";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{varchar article\\}")
+    public void shouldThrowIllegalArgumentExceptionWhenSerialDDLNotStartingWithStruct2()
+    {
+        String ddlSerializationValue = "struct article {varchar article}";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article varchar article varchar \\}")
+    public void shouldThrowIllegalArgumentExceptionWhenMissingOpenStartStruct()
+    {
+        String ddlSerializationValue = "struct article varchar article varchar }";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article\\{varchar article varchar author date date_pub int quantity")
+    public void shouldThrowIllegalArgumentExceptionWhenDDlFormatNotCorrect()
+    {
+        String ddlSerializationValue = "struct article{varchar article varchar author date date_pub int quantity";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Invalid Thrift DDL struct article \\{ varchar article varchar author date date_pub int quantity ")
+    public void shouldThrowIllegalArgumentExceptionWhenEndOfStructNotFound()
+    {
+        String ddlSerializationValue = "struct article { varchar article varchar author date date_pub int quantity ";
+        buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS);
+    }
+
+	@Test
+    public void shouldFilterColumnsWhichDoesNotMatchInTheHiveTable()
+    {
+        String ddlSerializationValue = "struct article { varchar address varchar company date date_pub int quantity}";
+        String expectedDDLSerialization = "struct article { date date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test
+    public void shouldReturnOnlyQuantityColumnInTheDDl()
+    {
+        String ddlSerializationValue = "struct article { varchar address varchar company date date_pub int quantity}";
+        String expectedDDLSerialization = "struct article { int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, ARTICLE_COLUMN, QUANTITY_COLUMN),
+                buildExpectedProperties(expectedDDLSerialization, ARTICLE_COLUMN, QUANTITY_COLUMN));
+    }
+
+	@Test
+    public void shouldReturnProperties()
+    {
+        String ddlSerializationValue = "struct article { varchar article varchar author date date_pub int quantity}";
+        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test
+    public void shouldReturnPropertiesWithoutDoubleCommaInColumnsNameLastColumnNameWithEndStruct()
+    {
+        String ddlSerializationValue = "struct article { varchar article, varchar author, date date_pub, int quantity}";
+        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test
+    public void shouldReturnPropertiesWithoutDoubleCommaInColumnsNameLastColumnNameWithoutEndStruct()
+    {
+        String ddlSerializationValue = "struct article { varchar article, varchar author, date date_pub, int quantity }";
+        String expectedDDLSerialization = "struct article { varchar article, varchar author, date date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test
+    public void shouldOnlyGetColumnTypeFromHiveObjectAndNotFromDDLSerialLastColumnNameWithEndStruct()
+    {
+        String ddlSerializationValue = "struct article { int article, double author, xxxx date_pub, int quantity}";
+        String expectedDDLSerialization = "struct article { int article, double author, xxxx date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test
+    public void shouldOnlyGetColumnTypeFromHiveObjectAndNotFromDDLSerialLastColumnNameWithoutEndStruct()
+    {
+        String ddlSerializationValue = "struct article { int article, double author, xxxx date_pub, int quantity }";
+        String expectedDDLSerialization = "struct article { int article, double author, xxxx date_pub, int quantity}";
+        assertEquals(buildSplitSchema(ddlSerializationValue, DEFAULT_TEST_COLUMNS),
+                buildExpectedProperties(expectedDDLSerialization, DEFAULT_TEST_COLUMNS));
+    }
+
+	@Test(expectedExceptions = NullPointerException.class)
+    public void shouldThrowNullPointerExceptionWhenColumnsIsNull()
+    {
+        updateSplitSchema(new Properties(), null);
+    }
+
+	@Test(expectedExceptions = NullPointerException.class)
+    public void shouldThrowNullPointerExceptionWhenSchemaIsNull()
+    {
+        updateSplitSchema(null, ImmutableList.of());
+    }
+
+	private Properties buildSplitSchema(String ddlSerializationValue, HiveColumnHandle... columns)
+    {
+        Properties properties = new Properties();
+        properties.put(SERIALIZATION_LIB, LAZY_SERDE_CLASS_NAME);
+        properties.put(SERIALIZATION_DDL, ddlSerializationValue);
+        return updateSplitSchema(properties, asList(columns));
+    }
+
+	private Properties buildExpectedProperties(String expectedDDLSerialization, HiveColumnHandle... expectedColumns)
+    {
+        String expectedColumnsType = getTypes(expectedColumns);
+        String expectedColumnsName = getName(expectedColumns);
+        Properties propExpected = new Properties();
+        propExpected.put(LIST_COLUMNS, expectedColumnsName);
+        propExpected.put(SERIALIZATION_LIB, LAZY_SERDE_CLASS_NAME);
+        propExpected.put(SERIALIZATION_DDL, expectedDDLSerialization);
+        propExpected.put(LIST_COLUMN_TYPES, expectedColumnsType);
+        return propExpected;
+    }
+
+	private String getName(HiveColumnHandle[] expectedColumns)
+    {
+        return Stream.of(expectedColumns)
+                .map(HiveColumnHandle::getName)
+                .collect(joining(","));
+    }
+
+	private String getTypes(HiveColumnHandle[] expectedColumns)
+    {
+        return Stream.of(expectedColumns)
+                .map(HiveColumnHandle::getHiveType)
+                .map(HiveType::getTypeInfo)
+                .map(TypeInfo::getTypeName)
+                .collect(joining(","));
+    }
 }

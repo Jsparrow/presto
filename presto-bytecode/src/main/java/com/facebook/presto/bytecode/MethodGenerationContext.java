@@ -56,11 +56,11 @@ public class MethodGenerationContext
         ScopeContext scopeContext = new ScopeContext(scope);
         scopes.addLast(scopeContext);
 
-        for (Variable variable : scopeContext.getVariables()) {
+        scopeContext.getVariables().forEach(variable -> {
             checkArgument(!"this".equals(variable.getName()) || nextSlot == 0, "The 'this' variable must be in slot 0");
             variableSlots.put(variable, nextSlot);
             nextSlot += Type.getType(variable.getType().getType()).getSize();
-        }
+        });
 
         scopeContext.getStartLabel().accept(methodVisitor, this);
     }
@@ -74,9 +74,8 @@ public class MethodGenerationContext
 
         scopeContext.getEndLabel().accept(methodVisitor, this);
 
-        for (Variable variable : scopeContext.getVariables()) {
-            new LocalVariableNode(variable, scopeContext.getStartLabel(), scopeContext.getEndLabel()).accept(methodVisitor, this);
-        }
+        scopeContext.getVariables().forEach(variable -> new LocalVariableNode(variable, scopeContext.getStartLabel(), scopeContext.getEndLabel()).accept(methodVisitor,
+				this));
 
         variableSlots.keySet().removeAll(scopeContext.getVariables());
     }

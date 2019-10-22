@@ -178,12 +178,10 @@ public class ActualProperties
     public ActualProperties translateVariable(Function<VariableReferenceExpression, Optional<VariableReferenceExpression>> translator)
     {
         Map<VariableReferenceExpression, ConstantExpression> translatedConstants = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, ConstantExpression> entry : constants.entrySet()) {
+        constants.entrySet().forEach(entry -> {
             Optional<VariableReferenceExpression> translatedKey = translator.apply(entry.getKey());
-            if (translatedKey.isPresent()) {
-                translatedConstants.put(translatedKey.get(), entry.getValue());
-            }
-        }
+            translatedKey.ifPresent(value -> translatedConstants.put(value, entry.getValue()));
+        });
         return builder()
                 .global(global.translateVariableToRowExpression(variable -> {
                     Optional<RowExpression> translated = translator.apply(variable).map(RowExpression.class::cast);
@@ -200,7 +198,7 @@ public class ActualProperties
     public ActualProperties translateRowExpression(Map<VariableReferenceExpression, RowExpression> assignments, TypeProvider types)
     {
         Map<VariableReferenceExpression, VariableReferenceExpression> inputToOutputVariables = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : assignments.entrySet()) {
+        assignments.entrySet().forEach(assignment -> {
             RowExpression expression = assignment.getValue();
             if (isExpression(expression)) {
                 if (castToExpression(expression) instanceof SymbolReference) {
@@ -212,14 +210,10 @@ public class ActualProperties
                     inputToOutputVariables.put((VariableReferenceExpression) expression, assignment.getKey());
                 }
             }
-        }
+        });
 
         Map<VariableReferenceExpression, ConstantExpression> translatedConstants = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, ConstantExpression> entry : constants.entrySet()) {
-            if (inputToOutputVariables.containsKey(entry.getKey())) {
-                translatedConstants.put(inputToOutputVariables.get(entry.getKey()), entry.getValue());
-            }
-        }
+        constants.entrySet().stream().filter(entry -> inputToOutputVariables.containsKey(entry.getKey())).forEach(entry -> translatedConstants.put(inputToOutputVariables.get(entry.getKey()), entry.getValue()));
 
         ImmutableMap.Builder<VariableReferenceExpression, RowExpression> inputToOutputMappings = ImmutableMap.builder();
         inputToOutputMappings.putAll(inputToOutputVariables);
@@ -265,7 +259,38 @@ public class ActualProperties
         return new Builder(properties.global, properties.localProperties, properties.constants);
     }
 
-    public static class Builder
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(global, localProperties, constants.keySet());
+    }
+
+	@Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        final ActualProperties other = (ActualProperties) obj;
+        return Objects.equals(this.global, other.global)
+                && Objects.equals(this.localProperties, other.localProperties)
+                && Objects.equals(this.constants.keySet(), other.constants.keySet());
+    }
+
+	@Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("globalProperties", global)
+                .add("localProperties", localProperties)
+                .add("constants", constants)
+                .toString();
+    }
+
+	public static class Builder
     {
         private Global global;
         private List<LocalProperty<VariableReferenceExpression>> localProperties;
@@ -322,37 +347,6 @@ public class ActualProperties
             }
             return new ActualProperties(global, localProperties, constants);
         }
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(global, localProperties, constants.keySet());
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null || getClass() != obj.getClass()) {
-            return false;
-        }
-        final ActualProperties other = (ActualProperties) obj;
-        return Objects.equals(this.global, other.global)
-                && Objects.equals(this.localProperties, other.localProperties)
-                && Objects.equals(this.constants.keySet(), other.constants.keySet());
-    }
-
-    @Override
-    public String toString()
-    {
-        return toStringHelper(this)
-                .add("globalProperties", global)
-                .add("localProperties", localProperties)
-                .add("constants", constants)
-                .toString();
     }
 
     @Immutable

@@ -107,29 +107,6 @@ class AggregationAnalyzer
     private final Scope sourceScope;
     private final Optional<Scope> orderByScope;
 
-    public static void verifySourceAggregations(
-            List<Expression> groupByExpressions,
-            Scope sourceScope,
-            Expression expression,
-            Metadata metadata,
-            Analysis analysis)
-    {
-        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, sourceScope, Optional.empty(), metadata, analysis);
-        analyzer.analyze(expression);
-    }
-
-    public static void verifyOrderByAggregations(
-            List<Expression> groupByExpressions,
-            Scope sourceScope,
-            Scope orderByScope,
-            Expression expression,
-            Metadata metadata,
-            Analysis analysis)
-    {
-        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, sourceScope, Optional.of(orderByScope), metadata, analysis);
-        analyzer.analyze(expression);
-    }
-
     private AggregationAnalyzer(List<Expression> groupByExpressions, Scope sourceScope, Optional<Scope> orderByScope, Metadata metadata, Analysis analysis)
     {
         requireNonNull(groupByExpressions, "groupByExpressions is null");
@@ -154,13 +131,34 @@ class AggregationAnalyzer
                 .map(columnReferences::get)
                 .collect(toImmutableSet());
 
-        this.groupingFields.forEach(fieldId -> {
-            checkState(isFieldFromScope(fieldId, sourceScope),
-                    "Grouping field %s should originate from %s", fieldId, sourceScope.getRelationType());
-        });
+        this.groupingFields.forEach(fieldId -> checkState(isFieldFromScope(fieldId, sourceScope), "Grouping field %s should originate from %s", fieldId,
+				sourceScope.getRelationType()));
     }
 
-    private void analyze(Expression expression)
+	public static void verifySourceAggregations(
+            List<Expression> groupByExpressions,
+            Scope sourceScope,
+            Expression expression,
+            Metadata metadata,
+            Analysis analysis)
+    {
+        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, sourceScope, Optional.empty(), metadata, analysis);
+        analyzer.analyze(expression);
+    }
+
+	public static void verifyOrderByAggregations(
+            List<Expression> groupByExpressions,
+            Scope sourceScope,
+            Scope orderByScope,
+            Expression expression,
+            Metadata metadata,
+            Analysis analysis)
+    {
+        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, sourceScope, Optional.of(orderByScope), metadata, analysis);
+        analyzer.analyze(expression);
+    }
+
+	private void analyze(Expression expression)
     {
         Visitor visitor = new Visitor();
         if (!visitor.process(expression, null)) {
@@ -168,7 +166,21 @@ class AggregationAnalyzer
         }
     }
 
-    /**
+	private boolean hasOrderByReferencesToOutputColumns(Node node)
+    {
+        return hasReferencesToScope(node, analysis, orderByScope.get());
+    }
+
+	private void verifyNoOrderByReferencesToOutputColumns(Node node, SemanticErrorCode errorCode, String errorString)
+    {
+        getReferencesToScope(node, analysis, orderByScope.get())
+                .findFirst()
+                .ifPresent(expression -> {
+                    throw new SemanticException(errorCode, expression, errorString);
+                });
+    }
+
+	/**
      * visitor returns true if all expressions are constant with respect to the group.
      */
     private class Visitor
@@ -356,12 +368,9 @@ class AggregationAnalyzer
                         }
                         // ensure that no output fields are referenced from ORDER BY clause
                         if (orderByScope.isPresent()) {
-                            for (Expression sortKey : sortKeys) {
-                                verifyNoOrderByReferencesToOutputColumns(
-                                        sortKey,
-                                        REFERENCE_TO_OUTPUT_ATTRIBUTE_WITHIN_ORDER_BY_AGGREGATION,
-                                        "ORDER BY clause in aggregation function must not reference query output columns");
-                            }
+                            sortKeys.forEach(sortKey -> verifyNoOrderByReferencesToOutputColumns(sortKey,
+									REFERENCE_TO_OUTPUT_ATTRIBUTE_WITHIN_ORDER_BY_AGGREGATION,
+									"ORDER BY clause in aggregation function must not reference query output columns"));
                         }
                     }
 
@@ -405,12 +414,8 @@ class AggregationAnalyzer
         @Override
         protected Boolean visitBindExpression(BindExpression node, Void context)
         {
-            for (Expression value : node.getValues()) {
-                if (!process(value, context)) {
-                    return false;
-                }
-            }
-            return process(node.getFunction(), context);
+            return node.getValues().stream().filter(value -> !process(value, context)).findFirst().map(value -> false)
+					.orElse(process(node.getFunction(), context));
         }
 
         @Override
@@ -435,9 +440,7 @@ class AggregationAnalyzer
                 }
             }
 
-            if (node.getFrame().isPresent()) {
-                process(node.getFrame().get(), context);
-            }
+            node.getFrame().ifPresent(value -> process(value, context));
 
             return true;
         }
@@ -446,11 +449,10 @@ class AggregationAnalyzer
         public Boolean visitWindowFrame(WindowFrame node, Void context)
         {
             Optional<Expression> start = node.getStart().getValue();
-            if (start.isPresent()) {
-                if (!process(start.get(), context)) {
-                    throw new SemanticException(MUST_BE_AGGREGATE_OR_GROUP_BY, start.get(), "Window frame start must be an aggregate expression or appear in GROUP BY clause");
-                }
-            }
+            boolean condition = start.isPresent() && !process(start.get(), context);
+			if (condition) {
+			    throw new SemanticException(MUST_BE_AGGREGATE_OR_GROUP_BY, start.get(), "Window frame start must be an aggregate expression or appear in GROUP BY clause");
+			}
             if (node.getEnd().isPresent() && node.getEnd().get().getValue().isPresent()) {
                 Expression endValue = node.getEnd().get().getValue().get();
                 if (!process(endValue, context)) {
@@ -513,7 +515,7 @@ class AggregationAnalyzer
                     column = String.format("'%s.%s'", field.getRelationAlias().get(), field.getName().get());
                 }
                 else {
-                    column = "'" + field.getName().get() + "'";
+                    column = new StringBuilder().append("'").append(field.getName().get()).append("'").toString();
                 }
 
                 throw new SemanticException(MUST_BE_AGGREGATE_OR_GROUP_BY, node, "Column %s not in GROUP BY clause", column);
@@ -546,9 +548,7 @@ class AggregationAnalyzer
                     .add(node.getCondition())
                     .add(node.getTrueValue());
 
-            if (node.getFalseValue().isPresent()) {
-                expressions.add(node.getFalseValue().get());
-            }
+            node.getFalseValue().ifPresent(expressions::add);
 
             return expressions.build().stream().allMatch(expression -> process(expression, context));
         }
@@ -576,13 +576,8 @@ class AggregationAnalyzer
         @Override
         protected Boolean visitSearchedCaseExpression(SearchedCaseExpression node, Void context)
         {
-            for (WhenClause whenClause : node.getWhenClauses()) {
-                if (!process(whenClause.getOperand(), context) || !process(whenClause.getResult(), context)) {
-                    return false;
-                }
-            }
-
-            return !node.getDefaultValue().isPresent() || process(node.getDefaultValue().get(), context);
+            return node.getWhenClauses().stream().filter(whenClause -> !process(whenClause.getOperand(), context) || !process(whenClause.getResult(), context)).findFirst().map(whenClause -> false)
+					.orElse(!node.getDefaultValue().isPresent() || process(node.getDefaultValue().get(), context));
         }
 
         @Override
@@ -609,7 +604,8 @@ class AggregationAnalyzer
             return process(parameters.get(node.getPosition()), context);
         }
 
-        public Boolean visitGroupingOperation(GroupingOperation node, Void context)
+        @Override
+		public Boolean visitGroupingOperation(GroupingOperation node, Void context)
         {
             // ensure that no output fields are referenced from ORDER BY clause
             if (orderByScope.isPresent()) {
@@ -643,19 +639,5 @@ class AggregationAnalyzer
 
             return super.process(node, context);
         }
-    }
-
-    private boolean hasOrderByReferencesToOutputColumns(Node node)
-    {
-        return hasReferencesToScope(node, analysis, orderByScope.get());
-    }
-
-    private void verifyNoOrderByReferencesToOutputColumns(Node node, SemanticErrorCode errorCode, String errorString)
-    {
-        getReferencesToScope(node, analysis, orderByScope.get())
-                .findFirst()
-                .ifPresent(expression -> {
-                    throw new SemanticException(errorCode, expression, errorString);
-                });
     }
 }

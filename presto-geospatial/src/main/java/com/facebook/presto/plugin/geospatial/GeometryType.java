@@ -28,17 +28,17 @@ public class GeometryType
     public static final GeometryType GEOMETRY = new GeometryType();
     public static final String GEOMETRY_TYPE_NAME = "Geometry";
 
-    private GeometryType()
-    {
-        super(new TypeSignature(GEOMETRY_TYPE_NAME), Slice.class);
-    }
-
     protected GeometryType(TypeSignature signature)
     {
         super(signature, Slice.class);
     }
 
-    @Override
+	private GeometryType()
+    {
+        super(new TypeSignature(GEOMETRY_TYPE_NAME), Slice.class);
+    }
+
+	@Override
     public void appendTo(Block block, int position, BlockBuilder blockBuilder)
     {
         if (block.isNull(position)) {
@@ -50,13 +50,13 @@ public class GeometryType
         }
     }
 
-    @Override
+	@Override
     public Slice getSlice(Block block, int position)
     {
         return block.getSlice(position, 0, block.getSliceLength(position));
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value)
     {
         if (value == null) {
@@ -66,7 +66,7 @@ public class GeometryType
         writeSlice(blockBuilder, value, 0, value.length());
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         if (value == null) {
@@ -76,7 +76,7 @@ public class GeometryType
         blockBuilder.writeBytes(value, offset, length).closeEntry();
     }
 
-    @Override
+	@Override
     public Object getObjectValue(ConnectorSession session, Block block, int position)
     {
         if (block.isNull(position)) {

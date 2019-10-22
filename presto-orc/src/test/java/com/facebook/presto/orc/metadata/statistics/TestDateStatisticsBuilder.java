@@ -24,11 +24,15 @@ import static com.facebook.presto.orc.metadata.statistics.DateStatistics.DATE_VA
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Integer.MIN_VALUE;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDateStatisticsBuilder
         extends AbstractStatisticsBuilderTest<DateStatisticsBuilder, Integer>
 {
-    public TestDateStatisticsBuilder()
+    private static final Logger logger = LoggerFactory.getLogger(TestDateStatisticsBuilder.class);
+
+	public TestDateStatisticsBuilder()
     {
         super(DATE, DateStatisticsBuilder::new, DateStatisticsBuilder::addValue);
     }
@@ -62,6 +66,7 @@ public class TestDateStatisticsBuilder
             fail("Expected ArithmeticException");
         }
         catch (ArithmeticException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         try {
@@ -69,6 +74,7 @@ public class TestDateStatisticsBuilder
             fail("Expected ArithmeticException");
         }
         catch (ArithmeticException expected) {
+			logger.error(expected.getMessage(), expected);
         }
     }
 

@@ -359,7 +359,14 @@ public class HivePageSourceProvider
         return new BucketAdaptation(bucketColumnIndices, bucketColumnHiveTypes, conversion.getTableBucketCount(), conversion.getPartitionBucketCount(), tableBucketNumber.getAsInt());
     }
 
-    public static class ColumnMapping
+    public enum ColumnMappingKind
+    {
+        REGULAR,
+        PREFILLED,
+        INTERIM,
+    }
+
+	public static class ColumnMapping
     {
         private final ColumnMappingKind kind;
         private final HiveColumnHandle hiveColumnHandle;
@@ -370,24 +377,6 @@ public class HivePageSourceProvider
         private final OptionalInt index;
         private final Optional<HiveType> coercionFrom;
 
-        public static ColumnMapping regular(HiveColumnHandle hiveColumnHandle, int index, Optional<HiveType> coerceFrom)
-        {
-            checkArgument(hiveColumnHandle.getColumnType() == REGULAR);
-            return new ColumnMapping(ColumnMappingKind.REGULAR, hiveColumnHandle, Optional.empty(), OptionalInt.of(index), coerceFrom);
-        }
-
-        public static ColumnMapping prefilled(HiveColumnHandle hiveColumnHandle, String prefilledValue, Optional<HiveType> coerceFrom)
-        {
-            checkArgument(hiveColumnHandle.getColumnType() == PARTITION_KEY || hiveColumnHandle.getColumnType() == SYNTHESIZED);
-            return new ColumnMapping(ColumnMappingKind.PREFILLED, hiveColumnHandle, Optional.of(prefilledValue), OptionalInt.empty(), coerceFrom);
-        }
-
-        public static ColumnMapping interim(HiveColumnHandle hiveColumnHandle, int index)
-        {
-            checkArgument(hiveColumnHandle.getColumnType() == REGULAR);
-            return new ColumnMapping(ColumnMappingKind.INTERIM, hiveColumnHandle, Optional.empty(), OptionalInt.of(index), Optional.empty());
-        }
-
         private ColumnMapping(ColumnMappingKind kind, HiveColumnHandle hiveColumnHandle, Optional<String> prefilledValue, OptionalInt index, Optional<HiveType> coerceFrom)
         {
             this.kind = requireNonNull(kind, "kind is null");
@@ -397,34 +386,52 @@ public class HivePageSourceProvider
             this.coercionFrom = requireNonNull(coerceFrom, "coerceFrom is null");
         }
 
-        public ColumnMappingKind getKind()
+		public static ColumnMapping regular(HiveColumnHandle hiveColumnHandle, int index, Optional<HiveType> coerceFrom)
+        {
+            checkArgument(hiveColumnHandle.getColumnType() == REGULAR);
+            return new ColumnMapping(ColumnMappingKind.REGULAR, hiveColumnHandle, Optional.empty(), OptionalInt.of(index), coerceFrom);
+        }
+
+		public static ColumnMapping prefilled(HiveColumnHandle hiveColumnHandle, String prefilledValue, Optional<HiveType> coerceFrom)
+        {
+            checkArgument(hiveColumnHandle.getColumnType() == PARTITION_KEY || hiveColumnHandle.getColumnType() == SYNTHESIZED);
+            return new ColumnMapping(ColumnMappingKind.PREFILLED, hiveColumnHandle, Optional.of(prefilledValue), OptionalInt.empty(), coerceFrom);
+        }
+
+		public static ColumnMapping interim(HiveColumnHandle hiveColumnHandle, int index)
+        {
+            checkArgument(hiveColumnHandle.getColumnType() == REGULAR);
+            return new ColumnMapping(ColumnMappingKind.INTERIM, hiveColumnHandle, Optional.empty(), OptionalInt.of(index), Optional.empty());
+        }
+
+		public ColumnMappingKind getKind()
         {
             return kind;
         }
 
-        public String getPrefilledValue()
+		public String getPrefilledValue()
         {
             checkState(kind == ColumnMappingKind.PREFILLED);
             return prefilledValue.get();
         }
 
-        public HiveColumnHandle getHiveColumnHandle()
+		public HiveColumnHandle getHiveColumnHandle()
         {
             return hiveColumnHandle;
         }
 
-        public int getIndex()
+		public int getIndex()
         {
             checkState(kind == ColumnMappingKind.REGULAR || kind == ColumnMappingKind.INTERIM);
             return index.getAsInt();
         }
 
-        public Optional<HiveType> getCoercionFrom()
+		public Optional<HiveType> getCoercionFrom()
         {
             return coercionFrom;
         }
 
-        /**
+		/**
          * @param columns columns that need to be returned to engine
          * @param requiredInterimColumns columns that are needed for processing, but shouldn't be returned to engine (may overlaps with columns)
          * @param partitionSchemaDifference map from hive column index to hive type
@@ -477,14 +484,14 @@ public class HivePageSourceProvider
             return columnMappings.build();
         }
 
-        public static List<ColumnMapping> extractRegularAndInterimColumnMappings(List<ColumnMapping> columnMappings)
+		public static List<ColumnMapping> extractRegularAndInterimColumnMappings(List<ColumnMapping> columnMappings)
         {
             return columnMappings.stream()
                     .filter(columnMapping -> columnMapping.getKind() == ColumnMappingKind.REGULAR || columnMapping.getKind() == ColumnMappingKind.INTERIM)
                     .collect(toImmutableList());
         }
 
-        public static List<HiveColumnHandle> toColumnHandles(List<ColumnMapping> regularColumnMappings, boolean doCoercion)
+		public static List<HiveColumnHandle> toColumnHandles(List<ColumnMapping> regularColumnMappings, boolean doCoercion)
         {
             return regularColumnMappings.stream()
                     .map(columnMapping -> {
@@ -503,13 +510,6 @@ public class HivePageSourceProvider
                     })
                     .collect(toList());
         }
-    }
-
-    public enum ColumnMappingKind
-    {
-        REGULAR,
-        PREFILLED,
-        INTERIM,
     }
 
     public static class BucketAdaptation

@@ -85,14 +85,14 @@ public class ColumnRangesSystemTable
 
     public static Optional<SchemaTableName> getSourceTable(SchemaTableName tableName)
     {
-        if (tableName.getTableName().endsWith(COLUMN_RANGES_TABLE_SUFFIX) &&
-                !tableName.getTableName().equals(COLUMN_RANGES_TABLE_SUFFIX)) {
-            int tableNameLength = tableName.getTableName().length() - COLUMN_RANGES_TABLE_SUFFIX.length();
-            return Optional.of(new SchemaTableName(
-                    tableName.getSchemaName(),
-                    tableName.getTableName().substring(0, tableNameLength)));
-        }
-        return Optional.empty();
+        if (!(tableName.getTableName().endsWith(COLUMN_RANGES_TABLE_SUFFIX) &&
+                !tableName.getTableName().equals(COLUMN_RANGES_TABLE_SUFFIX))) {
+			return Optional.empty();
+		}
+		int tableNameLength = tableName.getTableName().length() - COLUMN_RANGES_TABLE_SUFFIX.length();
+		return Optional.of(new SchemaTableName(
+		        tableName.getSchemaName(),
+		        tableName.getTableName().substring(0, tableNameLength)));
     }
 
     @Override

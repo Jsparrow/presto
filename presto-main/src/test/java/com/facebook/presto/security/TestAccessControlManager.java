@@ -58,10 +58,13 @@ import static com.facebook.presto.transaction.TransactionBuilder.transaction;
 import static java.util.Objects.requireNonNull;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestAccessControlManager
 {
-    private static final Principal PRINCIPAL = new BasicPrincipal("principal");
+    private static final Logger logger = LoggerFactory.getLogger(TestAccessControlManager.class);
+	private static final Principal PRINCIPAL = new BasicPrincipal("principal");
     private static final String USER_NAME = "user_name";
 
     @Test(expectedExceptions = PrestoException.class, expectedExceptionsMessageRegExp = "Presto server is still initializing")
@@ -108,12 +111,11 @@ public class TestAccessControlManager
 
         try {
             transaction(transactionManager, accessControlManager)
-                    .execute(transactionId -> {
-                        accessControlManager.checkCanInsertIntoTable(transactionId, identity, tableName);
-                    });
+                    .execute(transactionId -> accessControlManager.checkCanInsertIntoTable(transactionId, identity, tableName));
             fail();
         }
         catch (AccessDeniedException expected) {
+			logger.error(expected.getMessage(), expected);
         }
     }
 
@@ -142,9 +144,9 @@ public class TestAccessControlManager
         accessControlManager.setSystemAccessControl("test", ImmutableMap.of());
 
         transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanSelectFromColumns(transactionId, new Identity(USER_NAME, Optional.of(PRINCIPAL)), new QualifiedObjectName("catalog", "schema", "table"), ImmutableSet.of("column"));
-                });
+                .execute(transactionId -> accessControlManager.checkCanSelectFromColumns(transactionId,
+						new Identity(USER_NAME, Optional.of(PRINCIPAL)),
+						new QualifiedObjectName("catalog", "schema", "table"), ImmutableSet.of("column")));
     }
 
     @Test(expectedExceptions = PrestoException.class, expectedExceptionsMessageRegExp = "Access Denied: Cannot select from columns \\[column\\] in table or view schema.table")
@@ -162,9 +164,9 @@ public class TestAccessControlManager
         accessControlManager.addCatalogAccessControl(connectorId, new DenyConnectorAccessControl());
 
         transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanSelectFromColumns(transactionId, new Identity(USER_NAME, Optional.of(PRINCIPAL)), new QualifiedObjectName("catalog", "schema", "table"), ImmutableSet.of("column"));
-                });
+                .execute(transactionId -> accessControlManager.checkCanSelectFromColumns(transactionId,
+						new Identity(USER_NAME, Optional.of(PRINCIPAL)),
+						new QualifiedObjectName("catalog", "schema", "table"), ImmutableSet.of("column")));
     }
 
     @Test(expectedExceptions = PrestoException.class, expectedExceptionsMessageRegExp = "Access Denied: Cannot select from table secured_catalog.schema.table")
@@ -182,9 +184,9 @@ public class TestAccessControlManager
         accessControlManager.addCatalogAccessControl(new ConnectorId("connector"), new DenyConnectorAccessControl());
 
         transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanSelectFromColumns(transactionId, new Identity(USER_NAME, Optional.of(PRINCIPAL)), new QualifiedObjectName("secured_catalog", "schema", "table"), ImmutableSet.of("column"));
-                });
+                .execute(transactionId -> accessControlManager.checkCanSelectFromColumns(transactionId,
+						new Identity(USER_NAME, Optional.of(PRINCIPAL)),
+						new QualifiedObjectName("secured_catalog", "schema", "table"), ImmutableSet.of("column")));
     }
 
     private static ConnectorId registerBogusConnector(CatalogManager catalogManager, TransactionManager transactionManager, AccessControl accessControl, String catalogName)
@@ -273,7 +275,7 @@ public class TestAccessControlManager
                 @Override
                 public void checkCanSelectFromColumns(Identity identity, CatalogSchemaTableName table, Set<String> columns)
                 {
-                    if (table.getCatalogName().equals("secured_catalog")) {
+                    if ("secured_catalog".equals(table.getCatalogName())) {
                         denySelectTable(table.toString());
                     }
                 }

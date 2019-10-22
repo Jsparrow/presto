@@ -275,9 +275,7 @@ public class TestShardCleaner
         assertEquals(cleaner.getLocalShardsCleaned().getTotalCount(), 0);
 
         // make sure nothing is deleted
-        for (UUID shard : shards) {
-            assertTrue(shardFileExists(shard));
-        }
+		shards.forEach(shard -> assertTrue(shardFileExists(shard)));
 
         // add reference for shard 3
         shardDao.insertShardNode(shard3, node1);

@@ -23,13 +23,15 @@ import static java.util.Objects.requireNonNull;
 
 public class Plans
 {
-    public static PlanNode resolveGroupReferences(PlanNode node, Lookup lookup)
+    private Plans() {}
+
+	public static PlanNode resolveGroupReferences(PlanNode node, Lookup lookup)
     {
         requireNonNull(node, "node is null");
         return node.accept(new ResolvingVisitor(lookup), null);
     }
 
-    private static class ResolvingVisitor
+	private static class ResolvingVisitor
             extends InternalPlanVisitor<PlanNode, Void>
     {
         private final Lookup lookup;
@@ -55,6 +57,4 @@ public class Plans
             return lookup.resolve(node).accept(this, context);
         }
     }
-
-    private Plans() {}
 }

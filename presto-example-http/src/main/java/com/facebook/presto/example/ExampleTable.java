@@ -44,9 +44,7 @@ public class ExampleTable
         this.sources = ImmutableList.copyOf(requireNonNull(sources, "sources is null"));
 
         ImmutableList.Builder<ColumnMetadata> columnsMetadata = ImmutableList.builder();
-        for (ExampleColumn column : this.columns) {
-            columnsMetadata.add(new ColumnMetadata(column.getName(), column.getType()));
-        }
+        this.columns.forEach(column -> columnsMetadata.add(new ColumnMetadata(column.getName(), column.getType())));
         this.columnsMetadata = columnsMetadata.build();
     }
 

@@ -27,33 +27,20 @@ import static org.testng.Assert.fail;
 public class TestKuduIntegrationIntegerColumns
         extends AbstractTestQueryFramework
 {
-    private QueryRunner queryRunner;
-
-    static class TestInt
-    {
-        final String type;
-        final int bits;
-
-        TestInt(String type, int bits)
-        {
-            this.type = type;
-            this.bits = bits;
-        }
-    }
-
     static final TestInt[] testList = {
             new TestInt("TINYINT", 8),
             new TestInt("SMALLINT", 16),
             new TestInt("INTEGER", 32),
             new TestInt("BIGINT", 64),
     };
+	private QueryRunner queryRunner;
 
-    public TestKuduIntegrationIntegerColumns()
+	public TestKuduIntegrationIntegerColumns()
     {
         super(() -> KuduQueryRunnerFactory.createKuduQueryRunner("test_integer"));
     }
 
-    @Test
+	@Test
     public void testCreateTableWithIntegerColumn()
     {
         for (TestInt test : testList) {
@@ -61,23 +48,20 @@ public class TestKuduIntegrationIntegerColumns
         }
     }
 
-    public void doTestCreateTableWithIntegerColumn(TestInt test)
+	public void doTestCreateTableWithIntegerColumn(TestInt test)
     {
         String dropTable = "DROP TABLE IF EXISTS test_int";
         String createTable = "CREATE TABLE test_int (\n";
         createTable += "  id INT WITH (primary_key=true),\n";
-        createTable += "  intcol " + test.type + "\n";
-        createTable += ") WITH (\n" +
-                " partition_by_hash_columns = ARRAY['id'],\n" +
-                " partition_by_hash_buckets = 2\n" +
-                ")";
+        createTable += new StringBuilder().append("  intcol ").append(test.type).append("\n").toString();
+        createTable += new StringBuilder().append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id'],\n").append(" partition_by_hash_buckets = 2\n").append(")").toString();
 
         queryRunner.execute(dropTable);
         queryRunner.execute(createTable);
 
         long maxValue = Long.MAX_VALUE;
         long casted = maxValue >> (64 - test.bits);
-        queryRunner.execute("INSERT INTO test_int VALUES(1, CAST(" + casted + " AS " + test.type + "))");
+        queryRunner.execute(new StringBuilder().append("INSERT INTO test_int VALUES(1, CAST(").append(casted).append(" AS ").append(test.type).append("))").toString());
 
         MaterializedResult result = queryRunner.execute("SELECT id, intcol FROM test_int");
         assertEquals(result.getRowCount(), 1);
@@ -105,18 +89,31 @@ public class TestKuduIntegrationIntegerColumns
         }
     }
 
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         queryRunner = getQueryRunner();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public final void destroy()
     {
-        if (queryRunner != null) {
-            queryRunner.close();
-            queryRunner = null;
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.close();
+		queryRunner = null;
+    }
+
+	static class TestInt
+    {
+        final String type;
+        final int bits;
+
+        TestInt(String type, int bits)
+        {
+            this.type = type;
+            this.bits = bits;
         }
     }
 }

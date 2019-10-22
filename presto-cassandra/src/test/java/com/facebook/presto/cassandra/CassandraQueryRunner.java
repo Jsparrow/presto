@@ -28,13 +28,13 @@ import static com.facebook.presto.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 
 public final class CassandraQueryRunner
 {
-    private CassandraQueryRunner()
+    private static boolean tpchLoaded;
+
+	private CassandraQueryRunner()
     {
     }
 
-    private static boolean tpchLoaded;
-
-    public static synchronized DistributedQueryRunner createCassandraQueryRunner()
+	public static synchronized DistributedQueryRunner createCassandraQueryRunner()
             throws Exception
     {
         EmbeddedCassandra.start();
@@ -63,7 +63,7 @@ public final class CassandraQueryRunner
         return queryRunner;
     }
 
-    public static Session createCassandraSession(String schema)
+	public static Session createCassandraSession(String schema)
     {
         return testSessionBuilder()
                 .setCatalog("cassandra")

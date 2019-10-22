@@ -444,26 +444,24 @@ public class GroupedTopNBuilder
 
         private ObjectBigArray<Row> nextGroupedRows()
         {
-            if (currentGroupNumber < groupCount) {
-                RowHeap rows = groupedRows.get(currentGroupNumber);
-                verify(rows != null && !rows.isEmpty(), "impossible to have inserted a group without a witness row");
-                groupedRows.set(currentGroupNumber, null);
-                currentGroupSizeInBytes = rows.getEstimatedSizeInBytes();
-                currentGroupNumber++;
-                currentGroupSize = rows.size();
-
-                // sort output rows in a big array in case there are too many rows
-                ObjectBigArray<Row> sortedRows = new ObjectBigArray<>();
-                sortedRows.ensureCapacity(currentGroupSize);
-                int index = currentGroupSize - 1;
-                while (!rows.isEmpty()) {
-                    sortedRows.set(index, rows.dequeue());
-                    index--;
-                }
-
-                return sortedRows;
-            }
-            return null;
+            if (currentGroupNumber >= groupCount) {
+				return null;
+			}
+			RowHeap rows = groupedRows.get(currentGroupNumber);
+			verify(rows != null && !rows.isEmpty(), "impossible to have inserted a group without a witness row");
+			groupedRows.set(currentGroupNumber, null);
+			currentGroupSizeInBytes = rows.getEstimatedSizeInBytes();
+			currentGroupNumber++;
+			currentGroupSize = rows.size();
+			// sort output rows in a big array in case there are too many rows
+			ObjectBigArray<Row> sortedRows = new ObjectBigArray<>();
+			sortedRows.ensureCapacity(currentGroupSize);
+			int index = currentGroupSize - 1;
+			while (!rows.isEmpty()) {
+			    sortedRows.set(index, rows.dequeue());
+			    index--;
+			}
+			return sortedRows;
         }
     }
 }

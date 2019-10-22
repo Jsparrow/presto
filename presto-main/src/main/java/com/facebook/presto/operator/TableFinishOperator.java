@@ -57,6 +57,173 @@ public class TableFinishOperator
         implements Operator
 {
     public static final List<Type> TYPES = ImmutableList.of(BIGINT);
+	private final OperatorContext operatorContext;
+	private final TableFinisher tableFinisher;
+	private final Operator statisticsAggregationOperator;
+	private final StatisticAggregationsDescriptor<Integer> descriptor;
+	private State state = State.RUNNING;
+	private Optional<ConnectorOutputMetadata> outputMetadata = Optional.empty();
+	private final ImmutableList.Builder<ComputedStatistics> computedStatisticsBuilder = ImmutableList.builder();
+	private final OperationTiming statisticsTiming = new OperationTiming();
+	private final boolean statisticsCpuTimerEnabled;
+	private final JsonCodec<TableCommitContext> tableCommitContextCodec;
+	private final LifespanAndStageStateTracker lifespanAndStageStateTracker;
+
+	public TableFinishOperator(
+            OperatorContext operatorContext,
+            TableFinisher tableFinisher,
+            LifespanCommitter lifespanCommitter,
+            Operator statisticsAggregationOperator,
+            StatisticAggregationsDescriptor<Integer> descriptor,
+            boolean statisticsCpuTimerEnabled,
+            JsonCodec<TableCommitContext> tableCommitContextCodec)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.tableFinisher = requireNonNull(tableFinisher, "tableCommitter is null");
+        this.statisticsAggregationOperator = requireNonNull(statisticsAggregationOperator, "statisticsAggregationOperator is null");
+        this.descriptor = requireNonNull(descriptor, "descriptor is null");
+        this.statisticsCpuTimerEnabled = statisticsCpuTimerEnabled;
+        this.tableCommitContextCodec = requireNonNull(tableCommitContextCodec, "tableCommitContextCodec is null");
+        this.lifespanAndStageStateTracker = new LifespanAndStageStateTracker(lifespanCommitter);
+
+        operatorContext.setInfoSupplier(this::getInfo);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
+        statisticsAggregationOperator.finish();
+        timer.end(statisticsTiming);
+
+        if (state == State.RUNNING) {
+            state = State.FINISHING;
+        }
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        if (state != State.FINISHED) {
+			return false;
+		}
+		verify(statisticsAggregationOperator.isFinished());
+		return true;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return statisticsAggregationOperator.isBlocked();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        if (state != State.RUNNING) {
+            return false;
+        }
+        return statisticsAggregationOperator.needsInput();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(state == State.RUNNING, "Operator is %s", state);
+
+        TableCommitContext tableCommitContext = getTableCommitContext(page, tableCommitContextCodec);
+        lifespanAndStageStateTracker.update(page, tableCommitContext);
+        lifespanAndStageStateTracker.getStatisticsPagesToProcess(page, tableCommitContext).forEach(statisticsPage -> {
+            OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
+            statisticsAggregationOperator.addInput(statisticsPage);
+            timer.end(statisticsTiming);
+        });
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!isBlocked().isDone()) {
+            return null;
+        }
+
+        if (!statisticsAggregationOperator.isFinished()) {
+            verify(statisticsAggregationOperator.isBlocked().isDone(), "aggregation operator should not be blocked");
+
+            OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
+            Page page = statisticsAggregationOperator.getOutput();
+            timer.end(statisticsTiming);
+
+            if (page == null) {
+                return null;
+            }
+            for (int position = 0; position < page.getPositionCount(); position++) {
+                computedStatisticsBuilder.add(getComputedStatistics(page, position));
+            }
+            return null;
+        }
+
+        if (state != State.FINISHING) {
+            return null;
+        }
+        state = State.FINISHED;
+
+        outputMetadata = tableFinisher.finishTable(lifespanAndStageStateTracker.getFinalFragments(), computedStatisticsBuilder.build());
+
+        // output page will only be constructed once,
+        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
+        PageBuilder page = new PageBuilder(1, TYPES);
+        page.declarePosition();
+        BIGINT.writeLong(page.getBlockBuilder(0), lifespanAndStageStateTracker.getFinalRowCount());
+        return page.build();
+    }
+
+	private ComputedStatistics getComputedStatistics(Page page, int position)
+    {
+        ImmutableList.Builder<String> groupingColumns = ImmutableList.builder();
+        ImmutableList.Builder<Block> groupingValues = ImmutableList.builder();
+        descriptor.getGrouping().forEach((column, channel) -> {
+            groupingColumns.add(column);
+            groupingValues.add(page.getBlock(channel).getSingleValueBlock(position));
+        });
+
+        ComputedStatistics.Builder statistics = ComputedStatistics.builder(groupingColumns.build(), groupingValues.build());
+
+        descriptor.getTableStatistics().forEach((type, channel) ->
+                statistics.addTableStatistic(type, page.getBlock(channel).getSingleValueBlock(position)));
+
+        descriptor.getColumnStatistics().forEach((metadata, channel) -> statistics.addColumnStatistic(metadata, page.getBlock(channel).getSingleValueBlock(position)));
+
+        return statistics.build();
+    }
+
+	@VisibleForTesting
+    TableFinishInfo getInfo()
+    {
+        return new TableFinishInfo(
+                outputMetadata,
+                succinctNanos(statisticsTiming.getWallNanos()),
+                succinctNanos(statisticsTiming.getCpuNanos()));
+    }
+
+	@Override
+    public void close()
+            throws Exception
+    {
+        statisticsAggregationOperator.close();
+    }
+
+	private enum State
+    {
+        RUNNING, FINISHING, FINISHED
+    }
 
     public static class TableFinishOperatorFactory
             implements OperatorFactory
@@ -115,177 +282,6 @@ public class TableFinishOperator
         }
     }
 
-    private enum State
-    {
-        RUNNING, FINISHING, FINISHED
-    }
-
-    private final OperatorContext operatorContext;
-    private final TableFinisher tableFinisher;
-    private final Operator statisticsAggregationOperator;
-    private final StatisticAggregationsDescriptor<Integer> descriptor;
-
-    private State state = State.RUNNING;
-    private Optional<ConnectorOutputMetadata> outputMetadata = Optional.empty();
-    private final ImmutableList.Builder<ComputedStatistics> computedStatisticsBuilder = ImmutableList.builder();
-
-    private final OperationTiming statisticsTiming = new OperationTiming();
-    private final boolean statisticsCpuTimerEnabled;
-
-    private final JsonCodec<TableCommitContext> tableCommitContextCodec;
-    private final LifespanAndStageStateTracker lifespanAndStageStateTracker;
-
-    public TableFinishOperator(
-            OperatorContext operatorContext,
-            TableFinisher tableFinisher,
-            LifespanCommitter lifespanCommitter,
-            Operator statisticsAggregationOperator,
-            StatisticAggregationsDescriptor<Integer> descriptor,
-            boolean statisticsCpuTimerEnabled,
-            JsonCodec<TableCommitContext> tableCommitContextCodec)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.tableFinisher = requireNonNull(tableFinisher, "tableCommitter is null");
-        this.statisticsAggregationOperator = requireNonNull(statisticsAggregationOperator, "statisticsAggregationOperator is null");
-        this.descriptor = requireNonNull(descriptor, "descriptor is null");
-        this.statisticsCpuTimerEnabled = statisticsCpuTimerEnabled;
-        this.tableCommitContextCodec = requireNonNull(tableCommitContextCodec, "tableCommitContextCodec is null");
-        this.lifespanAndStageStateTracker = new LifespanAndStageStateTracker(lifespanCommitter);
-
-        operatorContext.setInfoSupplier(this::getInfo);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
-        statisticsAggregationOperator.finish();
-        timer.end(statisticsTiming);
-
-        if (state == State.RUNNING) {
-            state = State.FINISHING;
-        }
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        if (state == State.FINISHED) {
-            verify(statisticsAggregationOperator.isFinished());
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return statisticsAggregationOperator.isBlocked();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        if (state != State.RUNNING) {
-            return false;
-        }
-        return statisticsAggregationOperator.needsInput();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(state == State.RUNNING, "Operator is %s", state);
-
-        TableCommitContext tableCommitContext = getTableCommitContext(page, tableCommitContextCodec);
-        lifespanAndStageStateTracker.update(page, tableCommitContext);
-        lifespanAndStageStateTracker.getStatisticsPagesToProcess(page, tableCommitContext).forEach(statisticsPage -> {
-            OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
-            statisticsAggregationOperator.addInput(statisticsPage);
-            timer.end(statisticsTiming);
-        });
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!isBlocked().isDone()) {
-            return null;
-        }
-
-        if (!statisticsAggregationOperator.isFinished()) {
-            verify(statisticsAggregationOperator.isBlocked().isDone(), "aggregation operator should not be blocked");
-
-            OperationTimer timer = new OperationTimer(statisticsCpuTimerEnabled);
-            Page page = statisticsAggregationOperator.getOutput();
-            timer.end(statisticsTiming);
-
-            if (page == null) {
-                return null;
-            }
-            for (int position = 0; position < page.getPositionCount(); position++) {
-                computedStatisticsBuilder.add(getComputedStatistics(page, position));
-            }
-            return null;
-        }
-
-        if (state != State.FINISHING) {
-            return null;
-        }
-        state = State.FINISHED;
-
-        outputMetadata = tableFinisher.finishTable(lifespanAndStageStateTracker.getFinalFragments(), computedStatisticsBuilder.build());
-
-        // output page will only be constructed once,
-        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
-        PageBuilder page = new PageBuilder(1, TYPES);
-        page.declarePosition();
-        BIGINT.writeLong(page.getBlockBuilder(0), lifespanAndStageStateTracker.getFinalRowCount());
-        return page.build();
-    }
-
-    private ComputedStatistics getComputedStatistics(Page page, int position)
-    {
-        ImmutableList.Builder<String> groupingColumns = ImmutableList.builder();
-        ImmutableList.Builder<Block> groupingValues = ImmutableList.builder();
-        descriptor.getGrouping().forEach((column, channel) -> {
-            groupingColumns.add(column);
-            groupingValues.add(page.getBlock(channel).getSingleValueBlock(position));
-        });
-
-        ComputedStatistics.Builder statistics = ComputedStatistics.builder(groupingColumns.build(), groupingValues.build());
-
-        descriptor.getTableStatistics().forEach((type, channel) ->
-                statistics.addTableStatistic(type, page.getBlock(channel).getSingleValueBlock(position)));
-
-        descriptor.getColumnStatistics().forEach((metadata, channel) -> statistics.addColumnStatistic(metadata, page.getBlock(channel).getSingleValueBlock(position)));
-
-        return statistics.build();
-    }
-
-    @VisibleForTesting
-    TableFinishInfo getInfo()
-    {
-        return new TableFinishInfo(
-                outputMetadata,
-                succinctNanos(statisticsTiming.getWallNanos()),
-                succinctNanos(statisticsTiming.getCpuNanos()));
-    }
-
-    @Override
-    public void close()
-            throws Exception
-    {
-        statisticsAggregationOperator.close();
-    }
-
     public interface TableFinisher
     {
         Optional<ConnectorOutputMetadata> finishTable(Collection<Slice> fragments, Collection<ComputedStatistics> computedStatistics);
@@ -331,13 +327,14 @@ public class TableFinishOperator
             Map<TaskId, LifespanAndStageState> lifespanStageStatesPerTask = uncommittedRecoverableLifespanAndStageStates.computeIfAbsent(lifespanAndStage, ignored -> new HashMap<>());
             lifespanStageStatesPerTask.computeIfAbsent(tableCommitContext.getTaskId(), ignored -> new LifespanAndStageState(tableCommitContext.getTaskId())).update(page);
 
-            if (tableCommitContext.isLastPage()) {
-                checkState(!committedRecoverableLifespanAndStages.containsKey(lifespanAndStage), "LifespanAndStage already finished");
-                LifespanAndStageState lifespanAndStageState = lifespanStageStatesPerTask.get(tableCommitContext.getTaskId());
-                committedRecoverableLifespanAndStages.put(lifespanAndStage, lifespanAndStageState);
-                uncommittedRecoverableLifespanAndStageStates.remove(lifespanAndStage);
-                lifespanCommitter.commitLifespan(lifespanAndStageState.getFragments());
-            }
+            if (!tableCommitContext.isLastPage()) {
+				return;
+			}
+			checkState(!committedRecoverableLifespanAndStages.containsKey(lifespanAndStage), "LifespanAndStage already finished");
+			LifespanAndStageState lifespanAndStageState = lifespanStageStatesPerTask.get(tableCommitContext.getTaskId());
+			committedRecoverableLifespanAndStages.put(lifespanAndStage, lifespanAndStageState);
+			uncommittedRecoverableLifespanAndStageStates.remove(lifespanAndStage);
+			lifespanCommitter.commitLifespan(lifespanAndStageState.getFragments());
         }
 
         List<Page> getStatisticsPagesToProcess(Page page, TableCommitContext tableCommitContext)

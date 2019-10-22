@@ -196,13 +196,13 @@ public class TestArrayBlock
             }
             else {
                 BlockBuilder intermediateBlockBuilder = new ArrayBlockBuilder(BIGINT, null, 100, 100);
-                for (int j = 0; j < expectedValue.length; j++) {
-                    if (expectedValue[j] == null) {
+                for (long[] anExpectedValue : expectedValue) {
+                    if (anExpectedValue == null) {
                         intermediateBlockBuilder.appendNull();
                     }
                     else {
                         BlockBuilder innerMostBlockBuilder = BIGINT.createBlockBuilder(null, expectedValue.length);
-                        for (long v : expectedValue[j]) {
+                        for (long v : anExpectedValue) {
                             BIGINT.writeLong(innerMostBlockBuilder, v);
                         }
                         intermediateBlockBuilder.appendStructure(innerMostBlockBuilder.build());

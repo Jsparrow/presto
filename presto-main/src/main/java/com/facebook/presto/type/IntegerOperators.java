@@ -252,7 +252,35 @@ public final class IntegerOperators
         return AbstractIntType.hash((int) value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(SATURATED_FLOOR_CAST)
+    @SqlType(StandardTypes.SMALLINT)
+    public static long saturatedFloorCastToSmallint(@SqlType(StandardTypes.INTEGER) long value)
+    {
+        return Shorts.saturatedCast(value);
+    }
+
+	@ScalarOperator(SATURATED_FLOOR_CAST)
+    @SqlType(StandardTypes.TINYINT)
+    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.INTEGER) long value)
+    {
+        return SignedBytes.saturatedCast(value);
+    }
+
+	@ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.INTEGER) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.INTEGER) long value)
+    {
+        return XxHash64.hash(value);
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class IntegerDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -286,33 +314,5 @@ public final class IntegerOperators
             }
             return notEqual(INTEGER.getLong(left, leftPosition), INTEGER.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(SATURATED_FLOOR_CAST)
-    @SqlType(StandardTypes.SMALLINT)
-    public static long saturatedFloorCastToSmallint(@SqlType(StandardTypes.INTEGER) long value)
-    {
-        return Shorts.saturatedCast(value);
-    }
-
-    @ScalarOperator(SATURATED_FLOOR_CAST)
-    @SqlType(StandardTypes.TINYINT)
-    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.INTEGER) long value)
-    {
-        return SignedBytes.saturatedCast(value);
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.INTEGER) long value, @IsNull boolean isNull)
-    {
-        return isNull;
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.INTEGER) long value)
-    {
-        return XxHash64.hash(value);
     }
 }

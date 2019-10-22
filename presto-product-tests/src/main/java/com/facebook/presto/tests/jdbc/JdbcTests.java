@@ -60,6 +60,7 @@ import static io.prestodb.tempto.query.QueryExecutor.defaultQueryExecutor;
 import static io.prestodb.tempto.query.QueryExecutor.query;
 import static java.util.Locale.CHINESE;
 import static org.assertj.core.api.Assertions.assertThat;
+import org.apache.commons.lang3.StringUtils;
 
 public class JdbcTests
         extends ProductTest
@@ -79,15 +80,6 @@ public class JdbcTests
     @Named("databases.presto.jdbc_password")
     private String prestoJdbcPassword;
 
-    private static class ImmutableAndMutableNationTable
-            implements RequirementsProvider
-    {
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return compose(immutableTable(NATION), mutableTable(NATION, TABLE_NAME, CREATED));
-        }
-    }
-
     @Test(groups = JDBC)
     @Requires(ImmutableNationTable.class)
     public void shouldExecuteQuery()
@@ -99,7 +91,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     @Requires(ImmutableAndMutableNationTable.class)
     public void shouldInsertSelectQuery()
             throws SQLException
@@ -108,14 +100,14 @@ public class JdbcTests
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).hasNoRows();
 
         try (Statement statement = connection().createStatement()) {
-            assertThat(statement.executeUpdate("insert into " + tableNameInDatabase + " select * from nation"))
+            assertThat(statement.executeUpdate(new StringBuilder().append("insert into ").append(tableNameInDatabase).append(" select * from nation").toString()))
                     .isEqualTo(25);
         }
 
         assertThat(query("SELECT * FROM " + tableNameInDatabase)).matches(PRESTO_NATION_RESULT);
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     @Requires(ImmutableNationTable.class)
     public void shouldExecuteQueryWithSelectedCatalogAndSchema()
             throws SQLException
@@ -133,7 +125,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     public void shouldSetTimezone()
             throws SQLException
     {
@@ -144,19 +136,19 @@ public class JdbcTests
         }
         else {
             String prestoJdbcURLTestTimeZone;
-            String testTimeZone = "TimeZoneID=" + timeZoneId + ";";
-            if (prestoJdbcURL.contains("TimeZoneID=")) {
+            String testTimeZone = new StringBuilder().append("TimeZoneID=").append(timeZoneId).append(";").toString();
+            if (StringUtils.contains(prestoJdbcURL, "TimeZoneID=")) {
                 prestoJdbcURLTestTimeZone = prestoJdbcURL.replaceFirst("TimeZoneID=[\\w/]*;", testTimeZone);
             }
             else {
-                prestoJdbcURLTestTimeZone = prestoJdbcURL + ";" + testTimeZone;
+                prestoJdbcURLTestTimeZone = new StringBuilder().append(prestoJdbcURL).append(";").append(testTimeZone).toString();
             }
             Connection testConnection = DriverManager.getConnection(prestoJdbcURLTestTimeZone, prestoJdbcUser, prestoJdbcPassword);
             assertConnectionTimezone(testConnection, timeZoneId);
         }
     }
 
-    private void assertConnectionTimezone(Connection connection, String timeZoneId)
+	private void assertConnectionTimezone(Connection connection, String timeZoneId)
             throws SQLException
     {
         try (Statement statement = connection.createStatement()) {
@@ -165,7 +157,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     public void shouldSetLocale()
             throws SQLException
     {
@@ -181,7 +173,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     public void shouldGetSchemas()
             throws SQLException
     {
@@ -189,7 +181,7 @@ public class JdbcTests
         assertThat(result).contains(row("default", "hive"));
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     @Requires(ImmutableNationTable.class)
     public void shouldGetTables()
             throws SQLException
@@ -198,7 +190,7 @@ public class JdbcTests
         assertThat(result).contains(row("hive", "default", "nation", "TABLE", null, null, null, null, null, null));
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     @Requires(ImmutableNationTable.class)
     public void shouldGetColumns()
             throws SQLException
@@ -220,7 +212,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     @Requires(ImmutableNationTable.class)
     public void shouldGetTableTypes()
             throws SQLException
@@ -229,7 +221,7 @@ public class JdbcTests
         assertThat(result).contains(row("TABLE"), row("VIEW"));
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     public void testSqlEscapeFunctions()
     {
         if (usingTeradataJdbcDriver(connection())) {
@@ -269,7 +261,7 @@ public class JdbcTests
         }
     }
 
-    @Test(groups = JDBC)
+	@Test(groups = JDBC)
     public void testSessionProperties()
             throws SQLException
     {
@@ -283,7 +275,7 @@ public class JdbcTests
         assertThat(getSessionProperty(connection(), joinDistributionType)).isEqualTo(defaultValue);
     }
 
-    /**
+	/**
      * Same as {@code com.facebook.presto.jdbc.TestJdbcPreparedStatement#testDeallocate()}. This one is run for TeradataJdbcDriver as well.
      */
     @Test(groups = JDBC)
@@ -293,7 +285,7 @@ public class JdbcTests
         try (Connection connection = connection()) {
             for (int i = 0; i < 200; i++) {
                 try {
-                    try (PreparedStatement preparedStatement = connection.prepareStatement("SELECT '" + repeat("a", 300) + "'")) {
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(new StringBuilder().append("SELECT '").append(repeat("a", 300)).append("'").toString())) {
                         preparedStatement.executeQuery().close(); // Let's not assume when PREPARE actually happens
                     }
                 }
@@ -304,20 +296,30 @@ public class JdbcTests
         }
     }
 
-    private QueryResult queryResult(Statement statement, String query)
+	private QueryResult queryResult(Statement statement, String query)
             throws SQLException
     {
         return QueryResult.forResultSet(statement.executeQuery(query));
     }
 
-    private DatabaseMetaData metaData()
+	private DatabaseMetaData metaData()
             throws SQLException
     {
         return connection().getMetaData();
     }
 
-    private Connection connection()
+	private Connection connection()
     {
         return defaultQueryExecutor().getConnection();
+    }
+
+	private static class ImmutableAndMutableNationTable
+            implements RequirementsProvider
+    {
+        @Override
+		public Requirement getRequirements(Configuration configuration)
+        {
+            return compose(immutableTable(NATION), mutableTable(NATION, TABLE_NAME, CREATED));
+        }
     }
 }

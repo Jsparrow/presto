@@ -168,140 +168,77 @@ public class TestConditions
     @Test
     public void testSearchCase()
     {
-        assertFunction("case " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when true then 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case " +
-                        "when true then BIGINT '33' " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when true then BIGINT '33' ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case " +
-                        "when false then 1 " +
-                        "else 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 1 ").append("else 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case " +
-                        "when false then 10000000000 " +
-                        "else 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 10000000000 ").append("else 33 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case " +
-                        "when false then 1 " +
-                        "when false then 1 " +
-                        "when true then 33 " +
-                        "else 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 1 ").append("when false then 1 ").append("when true then 33 ").append("else 1 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case " +
-                        "when false then BIGINT '1' " +
-                        "when false then 1 " +
-                        "when true then 33 " +
-                        "else 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then BIGINT '1' ").append("when false then 1 ").append("when true then 33 ").append("else 1 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case " +
-                        "when false then 10000000000 " +
-                        "when false then 1 " +
-                        "when true then 33 " +
-                        "else 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 10000000000 ").append("when false then 1 ").append("when true then 33 ").append("else 1 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case " +
-                        "when false then 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 1 ").append("end").toString(),
                 INTEGER,
                 null);
 
-        assertFunction("case " +
-                        "when true then null " +
-                        "else 'foo' " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when true then null ").append("else 'foo' ").append("end").toString(),
                 createVarcharType(3),
                 null);
 
-        assertFunction("case " +
-                        "when null then 1 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when null then 1 ").append("when true then 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case " +
-                        "when null then 10000000000 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when null then 10000000000 ").append("when true then 33 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case " +
-                        "when false then 1.0E0 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 1.0E0 ").append("when true then 33 ").append("end").toString(),
                 DOUBLE,
                 33.0);
 
-        assertDecimalFunction("case " +
-                        "when false then DECIMAL '2.2' " +
-                        "when true then DECIMAL '2.2' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then DECIMAL '2.2' ").append("when true then DECIMAL '2.2' ").append("end").toString(),
                 decimal("2.2"));
 
-        assertDecimalFunction("case " +
-                        "when false then DECIMAL '1234567890.0987654321' " +
-                        "when true then DECIMAL '3.3' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then DECIMAL '1234567890.0987654321' ").append("when true then DECIMAL '3.3' ").append("end").toString(),
                 decimal("0000000003.3000000000"));
 
-        assertDecimalFunction("case " +
-                        "when false then 1 " +
-                        "when true then DECIMAL '2.2' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then 1 ").append("when true then DECIMAL '2.2' ").append("end").toString(),
                 decimal("0000000002.2"));
 
-        assertDecimalFunction("case " +
-                        "when false then 2.2 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then 2.2 ").append("when true then 2.2 ").append("end").toString(),
                 decimal("2.2"));
 
-        assertDecimalFunction("case " +
-                        "when false then 1234567890.0987654321 " +
-                        "when true then 3.3 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then 1234567890.0987654321 ").append("when true then 3.3 ").append("end").toString(),
                 decimal("0000000003.3000000000"));
 
-        assertDecimalFunction("case " +
-                        "when false then 1 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case ").append("when false then 1 ").append("when true then 2.2 ").append("end").toString(),
                 decimal("0000000002.2"));
 
-        assertFunction("case " +
-                        "when false then DECIMAL '1.1' " +
-                        "when true then 33.0E0 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then DECIMAL '1.1' ").append("when true then 33.0E0 ").append("end").toString(),
                 DOUBLE,
                 33.0);
 
-        assertFunction("case " +
-                        "when false then 1.1 " +
-                        "when true then 33.0E0 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case ").append("when false then 1.1 ").append("when true then 33.0E0 ").append("end").toString(),
                 DOUBLE,
                 33.0);
     }
@@ -309,136 +246,77 @@ public class TestConditions
     @Test
     public void testSimpleCase()
     {
-        assertFunction("case true " +
-                        "when true then cast(null as varchar) " +
-                        "else 'foo' " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when true then cast(null as varchar) ").append("else 'foo' ").append("end").toString(),
                 VARCHAR,
                 null);
 
-        assertFunction("case true " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when true then 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case true " +
-                        "when true then BIGINT '33' " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when true then BIGINT '33' ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case true " +
-                        "when false then 1 " +
-                        "else 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 1 ").append("else 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case true " +
-                        "when false then 10000000000 " +
-                        "else 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 10000000000 ").append("else 33 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case true " +
-                        "when false then 1 " +
-                        "when false then 1 " +
-                        "when true then 33 " +
-                        "else 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 1 ").append("when false then 1 ").append("when true then 33 ").append("else 1 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case true " +
-                        "when false then 1 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 1 ").append("end").toString(),
                 INTEGER,
                 null);
 
-        assertFunction("case true " +
-                        "when true then null " +
-                        "else 'foo' " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when true then null ").append("else 'foo' ").append("end").toString(),
                 createVarcharType(3),
                 null);
 
-        assertFunction("case true " +
-                        "when null then 10000000000 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when null then 10000000000 ").append("when true then 33 ").append("end").toString(),
                 BIGINT,
                 33L);
 
-        assertFunction("case true " +
-                        "when null then 1 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when null then 1 ").append("when true then 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case null " +
-                        "when true then 1 " +
-                        "else 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case null ").append("when true then 1 ").append("else 33 ").append("end").toString(),
                 INTEGER,
                 33);
 
-        assertFunction("case true " +
-                        "when false then 1.0E0 " +
-                        "when true then 33 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 1.0E0 ").append("when true then 33 ").append("end").toString(),
                 DOUBLE,
                 33.0);
 
-        assertDecimalFunction("case true " +
-                        "when false then DECIMAL '2.2' " +
-                        "when true then DECIMAL '2.2' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then DECIMAL '2.2' ").append("when true then DECIMAL '2.2' ").append("end").toString(),
                 decimal("2.2"));
 
-        assertDecimalFunction("case true " +
-                        "when false then DECIMAL '1234567890.0987654321' " +
-                        "when true then DECIMAL '3.3' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then DECIMAL '1234567890.0987654321' ").append("when true then DECIMAL '3.3' ").append("end").toString(),
                 decimal("0000000003.3000000000"));
 
-        assertDecimalFunction("case true " +
-                        "when false then 1 " +
-                        "when true then DECIMAL '2.2' " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then 1 ").append("when true then DECIMAL '2.2' ").append("end").toString(),
                 decimal("0000000002.2"));
 
-        assertFunction("case true " +
-                        "when false then DECIMAL '1.1' " +
-                        "when true then 33.0E0 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then DECIMAL '1.1' ").append("when true then 33.0E0 ").append("end").toString(),
                 DOUBLE,
                 33.0);
 
-        assertDecimalFunction("case true " +
-                        "when false then 2.2 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then 2.2 ").append("when true then 2.2 ").append("end").toString(),
                 decimal("2.2"));
 
-        assertDecimalFunction("case true " +
-                        "when false then 1234567890.0987654321 " +
-                        "when true then 3.3 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then 1234567890.0987654321 ").append("when true then 3.3 ").append("end").toString(),
                 decimal("0000000003.3000000000"));
 
-        assertDecimalFunction("case true " +
-                        "when false then 1 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertDecimalFunction(new StringBuilder().append("case true ").append("when false then 1 ").append("when true then 2.2 ").append("end").toString(),
                 decimal("0000000002.2"));
 
-        assertFunction("case true " +
-                        "when false then 1.1 " +
-                        "when true then 33.0E0 " +
-                        "end",
+        assertFunction(new StringBuilder().append("case true ").append("when false then 1.1 ").append("when true then 33.0E0 ").append("end").toString(),
                 DOUBLE,
                 33.0);
     }

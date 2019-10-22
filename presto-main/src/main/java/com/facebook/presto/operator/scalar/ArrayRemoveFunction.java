@@ -119,9 +119,7 @@ public final class ArrayRemoveFunction
         }
         BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(0);
 
-        for (int position : positions) {
-            type.appendTo(array, position, blockBuilder);
-        }
+        positions.stream().mapToInt(Integer::valueOf).forEach(position -> type.appendTo(array, position, blockBuilder));
 
         pageBuilder.declarePositions(positions.size());
         return blockBuilder.getRegion(blockBuilder.getPositionCount() - positions.size(), positions.size());

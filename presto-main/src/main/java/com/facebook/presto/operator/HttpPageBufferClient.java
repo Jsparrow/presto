@@ -89,61 +89,36 @@ public final class HttpPageBufferClient
         implements Closeable
 {
     private static final Logger log = Logger.get(HttpPageBufferClient.class);
-
-    /**
-     * For each request, the addPage method will be called zero or more times,
-     * followed by either requestComplete or clientFinished (if buffer complete).  If the client is
-     * closed, requestComplete or bufferFinished may never be called.
-     * <p/>
-     * <b>NOTE:</b> Implementations of this interface are not allowed to perform
-     * blocking operations.
-     */
-    public interface ClientCallback
-    {
-        boolean addPages(HttpPageBufferClient client, List<SerializedPage> pages);
-
-        void requestComplete(HttpPageBufferClient client);
-
-        void clientFinished(HttpPageBufferClient client);
-
-        void clientFailed(HttpPageBufferClient client, Throwable cause);
-    }
-
-    private final HttpClient httpClient;
-    private final boolean acknowledgePages;
-    private final URI location;
-    private final ClientCallback clientCallback;
-    private final ScheduledExecutorService scheduler;
-    private final Backoff backoff;
-
-    @GuardedBy("this")
+	private final HttpClient httpClient;
+	private final boolean acknowledgePages;
+	private final URI location;
+	private final ClientCallback clientCallback;
+	private final ScheduledExecutorService scheduler;
+	private final Backoff backoff;
+	@GuardedBy("this")
     private boolean closed;
-    @GuardedBy("this")
+	@GuardedBy("this")
     private HttpResponseFuture<?> future;
-    @GuardedBy("this")
+	@GuardedBy("this")
     private DateTime lastUpdate = DateTime.now();
-    @GuardedBy("this")
+	@GuardedBy("this")
     private long token;
-    @GuardedBy("this")
+	@GuardedBy("this")
     private boolean scheduled;
-    @GuardedBy("this")
+	@GuardedBy("this")
     private boolean completed;
-    @GuardedBy("this")
+	@GuardedBy("this")
     private String taskInstanceId;
+	private final AtomicLong rowsReceived = new AtomicLong();
+	private final AtomicInteger pagesReceived = new AtomicInteger();
+	private final AtomicLong rowsRejected = new AtomicLong();
+	private final AtomicInteger pagesRejected = new AtomicInteger();
+	private final AtomicInteger requestsScheduled = new AtomicInteger();
+	private final AtomicInteger requestsCompleted = new AtomicInteger();
+	private final AtomicInteger requestsFailed = new AtomicInteger();
+	private final Executor pageBufferClientCallbackExecutor;
 
-    private final AtomicLong rowsReceived = new AtomicLong();
-    private final AtomicInteger pagesReceived = new AtomicInteger();
-
-    private final AtomicLong rowsRejected = new AtomicLong();
-    private final AtomicInteger pagesRejected = new AtomicInteger();
-
-    private final AtomicInteger requestsScheduled = new AtomicInteger();
-    private final AtomicInteger requestsCompleted = new AtomicInteger();
-    private final AtomicInteger requestsFailed = new AtomicInteger();
-
-    private final Executor pageBufferClientCallbackExecutor;
-
-    public HttpPageBufferClient(
+	public HttpPageBufferClient(
             HttpClient httpClient,
             Duration maxErrorDuration,
             boolean acknowledgePages,
@@ -155,7 +130,7 @@ public final class HttpPageBufferClient
         this(httpClient, maxErrorDuration, acknowledgePages, location, clientCallback, scheduler, Ticker.systemTicker(), pageBufferClientCallbackExecutor);
     }
 
-    public HttpPageBufferClient(
+	public HttpPageBufferClient(
             HttpClient httpClient,
             Duration maxErrorDuration,
             boolean acknowledgePages,
@@ -176,7 +151,7 @@ public final class HttpPageBufferClient
         this.backoff = new Backoff(maxErrorDuration, ticker);
     }
 
-    public synchronized PageBufferClientStatus getStatus()
+	public synchronized PageBufferClientStatus getStatus()
     {
         String state;
         if (closed) {
@@ -216,12 +191,12 @@ public final class HttpPageBufferClient
                 httpRequestState);
     }
 
-    public synchronized boolean isRunning()
+	public synchronized boolean isRunning()
     {
         return future != null;
     }
 
-    @Override
+	@Override
     public void close()
     {
         boolean shouldSendDelete;
@@ -248,7 +223,7 @@ public final class HttpPageBufferClient
         }
     }
 
-    public synchronized void scheduleRequest(DataSize maxResponseSize)
+	public synchronized void scheduleRequest(DataSize maxResponseSize)
     {
         if (closed || (future != null) || scheduled) {
             return;
@@ -273,7 +248,7 @@ public final class HttpPageBufferClient
         requestsScheduled.incrementAndGet();
     }
 
-    private synchronized void initiateRequest(DataSize maxResponseSize)
+	private synchronized void initiateRequest(DataSize maxResponseSize)
     {
         scheduled = false;
         if (closed || (future != null)) {
@@ -290,7 +265,7 @@ public final class HttpPageBufferClient
         lastUpdate = DateTime.now();
     }
 
-    private synchronized void sendGetResults(DataSize maxResponseSize)
+	private synchronized void sendGetResults(DataSize maxResponseSize)
     {
         URI uri = HttpUriBuilder.uriBuilderFrom(location).appendPath(String.valueOf(token)).build();
         HttpResponseFuture<PagesResponse> resultFuture = httpClient.executeAsync(
@@ -411,7 +386,7 @@ public final class HttpPageBufferClient
         }, pageBufferClientCallbackExecutor);
     }
 
-    private synchronized void sendDelete()
+	private synchronized void sendDelete()
     {
         HttpResponseFuture<StatusResponse> resultFuture = httpClient.executeAsync(prepareDelete().setUri(location).build(), createStatusResponseHandler());
         future = resultFuture;
@@ -452,12 +427,12 @@ public final class HttpPageBufferClient
         }, pageBufferClientCallbackExecutor);
     }
 
-    private static void checkNotHoldsLock(Object lock)
+	private static void checkNotHoldsLock(Object lock)
     {
         checkState(!Thread.holdsLock(lock), "Cannot execute this method while holding a lock");
     }
 
-    private void handleFailure(Throwable t, HttpResponseFuture<?> expectedFuture)
+	private void handleFailure(Throwable t, HttpResponseFuture<?> expectedFuture)
     {
         // Can not delegate to other callback while holding a lock on this
         checkNotHoldsLock(this);
@@ -478,7 +453,7 @@ public final class HttpPageBufferClient
         clientCallback.requestComplete(HttpPageBufferClient.this);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -497,13 +472,13 @@ public final class HttpPageBufferClient
         return true;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return location.hashCode();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         String state;
@@ -524,12 +499,31 @@ public final class HttpPageBufferClient
                 .toString();
     }
 
-    private static Throwable rewriteException(Throwable t)
+	private static Throwable rewriteException(Throwable t)
     {
         if (t instanceof ResponseTooLargeException) {
             return new PageTooLargeException();
         }
         return t;
+    }
+
+    /**
+     * For each request, the addPage method will be called zero or more times,
+     * followed by either requestComplete or clientFinished (if buffer complete).  If the client is
+     * closed, requestComplete or bufferFinished may never be called.
+     * <p/>
+     * <b>NOTE:</b> Implementations of this interface are not allowed to perform
+     * blocking operations.
+     */
+    public interface ClientCallback
+    {
+        boolean addPages(HttpPageBufferClient client, List<SerializedPage> pages);
+
+        void requestComplete(HttpPageBufferClient client);
+
+        void clientFinished(HttpPageBufferClient client);
+
+        void clientFailed(HttpPageBufferClient client, Throwable cause);
     }
 
     public static class PageResponseHandler
@@ -647,23 +641,13 @@ public final class HttpPageBufferClient
 
     public static class PagesResponse
     {
-        public static PagesResponse createPagesResponse(String taskInstanceId, long token, long nextToken, Iterable<SerializedPage> pages, boolean complete)
-        {
-            return new PagesResponse(taskInstanceId, token, nextToken, pages, complete);
-        }
-
-        public static PagesResponse createEmptyPagesResponse(String taskInstanceId, long token, long nextToken, boolean complete)
-        {
-            return new PagesResponse(taskInstanceId, token, nextToken, ImmutableList.of(), complete);
-        }
-
         private final String taskInstanceId;
-        private final long token;
-        private final long nextToken;
-        private final List<SerializedPage> pages;
-        private final boolean clientComplete;
+		private final long token;
+		private final long nextToken;
+		private final List<SerializedPage> pages;
+		private final boolean clientComplete;
 
-        private PagesResponse(String taskInstanceId, long token, long nextToken, Iterable<SerializedPage> pages, boolean clientComplete)
+		private PagesResponse(String taskInstanceId, long token, long nextToken, Iterable<SerializedPage> pages, boolean clientComplete)
         {
             this.taskInstanceId = taskInstanceId;
             this.token = token;
@@ -672,32 +656,42 @@ public final class HttpPageBufferClient
             this.clientComplete = clientComplete;
         }
 
-        public long getToken()
+		public static PagesResponse createPagesResponse(String taskInstanceId, long token, long nextToken, Iterable<SerializedPage> pages, boolean complete)
+        {
+            return new PagesResponse(taskInstanceId, token, nextToken, pages, complete);
+        }
+
+		public static PagesResponse createEmptyPagesResponse(String taskInstanceId, long token, long nextToken, boolean complete)
+        {
+            return new PagesResponse(taskInstanceId, token, nextToken, ImmutableList.of(), complete);
+        }
+
+		public long getToken()
         {
             return token;
         }
 
-        public long getNextToken()
+		public long getNextToken()
         {
             return nextToken;
         }
 
-        public List<SerializedPage> getPages()
+		public List<SerializedPage> getPages()
         {
             return pages;
         }
 
-        public boolean isClientComplete()
+		public boolean isClientComplete()
         {
             return clientComplete;
         }
 
-        public String getTaskInstanceId()
+		public String getTaskInstanceId()
         {
             return taskInstanceId;
         }
 
-        @Override
+		@Override
         public String toString()
         {
             return toStringHelper(this)

@@ -56,10 +56,13 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestSignatureBinder
 {
-    private final TypeManager typeRegistry = new TypeRegistry();
+    private static final Logger logger = LoggerFactory.getLogger(TestSignatureBinder.class);
+	private final TypeManager typeRegistry = new TypeRegistry();
 
     TestSignatureBinder()
     {
@@ -1098,6 +1101,7 @@ public class TestSignatureBinder
             fail(reason);
         }
         catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
             // Expected
         }
     }

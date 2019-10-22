@@ -119,13 +119,13 @@ public class ScaledWriterScheduler
         checkCondition(!scheduledNodes.isEmpty() || !nodes.isEmpty(), NO_NODES_AVAILABLE, "No nodes available to run query");
 
         ImmutableList.Builder<RemoteTask> tasks = ImmutableList.builder();
-        for (InternalNode node : nodes) {
+        nodes.forEach(node -> {
             Optional<RemoteTask> remoteTask = stage.scheduleTask(node, scheduledNodes.size(), OptionalInt.empty());
             remoteTask.ifPresent(task -> {
                 tasks.add(task);
                 scheduledNodes.add(node);
             });
-        }
+        });
 
         return tasks.build();
     }

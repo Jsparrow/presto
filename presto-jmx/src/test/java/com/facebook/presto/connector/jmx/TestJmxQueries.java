@@ -67,9 +67,7 @@ public class TestJmxQueries
     @Test
     public void testQuery()
     {
-        for (String name : STANDARD_NAMES) {
-            computeActual(format("SELECT * FROM \"%s\"", name));
-        }
+        STANDARD_NAMES.forEach(name -> computeActual(format("SELECT * FROM \"%s\"", name)));
     }
 
     @Test

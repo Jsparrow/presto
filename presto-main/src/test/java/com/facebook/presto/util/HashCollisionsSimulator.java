@@ -14,34 +14,39 @@
 package com.facebook.presto.util;
 
 import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class used to generate hash collision estimates.
  */
 public final class HashCollisionsSimulator
 {
-    private static final int NUMBER_OF_ESTIMATES = 500;
+    private static final Logger logger = LoggerFactory.getLogger(HashCollisionsSimulator.class);
+	private static final int NUMBER_OF_ESTIMATES = 500;
     private static final int NUMBER_OF_PROBES = 500;
     private static final int NUMBER_OF_VALUES = 10000;
 
-    public static void main(String[] args)
+    private HashCollisionsSimulator() {}
+
+	public static void main(String[] args)
     {
         generateEstimates();
     }
 
-    private static void generateEstimates()
+	private static void generateEstimates()
     {
-        System.out.print("0.0, ");
+        logger.info("0.0, ");
         for (int i = 1; i <= NUMBER_OF_ESTIMATES; ++i) {
             int hashSize = NUMBER_OF_VALUES * NUMBER_OF_ESTIMATES / i;
-            System.out.print(simulate(NUMBER_OF_VALUES, hashSize));
+            logger.info(String.valueOf(simulate(NUMBER_OF_VALUES, hashSize)));
             if (i < NUMBER_OF_ESTIMATES) {
-                System.out.print(", ");
+                logger.info(", ");
             }
         }
     }
 
-    private static double simulate(int numberOfValues, int hashSize)
+	private static double simulate(int numberOfValues, int hashSize)
     {
         int collisions = 0;
         for (int i = 0; i < NUMBER_OF_PROBES; ++i) {
@@ -50,7 +55,7 @@ public final class HashCollisionsSimulator
         return (double) collisions / NUMBER_OF_PROBES;
     }
 
-    public static double simulate(int numberOfValues, int hashSize, int iterations)
+	public static double simulate(int numberOfValues, int hashSize, int iterations)
     {
         int collisions = 0;
         for (int i = 0; i < iterations; ++i) {
@@ -59,7 +64,7 @@ public final class HashCollisionsSimulator
         return (double) collisions / iterations;
     }
 
-    private static int simulationIteration(int numberOfValues, int hashSize)
+	private static int simulationIteration(int numberOfValues, int hashSize)
     {
         int collisions = 0;
         Random random = new Random();
@@ -75,6 +80,4 @@ public final class HashCollisionsSimulator
         }
         return collisions;
     }
-
-    private HashCollisionsSimulator() {}
 }

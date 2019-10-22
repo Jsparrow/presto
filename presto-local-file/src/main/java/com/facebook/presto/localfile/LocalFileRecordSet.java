@@ -42,9 +42,7 @@ public class LocalFileRecordSet
         requireNonNull(split, "split is null");
 
         ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (LocalFileColumnHandle column : columns) {
-            types.add(column.getColumnType());
-        }
+        columns.forEach(column -> types.add(column.getColumnType()));
         this.columnTypes = types.build();
         this.address = Iterables.getOnlyElement(split.getAddresses());
         this.effectivePredicate = split.getEffectivePredicate();

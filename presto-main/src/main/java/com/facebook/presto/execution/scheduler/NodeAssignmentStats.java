@@ -36,13 +36,10 @@ public final class NodeAssignmentStats
         this.nodeTaskMap = requireNonNull(nodeTaskMap, "nodeTaskMap is null");
 
         // pre-populate the assignment counts with zeros. This makes getOrDefault() faster
-        for (InternalNode node : nodeMap.getNodesByHostAndPort().values()) {
-            assignmentCount.put(node, 0);
-        }
+		nodeMap.getNodesByHostAndPort().values().forEach(node -> assignmentCount.put(node, 0));
 
-        for (RemoteTask task : existingTasks) {
-            checkArgument(queuedSplitCountByNode.put(task.getNodeId(), task.getQueuedPartitionedSplitCount()) == null, "A single stage may not have multiple tasks running on the same node");
-        }
+        existingTasks.forEach(task -> checkArgument(queuedSplitCountByNode.put(task.getNodeId(), task.getQueuedPartitionedSplitCount()) == null,
+				"A single stage may not have multiple tasks running on the same node"));
     }
 
     public int getTotalSplitCount(InternalNode node)

@@ -42,29 +42,38 @@ public class TypedSet
     private static final float FILL_RATIO = 0.75f;
     static final long FOUR_MEGABYTES = MAX_FUNCTION_MEMORY.toBytes();
 
-    private final Type elementType;
-    private final IntArrayList blockPositionByHash;
-    private final BlockBuilder elementBlock;
-    private final String functionName;
+	private static final int EMPTY_SLOT = -1;
 
-    private int initialElementBlockOffset;
-    private long initialElementBlockSizeInBytes;
-    // size is the number of elements added to the TypedSet (including null).
+	private final Type elementType;
+
+	private final IntArrayList blockPositionByHash;
+
+	private final BlockBuilder elementBlock;
+
+	private final String functionName;
+
+	private int initialElementBlockOffset;
+
+	private long initialElementBlockSizeInBytes;
+
+	// size is the number of elements added to the TypedSet (including null).
     // It equals to elementBlock.size() - initialElementBlockOffset
     private int size;
-    private int hashCapacity;
-    private int maxFill;
-    private int hashMask;
-    private static final int EMPTY_SLOT = -1;
 
-    private boolean containsNullElement;
+	private int hashCapacity;
 
-    public TypedSet(Type elementType, int expectedSize, String functionName)
+	private int maxFill;
+
+	private int hashMask;
+
+	private boolean containsNullElement;
+
+	public TypedSet(Type elementType, int expectedSize, String functionName)
     {
         this(elementType, elementType.createBlockBuilder(null, expectedSize), expectedSize, functionName);
     }
 
-    public TypedSet(Type elementType, BlockBuilder blockBuilder, int expectedSize, String functionName)
+	public TypedSet(Type elementType, BlockBuilder blockBuilder, int expectedSize, String functionName)
     {
         checkArgument(expectedSize >= 0, "expectedSize must not be negative");
         this.elementType = requireNonNull(elementType, "elementType must not be null");
@@ -88,12 +97,12 @@ public class TypedSet
         this.containsNullElement = false;
     }
 
-    public long getRetainedSizeInBytes()
+	public long getRetainedSizeInBytes()
     {
         return INSTANCE_SIZE + INT_ARRAY_LIST_INSTANCE_SIZE + elementBlock.getRetainedSizeInBytes() + blockPositionByHash.size() * Integer.BYTES;
     }
 
-    public boolean contains(Block block, int position)
+	public boolean contains(Block block, int position)
     {
         requireNonNull(block, "block must not be null");
         checkArgument(position >= 0, "position must be >= 0");
@@ -106,7 +115,7 @@ public class TypedSet
         }
     }
 
-    public void add(Block block, int position)
+	public void add(Block block, int position)
     {
         requireNonNull(block, "block must not be null");
         checkArgument(position >= 0, "position must be >= 0");
@@ -122,17 +131,17 @@ public class TypedSet
         }
     }
 
-    public int size()
+	public int size()
     {
         return size;
     }
 
-    public int positionOf(Block block, int position)
+	public int positionOf(Block block, int position)
     {
         return blockPositionByHash.get(getHashPositionOfElement(block, position));
     }
 
-    /**
+	/**
      * Get slot position of element at {@code position} of {@code block}
      */
     private int getHashPositionOfElement(Block block, int position)
@@ -153,7 +162,7 @@ public class TypedSet
         }
     }
 
-    private void addNewElement(int hashPosition, Block block, int position)
+	private void addNewElement(int hashPosition, Block block, int position)
     {
         elementType.appendTo(block, position, elementBlock);
         if (elementBlock.getSizeInBytes() - initialElementBlockSizeInBytes > FOUR_MEGABYTES) {
@@ -172,7 +181,7 @@ public class TypedSet
         }
     }
 
-    private void rehash()
+	private void rehash()
     {
         long newCapacityLong = hashCapacity * 2L;
         if (newCapacityLong > Integer.MAX_VALUE) {
@@ -193,7 +202,7 @@ public class TypedSet
         }
     }
 
-    private static int calculateMaxFill(int hashSize)
+	private static int calculateMaxFill(int hashSize)
     {
         checkArgument(hashSize > 0, "hashSize must be greater than 0");
         int maxFill = (int) Math.ceil(hashSize * FILL_RATIO);
@@ -204,7 +213,7 @@ public class TypedSet
         return maxFill;
     }
 
-    private int getMaskedHash(long rawHash)
+	private int getMaskedHash(long rawHash)
     {
         return (int) (rawHash & hashMask);
     }

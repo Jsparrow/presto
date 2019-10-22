@@ -63,6 +63,7 @@ import static java.sql.JDBCType.SMALLINT;
 import static java.sql.JDBCType.VARCHAR;
 import static java.util.stream.Collectors.toList;
 import static org.testng.Assert.assertEquals;
+import org.apache.commons.lang3.StringUtils;
 
 public class TestHiveCoercion
         extends ProductTest
@@ -93,99 +94,21 @@ public class TestHiveCoercion
 
     private static HiveTableDefinition.HiveTableDefinitionBuilder tableDefinitionBuilder(String fileFormat, Optional<String> recommendTableName, Optional<String> rowFormat)
     {
-        String tableName = format("%s_hive_coercion", recommendTableName.orElse(fileFormat).toLowerCase(Locale.ENGLISH));
-        String floatToDoubleType = fileFormat.toLowerCase(Locale.ENGLISH).contains("parquet") ? "DOUBLE" : "FLOAT";
+        String tableName = format("%s_hive_coercion", StringUtils.lowerCase(recommendTableName.orElse(fileFormat), Locale.ENGLISH));
+        String floatToDoubleType = StringUtils.contains(fileFormat.toLowerCase(Locale.ENGLISH), "parquet") ? "DOUBLE" : "FLOAT";
         return HiveTableDefinition.builder(tableName)
-                .setCreateTableDDLTemplate("" +
-                        "CREATE TABLE %NAME%(" +
-                        "    tinyint_to_smallint        TINYINT," +
-                        "    tinyint_to_int             TINYINT," +
-                        "    tinyint_to_bigint          TINYINT," +
-                        "    smallint_to_int            SMALLINT," +
-                        "    smallint_to_bigint         SMALLINT," +
-                        "    int_to_bigint              INT," +
-                        "    bigint_to_varchar          BIGINT," +
-                        "    float_to_double            " + floatToDoubleType + "," +
-                        // all nested primitive/varchar coercions and adding/removing tailing nested fields are covered across row_to_row, list_to_list, and map_to_map
-                        "    row_to_row                 STRUCT<keep: STRING, ti2si: TINYINT, si2int: SMALLINT, int2bi: INT, bi2vc: BIGINT>," +
-                        "    list_to_list               ARRAY<STRUCT<ti2int: TINYINT, si2bi: SMALLINT, bi2vc: BIGINT, remove: STRING>>," +
-                        "    map_to_map                 MAP<TINYINT, STRUCT<ti2bi: TINYINT, int2bi: INT, float2double: " + floatToDoubleType + ">>" +
-                        ") " +
-                        "PARTITIONED BY (id BIGINT) " +
-                        rowFormat.map(s -> format("ROW FORMAT %s ", s)).orElse("") +
-                        "STORED AS " + fileFormat);
+                .setCreateTableDDLTemplate(new StringBuilder().append("").append("CREATE TABLE %NAME%(").append("    tinyint_to_smallint        TINYINT,").append("    tinyint_to_int             TINYINT,").append("    tinyint_to_bigint          TINYINT,").append("    smallint_to_int            SMALLINT,").append("    smallint_to_bigint         SMALLINT,")
+						.append("    int_to_bigint              INT,").append("    bigint_to_varchar          BIGINT,").append("    float_to_double            ").append(floatToDoubleType).append(",").append(// all nested primitive/varchar coercions and adding/removing tailing nested fields are covered across row_to_row, list_to_list, and map_to_map
+                        "    row_to_row                 STRUCT<keep: STRING, ti2si: TINYINT, si2int: SMALLINT, int2bi: INT, bi2vc: BIGINT>,").append("    list_to_list               ARRAY<STRUCT<ti2int: TINYINT, si2bi: SMALLINT, bi2vc: BIGINT, remove: STRING>>,").append("    map_to_map                 MAP<TINYINT, STRUCT<ti2bi: TINYINT, int2bi: INT, float2double: ")
+						.append(floatToDoubleType).append(">>").append(") ").append("PARTITIONED BY (id BIGINT) ").append(rowFormat.map(s -> format("ROW FORMAT %s ", s)).orElse("")).append("STORED AS ").append(fileFormat)
+						.toString());
     }
 
     private static HiveTableDefinition.HiveTableDefinitionBuilder avroTableDefinitionBuilder()
     {
         return HiveTableDefinition.builder("avro_hive_coercion")
-                .setCreateTableDDLTemplate("" +
-                        "CREATE TABLE %NAME%(" +
-                        "    int_to_bigint              INT," +
-                        "    float_to_double            DOUBLE" +
-                        ") " +
-                        "PARTITIONED BY (id BIGINT) " +
-                        "STORED AS AVRO");
-    }
-
-    public static final class TextRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_TEXTFILE).withState(CREATED).build();
-        }
-    }
-
-    public static final class OrcRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_ORC).withState(CREATED).build();
-        }
-    }
-
-    public static final class RcTextRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_RCTEXT).withState(CREATED).build();
-        }
-    }
-
-    public static final class RcBinaryRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_RCBINARY).withState(CREATED).build();
-        }
-    }
-
-    public static final class ParquetRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_PARQUET).withState(CREATED).build();
-        }
-    }
-
-    public static final class AvroRequirements
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return MutableTableRequirement.builder(HIVE_COERCION_AVRO).withState(CREATED).build();
-        }
+                .setCreateTableDDLTemplate(new StringBuilder().append("").append("CREATE TABLE %NAME%(").append("    int_to_bigint              INT,").append("    float_to_double            DOUBLE").append(") ").append("PARTITIONED BY (id BIGINT) ").append("STORED AS AVRO")
+						.toString());
     }
 
     @Requires(TextRequirements.class)
@@ -195,45 +118,41 @@ public class TestHiveCoercion
         doTestHiveCoercion(HIVE_COERCION_TEXTFILE);
     }
 
-    @Requires(OrcRequirements.class)
+	@Requires(OrcRequirements.class)
     @Test(groups = {HIVE_COERCION, JDBC})
     public void testHiveCoercionOrc()
     {
         doTestHiveCoercion(HIVE_COERCION_ORC);
     }
 
-    @Requires(RcTextRequirements.class)
+	@Requires(RcTextRequirements.class)
     @Test(groups = {HIVE_COERCION, JDBC})
     public void testHiveCoercionRcText()
     {
         doTestHiveCoercion(HIVE_COERCION_RCTEXT);
     }
 
-    @Requires(RcBinaryRequirements.class)
+	@Requires(RcBinaryRequirements.class)
     @Test(groups = {HIVE_COERCION, JDBC})
     public void testHiveCoercionRcBinary()
     {
         doTestHiveCoercion(HIVE_COERCION_RCBINARY);
     }
 
-    @Requires(ParquetRequirements.class)
+	@Requires(ParquetRequirements.class)
     @Test(groups = {HIVE_COERCION, JDBC})
     public void testHiveCoercionParquet()
     {
         doTestHiveCoercion(HIVE_COERCION_PARQUET);
     }
 
-    @Requires(AvroRequirements.class)
+	@Requires(AvroRequirements.class)
     @Test(groups = {HIVE_COERCION, JDBC})
     public void testHiveCoercionAvro()
     {
         String tableName = mutableTableInstanceOf(HIVE_COERCION_AVRO).getNameInDatabase();
 
-        onHive().executeQuery(format("INSERT INTO TABLE %s " +
-                        "PARTITION (id=1) " +
-                        "VALUES" +
-                        "(2323, 0.5)," +
-                        "(-2323, -1.5)",
+        onHive().executeQuery(format(new StringBuilder().append("INSERT INTO TABLE %s ").append("PARTITION (id=1) ").append("VALUES").append("(2323, 0.5),").append("(-2323, -1.5)").toString(),
                 tableName));
 
         onHive().executeQuery(format("ALTER TABLE %s CHANGE COLUMN int_to_bigint int_to_bigint bigint", tableName));
@@ -252,25 +171,15 @@ public class TestHiveCoercion
                 row(-2323L, -1.5, 1));
     }
 
-    private void doTestHiveCoercion(HiveTableDefinition tableDefinition)
+	private void doTestHiveCoercion(HiveTableDefinition tableDefinition)
     {
         String tableName = mutableTableInstanceOf(tableDefinition).getNameInDatabase();
 
-        String floatToDoubleType = tableName.toLowerCase(Locale.ENGLISH).contains("parquet") ? "DOUBLE" : "REAL";
+        String floatToDoubleType = StringUtils.contains(tableName.toLowerCase(Locale.ENGLISH), "parquet") ? "DOUBLE" : "REAL";
 
         query(format(
-                "INSERT INTO %s\n" +
-                        "VALUES\n" +
-                        "  (TINYINT '-1', TINYINT '2', TINYINT '-3', SMALLINT '100', SMALLINT '-101', INTEGER '2323', 12345, REAL '0.5',\n" +
-                        "    CAST(ROW ('as is', -1, 100, 2323, 12345) AS ROW(keep VARCHAR, ti2si TINYINT, si2int SMALLINT, int2bi INTEGER, bi2vc BIGINT)),\n" +
-                        "    ARRAY [CAST(ROW (2, -101, 12345, 'removed') AS ROW (ti2int TINYINT, si2bi SMALLINT, bi2vc BIGINT, remove VARCHAR))],\n" +
-                        "    MAP (ARRAY [TINYINT '2'], ARRAY [CAST(ROW (-3, 2323, REAL '0.5') AS ROW (ti2bi TINYINT, int2bi INTEGER, float2double %s))]),\n" +
-                        "    1),\n" +
-                        "  (TINYINT '1', TINYINT '-2', NULL, SMALLINT '-100', SMALLINT '101', INTEGER '-2323', -12345, REAL '-1.5',\n" +
-                        "    CAST(ROW (NULL, 1, -100, -2323, -12345) AS ROW(keep VARCHAR, ti2si TINYINT, si2int SMALLINT, int2bi INTEGER, bi2vc BIGINT)),\n" +
-                        "    ARRAY [CAST(ROW (-2, 101, -12345, NULL) AS ROW (ti2int TINYINT, si2bi SMALLINT, bi2vc BIGINT, remove VARCHAR))],\n" +
-                        "    MAP (ARRAY [TINYINT '-2'], ARRAY [CAST(ROW (null, -2323, REAL '-1.5') AS ROW (ti2bi TINYINT, int2bi INTEGER, float2double %s))]),\n" +
-                        "    1)",
+                new StringBuilder().append("INSERT INTO %s\n").append("VALUES\n").append("  (TINYINT '-1', TINYINT '2', TINYINT '-3', SMALLINT '100', SMALLINT '-101', INTEGER '2323', 12345, REAL '0.5',\n").append("    CAST(ROW ('as is', -1, 100, 2323, 12345) AS ROW(keep VARCHAR, ti2si TINYINT, si2int SMALLINT, int2bi INTEGER, bi2vc BIGINT)),\n").append("    ARRAY [CAST(ROW (2, -101, 12345, 'removed') AS ROW (ti2int TINYINT, si2bi SMALLINT, bi2vc BIGINT, remove VARCHAR))],\n").append("    MAP (ARRAY [TINYINT '2'], ARRAY [CAST(ROW (-3, 2323, REAL '0.5') AS ROW (ti2bi TINYINT, int2bi INTEGER, float2double %s))]),\n").append("    1),\n")
+						.append("  (TINYINT '1', TINYINT '-2', NULL, SMALLINT '-100', SMALLINT '101', INTEGER '-2323', -12345, REAL '-1.5',\n").append("    CAST(ROW (NULL, 1, -100, -2323, -12345) AS ROW(keep VARCHAR, ti2si TINYINT, si2int SMALLINT, int2bi INTEGER, bi2vc BIGINT)),\n").append("    ARRAY [CAST(ROW (-2, 101, -12345, NULL) AS ROW (ti2int TINYINT, si2bi SMALLINT, bi2vc BIGINT, remove VARCHAR))],\n").append("    MAP (ARRAY [TINYINT '-2'], ARRAY [CAST(ROW (null, -2323, REAL '-1.5') AS ROW (ti2bi TINYINT, int2bi INTEGER, float2double %s))]),\n").append("    1)").toString(),
                 tableName, floatToDoubleType, floatToDoubleType));
 
         alterTableColumnTypes(tableName);
@@ -357,7 +266,7 @@ public class TestHiveCoercion
         assertEqualsIgnoreOrder(queryResult.column(11), column(expectedRows, 11), "map_to_map field is not equal");
     }
 
-    private void assertProperAlteredTableSchema(String tableName)
+	private void assertProperAlteredTableSchema(String tableName)
     {
         assertThat(query("SHOW COLUMNS FROM " + tableName).project(1, 2)).containsExactly(
                 row("tinyint_to_smallint", "smallint"),
@@ -374,7 +283,7 @@ public class TestHiveCoercion
                 row("id", "bigint"));
     }
 
-    private void assertColumnTypes(QueryResult queryResult)
+	private void assertColumnTypes(QueryResult queryResult)
     {
         Connection connection = defaultQueryExecutor().getConnection();
         if (usingPrestoJdbcDriver(connection)) {
@@ -412,7 +321,7 @@ public class TestHiveCoercion
         }
     }
 
-    private static void alterTableColumnTypes(String tableName)
+	private static void alterTableColumnTypes(String tableName)
     {
         onHive().executeQuery(format("ALTER TABLE %s CHANGE COLUMN tinyint_to_smallint tinyint_to_smallint smallint", tableName));
         onHive().executeQuery(format("ALTER TABLE %s CHANGE COLUMN tinyint_to_int tinyint_to_int int", tableName));
@@ -427,7 +336,7 @@ public class TestHiveCoercion
         onHive().executeQuery(format("ALTER TABLE %s CHANGE COLUMN map_to_map map_to_map map<int,struct<ti2bi:bigint, int2bi:bigint, float2double:double, add:tinyint>>", tableName));
     }
 
-    private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition)
+	private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition)
     {
         if (tableDefinition.getDatabase().isPresent()) {
             return mutableTableInstanceOf(tableDefinition, tableDefinition.getDatabase().get());
@@ -437,17 +346,17 @@ public class TestHiveCoercion
         }
     }
 
-    private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition, String database)
+	private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition, String database)
     {
         return mutableTableInstanceOf(tableHandleInSchema(tableDefinition).inDatabase(database));
     }
 
-    private static TableInstance mutableTableInstanceOf(TableHandle tableHandle)
+	private static TableInstance mutableTableInstanceOf(TableHandle tableHandle)
     {
         return testContext().getDependency(MutableTablesState.class).get(tableHandle);
     }
 
-    private static TableHandle tableHandleInSchema(TableDefinition tableDefinition)
+	private static TableHandle tableHandleInSchema(TableDefinition tableDefinition)
     {
         TableHandle tableHandle = tableHandle(tableDefinition.getName());
         if (tableDefinition.getSchema().isPresent()) {
@@ -456,7 +365,7 @@ public class TestHiveCoercion
         return tableHandle;
     }
 
-    // This help function should only be used when the map contains null value.
+	// This help function should only be used when the map contains null value.
     // Otherwise, use ImmutableMap.
     private static Map<Object, Object> asMap(Object... objects)
     {
@@ -468,31 +377,91 @@ public class TestHiveCoercion
         return struct;
     }
 
-    private static Row project(Row row, int... columns)
+	private static Row project(Row row, int... columns)
     {
         return new Row(Arrays.stream(columns)
                 .mapToObj(column -> row.getValues().get(column - 1))
                 .collect(toList())); // to allow nulls
     }
 
-    private static List<Row> project(List<Row> rows, int... columns)
+	private static List<Row> project(List<Row> rows, int... columns)
     {
         return rows.stream()
                 .map(row -> project(row, columns))
                 .collect(toImmutableList());
     }
 
-    private static List<?> column(List<Row> rows, int sqlColumnIndex)
+	private static List<?> column(List<Row> rows, int sqlColumnIndex)
     {
         return rows.stream()
                 .map(row -> project(row, sqlColumnIndex).getValues().get(0))
                 .collect(toList()); // to allow nulls
     }
 
-    private static List<List<?>> extract(List<PrestoArray> arrays)
+	private static List<List<?>> extract(List<PrestoArray> arrays)
     {
         return arrays.stream()
                 .map(prestoArray -> Arrays.asList((Object[]) prestoArray.getArray()))
                 .collect(toImmutableList());
+    }
+
+	public static final class TextRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_TEXTFILE).withState(CREATED).build();
+        }
+    }
+
+    public static final class OrcRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_ORC).withState(CREATED).build();
+        }
+    }
+
+    public static final class RcTextRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_RCTEXT).withState(CREATED).build();
+        }
+    }
+
+    public static final class RcBinaryRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_RCBINARY).withState(CREATED).build();
+        }
+    }
+
+    public static final class ParquetRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_PARQUET).withState(CREATED).build();
+        }
+    }
+
+    public static final class AvroRequirements
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return MutableTableRequirement.builder(HIVE_COERCION_AVRO).withState(CREATED).build();
+        }
     }
 }

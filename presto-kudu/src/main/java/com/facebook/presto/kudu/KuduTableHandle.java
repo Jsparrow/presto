@@ -93,6 +93,6 @@ public class KuduTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + schemaTableName;
+        return new StringBuilder().append(connectorId).append(":").append(schemaTableName).toString();
     }
 }

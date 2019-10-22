@@ -24,7 +24,9 @@ import static java.util.Objects.requireNonNull;
 
 public final class AstUtils
 {
-    public static boolean nodeContains(Node node, Node subNode)
+    private AstUtils() {}
+
+	public static boolean nodeContains(Node node, Node subNode)
     {
         requireNonNull(node, "node is null");
         requireNonNull(subNode, "subNode is null");
@@ -33,12 +35,10 @@ public final class AstUtils
                 .anyMatch(childNode -> childNode == subNode);
     }
 
-    public static Stream<Node> preOrder(Node node)
+	public static Stream<Node> preOrder(Node node)
     {
         return stream(
                 Traverser.forTree((SuccessorsFunction<Node>) Node::getChildren)
                         .depthFirstPreOrder(requireNonNull(node, "node is null")));
     }
-
-    private AstUtils() {}
 }

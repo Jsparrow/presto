@@ -243,23 +243,23 @@ public class TestDatabaseShardManager
 
         ImmutableList.Builder<ShardInfo> inputShards = ImmutableList.builder();
         Multimap<String, UUID> nodeShardMap = HashMultimap.create();
-        for (String node : nodes) {
+        nodes.forEach(node -> {
             UUID uuid = UUID.randomUUID();
             nodeShardMap.put(node, uuid);
             inputShards.add(shardInfo(uuid, node));
-        }
+        });
 
         shardManager.createTable(tableId, columns, false, OptionalLong.empty());
 
         long transactionId = shardManager.beginTransaction();
         shardManager.commitShards(transactionId, tableId, columns, inputShards.build(), Optional.empty(), 0);
 
-        for (String node : nodes) {
+        nodes.forEach(node -> {
             Set<ShardMetadata> shardMetadata = shardManager.getNodeShards(node);
             Set<UUID> expectedUuids = ImmutableSet.copyOf(nodeShardMap.get(node));
             Set<UUID> actualUuids = shardMetadata.stream().map(ShardMetadata::getShardUuid).collect(toSet());
             assertEquals(actualUuids, expectedUuids);
-        }
+        });
     }
 
     @Test
@@ -760,7 +760,37 @@ public class TestDatabaseShardManager
         return new ShardAssertion(tableId);
     }
 
-    private class ShardAssertion
+    private static long date(int year, int month, int day)
+    {
+        return LocalDate.of(year, month, day).toEpochDay();
+    }
+
+	private static long timestamp(int year, int month, int day, int hour, int minute, int second)
+    {
+        return ZonedDateTime.of(year, month, day, hour, minute, second, 0, UTC).toInstant().toEpochMilli();
+    }
+
+	private static Set<String> nodeIds(Collection<Node> nodes)
+    {
+        return nodes.stream().map(Node::getNodeIdentifier).collect(toSet());
+    }
+
+	private static Node createTestingNode()
+    {
+        return new InternalNode(UUID.randomUUID().toString(), URI.create("http://test"), NodeVersion.UNKNOWN, false);
+    }
+
+	private int columnCount(long tableId)
+            throws SQLException
+    {
+        try (Statement statement = dummyHandle.getConnection().createStatement()) {
+            try (ResultSet rs = statement.executeQuery(format("SELECT * FROM %s LIMIT 0", shardIndexTable(tableId)))) {
+                return rs.getMetaData().getColumnCount();
+            }
+        }
+    }
+
+	private class ShardAssertion
     {
         private final Map<RaptorColumnHandle, Domain> domains = new HashMap<>();
         private final long tableId;
@@ -801,36 +831,6 @@ public class TestDatabaseShardManager
             TupleDomain<RaptorColumnHandle> predicate = TupleDomain.withColumnDomains(domains);
             Set<ShardNodes> actual = getShardNodes(tableId, predicate);
             assertEquals(actual, toShardNodes(shards));
-        }
-    }
-
-    private static long date(int year, int month, int day)
-    {
-        return LocalDate.of(year, month, day).toEpochDay();
-    }
-
-    private static long timestamp(int year, int month, int day, int hour, int minute, int second)
-    {
-        return ZonedDateTime.of(year, month, day, hour, minute, second, 0, UTC).toInstant().toEpochMilli();
-    }
-
-    private static Set<String> nodeIds(Collection<Node> nodes)
-    {
-        return nodes.stream().map(Node::getNodeIdentifier).collect(toSet());
-    }
-
-    private static Node createTestingNode()
-    {
-        return new InternalNode(UUID.randomUUID().toString(), URI.create("http://test"), NodeVersion.UNKNOWN, false);
-    }
-
-    private int columnCount(long tableId)
-            throws SQLException
-    {
-        try (Statement statement = dummyHandle.getConnection().createStatement()) {
-            try (ResultSet rs = statement.executeQuery(format("SELECT * FROM %s LIMIT 0", shardIndexTable(tableId)))) {
-                return rs.getMetaData().getColumnCount();
-            }
         }
     }
 }

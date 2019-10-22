@@ -100,9 +100,7 @@ public final class MultimapFromEntriesFunction
         for (int i = 0; i < keySet.size(); i++) {
             keyType.appendTo(rowType.getObject(block, entryIndicesList[i].getInt(0)), 0, singleMapWriter);
             BlockBuilder singleArrayWriter = singleMapWriter.beginBlockEntry();
-            for (int entryIndex : entryIndicesList[i]) {
-                valueType.appendTo(rowType.getObject(block, entryIndex), 1, singleArrayWriter);
-            }
+            entryIndicesList[i].stream().mapToInt(Integer::valueOf).forEach(entryIndex -> valueType.appendTo(rowType.getObject(block, entryIndex), 1, singleArrayWriter));
             singleMapWriter.closeEntry();
         }
 

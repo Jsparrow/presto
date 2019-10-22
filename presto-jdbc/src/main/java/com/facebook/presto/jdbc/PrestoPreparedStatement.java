@@ -775,7 +775,7 @@ public class PrestoPreparedStatement
 
     private static String formatLiteral(String type, String x)
     {
-        return type + " " + formatStringLiteral(x);
+        return new StringBuilder().append(type).append(" ").append(formatStringLiteral(x)).toString();
     }
 
     private static String formatBooleanLiteral(boolean x)
@@ -785,12 +785,12 @@ public class PrestoPreparedStatement
 
     private static String formatStringLiteral(String x)
     {
-        return "'" + x.replace("'", "''") + "'";
+        return new StringBuilder().append("'").append(x.replace("'", "''")).append("'").toString();
     }
 
     private static String formatBinaryLiteral(byte[] x)
     {
-        return "X'" + base16().encode(x) + "'";
+        return new StringBuilder().append("X'").append(base16().encode(x)).append("'").toString();
     }
 
     private static String typedNull(int targetSqlType)

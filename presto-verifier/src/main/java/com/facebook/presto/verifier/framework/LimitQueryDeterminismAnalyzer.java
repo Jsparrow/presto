@@ -42,24 +42,16 @@ import static java.util.Objects.requireNonNull;
 
 public class LimitQueryDeterminismAnalyzer
 {
-    public enum Analysis
-    {
-        NOT_RUN,
-        NON_DETERMINISTIC,
-        DETERMINISTIC,
-        FAILED_DATA_CHANGED,
-    }
-
     private final PrestoAction prestoAction;
-    private final boolean enabled;
+	private final boolean enabled;
 
-    public LimitQueryDeterminismAnalyzer(PrestoAction prestoAction, VerifierConfig verifierConfig)
+	public LimitQueryDeterminismAnalyzer(PrestoAction prestoAction, VerifierConfig verifierConfig)
     {
         this.prestoAction = requireNonNull(prestoAction, "prestoAction is null");
         this.enabled = verifierConfig.isEnableLimitQueryDeterminismAnalyzer();
     }
 
-    public Analysis analyze(QueryBundle control, long rowCount)
+	public Analysis analyze(QueryBundle control, long rowCount)
     {
         if (!enabled) {
             return NOT_RUN;
@@ -139,5 +131,13 @@ public class LimitQueryDeterminismAnalyzer
             return DETERMINISTIC;
         }
         return FAILED_DATA_CHANGED;
+    }
+
+	public enum Analysis
+    {
+        NOT_RUN,
+        NON_DETERMINISTIC,
+        DETERMINISTIC,
+        FAILED_DATA_CHANGED,
     }
 }

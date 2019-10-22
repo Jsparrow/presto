@@ -106,52 +106,50 @@ public class RemoteNodeMemory
             log.warn("Memory info update request to %s has not returned in %s", memoryInfoUri, sinceUpdate.toString(SECONDS));
             lastWarningLogged.set(System.nanoTime());
         }
-        if (sinceUpdate.toMillis() > 1_000 && future.get() == null) {
-            Request request = setContentTypeHeaders(isBinaryTransportEnabled, preparePost())
-                    .setUri(memoryInfoUri)
-                    .setBodyGenerator(createBodyGenerator(assignments))
-                    .build();
+        if (!(sinceUpdate.toMillis() > 1_000 && future.get() == null)) {
+			return;
+		}
+		Request request = setContentTypeHeaders(isBinaryTransportEnabled, preparePost())
+		        .setUri(memoryInfoUri)
+		        .setBodyGenerator(createBodyGenerator(assignments))
+		        .build();
+		ResponseHandler responseHandler;
+		if (isBinaryTransportEnabled) {
+		    responseHandler = createFullSmileResponseHandler((SmileCodec<MemoryInfo>) memoryInfoCodec);
+		}
+		else {
+		    responseHandler = createAdaptingJsonResponseHandler(unwrapJsonCodec(memoryInfoCodec));
+		}
+		HttpResponseFuture<BaseResponse<MemoryInfo>> responseFuture = httpClient.executeAsync(request, responseHandler);
+		future.compareAndSet(null, responseFuture);
+		Futures.addCallback(responseFuture, new FutureCallback<BaseResponse<MemoryInfo>>()
+		{
+		    @Override
+		    public void onSuccess(@Nullable BaseResponse<MemoryInfo> result)
+		    {
+		        lastUpdateNanos.set(System.nanoTime());
+		        future.compareAndSet(responseFuture, null);
+		        long version = currentAssignmentVersion.get();
+		        if (result != null) {
+		            if (result.hasValue()) {
+		                memoryInfo.set(Optional.ofNullable(result.getValue()));
+		            }
+		            if (result.getStatusCode() != OK.code()) {
+		                log.warn("Error fetching memory info from %s returned status %d: %s", memoryInfoUri, result.getStatusCode(), result.getStatusMessage());
+		                return;
+		            }
+		        }
+		        currentAssignmentVersion.compareAndSet(version, assignments.getVersion());
+		    }
 
-            ResponseHandler responseHandler;
-            if (isBinaryTransportEnabled) {
-                responseHandler = createFullSmileResponseHandler((SmileCodec<MemoryInfo>) memoryInfoCodec);
-            }
-            else {
-                responseHandler = createAdaptingJsonResponseHandler(unwrapJsonCodec(memoryInfoCodec));
-            }
-
-            HttpResponseFuture<BaseResponse<MemoryInfo>> responseFuture = httpClient.executeAsync(request, responseHandler);
-            future.compareAndSet(null, responseFuture);
-
-            Futures.addCallback(responseFuture, new FutureCallback<BaseResponse<MemoryInfo>>()
-            {
-                @Override
-                public void onSuccess(@Nullable BaseResponse<MemoryInfo> result)
-                {
-                    lastUpdateNanos.set(System.nanoTime());
-                    future.compareAndSet(responseFuture, null);
-                    long version = currentAssignmentVersion.get();
-                    if (result != null) {
-                        if (result.hasValue()) {
-                            memoryInfo.set(Optional.ofNullable(result.getValue()));
-                        }
-                        if (result.getStatusCode() != OK.code()) {
-                            log.warn("Error fetching memory info from %s returned status %d: %s", memoryInfoUri, result.getStatusCode(), result.getStatusMessage());
-                            return;
-                        }
-                    }
-                    currentAssignmentVersion.compareAndSet(version, assignments.getVersion());
-                }
-
-                @Override
-                public void onFailure(Throwable t)
-                {
-                    log.warn("Error fetching memory info from %s: %s", memoryInfoUri, t.getMessage());
-                    lastUpdateNanos.set(System.nanoTime());
-                    future.compareAndSet(responseFuture, null);
-                }
-            }, directExecutor());
-        }
+		    @Override
+		    public void onFailure(Throwable t)
+		    {
+		        log.warn("Error fetching memory info from %s: %s", memoryInfoUri, t.getMessage());
+		        lastUpdateNanos.set(System.nanoTime());
+		        future.compareAndSet(responseFuture, null);
+		    }
+		}, directExecutor());
     }
 
     private StaticBodyGenerator createBodyGenerator(MemoryPoolAssignmentsRequest assignments)

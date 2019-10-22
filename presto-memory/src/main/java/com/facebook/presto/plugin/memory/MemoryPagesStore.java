@@ -52,9 +52,7 @@ public class MemoryPagesStore
 
     public synchronized void initialize(long tableId)
     {
-        if (!tables.containsKey(tableId)) {
-            tables.put(tableId, new TableData());
-        }
+        tables.putIfAbsent(tableId, new TableData());
     }
 
     public synchronized void add(Long tableId, Page page)
@@ -125,9 +123,7 @@ public class MemoryPagesStore
             Map.Entry<Long, TableData> tablePagesEntry = tableDataIterator.next();
             Long tableId = tablePagesEntry.getKey();
             if (tableId < latestTableId && !activeTableIds.contains(tableId)) {
-                for (Page removedPage : tablePagesEntry.getValue().getPages()) {
-                    currentBytes -= removedPage.getRetainedSizeInBytes();
-                }
+                tablePagesEntry.getValue().getPages().forEach(removedPage -> currentBytes -= removedPage.getRetainedSizeInBytes());
                 tableDataIterator.remove();
             }
         }

@@ -279,9 +279,9 @@ public class TestStructBatchStreamReader
     private Type getType(List<String> fieldNames)
     {
         ImmutableList.Builder<TypeSignatureParameter> typeSignatureParameters = ImmutableList.builder();
-        for (String fieldName : fieldNames) {
-            typeSignatureParameters.add(TypeSignatureParameter.of(new NamedTypeSignature(Optional.of(new RowFieldName(fieldName, false)), TEST_DATA_TYPE.getTypeSignature())));
-        }
+        fieldNames.forEach(fieldName -> typeSignatureParameters
+				.add(TypeSignatureParameter.of(new NamedTypeSignature(Optional.of(new RowFieldName(fieldName, false)),
+						TEST_DATA_TYPE.getTypeSignature()))));
         return TYPE_MANAGER.getParameterizedType(StandardTypes.ROW, typeSignatureParameters.build());
     }
 

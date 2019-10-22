@@ -30,33 +30,25 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 final class SpilledLookupSourceHandle
 {
-    private enum State
-    {
-        SPILLED,
-        UNSPILLING,
-        PRODUCED,
-        DISPOSED
-    }
-
     @GuardedBy("this")
     private State state = State.SPILLED;
 
-    private final SettableFuture<?> unspillingRequested = SettableFuture.create();
+	private final SettableFuture<?> unspillingRequested = SettableFuture.create();
 
-    @GuardedBy("this")
+	@GuardedBy("this")
     @Nullable
     private SettableFuture<Supplier<LookupSource>> unspilledLookupSource;
 
-    private final SettableFuture<?> disposeRequested = SettableFuture.create();
+	private final SettableFuture<?> disposeRequested = SettableFuture.create();
 
-    private final ListenableFuture<?> unspillingOrDisposeRequested = whenAnyComplete(ImmutableList.of(unspillingRequested, disposeRequested));
+	private final ListenableFuture<?> unspillingOrDisposeRequested = whenAnyComplete(ImmutableList.of(unspillingRequested, disposeRequested));
 
-    public SettableFuture<?> getUnspillingRequested()
+	public SettableFuture<?> getUnspillingRequested()
     {
         return unspillingRequested;
     }
 
-    public synchronized ListenableFuture<Supplier<LookupSource>> getLookupSource()
+	public synchronized ListenableFuture<Supplier<LookupSource>> getLookupSource()
     {
         assertState(State.SPILLED);
         unspillingRequested.set(null);
@@ -66,7 +58,7 @@ final class SpilledLookupSourceHandle
         return unspilledLookupSource;
     }
 
-    public synchronized void setLookupSource(Supplier<LookupSource> lookupSource)
+	public synchronized void setLookupSource(Supplier<LookupSource> lookupSource)
     {
         requireNonNull(lookupSource, "lookupSource is null");
 
@@ -81,34 +73,42 @@ final class SpilledLookupSourceHandle
         setState(State.PRODUCED);
     }
 
-    public synchronized void dispose()
+	public synchronized void dispose()
     {
         disposeRequested.set(null);
         unspilledLookupSource = null; // let the memory go
         setState(State.DISPOSED);
     }
 
-    public SettableFuture<?> getDisposeRequested()
+	public SettableFuture<?> getDisposeRequested()
     {
         return disposeRequested;
     }
 
-    public ListenableFuture<?> getUnspillingOrDisposeRequested()
+	public ListenableFuture<?> getUnspillingOrDisposeRequested()
     {
         return unspillingOrDisposeRequested;
     }
 
-    @GuardedBy("this")
+	@GuardedBy("this")
     private void assertState(State expectedState)
     {
         State currentState = state;
         checkState(currentState == expectedState, "Expected state %s, but state is %s", expectedState, currentState);
     }
 
-    @GuardedBy("this")
+	@GuardedBy("this")
     private void setState(State newState)
     {
         //this.state.set(requireNonNull(newState, "newState is null"));
         this.state = requireNonNull(newState, "newState is null");
+    }
+
+	private enum State
+    {
+        SPILLED,
+        UNSPILLING,
+        PRODUCED,
+        DISPOSED
     }
 }

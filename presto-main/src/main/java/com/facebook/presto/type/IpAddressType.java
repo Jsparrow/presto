@@ -33,12 +33,15 @@ import java.net.UnknownHostException;
 import static com.facebook.presto.spi.block.Int128ArrayBlock.INT128_BYTES;
 import static com.facebook.presto.spi.type.TypeSignature.parseTypeSignature;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class IpAddressType
         extends AbstractType
         implements FixedWidthType
 {
-    public static final IpAddressType IPADDRESS = new IpAddressType();
+    private static final Logger logger = LoggerFactory.getLogger(IpAddressType.class);
+	public static final IpAddressType IPADDRESS = new IpAddressType();
 
     private IpAddressType()
     {
@@ -125,7 +128,8 @@ public class IpAddressType
             return InetAddresses.toAddrString(InetAddress.getByAddress(getSlice(block, position).getBytes()));
         }
         catch (UnknownHostException e) {
-            throw new IllegalArgumentException();
+            logger.error(e.getMessage(), e);
+			throw new IllegalArgumentException();
         }
     }
 
@@ -152,7 +156,7 @@ public class IpAddressType
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         if (length != INT128_BYTES) {
-            throw new IllegalStateException("Expected entry size to be exactly " + INT128_BYTES + " but was " + length);
+            throw new IllegalStateException(new StringBuilder().append("Expected entry size to be exactly ").append(INT128_BYTES).append(" but was ").append(length).toString());
         }
         blockBuilder.writeLong(value.getLong(offset));
         blockBuilder.writeLong(value.getLong(offset + SIZE_OF_LONG));

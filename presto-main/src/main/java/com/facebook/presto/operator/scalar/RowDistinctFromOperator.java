@@ -65,16 +65,15 @@ public class RowDistinctFromOperator
     {
         ImmutableList.Builder<MethodHandle> argumentMethods = ImmutableList.builder();
         Type type = boundVariables.getTypeVariable("T");
-        for (Type parameterType : type.getTypeParameters()) {
-            FunctionHandle operatorHandle = functionManager.resolveOperator(IS_DISTINCT_FROM, fromTypes(parameterType, parameterType));
-            FunctionInvoker functionInvoker = functionManager.getFunctionInvokerProvider().createFunctionInvoker(
+        type.getTypeParameters().stream().map(parameterType -> functionManager.resolveOperator(IS_DISTINCT_FROM, fromTypes(parameterType, parameterType))).forEach(operatorHandle -> {
+			FunctionInvoker functionInvoker = functionManager.getFunctionInvokerProvider().createFunctionInvoker(
                     operatorHandle,
                     Optional.of(new InvocationConvention(
                             ImmutableList.of(NULL_FLAG, NULL_FLAG),
                             InvocationConvention.InvocationReturnConvention.FAIL_ON_NULL,
                             false)));
-            argumentMethods.add(functionInvoker.methodHandle());
-        }
+			argumentMethods.add(functionInvoker.methodHandle());
+		});
         return new ScalarFunctionImplementation(
                 ImmutableList.of(
                         new ScalarImplementationChoice(

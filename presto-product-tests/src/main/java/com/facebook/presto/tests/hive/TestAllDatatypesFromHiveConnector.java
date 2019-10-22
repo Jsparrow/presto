@@ -69,7 +69,291 @@ import static java.sql.JDBCType.VARCHAR;
 public class TestAllDatatypesFromHiveConnector
         extends ProductTest
 {
-    public static final class TextRequirements
+    @Requires(TextRequirements.class)
+    @Test(groups = {SMOKE})
+    public void testSelectAllDatatypesTextFile()
+    {
+        String tableName = ALL_HIVE_SIMPLE_TYPES_TEXTFILE.getName();
+
+        assertProperAllDatatypesSchema(tableName);
+        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
+
+        assertColumnTypes(queryResult);
+        assertThat(queryResult).containsOnly(
+                row(
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        123.345f,
+                        234.567,
+                        new BigDecimal("346"),
+                        new BigDecimal("345.67800"),
+                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
+                        Date.valueOf("2015-05-10"),
+                        "ala ma kota",
+                        "ala ma kot",
+                        "ala ma    ",
+                        true,
+                        "kot binarny".getBytes()));
+    }
+
+	@Requires(OrcRequirements.class)
+    @Test(groups = {JDBC})
+    public void testSelectAllDatatypesOrc()
+    {
+        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_ORC).getNameInDatabase();
+
+        populateDataToHiveTable(tableName);
+
+        assertProperAllDatatypesSchema(tableName);
+
+        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
+        assertColumnTypes(queryResult);
+        assertThat(queryResult).containsOnly(
+                row(
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        123.345f,
+                        234.567,
+                        new BigDecimal("346"),
+                        new BigDecimal("345.67800"),
+                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
+                        Date.valueOf("2015-05-10"),
+                        "ala ma kota",
+                        "ala ma kot",
+                        "ala ma    ",
+                        true,
+                        "kot binarny".getBytes()));
+    }
+
+	@Requires(RcfileRequirements.class)
+    @Test(groups = {JDBC})
+    public void testSelectAllDatatypesRcfile()
+    {
+        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_RCFILE).getNameInDatabase();
+
+        populateDataToHiveTable(tableName);
+
+        assertProperAllDatatypesSchema(tableName);
+
+        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
+        assertColumnTypes(queryResult);
+        assertThat(queryResult).containsOnly(
+                row(
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        123.345f,
+                        234.567,
+                        new BigDecimal("346"),
+                        new BigDecimal("345.67800"),
+                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
+                        Date.valueOf("2015-05-10"),
+                        "ala ma kota",
+                        "ala ma kot",
+                        "ala ma    ",
+                        true,
+                        "kot binarny".getBytes()));
+    }
+
+	@Requires(AvroRequirements.class)
+    @Test(groups = {JDBC, SKIP_ON_CDH, AVRO})
+    public void testSelectAllDatatypesAvro()
+    {
+        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_AVRO).getNameInDatabase();
+
+        onHive().executeQuery(format(new StringBuilder().append("INSERT INTO %s VALUES(").append("2147483647,").append("9223372036854775807,").append("123.345,").append("234.567,").append("346,").append("345.67800,").append("'")
+				.append(Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)).toString()).append("',").append("'").append(Date.valueOf("2015-05-10")).append("',").append("'ala ma kota',").append("'ala ma kot',").append("'ala ma    ',")
+				.append("true,").append("'kot binarny'").append(")").toString(),
+                tableName));
+
+        assertThat(query("SHOW COLUMNS FROM " + tableName).project(1, 2)).containsExactly(
+                row("c_int", "integer"),
+                row("c_bigint", "bigint"),
+                row("c_float", "real"),
+                row("c_double", "double"),
+                row("c_decimal", "decimal(10,0)"),
+                row("c_decimal_w_params", "decimal(10,5)"),
+                row("c_timestamp", "timestamp"),
+                row("c_date", "date"),
+                row("c_string", "varchar"),
+                row("c_varchar", "varchar(10)"),
+                row("c_char", "char(10)"),
+                row("c_boolean", "boolean"),
+                row("c_binary", "varbinary"));
+
+        QueryResult queryResult = query("SELECT * FROM " + tableName);
+        assertThat(queryResult).hasColumns(
+                INTEGER,
+                BIGINT,
+                REAL,
+                DOUBLE,
+                DECIMAL,
+                DECIMAL,
+                TIMESTAMP,
+                DATE,
+                VARCHAR,
+                VARCHAR,
+                CHAR,
+                BOOLEAN,
+                VARBINARY);
+
+        assertThat(queryResult).containsOnly(
+                row(
+                        2147483647,
+                        9223372036854775807L,
+                        123.345f,
+                        234.567,
+                        new BigDecimal("346"),
+                        new BigDecimal("345.67800"),
+                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
+                        Date.valueOf("2015-05-10"),
+                        "ala ma kota",
+                        "ala ma kot",
+                        "ala ma    ",
+                        true,
+                        "kot binarny".getBytes()));
+    }
+
+	private void assertProperAllDatatypesSchema(String tableName)
+    {
+        assertThat(query("SHOW COLUMNS FROM " + tableName).project(1, 2)).containsExactly(
+                row("c_tinyint", "tinyint"),
+                row("c_smallint", "smallint"),
+                row("c_int", "integer"),
+                row("c_bigint", "bigint"),
+                row("c_float", "real"),
+                row("c_double", "double"),
+                row("c_decimal", "decimal(10,0)"),
+                row("c_decimal_w_params", "decimal(10,5)"),
+                row("c_timestamp", "timestamp"),
+                row("c_date", "date"),
+                row("c_string", "varchar"),
+                row("c_varchar", "varchar(10)"),
+                row("c_char", "char(10)"),
+                row("c_boolean", "boolean"),
+                row("c_binary", "varbinary"));
+    }
+
+	private void assertColumnTypes(QueryResult queryResult)
+    {
+        assertThat(queryResult).hasColumns(
+                TINYINT,
+                SMALLINT,
+                INTEGER,
+                BIGINT,
+                REAL,
+                DOUBLE,
+                DECIMAL,
+                DECIMAL,
+                TIMESTAMP,
+                DATE,
+                VARCHAR,
+                VARCHAR,
+                CHAR,
+                BOOLEAN,
+                VARBINARY);
+    }
+
+	private void assertColumnTypesParquet(QueryResult queryResult)
+    {
+        assertThat(queryResult).hasColumns(
+                TINYINT,
+                SMALLINT,
+                INTEGER,
+                BIGINT,
+                REAL,
+                DOUBLE,
+                DECIMAL,
+                DECIMAL,
+                TIMESTAMP,
+                VARCHAR,
+                VARCHAR,
+                CHAR,
+                BOOLEAN,
+                VARBINARY);
+    }
+
+	@Requires(ParquetRequirements.class)
+    @Test(groups = {POST_HIVE_1_0_1})
+    public void testSelectAllDatatypesParquetFile()
+    {
+        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_PARQUET).getNameInDatabase();
+
+        onHive().executeQuery(format(new StringBuilder().append("INSERT INTO %s VALUES(").append("127,").append("32767,").append("2147483647,").append("9223372036854775807,").append("123.345,").append("234.567,").append("346,")
+				.append("345.67800,").append("'").append(Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)).toString()).append("',").append("'ala ma kota',").append("'ala ma kot',").append("'ala ma    ',").append("true,")
+				.append("'kot binarny'").append(")").toString(), tableName));
+
+        assertThat(query(format("SHOW COLUMNS FROM %s", tableName)).project(1, 2)).containsExactly(
+                row("c_tinyint", "tinyint"),
+                row("c_smallint", "smallint"),
+                row("c_int", "integer"),
+                row("c_bigint", "bigint"),
+                row("c_float", "real"),
+                row("c_double", "double"),
+                row("c_decimal", "decimal(10,0)"),
+                row("c_decimal_w_params", "decimal(10,5)"),
+                row("c_timestamp", "timestamp"),
+                row("c_string", "varchar"),
+                row("c_varchar", "varchar(10)"),
+                row("c_char", "char(10)"),
+                row("c_boolean", "boolean"),
+                row("c_binary", "varbinary"));
+
+        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
+        assertColumnTypesParquet(queryResult);
+        assertThat(queryResult).containsOnly(
+                row(
+                        127,
+                        32767,
+                        2147483647,
+                        9223372036854775807L,
+                        123.345f,
+                        234.567,
+                        new BigDecimal("346"),
+                        new BigDecimal("345.67800"),
+                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
+                        "ala ma kota",
+                        "ala ma kot",
+                        "ala ma    ",
+                        true,
+                        "kot binarny".getBytes()));
+    }
+
+	private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition)
+    {
+        if (tableDefinition.getDatabase().isPresent()) {
+            return mutableTableInstanceOf(tableDefinition, tableDefinition.getDatabase().get());
+        }
+        else {
+            return mutableTableInstanceOf(tableHandleInSchema(tableDefinition));
+        }
+    }
+
+	private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition, String database)
+    {
+        return mutableTableInstanceOf(tableHandleInSchema(tableDefinition).inDatabase(database));
+    }
+
+	private static TableInstance mutableTableInstanceOf(TableHandle tableHandle)
+    {
+        return testContext().getDependency(MutableTablesState.class).get(tableHandle);
+    }
+
+	private static TableHandle tableHandleInSchema(TableDefinition tableDefinition)
+    {
+        TableHandle tableHandle = tableHandle(tableDefinition.getName());
+        if (tableDefinition.getSchema().isPresent()) {
+            tableHandle = tableHandle.inSchema(tableDefinition.getSchema().get());
+        }
+        return tableHandle;
+    }
+
+	public static final class TextRequirements
             implements RequirementsProvider
     {
         @Override
@@ -123,314 +407,5 @@ public class TestAllDatatypesFromHiveConnector
                     MutableTableRequirement.builder(ALL_HIVE_SIMPLE_TYPES_AVRO).withState(CREATED).build(),
                     immutableTable(ALL_HIVE_SIMPLE_TYPES_TEXTFILE));
         }
-    }
-
-    @Requires(TextRequirements.class)
-    @Test(groups = {SMOKE})
-    public void testSelectAllDatatypesTextFile()
-    {
-        String tableName = ALL_HIVE_SIMPLE_TYPES_TEXTFILE.getName();
-
-        assertProperAllDatatypesSchema(tableName);
-        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
-
-        assertColumnTypes(queryResult);
-        assertThat(queryResult).containsOnly(
-                row(
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
-                        123.345f,
-                        234.567,
-                        new BigDecimal("346"),
-                        new BigDecimal("345.67800"),
-                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
-                        Date.valueOf("2015-05-10"),
-                        "ala ma kota",
-                        "ala ma kot",
-                        "ala ma    ",
-                        true,
-                        "kot binarny".getBytes()));
-    }
-
-    @Requires(OrcRequirements.class)
-    @Test(groups = {JDBC})
-    public void testSelectAllDatatypesOrc()
-    {
-        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_ORC).getNameInDatabase();
-
-        populateDataToHiveTable(tableName);
-
-        assertProperAllDatatypesSchema(tableName);
-
-        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
-        assertColumnTypes(queryResult);
-        assertThat(queryResult).containsOnly(
-                row(
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
-                        123.345f,
-                        234.567,
-                        new BigDecimal("346"),
-                        new BigDecimal("345.67800"),
-                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
-                        Date.valueOf("2015-05-10"),
-                        "ala ma kota",
-                        "ala ma kot",
-                        "ala ma    ",
-                        true,
-                        "kot binarny".getBytes()));
-    }
-
-    @Requires(RcfileRequirements.class)
-    @Test(groups = {JDBC})
-    public void testSelectAllDatatypesRcfile()
-    {
-        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_RCFILE).getNameInDatabase();
-
-        populateDataToHiveTable(tableName);
-
-        assertProperAllDatatypesSchema(tableName);
-
-        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
-        assertColumnTypes(queryResult);
-        assertThat(queryResult).containsOnly(
-                row(
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
-                        123.345f,
-                        234.567,
-                        new BigDecimal("346"),
-                        new BigDecimal("345.67800"),
-                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
-                        Date.valueOf("2015-05-10"),
-                        "ala ma kota",
-                        "ala ma kot",
-                        "ala ma    ",
-                        true,
-                        "kot binarny".getBytes()));
-    }
-
-    @Requires(AvroRequirements.class)
-    @Test(groups = {JDBC, SKIP_ON_CDH, AVRO})
-    public void testSelectAllDatatypesAvro()
-    {
-        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_AVRO).getNameInDatabase();
-
-        onHive().executeQuery(format("INSERT INTO %s VALUES(" +
-                        "2147483647," +
-                        "9223372036854775807," +
-                        "123.345," +
-                        "234.567," +
-                        "346," +
-                        "345.67800," +
-                        "'" + Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)).toString() + "'," +
-                        "'" + Date.valueOf("2015-05-10") + "'," +
-                        "'ala ma kota'," +
-                        "'ala ma kot'," +
-                        "'ala ma    '," +
-                        "true," +
-                        "'kot binarny'" +
-                        ")",
-                tableName));
-
-        assertThat(query("SHOW COLUMNS FROM " + tableName).project(1, 2)).containsExactly(
-                row("c_int", "integer"),
-                row("c_bigint", "bigint"),
-                row("c_float", "real"),
-                row("c_double", "double"),
-                row("c_decimal", "decimal(10,0)"),
-                row("c_decimal_w_params", "decimal(10,5)"),
-                row("c_timestamp", "timestamp"),
-                row("c_date", "date"),
-                row("c_string", "varchar"),
-                row("c_varchar", "varchar(10)"),
-                row("c_char", "char(10)"),
-                row("c_boolean", "boolean"),
-                row("c_binary", "varbinary"));
-
-        QueryResult queryResult = query("SELECT * FROM " + tableName);
-        assertThat(queryResult).hasColumns(
-                INTEGER,
-                BIGINT,
-                REAL,
-                DOUBLE,
-                DECIMAL,
-                DECIMAL,
-                TIMESTAMP,
-                DATE,
-                VARCHAR,
-                VARCHAR,
-                CHAR,
-                BOOLEAN,
-                VARBINARY);
-
-        assertThat(queryResult).containsOnly(
-                row(
-                        2147483647,
-                        9223372036854775807L,
-                        123.345f,
-                        234.567,
-                        new BigDecimal("346"),
-                        new BigDecimal("345.67800"),
-                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
-                        Date.valueOf("2015-05-10"),
-                        "ala ma kota",
-                        "ala ma kot",
-                        "ala ma    ",
-                        true,
-                        "kot binarny".getBytes()));
-    }
-
-    private void assertProperAllDatatypesSchema(String tableName)
-    {
-        assertThat(query("SHOW COLUMNS FROM " + tableName).project(1, 2)).containsExactly(
-                row("c_tinyint", "tinyint"),
-                row("c_smallint", "smallint"),
-                row("c_int", "integer"),
-                row("c_bigint", "bigint"),
-                row("c_float", "real"),
-                row("c_double", "double"),
-                row("c_decimal", "decimal(10,0)"),
-                row("c_decimal_w_params", "decimal(10,5)"),
-                row("c_timestamp", "timestamp"),
-                row("c_date", "date"),
-                row("c_string", "varchar"),
-                row("c_varchar", "varchar(10)"),
-                row("c_char", "char(10)"),
-                row("c_boolean", "boolean"),
-                row("c_binary", "varbinary"));
-    }
-
-    private void assertColumnTypes(QueryResult queryResult)
-    {
-        assertThat(queryResult).hasColumns(
-                TINYINT,
-                SMALLINT,
-                INTEGER,
-                BIGINT,
-                REAL,
-                DOUBLE,
-                DECIMAL,
-                DECIMAL,
-                TIMESTAMP,
-                DATE,
-                VARCHAR,
-                VARCHAR,
-                CHAR,
-                BOOLEAN,
-                VARBINARY);
-    }
-
-    private void assertColumnTypesParquet(QueryResult queryResult)
-    {
-        assertThat(queryResult).hasColumns(
-                TINYINT,
-                SMALLINT,
-                INTEGER,
-                BIGINT,
-                REAL,
-                DOUBLE,
-                DECIMAL,
-                DECIMAL,
-                TIMESTAMP,
-                VARCHAR,
-                VARCHAR,
-                CHAR,
-                BOOLEAN,
-                VARBINARY);
-    }
-
-    @Requires(ParquetRequirements.class)
-    @Test(groups = {POST_HIVE_1_0_1})
-    public void testSelectAllDatatypesParquetFile()
-    {
-        String tableName = mutableTableInstanceOf(ALL_HIVE_SIMPLE_TYPES_PARQUET).getNameInDatabase();
-
-        onHive().executeQuery(format("INSERT INTO %s VALUES(" +
-                "127," +
-                "32767," +
-                "2147483647," +
-                "9223372036854775807," +
-                "123.345," +
-                "234.567," +
-                "346," +
-                "345.67800," +
-                "'" + Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)).toString() + "'," +
-                "'ala ma kota'," +
-                "'ala ma kot'," +
-                "'ala ma    '," +
-                "true," +
-                "'kot binarny'" +
-                ")", tableName));
-
-        assertThat(query(format("SHOW COLUMNS FROM %s", tableName)).project(1, 2)).containsExactly(
-                row("c_tinyint", "tinyint"),
-                row("c_smallint", "smallint"),
-                row("c_int", "integer"),
-                row("c_bigint", "bigint"),
-                row("c_float", "real"),
-                row("c_double", "double"),
-                row("c_decimal", "decimal(10,0)"),
-                row("c_decimal_w_params", "decimal(10,5)"),
-                row("c_timestamp", "timestamp"),
-                row("c_string", "varchar"),
-                row("c_varchar", "varchar(10)"),
-                row("c_char", "char(10)"),
-                row("c_boolean", "boolean"),
-                row("c_binary", "varbinary"));
-
-        QueryResult queryResult = query(format("SELECT * FROM %s", tableName));
-        assertColumnTypesParquet(queryResult);
-        assertThat(queryResult).containsOnly(
-                row(
-                        127,
-                        32767,
-                        2147483647,
-                        9223372036854775807L,
-                        123.345f,
-                        234.567,
-                        new BigDecimal("346"),
-                        new BigDecimal("345.67800"),
-                        Timestamp.valueOf(LocalDateTime.of(2015, 5, 10, 12, 15, 35, 123_000_000)),
-                        "ala ma kota",
-                        "ala ma kot",
-                        "ala ma    ",
-                        true,
-                        "kot binarny".getBytes()));
-    }
-
-    private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition)
-    {
-        if (tableDefinition.getDatabase().isPresent()) {
-            return mutableTableInstanceOf(tableDefinition, tableDefinition.getDatabase().get());
-        }
-        else {
-            return mutableTableInstanceOf(tableHandleInSchema(tableDefinition));
-        }
-    }
-
-    private static TableInstance mutableTableInstanceOf(TableDefinition tableDefinition, String database)
-    {
-        return mutableTableInstanceOf(tableHandleInSchema(tableDefinition).inDatabase(database));
-    }
-
-    private static TableInstance mutableTableInstanceOf(TableHandle tableHandle)
-    {
-        return testContext().getDependency(MutableTablesState.class).get(tableHandle);
-    }
-
-    private static TableHandle tableHandleInSchema(TableDefinition tableDefinition)
-    {
-        TableHandle tableHandle = tableHandle(tableDefinition.getName());
-        if (tableDefinition.getSchema().isPresent()) {
-            tableHandle = tableHandle.inSchema(tableDefinition.getSchema().get());
-        }
-        return tableHandle;
     }
 }

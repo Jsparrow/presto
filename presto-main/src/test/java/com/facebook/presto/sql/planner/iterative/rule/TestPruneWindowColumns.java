@@ -95,7 +95,7 @@ public class TestPruneWindowColumns
     {
         tester().assertThat(new PruneWindowColumns())
                 .on(p -> buildProjectedWindow(p,
-                        symbol -> symbol.getName().equals("output2") || symbol.getName().equals("unused"),
+                        symbol -> "output2".equals(symbol.getName()) || "unused".equals(symbol.getName()),
                         alwaysTrue()))
                 .matches(
                         strictProject(
@@ -140,7 +140,7 @@ public class TestPruneWindowColumns
                         // only the window function outputs
                         symbol -> !inputSymbolNameSet.contains(symbol.getName()),
                         // only the used input symbols
-                        symbol -> !symbol.getName().equals("unused")))
+                        symbol -> !"unused".equals(symbol.getName())))
                 .doesNotFire();
     }
 
@@ -178,7 +178,7 @@ public class TestPruneWindowColumns
                                                 .hashSymbol("hash"),
                                         strictProject(
                                                 Maps.asMap(
-                                                        Sets.filter(inputSymbolNameSet, symbolName -> !symbolName.equals("unused")),
+                                                        Sets.filter(inputSymbolNameSet, symbolName -> !"unused".equals(symbolName)),
                                                         PlanMatchPattern::expression),
                                                 values(inputSymbolNameList)))));
     }

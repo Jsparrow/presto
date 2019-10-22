@@ -38,7 +38,7 @@ public class DeflateCompressor
     {
         int maxCompressedLength = maxCompressedLength(inputLength);
         if (maxOutputLength < maxCompressedLength) {
-            throw new IllegalArgumentException("Output buffer must be at least " + maxCompressedLength + " bytes");
+            throw new IllegalArgumentException(new StringBuilder().append("Output buffer must be at least ").append(maxCompressedLength).append(" bytes").toString());
         }
 
         Deflater deflater = new Deflater(COMPRESSION_LEVEL, true);

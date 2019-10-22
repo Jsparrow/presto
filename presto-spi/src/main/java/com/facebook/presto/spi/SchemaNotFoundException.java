@@ -22,7 +22,7 @@ public class SchemaNotFoundException
 
     public SchemaNotFoundException(String schemaName)
     {
-        this(schemaName, "Schema " + schemaName + " not found");
+        this(schemaName, new StringBuilder().append("Schema ").append(schemaName).append(" not found").toString());
     }
 
     public SchemaNotFoundException(String schemaName, String message)
@@ -33,7 +33,7 @@ public class SchemaNotFoundException
 
     public SchemaNotFoundException(String schemaName, Throwable cause)
     {
-        this(schemaName, "Schema " + schemaName + " not found", cause);
+        this(schemaName, new StringBuilder().append("Schema ").append(schemaName).append(" not found").toString(), cause);
     }
 
     public SchemaNotFoundException(String schemaName, String message, Throwable cause)

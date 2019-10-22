@@ -44,10 +44,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.util.Files.newTemporaryFile;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertThrows;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFileBasedSystemAccessControl
 {
-    private static final Identity alice = new Identity("alice", Optional.empty());
+    private static final Logger logger = LoggerFactory.getLogger(TestFileBasedSystemAccessControl.class);
+	private static final Identity alice = new Identity("alice", Optional.empty());
     private static final Identity kerberosValidAlice = new Identity("alice", Optional.of(new KerberosPrincipal("alice/example.com@EXAMPLE.COM")));
     private static final Identity kerberosValidNonAsciiUser = new Identity("\u0194\u0194\u0194", Optional.of(new KerberosPrincipal("\u0194\u0194\u0194/example.com@EXAMPLE.COM")));
     private static final Identity kerberosInvalidAlice = new Identity("alice", Optional.of(new KerberosPrincipal("mallory/example.com@EXAMPLE.COM")));
@@ -75,6 +78,7 @@ public class TestFileBasedSystemAccessControl
             throw new AssertionError("expected AccessDeniedExeption");
         }
         catch (AccessDeniedException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         accessControlManager.checkCanSetUser(kerberosValidAlice.getPrincipal(), kerberosValidAlice.getUser());
@@ -84,6 +88,7 @@ public class TestFileBasedSystemAccessControl
             throw new AssertionError("expected AccessDeniedExeption");
         }
         catch (AccessDeniedException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         accessControlManager.checkCanSetUser(kerberosValidShare.getPrincipal(), kerberosValidShare.getUser());
@@ -92,6 +97,7 @@ public class TestFileBasedSystemAccessControl
             throw new AssertionError("expected AccessDeniedExeption");
         }
         catch (AccessDeniedException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         accessControlManager.checkCanSetUser(validSpecialRegexWildDot.getPrincipal(), validSpecialRegexWildDot.getUser());
@@ -101,6 +107,7 @@ public class TestFileBasedSystemAccessControl
             throw new AssertionError("expected AccessDeniedExeption");
         }
         catch (AccessDeniedException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         TransactionManager transactionManagerNoPatterns = createTestTransactionManager();
@@ -143,9 +150,7 @@ public class TestFileBasedSystemAccessControl
                     accessControlManager.checkCanRenameSchema(transactionId, alice, aliceSchema, "new-schema");
                     accessControlManager.checkCanShowSchemas(transactionId, alice, "alice-catalog");
                 });
-        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> {
-            accessControlManager.checkCanCreateSchema(transactionId, bob, aliceSchema);
-        }));
+        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> accessControlManager.checkCanCreateSchema(transactionId, bob, aliceSchema)));
     }
 
     @Test
@@ -168,9 +173,7 @@ public class TestFileBasedSystemAccessControl
                     accessControlManager.checkCanAddColumns(transactionId, alice, aliceTable);
                     accessControlManager.checkCanRenameColumn(transactionId, alice, aliceTable);
                 });
-        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> {
-            accessControlManager.checkCanCreateTable(transactionId, bob, aliceTable);
-        }));
+        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> accessControlManager.checkCanCreateTable(transactionId, bob, aliceTable)));
     }
 
     @Test
@@ -190,9 +193,7 @@ public class TestFileBasedSystemAccessControl
                     accessControlManager.checkCanGrantTablePrivilege(transactionId, alice, SELECT, aliceTable, new PrestoPrincipal(USER, "grantee"), true);
                     accessControlManager.checkCanRevokeTablePrivilege(transactionId, alice, SELECT, aliceTable, new PrestoPrincipal(USER, "revokee"), true);
                 });
-        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> {
-            accessControlManager.checkCanCreateView(transactionId, bob, aliceView);
-        }));
+        assertThrows(AccessDeniedException.class, () -> transaction(transactionManager, accessControlManager).execute(transactionId -> accessControlManager.checkCanCreateView(transactionId, bob, aliceView)));
     }
 
     @Test
@@ -226,16 +227,12 @@ public class TestFileBasedSystemAccessControl
         sleep(2);
 
         assertThatThrownBy(() -> transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanCreateView(transactionId, alice, aliceView);
-                }))
+                .execute(transactionId -> accessControlManager.checkCanCreateView(transactionId, alice, aliceView)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageStartingWith("Invalid JSON file");
         // test if file based cached control was not cached somewhere
         assertThatThrownBy(() -> transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanCreateView(transactionId, alice, aliceView);
-                }))
+                .execute(transactionId -> accessControlManager.checkCanCreateView(transactionId, alice, aliceView)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageStartingWith("Invalid JSON file");
 
@@ -243,9 +240,7 @@ public class TestFileBasedSystemAccessControl
         sleep(2);
 
         transaction(transactionManager, accessControlManager)
-                .execute(transactionId -> {
-                    accessControlManager.checkCanCreateView(transactionId, alice, aliceView);
-                });
+                .execute(transactionId -> accessControlManager.checkCanCreateView(transactionId, alice, aliceView));
     }
 
     private AccessControlManager newAccessControlManager(TransactionManager transactionManager, String resourceName)

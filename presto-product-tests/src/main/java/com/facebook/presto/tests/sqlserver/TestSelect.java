@@ -55,7 +55,12 @@ public class TestSelect
         extends ProductTest
         implements RequirementsProvider
 {
-    @Override
+    private static final String CTAS_TABLE_NAME = "create_table_as_select";
+	private static final String NATION_TABLE_NAME = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, NATION.getName());
+	private static final String CREATE_TABLE_AS_SELECT = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, CTAS_TABLE_NAME);
+	private static final String ALL_TYPES_TABLE_NAME = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, SQLSERVER_ALL_TYPES.getName());
+
+	@Override
     public Requirement getRequirements(Configuration configuration)
     {
         return compose(
@@ -63,12 +68,7 @@ public class TestSelect
                 immutableTable(SQLSERVER_ALL_TYPES));
     }
 
-    private static final String CTAS_TABLE_NAME = "create_table_as_select";
-    private static final String NATION_TABLE_NAME = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, NATION.getName());
-    private static final String CREATE_TABLE_AS_SELECT = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, CTAS_TABLE_NAME);
-    private static final String ALL_TYPES_TABLE_NAME = format("%s.%s.%s", CONNECTOR_NAME, KEY_SPACE, SQLSERVER_ALL_TYPES.getName());
-
-    @BeforeTestWithContext
+	@BeforeTestWithContext
     @AfterTestWithContext
     public void dropTestTables()
     {
@@ -80,7 +80,7 @@ public class TestSelect
         }
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testSelectNation()
     {
         String sql = format(
@@ -92,13 +92,11 @@ public class TestSelect
         assertThat(queryResult).matches(PRESTO_NATION_RESULT);
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testNationSelfInnerJoin()
     {
         String sql = format(
-                "SELECT n1.n_name, n2.n_regionkey FROM %s n1 JOIN " +
-                        "%s n2 ON n1.n_nationkey = n2.n_regionkey " +
-                        "WHERE n1.n_nationkey=3",
+                new StringBuilder().append("SELECT n1.n_name, n2.n_regionkey FROM %s n1 JOIN ").append("%s n2 ON n1.n_nationkey = n2.n_regionkey ").append("WHERE n1.n_nationkey=3").toString(),
                 NATION_TABLE_NAME,
                 NATION_TABLE_NAME);
         QueryResult queryResult = onPresto()
@@ -112,13 +110,11 @@ public class TestSelect
                 row("CANADA", 3));
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testNationJoinRegion()
     {
         String sql = format(
-                "SELECT c.n_name, t.name FROM %s c JOIN " +
-                        "tpch.tiny.region t ON c.n_regionkey = t.regionkey " +
-                        "WHERE c.n_nationkey=3",
+                new StringBuilder().append("SELECT c.n_name, t.name FROM %s c JOIN ").append("tpch.tiny.region t ON c.n_regionkey = t.regionkey ").append("WHERE c.n_nationkey=3").toString(),
                 NATION_TABLE_NAME);
         QueryResult queryResult = onPresto()
                 .executeQuery(sql);
@@ -126,7 +122,7 @@ public class TestSelect
         assertThat(queryResult).containsOnly(row("CANADA", "AMERICA"));
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testAllDatatypes()
     {
         String sql = format(
@@ -152,7 +148,7 @@ public class TestSelect
                         row(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testCreateTableAsSelect()
     {
         String sql = format(

@@ -109,7 +109,12 @@ class ErrorHandler
         throw new ParsingException(message, e, line, charPositionInLine);
     }
 
-    private static class ParsingState
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+	private static class ParsingState
     {
         public final ATNState state;
         public final int tokenIndex;
@@ -261,11 +266,6 @@ class ErrorHandler
             ATNState followState = ((RuleTransition) atn.states.get(context.invokingState).transition(0)).followState;
             return new CallerContext(parent, followState);
         }
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
     }
 
     public static class Builder

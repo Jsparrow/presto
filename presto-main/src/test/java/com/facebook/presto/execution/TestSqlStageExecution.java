@@ -124,7 +124,8 @@ public class TestSqlStageExecution
                     }
                     InternalNode node = new InternalNode(
                             "source" + i,
-                            URI.create("http://10.0.0." + (i / 10_000) + ":" + (i % 10_000)),
+                            URI.create(new StringBuilder().append("http://10.0.0.").append(i / 10_000).append(":")
+									.append(i % 10_000).toString()),
                             NodeVersion.UNKNOWN,
                             false);
                     stage.scheduleTask(node, i, OptionalInt.empty());

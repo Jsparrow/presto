@@ -31,11 +31,14 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TpcdsConnectorFactory
         implements ConnectorFactory
 {
-    private final int defaultSplitsPerNode;
+    private static final Logger logger = LoggerFactory.getLogger(TpcdsConnectorFactory.class);
+	private final int defaultSplitsPerNode;
 
     public TpcdsConnectorFactory()
     {
@@ -105,7 +108,8 @@ public class TpcdsConnectorFactory
             return parseInt(firstNonNull(properties.get("tpcds.splits-per-node"), String.valueOf(defaultSplitsPerNode)));
         }
         catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid property tpcds.splits-per-node");
+            logger.error(e.getMessage(), e);
+			throw new IllegalArgumentException("Invalid property tpcds.splits-per-node");
         }
     }
 

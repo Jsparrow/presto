@@ -26,7 +26,114 @@ import static java.util.Objects.requireNonNull;
 
 public class Subfield
 {
-    public interface PathElement
+    private final String name;
+	private final List<PathElement> path;
+
+	@JsonCreator
+    public Subfield(String path)
+    {
+        requireNonNull(path, "path is null");
+
+        SubfieldTokenizer tokenizer = new SubfieldTokenizer(path);
+        checkArgument(tokenizer.hasNext(), "Column name is missing: " + path);
+
+        PathElement firstElement = tokenizer.next();
+        checkArgument(firstElement instanceof NestedField, "Subfield path must start with a name: " + path);
+
+        this.name = ((NestedField) firstElement).getName();
+
+        List<PathElement> pathElements = new ArrayList<>();
+        tokenizer.forEachRemaining(pathElements::add);
+        this.path = Collections.unmodifiableList(pathElements);
+    }
+
+	public Subfield(String name, List<PathElement> path)
+    {
+        this.name = requireNonNull(name, "name is null");
+        this.path = requireNonNull(path, "path is null");
+    }
+
+	public static PathElement allSubscripts()
+    {
+        return AllSubscripts.getInstance();
+    }
+
+	private static void checkArgument(boolean expression, String errorMessage)
+    {
+        if (!expression) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+    }
+
+	public String getRootName()
+    {
+        return name;
+    }
+
+	public List<PathElement> getPath()
+    {
+        return path;
+    }
+
+	public boolean isPrefix(Subfield other)
+    {
+        if (!other.name.equals(name)) {
+            return false;
+        }
+
+        if (path.size() < other.path.size()) {
+            return Objects.equals(path, other.path.subList(0, path.size()));
+        }
+
+        return false;
+    }
+
+	public Subfield tail(String name)
+    {
+        if (path.isEmpty()) {
+            throw new IllegalStateException("path is empty");
+        }
+
+        return new Subfield(name, path.subList(1, path.size()));
+    }
+
+	@JsonValue
+    public String serialize()
+    {
+        return name + path.stream()
+                .map(PathElement::toString)
+                .collect(Collectors.joining());
+    }
+
+	@Override
+    public String toString()
+    {
+        return serialize();
+    }
+
+	@Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Subfield other = (Subfield) o;
+        return Objects.equals(name, other.name) &&
+                Objects.equals(path, other.path);
+    }
+
+	@Override
+    public int hashCode()
+    {
+        return Objects.hash(name, path);
+    }
+
+	public interface PathElement
     {
         boolean isSubscript();
     }
@@ -142,7 +249,7 @@ public class Subfield
         @Override
         public String toString()
         {
-            return "[" + index + "]";
+            return new StringBuilder().append("[").append(index).append("]").toString();
         }
 
         @Override
@@ -190,7 +297,7 @@ public class Subfield
         @Override
         public String toString()
         {
-            return "[\"" + index.replace("\"", "\\\"") + "\"]";
+            return new StringBuilder().append("[\"").append(index.replace("\"", "\\\"")).append("\"]").toString();
         }
 
         @Override
@@ -198,112 +305,5 @@ public class Subfield
         {
             return true;
         }
-    }
-
-    private final String name;
-    private final List<PathElement> path;
-
-    public static PathElement allSubscripts()
-    {
-        return AllSubscripts.getInstance();
-    }
-
-    @JsonCreator
-    public Subfield(String path)
-    {
-        requireNonNull(path, "path is null");
-
-        SubfieldTokenizer tokenizer = new SubfieldTokenizer(path);
-        checkArgument(tokenizer.hasNext(), "Column name is missing: " + path);
-
-        PathElement firstElement = tokenizer.next();
-        checkArgument(firstElement instanceof NestedField, "Subfield path must start with a name: " + path);
-
-        this.name = ((NestedField) firstElement).getName();
-
-        List<PathElement> pathElements = new ArrayList<>();
-        tokenizer.forEachRemaining(pathElements::add);
-        this.path = Collections.unmodifiableList(pathElements);
-    }
-
-    private static void checkArgument(boolean expression, String errorMessage)
-    {
-        if (!expression) {
-            throw new IllegalArgumentException(errorMessage);
-        }
-    }
-
-    public Subfield(String name, List<PathElement> path)
-    {
-        this.name = requireNonNull(name, "name is null");
-        this.path = requireNonNull(path, "path is null");
-    }
-
-    public String getRootName()
-    {
-        return name;
-    }
-
-    public List<PathElement> getPath()
-    {
-        return path;
-    }
-
-    public boolean isPrefix(Subfield other)
-    {
-        if (!other.name.equals(name)) {
-            return false;
-        }
-
-        if (path.size() < other.path.size()) {
-            return Objects.equals(path, other.path.subList(0, path.size()));
-        }
-
-        return false;
-    }
-
-    public Subfield tail(String name)
-    {
-        if (path.isEmpty()) {
-            throw new IllegalStateException("path is empty");
-        }
-
-        return new Subfield(name, path.subList(1, path.size()));
-    }
-
-    @JsonValue
-    public String serialize()
-    {
-        return name + path.stream()
-                .map(PathElement::toString)
-                .collect(Collectors.joining());
-    }
-
-    @Override
-    public String toString()
-    {
-        return serialize();
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        Subfield other = (Subfield) o;
-        return Objects.equals(name, other.name) &&
-                Objects.equals(path, other.path);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(name, path);
     }
 }

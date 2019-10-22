@@ -38,24 +38,18 @@ public class TestingEventListenerManager
     @Override
     public void queryCompleted(QueryCompletedEvent queryCompletedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().queryCompleted(queryCompletedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.queryCompleted(queryCompletedEvent));
     }
 
     @Override
     public void queryCreated(QueryCreatedEvent queryCreatedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().queryCreated(queryCreatedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.queryCreated(queryCreatedEvent));
     }
 
     @Override
     public void splitCompleted(SplitCompletedEvent splitCompletedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().splitCompleted(splitCompletedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.splitCompleted(splitCompletedEvent));
     }
 }

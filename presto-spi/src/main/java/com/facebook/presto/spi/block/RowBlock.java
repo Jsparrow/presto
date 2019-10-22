@@ -26,7 +26,6 @@ import static java.util.Objects.requireNonNull;
 
 public class RowBlock
         extends AbstractRowBlock
-        implements Block
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(RowBlock.class).instanceSize();
 
@@ -41,6 +40,28 @@ public class RowBlock
     private final long retainedSizeInBytes;
 
     /**
+     * Use createRowBlockInternal or fromFieldBlocks instead of this method.  The caller of this method is assumed to have
+     * validated the arguments with validateConstructorArguments.
+     */
+    private RowBlock(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets, Block[] fieldBlocks)
+    {
+        super(fieldBlocks.length);
+
+        this.startOffset = startOffset;
+        this.positionCount = positionCount;
+        this.rowIsNull = rowIsNull;
+        this.fieldBlockOffsets = fieldBlockOffsets;
+        this.fieldBlocks = fieldBlocks;
+
+        this.sizeInBytes = -1;
+        long retainedSizeInBytes = INSTANCE_SIZE + sizeOf(fieldBlockOffsets) + sizeOf(rowIsNull);
+        for (Block fieldBlock : fieldBlocks) {
+            retainedSizeInBytes += fieldBlock.getRetainedSizeInBytes();
+        }
+        this.retainedSizeInBytes = retainedSizeInBytes;
+    }
+
+	/**
      * Create a row block directly from columnar nulls and field blocks.
      */
     public static Block fromFieldBlocks(int positionCount, Optional<boolean[]> rowIsNull, Block[] fieldBlocks)
@@ -53,7 +74,7 @@ public class RowBlock
         return new RowBlock(0, positionCount, rowIsNull.orElse(null), fieldBlockOffsets, fieldBlocks);
     }
 
-    /**
+	/**
      * Create a row block directly without per element validations.
      */
     static RowBlock createRowBlockInternal(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets, Block[] fieldBlocks)
@@ -62,7 +83,7 @@ public class RowBlock
         return new RowBlock(startOffset, positionCount, rowIsNull, fieldBlockOffsets, fieldBlocks);
     }
 
-    private static void validateConstructorArguments(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets, Block[] fieldBlocks)
+	private static void validateConstructorArguments(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets, Block[] fieldBlocks)
     {
         if (startOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -95,60 +116,38 @@ public class RowBlock
         }
     }
 
-    /**
-     * Use createRowBlockInternal or fromFieldBlocks instead of this method.  The caller of this method is assumed to have
-     * validated the arguments with validateConstructorArguments.
-     */
-    private RowBlock(int startOffset, int positionCount, @Nullable boolean[] rowIsNull, int[] fieldBlockOffsets, Block[] fieldBlocks)
-    {
-        super(fieldBlocks.length);
-
-        this.startOffset = startOffset;
-        this.positionCount = positionCount;
-        this.rowIsNull = rowIsNull;
-        this.fieldBlockOffsets = fieldBlockOffsets;
-        this.fieldBlocks = fieldBlocks;
-
-        this.sizeInBytes = -1;
-        long retainedSizeInBytes = INSTANCE_SIZE + sizeOf(fieldBlockOffsets) + sizeOf(rowIsNull);
-        for (Block fieldBlock : fieldBlocks) {
-            retainedSizeInBytes += fieldBlock.getRetainedSizeInBytes();
-        }
-        this.retainedSizeInBytes = retainedSizeInBytes;
-    }
-
-    @Override
+	@Override
     protected Block[] getRawFieldBlocks()
     {
         return fieldBlocks;
     }
 
-    @Override
+	@Override
     protected int[] getFieldBlockOffsets()
     {
         return fieldBlockOffsets;
     }
 
-    @Override
+	@Override
     public int getOffsetBase()
     {
         return startOffset;
     }
 
-    @Override
+	@Override
     @Nullable
     protected boolean[] getRowIsNull()
     {
         return rowIsNull;
     }
 
-    @Override
+	@Override
     public int getPositionCount()
     {
         return positionCount;
     }
 
-    @Override
+	@Override
     public long getSizeInBytes()
     {
         if (sizeInBytes < 0) {
@@ -157,7 +156,7 @@ public class RowBlock
         return sizeInBytes;
     }
 
-    private void calculateSize()
+	private void calculateSize()
     {
         int startFieldBlockOffset = fieldBlockOffsets[startOffset];
         int endFieldBlockOffset = fieldBlockOffsets[startOffset + positionCount];
@@ -170,13 +169,13 @@ public class RowBlock
         this.sizeInBytes = sizeInBytes;
     }
 
-    @Override
+	@Override
     public long getRetainedSizeInBytes()
     {
         return retainedSizeInBytes;
     }
 
-    @Override
+	@Override
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
     {
         for (int i = 0; i < numFields; i++) {
@@ -187,13 +186,13 @@ public class RowBlock
         consumer.accept(this, (long) INSTANCE_SIZE);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return format("RowBlock{numFields=%d, positionCount=%d}", numFields, getPositionCount());
     }
 
-    @Override
+	@Override
     public Block getLoadedBlock()
     {
         boolean allLoaded = true;

@@ -48,11 +48,14 @@ import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Base64.getMimeDecoder;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JsonWebTokenAuthenticator
         implements Authenticator
 {
-    private static final String DEFAULT_KEY = "default-key";
+    private static final Logger logger = LoggerFactory.getLogger(JsonWebTokenAuthenticator.class);
+	private static final String DEFAULT_KEY = "default-key";
     private static final CharMatcher INVALID_KID_CHARS = inRange('a', 'z').or(inRange('A', 'Z')).or(inRange('0', '9')).or(CharMatcher.anyOf("_-")).negate();
     private static final String KEY_ID_VARIABLE = "${KID}";
 
@@ -106,7 +109,7 @@ public class JsonWebTokenAuthenticator
         String header = nullToEmpty(request.getHeader(AUTHORIZATION));
 
         int space = header.indexOf(' ');
-        if ((space < 0) || !header.substring(0, space).equalsIgnoreCase("bearer")) {
+        if ((space < 0) || !"bearer".equalsIgnoreCase(header.substring(0, space))) {
             throw needAuthentication(null);
         }
         String token = header.substring(space + 1).trim();
@@ -132,7 +135,34 @@ public class JsonWebTokenAuthenticator
         return new AuthenticationException(message, "Bearer realm=\"Presto\", token_type=\"JWT\"");
     }
 
-    private static class StaticKeyLoader
+    private static LoadedKey loadKeyFile(File file)
+    {
+        if (!file.canRead()) {
+            throw new SignatureException("Unknown signing key ID");
+        }
+
+        // try to load the key as a PEM encoded public key
+        try {
+            return new LoadedKey(PemReader.loadPublicKey(file));
+        }
+        catch (Exception ignored) {
+			logger.error(ignored.getMessage(), ignored);
+        }
+
+        // try to load the key as a base64 encoded HMAC key
+        try {
+            String base64Key = asCharSource(file, US_ASCII).read();
+            byte[] rawKey = getMimeDecoder().decode(base64Key.getBytes(US_ASCII));
+            return new LoadedKey(rawKey);
+        }
+        catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
+        }
+
+        throw new SignatureException("Unknown signing key id");
+    }
+
+	private static class StaticKeyLoader
             implements Function<JwsHeader<?>, Key>
     {
         private final LoadedKey key;
@@ -188,31 +218,6 @@ public class JsonWebTokenAuthenticator
         {
             return loadKeyFile(new File(keyFile.replace(KEY_ID_VARIABLE, keyId)));
         }
-    }
-
-    private static LoadedKey loadKeyFile(File file)
-    {
-        if (!file.canRead()) {
-            throw new SignatureException("Unknown signing key ID");
-        }
-
-        // try to load the key as a PEM encoded public key
-        try {
-            return new LoadedKey(PemReader.loadPublicKey(file));
-        }
-        catch (Exception ignored) {
-        }
-
-        // try to load the key as a base64 encoded HMAC key
-        try {
-            String base64Key = asCharSource(file, US_ASCII).read();
-            byte[] rawKey = getMimeDecoder().decode(base64Key.getBytes(US_ASCII));
-            return new LoadedKey(rawKey);
-        }
-        catch (IOException ignored) {
-        }
-
-        throw new SignatureException("Unknown signing key id");
     }
 
     private static class LoadedKey

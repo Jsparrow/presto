@@ -65,9 +65,7 @@ public class TestSetFlatteningOptimizer
     public void testFlattensUnionAndUnionAllWhenAllowed()
     {
         assertPlan(
-                "SELECT * FROM nation " +
-                        "UNION ALL (SELECT * FROM nation " +
-                        "UNION (SELECT * FROM nation UNION ALL select * FROM nation))",
+                new StringBuilder().append("SELECT * FROM nation ").append("UNION ALL (SELECT * FROM nation ").append("UNION (SELECT * FROM nation UNION ALL select * FROM nation))").toString(),
                 anyTree(
                         union(
                                 tableScan("nation"),
@@ -123,7 +121,8 @@ public class TestSetFlatteningOptimizer
                                         tableScan("nation")))));
     }
 
-    public void assertPlan(String sql, PlanMatchPattern pattern)
+    @Override
+	public void assertPlan(String sql, PlanMatchPattern pattern)
     {
         List<PlanOptimizer> optimizers = ImmutableList.of(
                 new UnaliasSymbolReferences(getMetadata().getFunctionManager()),

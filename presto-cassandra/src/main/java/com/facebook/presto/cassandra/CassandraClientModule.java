@@ -110,9 +110,7 @@ public class CassandraClientModule
         if (config.isUseWhiteList()) {
             checkArgument(!config.getWhiteListAddresses().isEmpty(), "empty WhiteListAddresses");
             List<InetSocketAddress> whiteList = new ArrayList<>();
-            for (String point : config.getWhiteListAddresses()) {
-                whiteList.add(new InetSocketAddress(point, config.getNativeProtocolPort()));
-            }
+            config.getWhiteListAddresses().forEach(point -> whiteList.add(new InetSocketAddress(point, config.getNativeProtocolPort())));
             loadPolicy = new WhiteListPolicy(loadPolicy, whiteList);
         }
 

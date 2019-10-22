@@ -31,7 +31,7 @@ public class SetOperationNodeUtils
     public static Map<VariableReferenceExpression, List<VariableReferenceExpression>> fromListMultimap(ListMultimap<VariableReferenceExpression, VariableReferenceExpression> outputsToInputs)
     {
         Map<VariableReferenceExpression, List<VariableReferenceExpression>> mapping = new LinkedHashMap<>();
-        for (Map.Entry<VariableReferenceExpression, VariableReferenceExpression> entry : outputsToInputs.entries()) {
+        outputsToInputs.entries().forEach(entry -> {
             if (!mapping.containsKey(entry.getKey())) {
                 List<VariableReferenceExpression> values = new ArrayList<>();
                 values.add(entry.getValue());
@@ -40,7 +40,7 @@ public class SetOperationNodeUtils
             else {
                 mapping.get(entry.getKey()).add(entry.getValue());
             }
-        }
+        });
 
         return mapping;
     }

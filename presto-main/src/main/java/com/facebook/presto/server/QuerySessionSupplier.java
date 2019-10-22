@@ -87,19 +87,13 @@ public class QuerySessionSupplier
             sessionBuilder.setLocale(Locale.forLanguageTag(context.getLanguage()));
         }
 
-        for (Entry<String, String> entry : context.getSystemProperties().entrySet()) {
-            sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue());
-        }
-        for (Entry<String, Map<String, String>> catalogProperties : context.getCatalogSessionProperties().entrySet()) {
+        context.getSystemProperties().entrySet().forEach(entry -> sessionBuilder.setSystemProperty(entry.getKey(), entry.getValue()));
+        context.getCatalogSessionProperties().entrySet().forEach(catalogProperties -> {
             String catalog = catalogProperties.getKey();
-            for (Entry<String, String> entry : catalogProperties.getValue().entrySet()) {
-                sessionBuilder.setCatalogSessionProperty(catalog, entry.getKey(), entry.getValue());
-            }
-        }
+            catalogProperties.getValue().entrySet().forEach(entry -> sessionBuilder.setCatalogSessionProperty(catalog, entry.getKey(), entry.getValue()));
+        });
 
-        for (Entry<String, String> preparedStatement : context.getPreparedStatements().entrySet()) {
-            sessionBuilder.addPreparedStatement(preparedStatement.getKey(), preparedStatement.getValue());
-        }
+        context.getPreparedStatements().entrySet().forEach(preparedStatement -> sessionBuilder.addPreparedStatement(preparedStatement.getKey(), preparedStatement.getValue()));
 
         if (context.supportClientTransaction()) {
             sessionBuilder.setClientTransactionSupport();

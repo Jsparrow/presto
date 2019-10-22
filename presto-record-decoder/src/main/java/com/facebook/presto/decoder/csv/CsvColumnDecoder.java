@@ -35,10 +35,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CsvColumnDecoder
 {
-    private final String columnName;
+    private static final Logger logger = LoggerFactory.getLogger(CsvColumnDecoder.class);
+	private final String columnName;
     private final Type columnType;
     private final int columnIndex;
 
@@ -57,7 +60,8 @@ public class CsvColumnDecoder
                 columnIndex = Integer.parseInt(columnHandle.getMapping());
             }
             catch (NumberFormatException e) {
-                throw new IllegalArgumentException(format("invalid mapping '%s' for column '%s'", columnHandle.getMapping(), columnName));
+                logger.error(e.getMessage(), e);
+				throw new IllegalArgumentException(format("invalid mapping '%s' for column '%s'", columnHandle.getMapping(), columnName));
             }
             checkArgument(columnIndex >= 0, "invalid mapping '%s' for column '%s'", columnHandle.getMapping(), columnName);
 
@@ -101,7 +105,8 @@ public class CsvColumnDecoder
                         return Boolean.parseBoolean(tokens[columnIndex].trim());
                     }
                     catch (NumberFormatException e) {
-                        throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
+                        logger.error(e.getMessage(), e);
+						throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
                     }
                 }
 
@@ -112,7 +117,8 @@ public class CsvColumnDecoder
                         return Long.parseLong(tokens[columnIndex].trim());
                     }
                     catch (NumberFormatException e) {
-                        throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
+                        logger.error(e.getMessage(), e);
+						throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
                     }
                 }
 
@@ -123,7 +129,8 @@ public class CsvColumnDecoder
                         return Double.parseDouble(tokens[columnIndex].trim());
                     }
                     catch (NumberFormatException e) {
-                        throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
+                        logger.error(e.getMessage(), e);
+						throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("could not parse value '%s' as '%s' for column '%s'", tokens[columnIndex].trim(), columnType, columnName));
                     }
                 }
 

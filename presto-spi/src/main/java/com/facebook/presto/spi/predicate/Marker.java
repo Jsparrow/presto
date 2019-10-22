@@ -31,18 +31,11 @@ import static java.util.Objects.requireNonNull;
 public final class Marker
         implements Comparable<Marker>
 {
-    public enum Bound
-    {
-        BELOW,   // lower than the value, but infinitesimally close to the value
-        EXACTLY, // exactly the value
-        ABOVE    // higher than the value, but infinitesimally close to the value
-    }
-
     private final Type type;
-    private final Optional<Block> valueBlock;
-    private final Bound bound;
+	private final Optional<Block> valueBlock;
+	private final Bound bound;
 
-    /**
+	/**
      * LOWER UNBOUNDED is specified with an empty value and a ABOVE bound
      * UPPER UNBOUNDED is specified with an empty value and a BELOW bound
      */
@@ -70,57 +63,57 @@ public final class Marker
         this.bound = bound;
     }
 
-    private static Marker create(Type type, Optional<Object> value, Bound bound)
+	private static Marker create(Type type, Optional<Object> value, Bound bound)
     {
         return new Marker(type, value.map(object -> Utils.nativeValueToBlock(type, object)), bound);
     }
 
-    public static Marker upperUnbounded(Type type)
+	public static Marker upperUnbounded(Type type)
     {
         requireNonNull(type, "type is null");
         return create(type, Optional.empty(), Bound.BELOW);
     }
 
-    public static Marker lowerUnbounded(Type type)
+	public static Marker lowerUnbounded(Type type)
     {
         requireNonNull(type, "type is null");
         return create(type, Optional.empty(), Bound.ABOVE);
     }
 
-    public static Marker above(Type type, Object value)
+	public static Marker above(Type type, Object value)
     {
         requireNonNull(type, "type is null");
         requireNonNull(value, "value is null");
         return create(type, Optional.of(value), Bound.ABOVE);
     }
 
-    public static Marker exactly(Type type, Object value)
+	public static Marker exactly(Type type, Object value)
     {
         requireNonNull(type, "type is null");
         requireNonNull(value, "value is null");
         return create(type, Optional.of(value), Bound.EXACTLY);
     }
 
-    public static Marker below(Type type, Object value)
+	public static Marker below(Type type, Object value)
     {
         requireNonNull(type, "type is null");
         requireNonNull(value, "value is null");
         return create(type, Optional.of(value), Bound.BELOW);
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<Block> getValueBlock()
     {
         return valueBlock;
     }
 
-    public Object getValue()
+	public Object getValue()
     {
         if (!valueBlock.isPresent()) {
             throw new IllegalStateException("No value to get");
@@ -128,7 +121,7 @@ public final class Marker
         return Utils.blockToNativeValue(type, valueBlock.get());
     }
 
-    public Object getPrintableValue(ConnectorSession session)
+	public Object getPrintableValue(ConnectorSession session)
     {
         if (!valueBlock.isPresent()) {
             throw new IllegalStateException("No value to get");
@@ -136,30 +129,30 @@ public final class Marker
         return type.getObjectValue(session, valueBlock.get(), 0);
     }
 
-    @JsonProperty
+	@JsonProperty
     public Bound getBound()
     {
         return bound;
     }
 
-    public boolean isUpperUnbounded()
+	public boolean isUpperUnbounded()
     {
         return !valueBlock.isPresent() && bound == Bound.BELOW;
     }
 
-    public boolean isLowerUnbounded()
+	public boolean isLowerUnbounded()
     {
         return !valueBlock.isPresent() && bound == Bound.ABOVE;
     }
 
-    private void checkTypeCompatibility(Marker marker)
+	private void checkTypeCompatibility(Marker marker)
     {
         if (!type.equals(marker.getType())) {
             throw new IllegalArgumentException(String.format("Mismatched Marker types: %s vs %s", type, marker.getType()));
         }
     }
 
-    /**
+	/**
      * Adjacency is defined by two Markers being infinitesimally close to each other.
      * This means they must share the same value and have adjacent Bounds.
      */
@@ -176,7 +169,7 @@ public final class Marker
                 (bound != Bound.EXACTLY && other.bound == Bound.EXACTLY);
     }
 
-    public Marker greaterAdjacent()
+	public Marker greaterAdjacent()
     {
         if (!valueBlock.isPresent()) {
             throw new IllegalStateException("No marker adjacent to unbounded");
@@ -193,7 +186,7 @@ public final class Marker
         }
     }
 
-    public Marker lesserAdjacent()
+	public Marker lesserAdjacent()
     {
         if (!valueBlock.isPresent()) {
             throw new IllegalStateException("No marker adjacent to unbounded");
@@ -210,7 +203,7 @@ public final class Marker
         }
     }
 
-    @Override
+	@Override
     public int compareTo(Marker o)
     {
         checkTypeCompatibility(o);
@@ -229,33 +222,33 @@ public final class Marker
         // INVARIANT: value and o.value are present
 
         int compare = type.compareTo(valueBlock.get(), 0, o.valueBlock.get(), 0);
-        if (compare == 0) {
-            if (bound == o.bound) {
-                return 0;
-            }
-            if (bound == Bound.BELOW) {
-                return -1;
-            }
-            if (bound == Bound.ABOVE) {
-                return 1;
-            }
-            // INVARIANT: bound == EXACTLY
-            return (o.bound == Bound.BELOW) ? 1 : -1;
-        }
-        return compare;
+        if (compare != 0) {
+			return compare;
+		}
+		if (bound == o.bound) {
+		    return 0;
+		}
+		if (bound == Bound.BELOW) {
+		    return -1;
+		}
+		if (bound == Bound.ABOVE) {
+		    return 1;
+		}
+		// INVARIANT: bound == EXACTLY
+		return (o.bound == Bound.BELOW) ? 1 : -1;
     }
 
-    public static Marker min(Marker marker1, Marker marker2)
+	public static Marker min(Marker marker1, Marker marker2)
     {
         return marker1.compareTo(marker2) <= 0 ? marker1 : marker2;
     }
 
-    public static Marker max(Marker marker1, Marker marker2)
+	public static Marker max(Marker marker1, Marker marker2)
     {
         return marker1.compareTo(marker2) >= 0 ? marker1 : marker2;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         int hash = Objects.hash(type, bound);
@@ -265,7 +258,7 @@ public final class Marker
         return hash;
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -281,7 +274,7 @@ public final class Marker
                 && (!this.valueBlock.isPresent() || type.equalTo(this.valueBlock.get(), 0, other.valueBlock.get(), 0));
     }
 
-    public String toString(ConnectorSession session)
+	public String toString(ConnectorSession session)
     {
         StringBuilder buffer = new StringBuilder("{");
         buffer.append("type=").append(type);
@@ -298,5 +291,12 @@ public final class Marker
         buffer.append(", bound=").append(bound);
         buffer.append("}");
         return buffer.toString();
+    }
+
+	public enum Bound
+    {
+        BELOW,   // lower than the value, but infinitesimally close to the value
+        EXACTLY, // exactly the value
+        ABOVE    // higher than the value, but infinitesimally close to the value
     }
 }

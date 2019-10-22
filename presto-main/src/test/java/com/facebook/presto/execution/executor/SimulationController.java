@@ -31,10 +31,14 @@ import java.util.function.BiConsumer;
 import static com.facebook.presto.execution.executor.SimulationController.TaskSpecification.Type.LEAF;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class SimulationController
 {
-    private static final int DEFAULT_MIN_SPLITS_PER_TASK = 3;
+    private static final Logger logger = LoggerFactory.getLogger(SimulationController.class);
+
+	private static final int DEFAULT_MIN_SPLITS_PER_TASK = 3;
 
     private final TaskExecutor taskExecutor;
     private final BiConsumer<SimulationController, TaskExecutor> callback;
@@ -62,7 +66,7 @@ class SimulationController
 
     public synchronized void clearPendingQueue()
     {
-        System.out.println("Clearing pending queue..");
+        logger.info("Clearing pending queue..");
         clearPendingQueue.set(true);
     }
 
@@ -102,7 +106,8 @@ class SimulationController
                     MILLISECONDS.sleep(500);
                 }
                 catch (InterruptedException e) {
-                    return;
+                    logger.error(e.getMessage(), e);
+					return;
                 }
             }
         });
@@ -115,7 +120,7 @@ class SimulationController
                 return;
             }
 
-            System.out.println("Cleared pending queue.");
+            logger.info("Cleared pending queue.");
             clearPendingQueue.set(false);
         }
 
@@ -124,7 +129,7 @@ class SimulationController
                 continue;
             }
 
-            for (SimulationTask task : runningTasks.get(specification)) {
+            runningTasks.get(specification).forEach(task -> {
                 if (specification.getType() == LEAF) {
                     int remainingSplits = specification.getNumSplitsPerTask() - (task.getRunningSplits().size() + task.getCompletedSplits().size());
                     int candidateSplits = DEFAULT_MIN_SPLITS_PER_TASK - task.getRunningSplits().size();
@@ -136,7 +141,7 @@ class SimulationController
                     int remainingSplits = specification.getNumSplitsPerTask() - (task.getRunningSplits().size() + task.getCompletedSplits().size());
                     task.schedule(taskExecutor, remainingSplits);
                 }
-            }
+            });
         }
     }
 
@@ -151,7 +156,7 @@ class SimulationController
                         specificationEnabled.get(specification) &&
                         specification.getTotalTasks().getAsInt() <= completedTasks.get(specification).size() + runningTasks.get(specification).size()) {
                     System.out.println();
-                    System.out.println(specification.getName() + " disabled for reaching target count " + specification.getTotalTasks());
+                    logger.info(new StringBuilder().append(specification.getName()).append(" disabled for reaching target count ").append(specification.getTotalTasks()).toString());
                     System.out.println();
                     disableSpecification(specification);
                     continue;
@@ -219,20 +224,14 @@ class SimulationController
 
     public static class TaskSpecification
     {
-        enum Type
-        {
-            LEAF,
-            INTERMEDIATE
-        }
-
         private final Type type;
-        private final String name;
-        private final OptionalInt totalTasks;
-        private final int numConcurrentTasks;
-        private final int numSplitsPerTask;
-        private final SplitGenerator splitGenerator;
+		private final String name;
+		private final OptionalInt totalTasks;
+		private final int numConcurrentTasks;
+		private final int numSplitsPerTask;
+		private final SplitGenerator splitGenerator;
 
-        TaskSpecification(Type type, String name, OptionalInt totalTasks, int numConcurrentTasks, int numSplitsPerTask, SplitGenerator splitGenerator)
+		TaskSpecification(Type type, String name, OptionalInt totalTasks, int numConcurrentTasks, int numSplitsPerTask, SplitGenerator splitGenerator)
         {
             this.type = type;
             this.name = name;
@@ -242,34 +241,40 @@ class SimulationController
             this.splitGenerator = splitGenerator;
         }
 
-        Type getType()
+		Type getType()
         {
             return type;
         }
 
-        String getName()
+		String getName()
         {
             return name;
         }
 
-        int getNumConcurrentTasks()
+		int getNumConcurrentTasks()
         {
             return numConcurrentTasks;
         }
 
-        int getNumSplitsPerTask()
+		int getNumSplitsPerTask()
         {
             return numSplitsPerTask;
         }
 
-        OptionalInt getTotalTasks()
+		OptionalInt getTotalTasks()
         {
             return totalTasks;
         }
 
-        SplitSpecification nextSpecification()
+		SplitSpecification nextSpecification()
         {
             return splitGenerator.next();
+        }
+
+		enum Type
+        {
+            LEAF,
+            INTERMEDIATE
         }
     }
 }

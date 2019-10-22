@@ -281,9 +281,7 @@ public class TestNodeScheduler
         }
         Multimap<InternalNode, Split> assignments = nodeSelector.computeAssignments(splits, ImmutableList.copyOf(taskMap.values())).getAssignments();
         assertEquals(assignments.entries().size(), 3);
-        for (InternalNode node : nodeManager.getActiveConnectorNodes(CONNECTOR_ID)) {
-            assertTrue(assignments.keySet().contains(node));
-        }
+        nodeManager.getActiveConnectorNodes(CONNECTOR_ID).forEach(node -> assertTrue(assignments.keySet().contains(node)));
     }
 
     @Test
@@ -339,13 +337,13 @@ public class TestNodeScheduler
 
         List<RemoteTask> tasks = new ArrayList<>();
         MockRemoteTaskFactory remoteTaskFactory = new MockRemoteTaskFactory(remoteTaskExecutor, remoteTaskScheduledExecutor);
-        for (InternalNode node : nodeManager.getActiveConnectorNodes(CONNECTOR_ID)) {
+        nodeManager.getActiveConnectorNodes(CONNECTOR_ID).forEach(node -> {
             // Max out number of splits on node
             TaskId taskId = new TaskId("test", 1, 0, 1);
             RemoteTask remoteTask = remoteTaskFactory.createTableScanTask(taskId, node, initialSplits.build(), nodeTaskMap.createPartitionedSplitCountTracker(node, taskId));
             nodeTaskMap.addTask(node, remoteTask);
             tasks.add(remoteTask);
-        }
+        });
 
         TaskId taskId = new TaskId("test", 1, 0, 2);
         RemoteTask newRemoteTask = remoteTaskFactory.createTableScanTask(taskId, newNode, initialSplits.build(), nodeTaskMap.createPartitionedSplitCountTracker(newNode, taskId));
@@ -365,9 +363,7 @@ public class TestNodeScheduler
         assertEquals(assignments.keySet().size(), 3); // Splits should be scheduled on the other three nodes
         assertFalse(assignments.keySet().contains(newNode)); // No splits scheduled on the maxed out node
 
-        for (RemoteTask task : tasks) {
-            task.abort();
-        }
+        tasks.forEach(RemoteTask::abort);
         assertEquals(nodeTaskMap.getPartitionedSplitsOnNode(newNode), 0);
     }
 

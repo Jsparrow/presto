@@ -90,7 +90,7 @@ public class IonSqlQueryBuilder
     private List<String> toConjuncts(List<HiveColumnHandle> columns, TupleDomain<HiveColumnHandle> tupleDomain)
     {
         Builder<String> builder = builder();
-        for (HiveColumnHandle column : columns) {
+        columns.forEach(column -> {
             Type type = column.getHiveType().getType(typeManager);
             if (tupleDomain.getDomains().isPresent() && isSupported(type)) {
                 Domain domain = tupleDomain.getDomains().get().get(column);
@@ -98,7 +98,7 @@ public class IonSqlQueryBuilder
                     builder.add(toPredicate(domain, type, column.getHiveColumnIndex()));
                 }
             }
-        }
+        });
         return builder.build();
     }
 
@@ -172,7 +172,7 @@ public class IonSqlQueryBuilder
             }
             // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
             checkState(!rangeConjuncts.isEmpty());
-            disjuncts.add("(" + Joiner.on(" AND ").join(rangeConjuncts) + ")");
+            disjuncts.add(new StringBuilder().append("(").append(Joiner.on(" AND ").join(rangeConjuncts)).append(")").toString());
         }
 
         // Add back all of the possible single values either as an equality or an IN predicate
@@ -181,11 +181,11 @@ public class IonSqlQueryBuilder
         }
         else if (singleValues.size() > 1) {
             List<String> values = new ArrayList<>();
-            for (Object value : singleValues) {
+            singleValues.forEach(value -> {
                 checkType(type);
                 values.add(valueToQuery(type, value));
-            }
-            disjuncts.add(createColumn(type, position) + " IN (" + Joiner.on(",").join(values) + ")");
+            });
+            disjuncts.add(new StringBuilder().append(createColumn(type, position)).append(" IN (").append(Joiner.on(",").join(values)).append(")").toString());
         }
 
         // Add nullability disjuncts
@@ -194,7 +194,7 @@ public class IonSqlQueryBuilder
             disjuncts.add(format("s._%d", position + 1) + " = '' ");
         }
 
-        return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
+        return new StringBuilder().append("(").append(Joiner.on(" OR ").join(disjuncts)).append(")").toString();
     }
 
     private String toPredicate(String operator, Object value, Type type, int position)
@@ -227,18 +227,18 @@ public class IonSqlQueryBuilder
             return String.valueOf(value);
         }
         if (type.equals(DATE)) {
-            return "`" + FORMATTER.print(DAYS.toMillis((long) value)) + "`";
+            return new StringBuilder().append("`").append(FORMATTER.print(DAYS.toMillis((long) value))).append("`").toString();
         }
         if (type.equals(VarcharType.VARCHAR)) {
-            return "'" + ((Slice) value).toStringUtf8() + "'";
+            return new StringBuilder().append("'").append(((Slice) value).toStringUtf8()).append("'").toString();
         }
-        if (type instanceof DecimalType) {
-            if (Decimals.isLongDecimal(type)) {
-                return Decimals.toString((Slice) value, ((DecimalType) type).getScale());
-            }
-            return Decimals.toString((long) value, ((DecimalType) type).getScale());
-        }
-        return "'" + ((Slice) value).toStringUtf8() + "'";
+        if (!(type instanceof DecimalType)) {
+			return new StringBuilder().append("'").append(((Slice) value).toStringUtf8()).append("'").toString();
+		}
+		if (Decimals.isLongDecimal(type)) {
+		    return Decimals.toString((Slice) value, ((DecimalType) type).getScale());
+		}
+		return Decimals.toString((long) value, ((DecimalType) type).getScale());
     }
 
     private String createColumn(Type type, int position)
@@ -254,11 +254,11 @@ public class IonSqlQueryBuilder
         if (type.equals(DATE)) {
             return formatPredicate(column, "TIMESTAMP");
         }
-        if (type instanceof DecimalType) {
-            DecimalType decimalType = (DecimalType) type;
-            return formatPredicate(column, format("DECIMAL(%s,%s)", decimalType.getPrecision(), decimalType.getScale()));
-        }
-        return column;
+        if (!(type instanceof DecimalType)) {
+			return column;
+		}
+		DecimalType decimalType = (DecimalType) type;
+		return formatPredicate(column, format("DECIMAL(%s,%s)", decimalType.getPrecision(), decimalType.getScale()));
     }
 
     private String formatPredicate(String column, String type)

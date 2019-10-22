@@ -46,11 +46,11 @@ class RootAggregatedMemoryContext
     @Override
     synchronized boolean tryUpdateBytes(String allocationTag, long delta)
     {
-        if (reservationHandler.tryReserveMemory(allocationTag, delta)) {
-            addBytes(delta);
-            return true;
-        }
-        return false;
+        if (!reservationHandler.tryReserveMemory(allocationTag, delta)) {
+			return false;
+		}
+		addBytes(delta);
+		return true;
     }
 
     @Override

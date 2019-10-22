@@ -31,30 +31,18 @@ import static com.google.common.collect.Iterables.getFirst;
 import static com.google.common.collect.Iterables.transform;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BenchmarkResultsPrinter
         implements BenchmarkResultsStore
 {
-    private final List<String> tagNames;
+    private static final Logger logger = LoggerFactory.getLogger(BenchmarkResultsPrinter.class);
+	private final List<String> tagNames;
 
     public BenchmarkResultsPrinter(Iterable<Suite> suites, Iterable<BenchmarkQuery> queries)
     {
         this(getSelectedQueryTagNames(suites, queries));
-    }
-
-    private static List<String> getSelectedQueryTagNames(Iterable<Suite> suites, Iterable<BenchmarkQuery> queries)
-    {
-        SortedSet<String> tags = new TreeSet<>();
-        for (Suite suite : suites) {
-            for (BenchmarkQuery query : suite.selectQueries(queries)) {
-                tags.addAll(query.getTags().keySet());
-            }
-
-            for (RegexTemplate regexTemplate : suite.getSchemaNameTemplates()) {
-                tags.addAll(regexTemplate.getFieldNames());
-            }
-        }
-        return ImmutableList.copyOf(tags);
     }
 
     public BenchmarkResultsPrinter(List<String> tagNames)
@@ -80,7 +68,18 @@ public class BenchmarkResultsPrinter
                 .build());
     }
 
-    @Override
+	private static List<String> getSelectedQueryTagNames(Iterable<Suite> suites, Iterable<BenchmarkQuery> queries)
+    {
+        SortedSet<String> tags = new TreeSet<>();
+        for (Suite suite : suites) {
+            suite.selectQueries(queries).forEach(query -> tags.addAll(query.getTags().keySet()));
+
+            suite.getSchemaNameTemplates().forEach(regexTemplate -> tags.addAll(regexTemplate.getFieldNames()));
+        }
+        return ImmutableList.copyOf(tags);
+    }
+
+	@Override
     public void store(BenchmarkSchema benchmarkSchema, BenchmarkQueryResult result)
     {
         Map<String, String> tags = new LinkedHashMap<>();
@@ -108,9 +107,9 @@ public class BenchmarkResultsPrinter
                 .build());
     }
 
-    @SuppressWarnings("UseOfSystemOutOrSystemErr")
+	@SuppressWarnings("UseOfSystemOutOrSystemErr")
     private static void printRow(Iterable<?> values)
     {
-        System.out.println(Joiner.on('\t').join(values));
+        logger.info(Joiner.on('\t').join(values));
     }
 }

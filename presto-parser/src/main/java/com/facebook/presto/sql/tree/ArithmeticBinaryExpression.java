@@ -22,7 +22,78 @@ import java.util.Optional;
 public class ArithmeticBinaryExpression
         extends Expression
 {
-    public enum Operator
+    private final Operator operator;
+	private final Expression left;
+	private final Expression right;
+
+	public ArithmeticBinaryExpression(Operator operator, Expression left, Expression right)
+    {
+        this(Optional.empty(), operator, left, right);
+    }
+
+	public ArithmeticBinaryExpression(NodeLocation location, Operator operator, Expression left, Expression right)
+    {
+        this(Optional.of(location), operator, left, right);
+    }
+
+	private ArithmeticBinaryExpression(Optional<NodeLocation> location, Operator operator, Expression left, Expression right)
+    {
+        super(location);
+        this.operator = operator;
+        this.left = left;
+        this.right = right;
+    }
+
+	public Operator getOperator()
+    {
+        return operator;
+    }
+
+	public Expression getLeft()
+    {
+        return left;
+    }
+
+	public Expression getRight()
+    {
+        return right;
+    }
+
+	@Override
+    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitArithmeticBinary(this, context);
+    }
+
+	@Override
+    public List<Node> getChildren()
+    {
+        return ImmutableList.of(left, right);
+    }
+
+	@Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        ArithmeticBinaryExpression that = (ArithmeticBinaryExpression) o;
+        return (operator == that.operator) &&
+                Objects.equals(left, that.left) &&
+                Objects.equals(right, that.right);
+    }
+
+	@Override
+    public int hashCode()
+    {
+        return Objects.hash(operator, left, right);
+    }
+
+	public enum Operator
     {
         ADD("+"),
         SUBTRACT("-"),
@@ -40,76 +111,5 @@ public class ArithmeticBinaryExpression
         {
             return value;
         }
-    }
-
-    private final Operator operator;
-    private final Expression left;
-    private final Expression right;
-
-    public ArithmeticBinaryExpression(Operator operator, Expression left, Expression right)
-    {
-        this(Optional.empty(), operator, left, right);
-    }
-
-    public ArithmeticBinaryExpression(NodeLocation location, Operator operator, Expression left, Expression right)
-    {
-        this(Optional.of(location), operator, left, right);
-    }
-
-    private ArithmeticBinaryExpression(Optional<NodeLocation> location, Operator operator, Expression left, Expression right)
-    {
-        super(location);
-        this.operator = operator;
-        this.left = left;
-        this.right = right;
-    }
-
-    public Operator getOperator()
-    {
-        return operator;
-    }
-
-    public Expression getLeft()
-    {
-        return left;
-    }
-
-    public Expression getRight()
-    {
-        return right;
-    }
-
-    @Override
-    public <R, C> R accept(AstVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitArithmeticBinary(this, context);
-    }
-
-    @Override
-    public List<Node> getChildren()
-    {
-        return ImmutableList.of(left, right);
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        ArithmeticBinaryExpression that = (ArithmeticBinaryExpression) o;
-        return (operator == that.operator) &&
-                Objects.equals(left, that.left) &&
-                Objects.equals(right, that.right);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(operator, left, right);
     }
 }

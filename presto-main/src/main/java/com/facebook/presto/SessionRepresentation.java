@@ -107,15 +107,11 @@ public final class SessionRepresentation
         this.preparedStatements = ImmutableMap.copyOf(preparedStatements);
 
         ImmutableMap.Builder<ConnectorId, Map<String, String>> catalogPropertiesBuilder = ImmutableMap.builder();
-        for (Entry<ConnectorId, Map<String, String>> entry : catalogProperties.entrySet()) {
-            catalogPropertiesBuilder.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue()));
-        }
+        catalogProperties.entrySet().forEach(entry -> catalogPropertiesBuilder.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue())));
         this.catalogProperties = catalogPropertiesBuilder.build();
 
         ImmutableMap.Builder<String, Map<String, String>> unprocessedCatalogPropertiesBuilder = ImmutableMap.builder();
-        for (Entry<String, Map<String, String>> entry : unprocessedCatalogProperties.entrySet()) {
-            unprocessedCatalogPropertiesBuilder.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue()));
-        }
+        unprocessedCatalogProperties.entrySet().forEach(entry -> unprocessedCatalogPropertiesBuilder.put(entry.getKey(), ImmutableMap.copyOf(entry.getValue())));
         this.unprocessedCatalogProperties = unprocessedCatalogPropertiesBuilder.build();
     }
 

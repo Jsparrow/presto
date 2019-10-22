@@ -453,14 +453,12 @@ public class SqlQueryExecution
     {
         ImmutableSet.Builder<ConnectorId> connectors = ImmutableSet.builder();
 
-        for (TableHandle tableHandle : analysis.getTables()) {
-            connectors.add(tableHandle.getConnectorId());
-        }
+        analysis.getTables().forEach(tableHandle -> connectors.add(tableHandle.getConnectorId()));
 
-        if (analysis.getInsert().isPresent()) {
-            TableHandle target = analysis.getInsert().get().getTarget();
+        analysis.getInsert().ifPresent(value -> {
+            TableHandle target = value.getTarget();
             connectors.add(target.getConnectorId());
-        }
+        });
 
         return connectors.build();
     }
@@ -515,11 +513,12 @@ public class SqlQueryExecution
         queryScheduler.set(scheduler);
 
         // if query was canceled during scheduler creation, abort the scheduler
-        // directly since the callback may have already fired
-        if (stateMachine.isDone()) {
-            scheduler.abort();
-            queryScheduler.set(null);
-        }
+		// directly since the callback may have already fired
+		if (!stateMachine.isDone()) {
+			return;
+		}
+		scheduler.abort();
+		queryScheduler.set(null);
     }
 
     @Override

@@ -54,7 +54,17 @@ public class BenchmarkGetPartitionsSample
         return getPartitionsSample(data.partitions, SAMPLE_SIZE);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGetPartitionsSample.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         public List<HivePartition> partitions;
@@ -69,15 +79,5 @@ public class BenchmarkGetPartitionsSample
             }
             this.partitions = partitions.build();
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGetPartitionsSample.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

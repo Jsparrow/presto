@@ -269,9 +269,7 @@ public final class AggregationUtils
     {
         StringBuilder sb = new StringBuilder();
         sb.append(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, outputType.toString()));
-        for (TypeSignature inputType : inputTypes) {
-            sb.append(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, inputType.toString()));
-        }
+        inputTypes.forEach(inputType -> sb.append(CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, inputType.toString())));
         sb.append(CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, baseName.toLowerCase(ENGLISH)));
 
         return sb.toString();

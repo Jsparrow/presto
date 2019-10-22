@@ -31,11 +31,14 @@ import static com.facebook.presto.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AvroRowDecoder
         implements RowDecoder
 {
-    public static final String NAME = "avro";
+    private static final Logger logger = LoggerFactory.getLogger(AvroRowDecoder.class);
+	public static final String NAME = "avro";
     private final DatumReader<GenericRecord> avroRecordReader;
     private final Map<DecoderColumnHandle, AvroColumnDecoder> columnDecoders;
 
@@ -90,6 +93,7 @@ public class AvroRowDecoder
             }
         }
         catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 }

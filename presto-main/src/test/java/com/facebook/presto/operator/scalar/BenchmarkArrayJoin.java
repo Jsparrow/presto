@@ -80,7 +80,30 @@ public class BenchmarkArrayJoin
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    @Test
+    public void verify()
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayJoin().benchmark(data);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayJoin().benchmark(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkArrayJoin.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -130,28 +153,5 @@ public class BenchmarkArrayJoin
         {
             return page;
         }
-    }
-
-    @Test
-    public void verify()
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayJoin().benchmark(data);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayJoin().benchmark(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkArrayJoin.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

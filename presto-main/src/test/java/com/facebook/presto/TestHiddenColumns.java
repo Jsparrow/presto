@@ -39,10 +39,11 @@ public class TestHiddenColumns
     @AfterClass(alwaysRun = true)
     public void destroy()
     {
-        if (runner != null) {
-            runner.close();
-            runner = null;
-        }
+        if (runner == null) {
+			return;
+		}
+		runner.close();
+		runner = null;
     }
 
     @Test

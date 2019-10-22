@@ -149,9 +149,7 @@ public class TestDataVerification
                 FAILED,
                 Optional.of(DETERMINISTIC),
                 Optional.of("ROW_COUNT_MISMATCH"),
-                Optional.of("Test state SUCCEEDED, Control state SUCCEEDED.\n\n" +
-                        "ROW COUNT MISMATCH\n" +
-                        "Control 1 rows, Test 2 rows\n"));
+                Optional.of(new StringBuilder().append("Test state SUCCEEDED, Control state SUCCEEDED.\n\n").append("ROW COUNT MISMATCH\n").append("Control 1 rows, Test 2 rows\n").toString()));
     }
 
     @Test
@@ -164,11 +162,7 @@ public class TestDataVerification
                 FAILED,
                 Optional.of(DETERMINISTIC),
                 Optional.of("COLUMN_MISMATCH"),
-                Optional.of("Test state SUCCEEDED, Control state SUCCEEDED.\n\n" +
-                        "COLUMN MISMATCH\n" +
-                        "Control 1 rows, Test 1 rows\n" +
-                        "Mismatched Columns:\n" +
-                        "  _col0 \\(double\\): control\\(sum: 1.0\\) test\\(sum: 1.001\\) relative error: 9.995002498749525E-4\n"));
+                Optional.of(new StringBuilder().append("Test state SUCCEEDED, Control state SUCCEEDED.\n\n").append("COLUMN MISMATCH\n").append("Control 1 rows, Test 1 rows\n").append("Mismatched Columns:\n").append("  _col0 \\(double\\): control\\(sum: 1.0\\) test\\(sum: 1.001\\) relative error: 9.995002498749525E-4\n").toString()));
     }
 
     @Test
@@ -219,11 +213,7 @@ public class TestDataVerification
                 SKIPPED,
                 Optional.of(NON_DETERMINISTIC_COLUMNS),
                 Optional.of("COLUMN_MISMATCH"),
-                Optional.of("Test state SUCCEEDED, Control state SUCCEEDED.\n\n" +
-                        "COLUMN MISMATCH\n" +
-                        "Control 1 rows, Test 1 rows\n" +
-                        "Mismatched Columns:\n" +
-                        "  _col0 \\(double\\): control\\(sum: .*\\) test\\(sum: 2.0\\) relative error: .*\n"));
+                Optional.of(new StringBuilder().append("Test state SUCCEEDED, Control state SUCCEEDED.\n\n").append("COLUMN MISMATCH\n").append("Control 1 rows, Test 1 rows\n").append("Mismatched Columns:\n").append("  _col0 \\(double\\): control\\(sum: .*\\) test\\(sum: 2.0\\) relative error: .*\n").toString()));
     }
 
     @Test
@@ -240,11 +230,7 @@ public class TestDataVerification
                 FAILED,
                 Optional.of(DETERMINISTIC),
                 Optional.of("COLUMN_MISMATCH"),
-                Optional.of("Test state SUCCEEDED, Control state SUCCEEDED.\n\n" +
-                        "COLUMN MISMATCH\n" +
-                        "Control 1 rows, Test 1 rows\n" +
-                        "Mismatched Columns:\n" +
-                        "  _col0 \\(array\\(row\\(integer, varchar\\(1\\)\\)\\)\\): control\\(checksum: 71 b5 2f 7f 1e 9b a6 a4\\) test\\(checksum: b4 3c 7d 02 2b 14 77 12\\)\n"));
+                Optional.of(new StringBuilder().append("Test state SUCCEEDED, Control state SUCCEEDED.\n\n").append("COLUMN MISMATCH\n").append("Control 1 rows, Test 1 rows\n").append("Mismatched Columns:\n").append("  _col0 \\(array\\(row\\(integer, varchar\\(1\\)\\)\\)\\): control\\(checksum: 71 b5 2f 7f 1e 9b a6 a4\\) test\\(checksum: b4 3c 7d 02 2b 14 77 12\\)\n").toString()));
     }
 
     private void assertEvent(

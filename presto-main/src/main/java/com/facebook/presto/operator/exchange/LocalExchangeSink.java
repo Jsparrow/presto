@@ -25,19 +25,11 @@ import static java.util.Objects.requireNonNull;
 
 public class LocalExchangeSink
 {
-    public static LocalExchangeSink finishedLocalExchangeSink()
-    {
-        LocalExchangeSink finishedSink = new LocalExchangeSink(FINISHED, sink -> {});
-        finishedSink.finish();
-        return finishedSink;
-    }
-
     private final LocalExchanger exchanger;
-    private final Consumer<LocalExchangeSink> onFinish;
+	private final Consumer<LocalExchangeSink> onFinish;
+	private final AtomicBoolean finished = new AtomicBoolean();
 
-    private final AtomicBoolean finished = new AtomicBoolean();
-
-    public LocalExchangeSink(
+	public LocalExchangeSink(
             LocalExchanger exchanger,
             Consumer<LocalExchangeSink> onFinish)
     {
@@ -45,20 +37,28 @@ public class LocalExchangeSink
         this.onFinish = requireNonNull(onFinish, "onFinish is null");
     }
 
-    public void finish()
+	public static LocalExchangeSink finishedLocalExchangeSink()
     {
-        if (finished.compareAndSet(false, true)) {
-            exchanger.finish();
-            onFinish.accept(this);
-        }
+        LocalExchangeSink finishedSink = new LocalExchangeSink(FINISHED, sink -> {});
+        finishedSink.finish();
+        return finishedSink;
     }
 
-    public boolean isFinished()
+	public void finish()
+    {
+        if (!finished.compareAndSet(false, true)) {
+			return;
+		}
+		exchanger.finish();
+		onFinish.accept(this);
+    }
+
+	public boolean isFinished()
     {
         return finished.get();
     }
 
-    public void addPage(Page page)
+	public void addPage(Page page)
     {
         requireNonNull(page, "page is null");
 
@@ -74,7 +74,7 @@ public class LocalExchangeSink
         exchanger.accept(page);
     }
 
-    public ListenableFuture<?> waitForWriting()
+	public ListenableFuture<?> waitForWriting()
     {
         if (isFinished()) {
             return NOT_BLOCKED;

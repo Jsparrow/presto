@@ -40,14 +40,13 @@ import static java.util.Objects.requireNonNull;
 public class RedisSplitManager
         implements ConnectorSplitManager
 {
-    private final String connectorId;
-    private final RedisConnectorConfig redisConnectorConfig;
-    private final RedisJedisManager jedisManager;
-
     private static final long REDIS_MAX_SPLITS = 100;
-    private static final long REDIS_STRIDE_SPLITS = 100;
+	private static final long REDIS_STRIDE_SPLITS = 100;
+	private final String connectorId;
+	private final RedisConnectorConfig redisConnectorConfig;
+	private final RedisJedisManager jedisManager;
 
-    @Inject
+	@Inject
     public RedisSplitManager(
             RedisConnectorId connectorId,
             RedisConnectorConfig redisConnectorConfig,
@@ -58,7 +57,7 @@ public class RedisSplitManager
         this.jedisManager = requireNonNull(jedisManager, "jedisManager is null");
     }
 
-    @Override
+	@Override
     public ConnectorSplitSource getSplits(
             ConnectorTransactionHandle transaction,
             ConnectorSession session,
@@ -76,7 +75,7 @@ public class RedisSplitManager
         long numberOfKeys = 1;
         // when Redis keys are provides in a zset, create multiple
         // splits by splitting zset in chunks
-        if (redisTableHandle.getKeyDataFormat().equals("zset")) {
+        if ("zset".equals(redisTableHandle.getKeyDataFormat())) {
             try (Jedis jedis = jedisManager.getJedisPool(nodes.get(0)).getResource()) {
                 numberOfKeys = jedis.zcount(redisTableHandle.getKeyName(), "-inf", "+inf");
             }

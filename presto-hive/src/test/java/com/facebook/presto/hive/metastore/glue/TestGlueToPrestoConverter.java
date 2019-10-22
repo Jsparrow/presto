@@ -160,10 +160,11 @@ public class TestGlueToPrestoConverter
         assertEquals(actual.getStorageFormat().getSerDe(), expected.getSerdeInfo().getSerializationLibrary());
         assertEquals(actual.getStorageFormat().getInputFormat(), expected.getInputFormat());
         assertEquals(actual.getStorageFormat().getOutputFormat(), expected.getOutputFormat());
-        if (!isNullOrEmpty(expected.getBucketColumns())) {
-            HiveBucketProperty bucketProperty = actual.getBucketProperty().get();
-            assertEquals(bucketProperty.getBucketedBy(), expected.getBucketColumns());
-            assertEquals(bucketProperty.getBucketCount(), expected.getNumberOfBuckets().intValue());
-        }
+        if (isNullOrEmpty(expected.getBucketColumns())) {
+			return;
+		}
+		HiveBucketProperty bucketProperty = actual.getBucketProperty().get();
+		assertEquals(bucketProperty.getBucketedBy(), expected.getBucketColumns());
+		assertEquals(bucketProperty.getBucketCount(), expected.getNumberOfBuckets().intValue());
     }
 }

@@ -33,7 +33,12 @@ public class FunctionTranslator<T>
 {
     private final Map<FunctionMetadata, MethodHandle> functionMapping;
 
-    public static <T> FunctionTranslator<T> buildFunctionTranslator(Set<Class<?>> translatorContainers)
+    private FunctionTranslator(Map<FunctionMetadata, MethodHandle> functionMapping)
+    {
+        this.functionMapping = requireNonNull(functionMapping, "functionMapping is null");
+    }
+
+	public static <T> FunctionTranslator<T> buildFunctionTranslator(Set<Class<?>> translatorContainers)
     {
         ImmutableMap.Builder<FunctionMetadata, MethodHandle> functionMappingBuilder = new ImmutableMap.Builder<>();
         translatorContainers.stream()
@@ -42,7 +47,7 @@ public class FunctionTranslator<T>
         return new FunctionTranslator<>(functionMappingBuilder.build());
     }
 
-    public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original, List<TranslatedExpression<T>> translatedExpressions)
+	public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original, List<TranslatedExpression<T>> translatedExpressions)
             throws Throwable
     {
         functionMetadata = removeTypeParameters(functionMetadata);
@@ -59,20 +64,15 @@ public class FunctionTranslator<T>
         return new TranslatedExpression<>(Optional.of((T) functionMapping.get(functionMetadata).invokeWithArguments(translatedArguments)), original, translatedExpressions);
     }
 
-    public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original, TranslatedExpression<T>... translatedArguments)
+	public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original, TranslatedExpression<T>... translatedArguments)
             throws Throwable
     {
         return translate(functionMetadata, original, ImmutableList.copyOf(translatedArguments));
     }
 
-    public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original)
+	public TranslatedExpression<T> translate(FunctionMetadata functionMetadata, RowExpression original)
             throws Throwable
     {
         return translate(functionMetadata, original, ImmutableList.of());
-    }
-
-    private FunctionTranslator(Map<FunctionMetadata, MethodHandle> functionMapping)
-    {
-        this.functionMapping = requireNonNull(functionMapping, "functionMapping is null");
     }
 }

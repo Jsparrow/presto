@@ -39,14 +39,6 @@ public final class LongDecode
     {
     }
 
-    enum FixedBitSizes
-    {
-        ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE,
-        THIRTEEN, FOURTEEN, FIFTEEN, SIXTEEN, SEVENTEEN, EIGHTEEN, NINETEEN,
-        TWENTY, TWENTY_ONE, TWENTY_TWO, TWENTY_THREE, TWENTY_FOUR, TWENTY_SIX,
-        TWENTY_EIGHT, THIRTY, THIRTY_TWO, FORTY, FORTY_EIGHT, FIFTY_SIX, SIXTY_FOUR
-    }
-
     /**
      * Decodes the ordinal fixed bit value to actual fixed bit width value.
      */
@@ -81,7 +73,7 @@ public final class LongDecode
         }
     }
 
-    /**
+	/**
      * Gets the closest supported fixed bit width for the specified bit width.
      */
     public static int getClosestFixedBits(int width)
@@ -119,14 +111,14 @@ public final class LongDecode
         }
     }
 
-    public static long readSignedVInt(OrcInputStream inputStream)
+	public static long readSignedVInt(OrcInputStream inputStream)
             throws IOException
     {
         long result = readUnsignedVInt(inputStream);
         return zigzagDecode(result);
     }
 
-    private static long readUnsignedVInt(OrcInputStream inputStream)
+	private static long readUnsignedVInt(OrcInputStream inputStream)
             throws IOException
     {
         long result = 0;
@@ -144,7 +136,7 @@ public final class LongDecode
         return result;
     }
 
-    public static long readVInt(boolean signed, OrcInputStream inputStream)
+	public static long readVInt(boolean signed, OrcInputStream inputStream)
             throws IOException
     {
         if (signed) {
@@ -155,12 +147,12 @@ public final class LongDecode
         }
     }
 
-    public static long zigzagDecode(long value)
+	public static long zigzagDecode(long value)
     {
         return (value >>> 1) ^ -(value & 1);
     }
 
-    public static long readDwrfLong(OrcInputStream input, OrcTypeKind type, boolean signed, boolean usesVInt)
+	public static long readDwrfLong(OrcInputStream input, OrcTypeKind type, boolean signed, boolean usesVInt)
             throws IOException
     {
         if (usesVInt) {
@@ -187,7 +179,7 @@ public final class LongDecode
         }
     }
 
-    public static void writeVLong(SliceOutput buffer, long value, boolean signed)
+	public static void writeVLong(SliceOutput buffer, long value, boolean signed)
     {
         if (signed) {
             value = zigzagEncode(value);
@@ -195,7 +187,7 @@ public final class LongDecode
         writeVLongUnsigned(buffer, value);
     }
 
-    private static void writeVLongUnsigned(SliceOutput output, long value)
+	private static void writeVLongUnsigned(SliceOutput output, long value)
     {
         while (true) {
             // if there are less than 7 bits left, we are done
@@ -210,8 +202,16 @@ public final class LongDecode
         }
     }
 
-    private static long zigzagEncode(long value)
+	private static long zigzagEncode(long value)
     {
         return (value << 1) ^ (value >> 63);
+    }
+
+	enum FixedBitSizes
+    {
+        ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE,
+        THIRTEEN, FOURTEEN, FIFTEEN, SIXTEEN, SEVENTEEN, EIGHTEEN, NINETEEN,
+        TWENTY, TWENTY_ONE, TWENTY_TWO, TWENTY_THREE, TWENTY_FOUR, TWENTY_SIX,
+        TWENTY_EIGHT, THIRTY, THIRTY_TWO, FORTY, FORTY_EIGHT, FIFTY_SIX, SIXTY_FOUR
     }
 }

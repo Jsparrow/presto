@@ -160,33 +160,6 @@ class Query
     @GuardedBy("this")
     private Long updateCount;
 
-    public static Query create(
-            SessionContext sessionContext,
-            String query,
-            QueryManager queryManager,
-            SessionPropertyManager sessionPropertyManager,
-            ExchangeClient exchangeClient,
-            Executor dataProcessorExecutor,
-            ScheduledExecutorService timeoutExecutor,
-            BlockEncodingSerde blockEncodingSerde)
-    {
-        Query result = new Query(sessionContext, query, queryManager, sessionPropertyManager, exchangeClient, dataProcessorExecutor, timeoutExecutor, blockEncodingSerde);
-
-        // register listeners after submission finishes
-        addSuccessCallback(result.submissionFuture, () -> {
-            result.queryManager.addOutputInfoListener(result.getQueryId(), result::setQueryOutputInfo);
-
-            result.queryManager.addStateChangeListener(result.getQueryId(), state -> {
-                if (state.isDone()) {
-                    QueryInfo queryInfo = queryManager.getFullQueryInfo(result.getQueryId());
-                    result.closeExchangeClientIfNecessary(queryInfo);
-                }
-            });
-        });
-
-        return result;
-    }
-
     private Query(
             SessionContext sessionContext,
             String query,
@@ -217,12 +190,39 @@ class Query
         this.blockEncodingSerde = blockEncodingSerde;
     }
 
-    public boolean isSubmissionFinished()
+	public static Query create(
+            SessionContext sessionContext,
+            String query,
+            QueryManager queryManager,
+            SessionPropertyManager sessionPropertyManager,
+            ExchangeClient exchangeClient,
+            Executor dataProcessorExecutor,
+            ScheduledExecutorService timeoutExecutor,
+            BlockEncodingSerde blockEncodingSerde)
+    {
+        Query result = new Query(sessionContext, query, queryManager, sessionPropertyManager, exchangeClient, dataProcessorExecutor, timeoutExecutor, blockEncodingSerde);
+
+        // register listeners after submission finishes
+        addSuccessCallback(result.submissionFuture, () -> {
+            result.queryManager.addOutputInfoListener(result.getQueryId(), result::setQueryOutputInfo);
+
+            result.queryManager.addStateChangeListener(result.getQueryId(), state -> {
+                if (state.isDone()) {
+                    QueryInfo queryInfo = queryManager.getFullQueryInfo(result.getQueryId());
+                    result.closeExchangeClientIfNecessary(queryInfo);
+                }
+            });
+        });
+
+        return result;
+    }
+
+	public boolean isSubmissionFinished()
     {
         return submissionFuture.isDone();
     }
 
-    public void cancel()
+	public void cancel()
     {
         // if submission is not finished, send cancel after it is finished
         if (submissionFuture.isDone()) {
@@ -234,67 +234,67 @@ class Query
         dispose();
     }
 
-    public synchronized void dispose()
+	public synchronized void dispose()
     {
         exchangeClient.close();
     }
 
-    public QueryId getQueryId()
+	public QueryId getQueryId()
     {
         return queryId;
     }
 
-    public boolean isSlugValid(String slug)
+	public boolean isSlugValid(String slug)
     {
         return this.slug.equals(slug);
     }
 
-    public synchronized Optional<String> getSetCatalog()
+	public synchronized Optional<String> getSetCatalog()
     {
         return setCatalog;
     }
 
-    public synchronized Optional<String> getSetSchema()
+	public synchronized Optional<String> getSetSchema()
     {
         return setSchema;
     }
 
-    public synchronized Map<String, String> getSetSessionProperties()
+	public synchronized Map<String, String> getSetSessionProperties()
     {
         return setSessionProperties;
     }
 
-    public synchronized Set<String> getResetSessionProperties()
+	public synchronized Set<String> getResetSessionProperties()
     {
         return resetSessionProperties;
     }
 
-    public synchronized Map<String, SelectedRole> getSetRoles()
+	public synchronized Map<String, SelectedRole> getSetRoles()
     {
         return setRoles;
     }
 
-    public synchronized Map<String, String> getAddedPreparedStatements()
+	public synchronized Map<String, String> getAddedPreparedStatements()
     {
         return addedPreparedStatements;
     }
 
-    public synchronized Set<String> getDeallocatedPreparedStatements()
+	public synchronized Set<String> getDeallocatedPreparedStatements()
     {
         return deallocatedPreparedStatements;
     }
 
-    public synchronized Optional<TransactionId> getStartedTransactionId()
+	public synchronized Optional<TransactionId> getStartedTransactionId()
     {
         return startedTransactionId;
     }
 
-    public synchronized boolean isClearTransactionId()
+	public synchronized boolean isClearTransactionId()
     {
         return clearTransactionId;
     }
 
-    public synchronized ListenableFuture<QueryResults> waitForResults(OptionalLong token, UriInfo uriInfo, String scheme, Duration wait, DataSize targetResultSize)
+	public synchronized ListenableFuture<QueryResults> waitForResults(OptionalLong token, UriInfo uriInfo, String scheme, Duration wait, DataSize targetResultSize)
     {
         // before waiting, check if this request has already been processed and cached
         if (token.isPresent()) {
@@ -315,7 +315,7 @@ class Query
         return Futures.transform(futureStateChange, ignored -> getNextResult(token, uriInfo, scheme, targetResultSize), resultsProcessorExecutor);
     }
 
-    private synchronized ListenableFuture<?> getFutureStateChange()
+	private synchronized ListenableFuture<?> getFutureStateChange()
     {
         // ensure the query has been submitted
         submissionFuture.submitQuery();
@@ -340,7 +340,7 @@ class Query
         }
     }
 
-    private synchronized Optional<QueryResults> getCachedResult(long token, UriInfo uriInfo)
+	private synchronized Optional<QueryResults> getCachedResult(long token, UriInfo uriInfo)
     {
         // is the a repeated request for the last results?
         String requestedPath = uriInfo.getAbsolutePath().getPath();
@@ -365,7 +365,7 @@ class Query
         return Optional.empty();
     }
 
-    public synchronized QueryResults getNextResult(OptionalLong token, UriInfo uriInfo, String scheme, DataSize targetResultSize)
+	public synchronized QueryResults getNextResult(OptionalLong token, UriInfo uriInfo, String scheme, DataSize targetResultSize)
     {
         // check if the result for the token have already been created
         if (token.isPresent()) {
@@ -471,7 +471,7 @@ class Query
         //   OR
         // (2)there is more data to send (due to buffering)
         URI nextResultsUri = null;
-        if (!queryInfo.isFinalQueryInfo() && !queryInfo.getState().equals(QueryState.FAILED)
+        if (!queryInfo.isFinalQueryInfo() && queryInfo.getState() != QueryState.FAILED
                 || !exchangeClient.isClosed()) {
             nextResultsUri = createNextResultsUri(scheme, uriInfo);
         }
@@ -513,7 +513,7 @@ class Query
         return queryResults;
     }
 
-    private synchronized void cacheLastResults(QueryResults queryResults)
+	private synchronized void cacheLastResults(QueryResults queryResults)
     {
         // cache the last results
         if (lastResult != null && lastResult.getNextUri() != null) {
@@ -525,7 +525,7 @@ class Query
         lastResult = queryResults;
     }
 
-    private synchronized void closeExchangeClientIfNecessary(QueryInfo queryInfo)
+	private synchronized void closeExchangeClientIfNecessary(QueryInfo queryInfo)
     {
         // Close the exchange client if the query has failed, or if the query
         // is done and it does not have an output stage. The latter happens
@@ -536,7 +536,7 @@ class Query
         }
     }
 
-    private synchronized void setQueryOutputInfo(QueryExecution.QueryOutputInfo outputInfo)
+	private synchronized void setQueryOutputInfo(QueryExecution.QueryOutputInfo outputInfo)
     {
         // if first callback, set column names
         if (columns == null) {
@@ -558,7 +558,7 @@ class Query
         }
     }
 
-    private ListenableFuture<?> queryDoneFuture(QueryState currentState)
+	private ListenableFuture<?> queryDoneFuture(QueryState currentState)
     {
         if (currentState.isDone()) {
             return immediateFuture(null);
@@ -566,7 +566,7 @@ class Query
         return Futures.transformAsync(queryManager.getStateChange(queryId, currentState), this::queryDoneFuture, directExecutor());
     }
 
-    private synchronized URI createNextResultsUri(String scheme, UriInfo uriInfo)
+	private synchronized URI createNextResultsUri(String scheme, UriInfo uriInfo)
     {
         return uriInfo.getBaseUriBuilder()
                 .scheme(scheme)
@@ -578,7 +578,7 @@ class Query
                 .build();
     }
 
-    private static StatementStats toStatementStats(QueryInfo queryInfo)
+	private static StatementStats toStatementStats(QueryInfo queryInfo)
     {
         QueryStats queryStats = queryInfo.getQueryStats();
         StageInfo outputStage = queryInfo.getOutputStage().orElse(null);
@@ -604,7 +604,7 @@ class Query
                 .build();
     }
 
-    private static StageStats toStageStats(StageInfo stageInfo)
+	private static StageStats toStageStats(StageInfo stageInfo)
     {
         if (stageInfo == null) {
             return null;
@@ -614,16 +614,11 @@ class Query
         StageExecutionStats stageExecutionStats = currentStageExecutionInfo.getStats();
 
         ImmutableList.Builder<StageStats> subStages = ImmutableList.builder();
-        for (StageInfo subStage : stageInfo.getSubStages()) {
-            subStages.add(toStageStats(subStage));
-        }
+        stageInfo.getSubStages().forEach(subStage -> subStages.add(toStageStats(subStage)));
 
         Set<String> uniqueNodes = new HashSet<>();
-        for (TaskInfo task : currentStageExecutionInfo.getTasks()) {
-            // todo add nodeId to TaskInfo
-            URI uri = task.getTaskStatus().getSelf();
-            uniqueNodes.add(uri.getHost() + ":" + uri.getPort());
-        }
+        // todo add nodeId to TaskInfo
+		currentStageExecutionInfo.getTasks().stream().map(task -> task.getTaskStatus().getSelf()).forEach(uri -> uniqueNodes.add(new StringBuilder().append(uri.getHost()).append(":").append(uri.getPort()).toString()));
 
         return StageStats.builder()
                 .setStageId(String.valueOf(stageInfo.getStageId().getId()))
@@ -642,31 +637,26 @@ class Query
                 .build();
     }
 
-    private static Set<String> globalUniqueNodes(StageInfo stageInfo)
+	private static Set<String> globalUniqueNodes(StageInfo stageInfo)
     {
         if (stageInfo == null) {
             return ImmutableSet.of();
         }
         ImmutableSet.Builder<String> nodes = ImmutableSet.builder();
-        for (TaskInfo task : stageInfo.getLatestAttemptExecutionInfo().getTasks()) {
-            // todo add nodeId to TaskInfo
-            URI uri = task.getTaskStatus().getSelf();
-            nodes.add(uri.getHost() + ":" + uri.getPort());
-        }
+        // todo add nodeId to TaskInfo
+		stageInfo.getLatestAttemptExecutionInfo().getTasks().stream().map(task -> task.getTaskStatus().getSelf()).forEach(uri -> nodes.add(new StringBuilder().append(uri.getHost()).append(":").append(uri.getPort()).toString()));
 
-        for (StageInfo subStage : stageInfo.getSubStages()) {
-            nodes.addAll(globalUniqueNodes(subStage));
-        }
+        stageInfo.getSubStages().forEach(subStage -> nodes.addAll(globalUniqueNodes(subStage)));
         return nodes.build();
     }
 
-    private static URI findCancelableLeafStage(QueryInfo queryInfo)
+	private static URI findCancelableLeafStage(QueryInfo queryInfo)
     {
         // if query is running, find the leaf-most running stage
         return queryInfo.getOutputStage().map(Query::findCancelableLeafStage).orElse(null);
     }
 
-    private static URI findCancelableLeafStage(StageInfo stage)
+	private static URI findCancelableLeafStage(StageInfo stage)
     {
         // if this stage is already done, we can't cancel it
         if (stage.getLatestAttemptExecutionInfo().getState().isDone()) {
@@ -686,7 +676,7 @@ class Query
         return stage.getSelf();
     }
 
-    private static QueryError toQueryError(QueryInfo queryInfo)
+	private static QueryError toQueryError(QueryInfo queryInfo)
     {
         QueryState state = queryInfo.getState();
         if (state != FAILED) {
@@ -720,7 +710,7 @@ class Query
                 failure);
     }
 
-    private static class QuerySubmissionFuture
+	private static class QuerySubmissionFuture
             extends AbstractFuture<QueryInfo>
     {
         private final QueryId queryId;

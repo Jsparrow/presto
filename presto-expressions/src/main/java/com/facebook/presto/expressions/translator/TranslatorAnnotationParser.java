@@ -54,9 +54,7 @@ class TranslatorAnnotationParser
     public static Map<FunctionMetadata, MethodHandle> parseFunctionDefinitions(Class<?> clazz)
     {
         ImmutableMap.Builder<FunctionMetadata, MethodHandle> translatorBuilder = ImmutableMap.builder();
-        for (ScalarHeaderAndMethods methods : findScalarsFromSetClass(clazz)) {
-            translatorBuilder.putAll(scalarToFunctionMetadata(methods));
-        }
+        findScalarsFromSetClass(clazz).forEach(methods -> translatorBuilder.putAll(scalarToFunctionMetadata(methods)));
 
         return translatorBuilder.build();
     }
@@ -69,9 +67,7 @@ class TranslatorAnnotationParser
     public static FunctionMetadata removeTypeParameters(FunctionMetadata metadata)
     {
         ImmutableList.Builder<TypeSignature> argumentsBuilder = ImmutableList.builder();
-        for (TypeSignature typeSignature : metadata.getArgumentTypes()) {
-            argumentsBuilder.add(removeTypeParameters(typeSignature));
-        }
+        metadata.getArgumentTypes().forEach(typeSignature -> argumentsBuilder.add(removeTypeParameters(typeSignature)));
 
         if (metadata.getOperatorType().isPresent()) {
             return new FunctionMetadata(
@@ -104,14 +100,12 @@ class TranslatorAnnotationParser
     private static List<ScalarHeaderAndMethods> findScalarsFromSetClass(Class<?> clazz)
     {
         ImmutableList.Builder<ScalarHeaderAndMethods> builder = ImmutableList.builder();
-        for (Method method : findPublicMethodsWithAnnotation(clazz, SqlType.class, ScalarFunction.class, ScalarOperator.class)) {
+        findPublicMethodsWithAnnotation(clazz, SqlType.class, ScalarFunction.class, ScalarOperator.class).forEach(method -> {
             boolean annotationCondition = (method.getAnnotation(ScalarFunction.class) != null) || (method.getAnnotation(ScalarOperator.class) != null);
             checkArgument(annotationCondition, format("Method [%s] annotated with @SqlType is missing @ScalarFunction or @ScalarOperator", method));
 
-            for (ScalarTranslationHeader header : ScalarTranslationHeader.fromAnnotatedElement(method)) {
-                builder.add(new ScalarHeaderAndMethods(header, ImmutableSet.of(method)));
-            }
-        }
+            ScalarTranslationHeader.fromAnnotatedElement(method).forEach(header -> builder.add(new ScalarHeaderAndMethods(header, ImmutableSet.of(method))));
+        });
         List<ScalarHeaderAndMethods> methods = builder.build();
         checkArgument(!methods.isEmpty(), "Class [%s] does not have any methods annotated with @ScalarFunction or @ScalarOperator", clazz.getName());
 
@@ -123,10 +117,10 @@ class TranslatorAnnotationParser
         ScalarTranslationHeader header = scalar.getHeader();
 
         ImmutableMap.Builder<FunctionMetadata, MethodHandle> metadataBuilder = ImmutableMap.builder();
-        for (Method method : scalar.getMethods()) {
+        scalar.getMethods().forEach(method -> {
             FunctionMetadata metadata = methodToFunctionMetadata(header, method);
             metadataBuilder.put(removeTypeParameters(metadata), getMethodHandle(method));
-        }
+        });
 
         return metadataBuilder.build();
     }
@@ -206,7 +200,24 @@ class TranslatorAnnotationParser
         private final boolean deterministic;
         private final boolean calledOnNullInput;
 
-        public static List<ScalarTranslationHeader> fromAnnotatedElement(AnnotatedElement annotated)
+        private ScalarTranslationHeader(String name, boolean deterministic, boolean calledOnNullInput)
+        {
+            // TODO This is a hack. Engine should provide an API for connectors to overwrite functions. Connector should not hard code the builtin function namespace.
+            this.name = requireNonNull(FullyQualifiedName.of("presto", "default", name));
+            this.operatorType = Optional.empty();
+            this.deterministic = deterministic;
+            this.calledOnNullInput = calledOnNullInput;
+        }
+
+		private ScalarTranslationHeader(OperatorType operatorType, boolean deterministic, boolean calledOnNullInput)
+        {
+            this.name = operatorType.getFunctionName();
+            this.operatorType = Optional.of(operatorType);
+            this.deterministic = deterministic;
+            this.calledOnNullInput = calledOnNullInput;
+        }
+
+		public static List<ScalarTranslationHeader> fromAnnotatedElement(AnnotatedElement annotated)
         {
             ScalarFunction scalarFunction = annotated.getAnnotation(ScalarFunction.class);
             ScalarOperator scalarOperator = annotated.getAnnotation(ScalarOperator.class);
@@ -231,24 +242,7 @@ class TranslatorAnnotationParser
             return result;
         }
 
-        private ScalarTranslationHeader(String name, boolean deterministic, boolean calledOnNullInput)
-        {
-            // TODO This is a hack. Engine should provide an API for connectors to overwrite functions. Connector should not hard code the builtin function namespace.
-            this.name = requireNonNull(FullyQualifiedName.of("presto", "default", name));
-            this.operatorType = Optional.empty();
-            this.deterministic = deterministic;
-            this.calledOnNullInput = calledOnNullInput;
-        }
-
-        private ScalarTranslationHeader(OperatorType operatorType, boolean deterministic, boolean calledOnNullInput)
-        {
-            this.name = operatorType.getFunctionName();
-            this.operatorType = Optional.of(operatorType);
-            this.deterministic = deterministic;
-            this.calledOnNullInput = calledOnNullInput;
-        }
-
-        private static String annotatedName(AnnotatedElement annotatedElement)
+		private static String annotatedName(AnnotatedElement annotatedElement)
         {
             if (annotatedElement instanceof Class<?>) {
                 return ((Class<?>) annotatedElement).getSimpleName();
@@ -260,27 +254,27 @@ class TranslatorAnnotationParser
             throw new UnsupportedOperationException("Only Classes and Methods are supported as annotated elements.");
         }
 
-        private static String camelToSnake(String name)
+		private static String camelToSnake(String name)
         {
             return LOWER_CAMEL.to(LOWER_UNDERSCORE, name);
         }
 
-        FullyQualifiedName getName()
+		FullyQualifiedName getName()
         {
             return name;
         }
 
-        Optional<OperatorType> getOperatorType()
+		Optional<OperatorType> getOperatorType()
         {
             return operatorType;
         }
 
-        boolean isDeterministic()
+		boolean isDeterministic()
         {
             return deterministic;
         }
 
-        boolean isCalledOnNullInput()
+		boolean isCalledOnNullInput()
         {
             return calledOnNullInput;
         }

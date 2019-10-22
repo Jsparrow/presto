@@ -45,11 +45,14 @@ import static com.facebook.presto.hive.HiveErrorCode.HIVE_WRITER_DATA_ERROR;
 import static com.facebook.presto.hive.HiveErrorCode.HIVE_WRITE_VALIDATION_FAILED;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RcFileFileWriter
         implements HiveFileWriter
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(RcFileFileWriter.class).instanceSize();
+    private static final Logger logger = LoggerFactory.getLogger(RcFileFileWriter.class);
+	private static final int INSTANCE_SIZE = ClassLayout.parseClass(RcFileFileWriter.class).instanceSize();
     private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
 
     private final CountingOutputStream outputStream;
@@ -86,11 +89,10 @@ public class RcFileFileWriter
         this.fileInputColumnIndexes = requireNonNull(fileInputColumnIndexes, "outputColumnInputIndexes is null");
 
         ImmutableList.Builder<Block> nullBlocks = ImmutableList.builder();
-        for (Type fileColumnType : fileColumnTypes) {
-            BlockBuilder blockBuilder = fileColumnType.createBlockBuilder(null, 1, 0);
-            blockBuilder.appendNull();
-            nullBlocks.add(blockBuilder.build());
-        }
+        fileColumnTypes.stream().map(fileColumnType -> fileColumnType.createBlockBuilder(null, 1, 0)).forEach(blockBuilder -> {
+			blockBuilder.appendNull();
+			nullBlocks.add(blockBuilder.build());
+		});
         this.nullBlocks = nullBlocks.build();
         this.validationInputFactory = validationInputFactory;
     }
@@ -140,6 +142,7 @@ public class RcFileFileWriter
                 rollbackAction.call();
             }
             catch (Exception ignored) {
+				logger.error(ignored.getMessage(), ignored);
                 // ignore
             }
             throw new PrestoException(HIVE_WRITER_CLOSE_ERROR, "Error committing write to Hive", e);

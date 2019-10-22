@@ -30,7 +30,8 @@ public abstract class AbstractArrayBlock
 
     protected abstract int[] getOffsets();
 
-    public abstract int getOffsetBase();
+    @Override
+	public abstract int getOffsetBase();
 
     @Nullable
     protected abstract boolean[] getValueIsNull();
@@ -228,11 +229,6 @@ public abstract class AbstractArrayBlock
         }
     }
 
-    public interface ArrayBlockFunction<T>
-    {
-        T apply(Block block, int startPosition, int length);
-    }
-
     @Override
     public Block getBlockUnchecked(int internalPosition)
     {
@@ -241,11 +237,16 @@ public abstract class AbstractArrayBlock
         return getRawElementBlock().getRegion(startValueOffset, endValueOffset - startValueOffset);
     }
 
-    @Override
+	@Override
     public boolean isNullUnchecked(int internalPosition)
     {
         assert mayHaveNull() : "no nulls present";
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return getValueIsNull()[internalPosition];
+    }
+
+	public interface ArrayBlockFunction<T>
+    {
+        T apply(Block block, int startPosition, int length);
     }
 }

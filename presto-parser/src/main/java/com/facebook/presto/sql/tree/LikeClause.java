@@ -28,52 +28,46 @@ public final class LikeClause
     private final QualifiedName tableName;
     private final Optional<PropertiesOption> propertiesOption;
 
-    public enum PropertiesOption
-    {
-        INCLUDING,
-        EXCLUDING
-    }
-
     public LikeClause(QualifiedName tableName, Optional<PropertiesOption> propertiesOption)
     {
         this(Optional.empty(), tableName, propertiesOption);
     }
 
-    public LikeClause(NodeLocation location, QualifiedName tableName, Optional<PropertiesOption> propertiesOption)
+	public LikeClause(NodeLocation location, QualifiedName tableName, Optional<PropertiesOption> propertiesOption)
     {
         this(Optional.of(location), tableName, propertiesOption);
     }
 
-    private LikeClause(Optional<NodeLocation> location, QualifiedName tableName, Optional<PropertiesOption> propertiesOption)
+	private LikeClause(Optional<NodeLocation> location, QualifiedName tableName, Optional<PropertiesOption> propertiesOption)
     {
         super(location);
         this.tableName = requireNonNull(tableName, "tableName is null");
         this.propertiesOption = requireNonNull(propertiesOption, "propertiesOption is null");
     }
 
-    public QualifiedName getTableName()
+	public QualifiedName getTableName()
     {
         return tableName;
     }
 
-    public Optional<PropertiesOption> getPropertiesOption()
+	public Optional<PropertiesOption> getPropertiesOption()
     {
         return propertiesOption;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitLikeClause(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -87,18 +81,24 @@ public final class LikeClause
                 Objects.equals(this.propertiesOption, o.propertiesOption);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(tableName, propertiesOption);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("tableName", tableName)
                 .add("propertiesOption", propertiesOption)
                 .toString();
+    }
+
+	public enum PropertiesOption
+    {
+        INCLUDING,
+        EXCLUDING
     }
 }

@@ -28,298 +28,109 @@ public abstract class AbstractTestRepartitionQueries
     @Test
     public void testBoolean()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        IF (mod(orderkey + linenumber, 11) = 0, FALSE, TRUE) AS flag\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.flag)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        IF (mod(orderkey + linenumber, 11) = 0, FALSE, TRUE) AS flag\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.flag)\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {126, 85, 59, 72, -71, -42, 49, 21});
     }
 
     @Test
     public void testSmallInt()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        CAST(linenumber AS SMALLINT) AS l_linenumber\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_linenumber)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        CAST(linenumber AS SMALLINT) AS l_linenumber\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.l_linenumber)\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {-87, -84, -37, 75, -52, 22, 87, -29});
     }
 
     @Test
     public void testInteger()
     {
-        assertQuery("SELECT\n" +
-                        "    CHECKSUM(l.linenumber)\n" +
-                        "    FROM lineitem l, partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("SELECT\n").append("    CHECKSUM(l.linenumber)\n").append("    FROM lineitem l, partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {-87, -84, -37, 75, -52, 22, 87, -29});
     }
 
     @Test
     public void testBigInt()
     {
-        assertQuery("SELECT\n" +
-                        "    CHECKSUM(l.partkey)\n" +
-                        "    FROM lineitem l, partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("SELECT\n").append("    CHECKSUM(l.partkey)\n").append("    FROM lineitem l, partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {122, -36, -24, 126, -7, 61, -78, 5});
     }
 
     @Test
     public void testIpAddress()
     {
-        assertQuery("WITH lineitem_ex AS \n" +
-                        "(\n" +
-                        "SELECT\n" +
-                        "    partkey,\n" +
-                        "    CAST(\n" +
-                        "        CONCAT(\n" +
-                        "            CONCAT(\n" +
-                        "                CONCAT(\n" +
-                        "                    CONCAT(\n" +
-                        "                        CONCAT(\n" +
-                        "                            CONCAT(CAST((orderkey % 255) AS VARCHAR), '.'),\n" +
-                        "                            CAST((partkey % 255) AS VARCHAR)\n" +
-                        "                        ),\n" +
-                        "                        '.'\n" +
-                        "                    ),\n" +
-                        "                    CAST(suppkey AS VARCHAR)\n" +
-                        "                ),\n" +
-                        "                '.'\n" +
-                        "            ),\n" +
-                        "            CAST(linenumber AS VARCHAR)\n" +
-                        "        ) AS ipaddress\n" +
-                        "    ) AS ip\n" +
-                        "    FROM lineitem\n" +
-                        "    )\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.ip) \n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS \n").append("(\n").append("SELECT\n").append("    partkey,\n").append("    CAST(\n").append("        CONCAT(\n").append("            CONCAT(\n").append("                CONCAT(\n")
+				.append("                    CONCAT(\n").append("                        CONCAT(\n").append("                            CONCAT(CAST((orderkey % 255) AS VARCHAR), '.'),\n").append("                            CAST((partkey % 255) AS VARCHAR)\n").append("                        ),\n").append("                        '.'\n").append("                    ),\n").append("                    CAST(suppkey AS VARCHAR)\n").append("                ),\n")
+				.append("                '.'\n").append("            ),\n").append("            CAST(linenumber AS VARCHAR)\n").append("        ) AS ipaddress\n").append("    ) AS ip\n").append("    FROM lineitem\n").append("    )\n").append("SELECT\n").append("    CHECKSUM(l.ip) \n")
+				.append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey").toString(),
                 new byte[] {92, -57, -31, -119, -122, 9, 118, -31});
     }
 
     @Test
     public void testBigintWithNulls()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        IF (mod(orderkey + linenumber, 11) = 0, NULL, partkey) AS l_partkey\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_partkey)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.l_partkey = p.partkey",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        IF (mod(orderkey + linenumber, 11) = 0, NULL, partkey) AS l_partkey\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n").append("    CHECKSUM(l.l_partkey)\n").append("FROM lineitem_ex l,\n")
+				.append("    partsupp p\n").append("WHERE\n").append("    l.l_partkey = p.partkey").toString(),
                 new byte[] {-4, -54, 21, 27, 121, 66, 3, 35});
     }
 
     @Test
     public void testVarchar()
     {
-        assertQuery("SELECT\n" +
-                        "    CHECKSUM(l.comment)\n" +
-                        "    FROM lineitem l, partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("SELECT\n").append("    CHECKSUM(l.comment)\n").append("    FROM lineitem l, partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {14, -4, 62, 87, 52, 53, -101, -100});
     }
 
     @Test
     public void testDictionaryOfVarcharWithNulls()
     {
-        assertQuery("SELECT\n" +
-                        "    CHECKSUM(l.shipmode)\n" +
-                        "    FROM lineitem l, partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("SELECT\n").append("    CHECKSUM(l.shipmode)\n").append("    FROM lineitem l, partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {127, 108, -69, -115, -43, 44, -54, 88});
     }
 
     @Test
     public void testArrayOfBigInt()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        ARRAY[orderkey, partkey, suppkey] AS l_array\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_array)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        ARRAY[orderkey, partkey, suppkey] AS l_array\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.l_array)\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {10, -59, 46, 87, 22, -93, 58, -16});
     }
 
     @Test
     public void testArrayOfArray()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        ARRAY[ARRAY[orderkey, partkey], ARRAY[suppkey]] AS l_array\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_array)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        ARRAY[ARRAY[orderkey, partkey], ARRAY[suppkey]] AS l_array\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.l_array)\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {10, -59, 46, 87, 22, -93, 58, -16});
     }
 
     @Test
     public void testStruct()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        orderkey,\n" +
-                        "        CAST(\n" +
-                        "            ROW (\n" +
-                        "                partkey,\n" +
-                        "                suppkey,\n" +
-                        "                extendedprice,\n" +
-                        "                discount,\n" +
-                        "                quantity,\n" +
-                        "                shipdate,\n" +
-                        "                receiptdate,\n" +
-                        "                commitdate,\n" +
-                        "                comment\n" +
-                        "            ) AS ROW(\n" +
-                        "                l_partkey BIGINT,\n" +
-                        "                l_suppkey BIGINT,\n" +
-                        "                l_extendedprice DOUBLE,\n" +
-                        "                l_discount DOUBLE,\n" +
-                        "                l_quantity DOUBLE,\n" +
-                        "                l_shipdate DATE,\n" +
-                        "                l_receiptdate DATE,\n" +
-                        "                l_commitdate DATE,\n" +
-                        "                l_comment VARCHAR(44)\n" +
-                        "            )\n" +
-                        "        ) AS l_shipment\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_shipment)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    orders o\n" +
-                        "WHERE\n" +
-                        "    l.orderkey = o.orderkey",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        orderkey,\n").append("        CAST(\n").append("            ROW (\n").append("                partkey,\n").append("                suppkey,\n").append("                extendedprice,\n")
+				.append("                discount,\n").append("                quantity,\n").append("                shipdate,\n").append("                receiptdate,\n").append("                commitdate,\n").append("                comment\n").append("            ) AS ROW(\n").append("                l_partkey BIGINT,\n").append("                l_suppkey BIGINT,\n")
+				.append("                l_extendedprice DOUBLE,\n").append("                l_discount DOUBLE,\n").append("                l_quantity DOUBLE,\n").append("                l_shipdate DATE,\n").append("                l_receiptdate DATE,\n").append("                l_commitdate DATE,\n").append("                l_comment VARCHAR(44)\n").append("            )\n").append("        ) AS l_shipment\n")
+				.append("    FROM lineitem\n").append(")\n").append("SELECT\n").append("    CHECKSUM(l.l_shipment)\n").append("FROM lineitem_ex l,\n").append("    orders o\n").append("WHERE\n").append("    l.orderkey = o.orderkey").toString(),
                 new byte[] {-56, 110, 18, -107, -123, 121, 87, 79});
     }
 
     @Test
     public void testStructWithNulls()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        orderkey,\n" +
-                        "        CAST(\n" +
-                        "            IF (\n" +
-                        "                mod(partkey, 5) = 0,\n" +
-                        "                NULL,\n" +
-                        "                ROW(\n" +
-                        "                    COMMENT,\n" +
-                        "                    IF (\n" +
-                        "                        mod(partkey, 13) = 0,\n" +
-                        "                        NULL,\n" +
-                        "                        CONCAT(CAST(partkey AS VARCHAR), COMMENT)\n" +
-                        "                    )\n" +
-                        "                )\n" +
-                        "            ) AS ROW(s1 VARCHAR, s2 VARCHAR)\n" +
-                        "        ) AS l_partkey_struct\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_partkey_struct)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    orders o\n" +
-                        "WHERE\n" +
-                        "    l.orderkey = o.orderkey",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        orderkey,\n").append("        CAST(\n").append("            IF (\n").append("                mod(partkey, 5) = 0,\n").append("                NULL,\n").append("                ROW(\n")
+				.append("                    COMMENT,\n").append("                    IF (\n").append("                        mod(partkey, 13) = 0,\n").append("                        NULL,\n").append("                        CONCAT(CAST(partkey AS VARCHAR), COMMENT)\n").append("                    )\n").append("                )\n").append("            ) AS ROW(s1 VARCHAR, s2 VARCHAR)\n").append("        ) AS l_partkey_struct\n")
+				.append("    FROM lineitem\n").append(")\n").append("SELECT\n").append("    CHECKSUM(l.l_partkey_struct)\n").append("FROM lineitem_ex l,\n").append("    orders o\n").append("WHERE\n").append("    l.orderkey = o.orderkey").toString(),
                 new byte[] {67, 108, 83, 92, 16, -5, 66, 65});
     }
 
     @Test
     public void testMaps()
     {
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]) AS l_map\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_map)\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]) AS l_map\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.l_map)\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000").toString(),
                 new byte[] {-28, 76, -12, -42, 116, -118, -9, 46});
 
-        assertQuery("WITH lineitem_ex AS (\n" +
-                        "    SELECT\n" +
-                        "        partkey,\n" +
-                        "        suppkey,\n" +
-                        "        MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]) AS l_map\n" +
-                        "    FROM lineitem\n" +
-                        ")\n" +
-                        "SELECT\n" +
-                        "    CHECKSUM(l.l_map[1])\n" +
-                        "FROM lineitem_ex l,\n" +
-                        "    partsupp p\n" +
-                        "WHERE\n" +
-                        "    l.partkey = p.partkey\n" +
-                        "    AND l.suppkey = p.suppkey\n" +
-                        "    AND p.availqty < 1000\n",
+        assertQuery(new StringBuilder().append("WITH lineitem_ex AS (\n").append("    SELECT\n").append("        partkey,\n").append("        suppkey,\n").append("        MAP(ARRAY[1, 2, 3], ARRAY[orderkey, partkey, suppkey]) AS l_map\n").append("    FROM lineitem\n").append(")\n").append("SELECT\n")
+				.append("    CHECKSUM(l.l_map[1])\n").append("FROM lineitem_ex l,\n").append("    partsupp p\n").append("WHERE\n").append("    l.partkey = p.partkey\n").append("    AND l.suppkey = p.suppkey\n").append("    AND p.availqty < 1000\n").toString(),
                 new byte[] {121, 123, -114, -120, -18, 98, -124, 105});
     }
 

@@ -58,9 +58,7 @@ public class TestPageSplitterUtil
 
     private static void assertPageSize(List<Page> pages, long maxPageSizeInBytes)
     {
-        for (Page page : pages) {
-            assertLessThanOrEqual(page.getSizeInBytes(), maxPageSizeInBytes);
-        }
+        pages.forEach(page -> assertLessThanOrEqual(page.getSizeInBytes(), maxPageSizeInBytes));
     }
 
     private static void assertPositionCount(List<Page> pages, int positionCount)

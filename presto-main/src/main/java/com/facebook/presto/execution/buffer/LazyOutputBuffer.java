@@ -126,24 +126,23 @@ public class LazyOutputBuffer
             outputBuffer = delegate;
         }
 
-        if (outputBuffer == null) {
-            //
-            // NOTE: this code must be lock free to not hanging state machine updates
-            //
-            BufferState state = this.state.get();
-
-            return new OutputBufferInfo(
-                    "UNINITIALIZED",
-                    state,
-                    state.canAddBuffers(),
-                    state.canAddPages(),
-                    0,
-                    0,
-                    0,
-                    0,
-                    ImmutableList.of());
-        }
-        return outputBuffer.getInfo();
+        if (outputBuffer != null) {
+			return outputBuffer.getInfo();
+		}
+		//
+		// NOTE: this code must be lock free to not hanging state machine updates
+		//
+		BufferState state = this.state.get();
+		return new OutputBufferInfo(
+		        "UNINITIALIZED",
+		        state,
+		        state.canAddBuffers(),
+		        state.canAddPages(),
+		        0,
+		        0,
+		        0,
+		        0,
+		        ImmutableList.of());
     }
 
     @Override
@@ -186,9 +185,7 @@ public class LazyOutputBuffer
 
         // process pending aborts and reads outside of synchronized lock
         abortedBuffers.forEach(outputBuffer::abort);
-        for (PendingRead pendingRead : pendingReads) {
-            pendingRead.process(outputBuffer);
-        }
+        pendingReads.forEach(pendingRead -> pendingRead.process(outputBuffer));
     }
 
     @Override
@@ -312,9 +309,7 @@ public class LazyOutputBuffer
 
         // if there is no output buffer, free the pending reads
         if (outputBuffer == null) {
-            for (PendingRead pendingRead : pendingReads) {
-                pendingRead.getFutureResult().set(emptyResults(taskInstanceId, 0, true));
-            }
+            pendingReads.forEach(pendingRead -> pendingRead.getFutureResult().set(emptyResults(taskInstanceId, 0, true)));
             return;
         }
 

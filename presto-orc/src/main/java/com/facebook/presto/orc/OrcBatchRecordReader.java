@@ -139,14 +139,15 @@ public class OrcBatchRecordReader
     private void validateWritePageChecksum(int batchSize)
             throws IOException
     {
-        if (shouldValidateWritePageChecksum()) {
-            Block[] blocks = new Block[getStreamReaders().length];
-            for (int columnIndex = 0; columnIndex < getStreamReaders().length; columnIndex++) {
-                blocks[columnIndex] = readBlock(includedColumns.get(columnIndex), columnIndex);
-            }
-            Page page = new Page(batchSize, blocks);
-            validateWritePageChecksum(page);
-        }
+        if (!shouldValidateWritePageChecksum()) {
+			return;
+		}
+		Block[] blocks = new Block[getStreamReaders().length];
+		for (int columnIndex = 0; columnIndex < getStreamReaders().length; columnIndex++) {
+		    blocks[columnIndex] = readBlock(includedColumns.get(columnIndex), columnIndex);
+		}
+		Page page = new Page(batchSize, blocks);
+		validateWritePageChecksum(page);
     }
 
     private static BatchStreamReader[] createStreamReaders(

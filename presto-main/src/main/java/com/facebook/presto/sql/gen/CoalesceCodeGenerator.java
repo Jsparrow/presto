@@ -36,9 +36,7 @@ public class CoalesceCodeGenerator
     public BytecodeNode generateExpression(BytecodeGeneratorContext generatorContext, Type returnType, List<RowExpression> arguments, Optional<Variable> outputBlockVariable)
     {
         List<BytecodeNode> operands = new ArrayList<>();
-        for (RowExpression expression : arguments) {
-            operands.add(generatorContext.generate(expression, Optional.empty()));
-        }
+        arguments.forEach(expression -> operands.add(generatorContext.generate(expression, Optional.empty())));
 
         Variable wasNull = generatorContext.wasNull();
         BytecodeNode nullValue = new BytecodeBlock()

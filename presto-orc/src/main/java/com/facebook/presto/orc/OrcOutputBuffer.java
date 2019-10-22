@@ -120,9 +120,7 @@ public class OrcOutputBuffer
     public int writeDataTo(SliceOutput outputStream)
     {
         checkState(bufferPosition == 0, "Buffer must be closed before writeDataTo can be called");
-        for (Slice slice : compressedOutputStream.getSlices()) {
-            outputStream.writeBytes(slice);
-        }
+        compressedOutputStream.getSlices().forEach(outputStream::writeBytes);
         return compressedOutputStream.size();
     }
 
@@ -421,11 +419,12 @@ public class OrcOutputBuffer
 
     private void flushBufferToOutputStream()
     {
-        if (bufferPosition > 0) {
-            writeChunkToOutputStream(buffer, 0, bufferPosition);
-            bufferOffset += bufferPosition;
-            bufferPosition = 0;
-        }
+        if (bufferPosition <= 0) {
+			return;
+		}
+		writeChunkToOutputStream(buffer, 0, bufferPosition);
+		bufferOffset += bufferPosition;
+		bufferPosition = 0;
     }
 
     private void writeChunkToOutputStream(byte[] chunk, int offset, int length)

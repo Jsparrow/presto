@@ -89,7 +89,7 @@ public class TestProgressMonitor
                 nextUriId == null ? null : server.url(format("/v1/statement/%s/%s", queryId, nextUriId)).uri(),
                 responseColumns,
                 data,
-                new StatementStats(state, state.equals("QUEUED"), true, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null),
+                new StatementStats(state, "QUEUED".equals(state), true, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null),
                 null,
                 ImmutableList.of(),
                 null,
@@ -102,11 +102,7 @@ public class TestProgressMonitor
     public void test()
             throws SQLException
     {
-        for (String result : createResults()) {
-            server.enqueue(new MockResponse()
-                    .addHeader(CONTENT_TYPE, "application/json")
-                    .setBody(result));
-        }
+        createResults().forEach(result -> server.enqueue(new MockResponse().addHeader(CONTENT_TYPE, "application/json").setBody(result)));
 
         try (Connection connection = createConnection()) {
             try (Statement statement = connection.createStatement()) {

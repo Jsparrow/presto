@@ -74,11 +74,11 @@ public final class SimpleLocalMemoryContext
         checkState(!closed, "SimpleLocalMemoryContext is already closed");
         checkArgument(bytes >= 0, "bytes cannot be negative");
         long delta = bytes - usedBytes;
-        if (parentMemoryContext.tryUpdateBytes(allocationTag, delta)) {
-            usedBytes = bytes;
-            return true;
-        }
-        return false;
+        if (!parentMemoryContext.tryUpdateBytes(allocationTag, delta)) {
+			return false;
+		}
+		usedBytes = bytes;
+		return true;
     }
 
     @Override

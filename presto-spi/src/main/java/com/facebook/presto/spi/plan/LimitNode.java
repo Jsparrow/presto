@@ -32,23 +32,11 @@ import static java.util.Objects.requireNonNull;
 public final class LimitNode
         extends PlanNode
 {
-    /**
-     * Stages of `LimitNode`:
-     *
-     * PARTIAL:   `LimitNode` is in the distributed plan and generates partial results on local workers.
-     * FINAL:     `LimitNode` is in the distributed plan and finalizes the partial results from `PARTIAL` nodes.
-     */
-    public enum Step
-    {
-        PARTIAL,
-        FINAL
-    }
-
     private final PlanNode source;
-    private final long count;
-    private final Step step;
+	private final long count;
+	private final Step step;
 
-    @JsonCreator
+	@JsonCreator
     public LimitNode(
             @JsonProperty("id") PlanNodeId id,
             @JsonProperty("source") PlanNode source,
@@ -63,13 +51,13 @@ public final class LimitNode
         this.step = requireNonNull(step, "step is null");
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return singletonList(source);
     }
 
-    /**
+	/**
      * LimitNode only expects a single upstream PlanNode.
      */
     @JsonProperty
@@ -78,7 +66,7 @@ public final class LimitNode
         return source;
     }
 
-    /**
+	/**
      * Get the limit `N` number of results to return.
      */
     @JsonProperty
@@ -87,40 +75,52 @@ public final class LimitNode
         return count;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Step getStep()
     {
         return step;
     }
 
-    public boolean isPartial()
+	public boolean isPartial()
     {
         return step == Step.PARTIAL;
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return source.getOutputVariables();
     }
 
-    @Override
+	@Override
     public <R, C> R accept(PlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitLimit(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         checkCondition(newChildren != null && newChildren.size() == 1, GENERIC_INTERNAL_ERROR, "Expect exactly 1 child PlanNode");
         return new LimitNode(getId(), newChildren.get(0), count, getStep());
     }
 
-    private static void checkCondition(boolean condition, ErrorCodeSupplier errorCode, String message)
+	private static void checkCondition(boolean condition, ErrorCodeSupplier errorCode, String message)
     {
         if (!condition) {
             throw new PrestoException(errorCode, message);
         }
+    }
+
+	/**
+     * Stages of `LimitNode`:
+     *
+     * PARTIAL:   `LimitNode` is in the distributed plan and generates partial results on local workers.
+     * FINAL:     `LimitNode` is in the distributed plan and finalizes the partial results from `PARTIAL` nodes.
+     */
+    public enum Step
+    {
+        PARTIAL,
+        FINAL
     }
 }

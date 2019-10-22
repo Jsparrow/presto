@@ -29,6 +29,8 @@ import static com.facebook.presto.operator.Operator.NOT_BLOCKED;
 import static io.airlift.units.Duration.succinctNanos;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 abstract class SimulationSplit
         implements SplitRunner
@@ -167,7 +169,8 @@ abstract class SimulationSplit
     static class LeafSplit
             extends SimulationSplit
     {
-        private final long perQuantaNanos;
+        private final Logger logger = LoggerFactory.getLogger(LeafSplit.class);
+		private final long perQuantaNanos;
 
         public LeafSplit(SimulationTask task, long scheduledTimeNanos, long perQuantaNanos)
         {
@@ -175,7 +178,8 @@ abstract class SimulationSplit
             this.perQuantaNanos = perQuantaNanos;
         }
 
-        public boolean process()
+        @Override
+		public boolean process()
         {
             if (getCompletedProcessNanos() >= super.scheduledTimeNanos) {
                 return true;
@@ -187,7 +191,8 @@ abstract class SimulationSplit
                     NANOSECONDS.sleep(processNanos);
                 }
                 catch (InterruptedException e) {
-                    setKilled();
+                    logger.error(e.getMessage(), e);
+					setKilled();
                     return true;
                 }
             }
@@ -195,7 +200,8 @@ abstract class SimulationSplit
             return false;
         }
 
-        public ListenableFuture<?> getProcessResult()
+        @Override
+		public ListenableFuture<?> getProcessResult()
         {
             return NOT_BLOCKED;
         }
@@ -214,7 +220,8 @@ abstract class SimulationSplit
     static class IntermediateSplit
             extends SimulationSplit
     {
-        private final long wallTimeNanos;
+        private final Logger logger = LoggerFactory.getLogger(IntermediateSplit.class);
+		private final long wallTimeNanos;
         private final long numQuantas;
         private final long perQuantaNanos;
         private final long betweenQuantaNanos;
@@ -236,7 +243,8 @@ abstract class SimulationSplit
             doneFuture.set(null);
         }
 
-        public boolean process()
+        @Override
+		public boolean process()
         {
             try {
                 if (getCalls() < numQuantas) {
@@ -245,14 +253,16 @@ abstract class SimulationSplit
                 }
             }
             catch (InterruptedException ignored) {
-                setKilled();
+                logger.error(ignored.getMessage(), ignored);
+				setKilled();
                 return true;
             }
 
             return true;
         }
 
-        public ListenableFuture<?> getProcessResult()
+        @Override
+		public ListenableFuture<?> getProcessResult()
         {
             future = SettableFuture.create();
             try {
@@ -267,12 +277,14 @@ abstract class SimulationSplit
                         setSplitReady();
                     }
                     catch (RuntimeException ignored) {
-                        setKilled();
+                        logger.error(ignored.getMessage(), ignored);
+						setKilled();
                     }
                 }, betweenQuantaNanos, NANOSECONDS);
             }
             catch (RejectedExecutionException ignored) {
-                setKilled();
+                logger.error(ignored.getMessage(), ignored);
+				setKilled();
                 return doneFuture;
             }
             return future;

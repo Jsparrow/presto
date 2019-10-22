@@ -73,7 +73,7 @@ public class SpecialFormExpression
     @Override
     public String toString()
     {
-        return form.name() + "(" + String.join(", ", arguments.stream().map(RowExpression::toString).collect(toList())) + ")";
+        return new StringBuilder().append(form.name()).append("(").append(String.join(", ", arguments.stream().map(RowExpression::toString).collect(toList()))).append(")").toString();
     }
 
     @Override

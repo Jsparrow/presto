@@ -124,7 +124,6 @@ public class SqlParser
             {
                 @Override
                 public Token recoverInline(Parser recognizer)
-                        throws RecognitionException
                 {
                     if (nextTokensContext == null) {
                         throw new InputMismatchException(recognizer);
@@ -190,7 +189,7 @@ public class SqlParser
             for (IdentifierSymbol identifierSymbol : EnumSet.complementOf(allowedIdentifierSymbols)) {
                 char symbol = identifierSymbol.getSymbol();
                 if (identifier.indexOf(symbol) >= 0) {
-                    throw new ParsingException("identifiers must not contain '" + identifierSymbol.getSymbol() + "'", null, context.IDENTIFIER().getSymbol().getLine(), context.IDENTIFIER().getSymbol().getCharPositionInLine());
+                    throw new ParsingException(new StringBuilder().append("identifiers must not contain '").append(identifierSymbol.getSymbol()).append("'").toString(), null, context.IDENTIFIER().getSymbol().getLine(), context.IDENTIFIER().getSymbol().getCharPositionInLine());
                 }
             }
         }
@@ -231,7 +230,7 @@ public class SqlParser
             context.getParent().removeLastChild();
 
             Token token = (Token) context.getChild(0).getPayload();
-            if (token.getText().equalsIgnoreCase("CURRENT_ROLE")) {
+            if ("CURRENT_ROLE".equalsIgnoreCase(token.getText())) {
                 warningConsumer.accept(new ParsingWarning(format("Reserved word used: %s", token.getText()), token.getLine(), token.getCharPositionInLine()));
             }
             context.getParent().addChild(new CommonToken(

@@ -171,10 +171,6 @@ public class RetryDriver
 
     private static void addSuppressed(Exception exception, List<Throwable> suppressedExceptions)
     {
-        for (Throwable suppressedException : suppressedExceptions) {
-            if (exception != suppressedException) {
-                exception.addSuppressed(suppressedException);
-            }
-        }
+        suppressedExceptions.stream().filter(suppressedException -> exception != suppressedException).forEach(exception::addSuppressed);
     }
 }

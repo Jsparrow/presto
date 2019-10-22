@@ -193,18 +193,14 @@ public class ProxyResource
         setupXForwardedFor(servletRequest, requestBuilder);
         setupBearerToken(servletRequest, requestBuilder);
 
-        for (String name : list(servletRequest.getHeaderNames())) {
+        list(servletRequest.getHeaderNames()).forEach(name -> {
             if (isPrestoHeader(name) || name.equalsIgnoreCase(COOKIE)) {
-                for (String value : list(servletRequest.getHeaders(name))) {
-                    requestBuilder.addHeader(name, value);
-                }
+                list(servletRequest.getHeaders(name)).forEach(value -> requestBuilder.addHeader(name, value));
             }
             else if (name.equalsIgnoreCase(USER_AGENT)) {
-                for (String value : list(servletRequest.getHeaders(name))) {
-                    requestBuilder.addHeader(name, "[Presto Proxy] " + value);
-                }
+                list(servletRequest.getHeaders(name)).forEach(value -> requestBuilder.addHeader(name, "[Presto Proxy] " + value));
             }
-        }
+        });
 
         Request request = requestBuilder
                 .setPreserveAuthorizationOnRedirect(true)

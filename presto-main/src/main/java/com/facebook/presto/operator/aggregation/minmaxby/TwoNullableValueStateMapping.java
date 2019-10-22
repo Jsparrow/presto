@@ -29,11 +29,9 @@ import static java.lang.String.format;
 
 public final class TwoNullableValueStateMapping
 {
-    private TwoNullableValueStateMapping() {}
-
     private static final Map<List<Class<?>>, Class<? extends AccumulatorState>> STATE_MAPPINGS;
 
-    static {
+	static {
         STATE_MAPPINGS = new ImmutableMap.Builder<List<Class<?>>, Class<? extends AccumulatorState>>()
                 .put(ImmutableList.of(boolean.class, Block.class), BooleanAndBlockPositionValueState.class)
                 .put(ImmutableList.of(boolean.class, boolean.class), BooleanBooleanState.class)
@@ -63,7 +61,9 @@ public final class TwoNullableValueStateMapping
                 .build();
     }
 
-    public static Class<? extends AccumulatorState> getStateClass(Class<?> first, Class<?> second)
+	private TwoNullableValueStateMapping() {}
+
+	public static Class<? extends AccumulatorState> getStateClass(Class<?> first, Class<?> second)
     {
         List<Class<?>> key = ImmutableList.of(first, second);
         Class<? extends AccumulatorState> state = STATE_MAPPINGS.get(key);
@@ -71,7 +71,7 @@ public final class TwoNullableValueStateMapping
         return state;
     }
 
-    public static AccumulatorStateSerializer<?> getStateSerializer(Type firstType, Type secondType)
+	public static AccumulatorStateSerializer<?> getStateSerializer(Type firstType, Type secondType)
     {
         Class<?> firstJavaType = firstType.getJavaType();
         Class<?> secondJavaType = secondType.getJavaType();

@@ -132,10 +132,10 @@ public final class LocalProperties
     {
         List<Optional<LocalProperty<T>>> normalizedProperties = new ArrayList<>(localProperties.size());
         Set<T> constants = new HashSet<>();
-        for (LocalProperty<T> localProperty : localProperties) {
+        localProperties.forEach(localProperty -> {
             normalizedProperties.add(localProperty.withConstants(constants));
             constants.addAll(localProperty.getColumns());
-        }
+        });
         return normalizedProperties;
     }
 }

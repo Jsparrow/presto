@@ -63,7 +63,7 @@ public final class Lateral
     @Override
     public String toString()
     {
-        return "LATERAL(" + query + ")";
+        return new StringBuilder().append("LATERAL(").append(query).append(")").toString();
     }
 
     @Override

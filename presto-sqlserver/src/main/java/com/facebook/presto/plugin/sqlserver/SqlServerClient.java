@@ -81,6 +81,6 @@ public class SqlServerClient
 
     private static String singleQuote(String literal)
     {
-        return "\'" + literal + "\'";
+        return new StringBuilder().append("\'").append(literal).append("\'").toString();
     }
 }

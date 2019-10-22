@@ -146,7 +146,7 @@ public class SqlTaskManager
         DataSize maxQuerySpillPerNode = nodeSpillConfig.getQueryMaxSpillPerNode();
 
         queryContexts = CacheBuilder.newBuilder().weakValues().build(CacheLoader.from(
-                queryId -> createQueryContext(queryId, localMemoryManager, nodeMemoryConfig, localSpillManager, gcMonitor, maxQueryUserMemoryPerNode, maxQueryTotalMemoryPerNode, maxQuerySpillPerNode)));
+                queryId -> createQueryContext(queryId, localMemoryManager, localSpillManager, gcMonitor, maxQueryUserMemoryPerNode, maxQueryTotalMemoryPerNode, maxQuerySpillPerNode)));
 
         tasks = CacheBuilder.newBuilder().build(CacheLoader.from(
                 taskId -> createSqlTask(
@@ -168,7 +168,6 @@ public class SqlTaskManager
     private QueryContext createQueryContext(
             QueryId queryId,
             LocalMemoryManager localMemoryManager,
-            NodeMemoryConfig nodeMemoryConfig,
             LocalSpillManager localSpillManager,
             GcMonitor gcMonitor,
             DataSize maxQueryUserMemoryPerNode,
@@ -195,7 +194,7 @@ public class SqlTaskManager
         }
         currentMemoryPoolAssignmentVersion = assignments.getVersion();
         if (coordinatorId != null && !coordinatorId.equals(assignments.getCoordinatorId())) {
-            log.warn("Switching coordinator affinity from " + coordinatorId + " to " + assignments.getCoordinatorId());
+            log.warn(new StringBuilder().append("Switching coordinator affinity from ").append(coordinatorId).append(" to ").append(assignments.getCoordinatorId()).toString());
         }
         coordinatorId = assignments.getCoordinatorId();
 

@@ -104,7 +104,7 @@ public class LambdaBytecodeGenerator
         for (LambdaDefinitionExpression lambdaExpression : lambdaExpressions) {
             CompiledLambda compiledLambda = LambdaBytecodeGenerator.preGenerateLambdaExpression(
                     lambdaExpression,
-                    methodNamePrefix + "lambda_" + counter,
+                    new StringBuilder().append(methodNamePrefix).append("lambda_").append(counter).toString(),
                     containerClassDefinition,
                     compiledLambdaMap.build(),
                     callSiteBinder,
@@ -207,7 +207,7 @@ public class LambdaBytecodeGenerator
 
         // generate values to be captured
         ImmutableList.Builder<BytecodeExpression> captureVariableBuilder = ImmutableList.builder();
-        for (RowExpression captureExpression : captureExpressions) {
+        captureExpressions.forEach(captureExpression -> {
             Class<?> valueType = Primitives.wrap(captureExpression.getType().getJavaType());
             Variable valueVariable = scope.createTempVariable(valueType);
             block.append(context.generate(captureExpression, Optional.empty()));
@@ -215,7 +215,7 @@ public class LambdaBytecodeGenerator
             block.putVariable(valueVariable);
             block.append(wasNull.set(constantFalse()));
             captureVariableBuilder.add(valueVariable);
-        }
+        });
 
         List<BytecodeExpression> captureVariables = ImmutableList.<BytecodeExpression>builder()
                 .add(scope.getThis(), scope.getVariable("session"))
@@ -318,7 +318,7 @@ public class LambdaBytecodeGenerator
         checkCondition(lambdaFunctionInterface.isAnnotationPresent(FunctionalInterface.class), COMPILER_ERROR, "Lambda function interface is required to be annotated with FunctionalInterface");
 
         List<Method> applyMethods = Arrays.stream(lambdaFunctionInterface.getMethods())
-                .filter(method -> method.getName().equals("apply"))
+                .filter(method -> "apply".equals(method.getName()))
                 .collect(toImmutableList());
 
         checkCondition(applyMethods.size() == 1, COMPILER_ERROR, "Expect to have exactly 1 method with name 'apply' in interface " + lambdaFunctionInterface.getName());

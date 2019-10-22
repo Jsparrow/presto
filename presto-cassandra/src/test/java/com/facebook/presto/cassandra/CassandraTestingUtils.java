@@ -56,20 +56,14 @@ public class CassandraTestingUtils
 
     public static void createKeyspace(CassandraSession session, String keyspaceName)
     {
-        session.execute("CREATE KEYSPACE " + keyspaceName + " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor': 1}");
+        session.execute(new StringBuilder().append("CREATE KEYSPACE ").append(keyspaceName).append(" WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor': 1}").toString());
     }
 
     public static void createTableClusteringKeys(CassandraSession session, SchemaTableName table, int rowsCount)
     {
         session.execute("DROP TABLE IF EXISTS " + table);
-        session.execute("CREATE TABLE " + table + " (" +
-                "key text, " +
-                "clust_one text, " +
-                "clust_two text, " +
-                "clust_three text, " +
-                "data text, " +
-                "PRIMARY KEY((key), clust_one, clust_two, clust_three) " +
-                ")");
+        session.execute(new StringBuilder().append("CREATE TABLE ").append(table).append(" (").append("key text, ").append("clust_one text, ").append("clust_two text, ").append("clust_three text, ").append("data text, ")
+				.append("PRIMARY KEY((key), clust_one, clust_two, clust_three) ").append(")").toString());
         insertIntoTableClusteringKeys(session, table, rowsCount);
     }
 
@@ -89,15 +83,8 @@ public class CassandraTestingUtils
     public static void createTableMultiPartitionClusteringKeys(CassandraSession session, SchemaTableName table)
     {
         session.execute("DROP TABLE IF EXISTS " + table);
-        session.execute("CREATE TABLE " + table + " (" +
-                "partition_one text, " +
-                "partition_two text, " +
-                "clust_one text, " +
-                "clust_two text, " +
-                "clust_three text, " +
-                "data text, " +
-                "PRIMARY KEY((partition_one, partition_two), clust_one, clust_two, clust_three) " +
-                ")");
+        session.execute(new StringBuilder().append("CREATE TABLE ").append(table).append(" (").append("partition_one text, ").append("partition_two text, ").append("clust_one text, ").append("clust_two text, ").append("clust_three text, ")
+				.append("data text, ").append("PRIMARY KEY((partition_one, partition_two), clust_one, clust_two, clust_three) ").append(")").toString());
         insertIntoTableMultiPartitionClusteringKeys(session, table);
     }
 
@@ -118,14 +105,8 @@ public class CassandraTestingUtils
     public static void createTableClusteringKeysInequality(CassandraSession session, SchemaTableName table, Date date, int rowsCount)
     {
         session.execute("DROP TABLE IF EXISTS " + table);
-        session.execute("CREATE TABLE " + table + " (" +
-                "key text, " +
-                "clust_one text, " +
-                "clust_two int, " +
-                "clust_three timestamp, " +
-                "data text, " +
-                "PRIMARY KEY((key), clust_one, clust_two, clust_three) " +
-                ")");
+        session.execute(new StringBuilder().append("CREATE TABLE ").append(table).append(" (").append("key text, ").append("clust_one text, ").append("clust_two int, ").append("clust_three timestamp, ").append("data text, ")
+				.append("PRIMARY KEY((key), clust_one, clust_two, clust_three) ").append(")").toString());
         insertIntoTableClusteringKeysInequality(session, table, date, rowsCount);
     }
 
@@ -145,26 +126,9 @@ public class CassandraTestingUtils
     public static void createTableAllTypes(CassandraSession session, SchemaTableName table, Date date, int rowsCount)
     {
         session.execute("DROP TABLE IF EXISTS " + table);
-        session.execute("CREATE TABLE " + table + " (" +
-                " key text PRIMARY KEY, " +
-                " typeuuid uuid, " +
-                " typeinteger int, " +
-                " typelong bigint, " +
-                " typebytes blob, " +
-                " typetimestamp timestamp, " +
-                " typeansi ascii, " +
-                " typeboolean boolean, " +
-                " typedecimal decimal, " +
-                " typedouble double, " +
-                " typefloat float, " +
-                " typeinet inet, " +
-                " typevarchar varchar, " +
-                " typevarint varint, " +
-                " typetimeuuid timeuuid, " +
-                " typelist list<text>, " +
-                " typemap map<int, bigint>, " +
-                " typeset set<boolean>, " +
-                ")");
+        session.execute(new StringBuilder().append("CREATE TABLE ").append(table).append(" (").append(" key text PRIMARY KEY, ").append(" typeuuid uuid, ").append(" typeinteger int, ").append(" typelong bigint, ").append(" typebytes blob, ")
+				.append(" typetimestamp timestamp, ").append(" typeansi ascii, ").append(" typeboolean boolean, ").append(" typedecimal decimal, ").append(" typedouble double, ").append(" typefloat float, ").append(" typeinet inet, ").append(" typevarchar varchar, ").append(" typevarint varint, ")
+				.append(" typetimeuuid timeuuid, ").append(" typelist list<text>, ").append(" typemap map<int, bigint>, ").append(" typeset set<boolean>, ").append(")").toString());
         insertTestData(session, table, date, rowsCount);
     }
 
@@ -172,50 +136,21 @@ public class CassandraTestingUtils
     {
         session.execute("DROP TABLE IF EXISTS " + table);
 
-        session.execute("CREATE TABLE " + table + " (" +
-                " key text, " +
-                " typeuuid uuid, " +
-                " typeinteger int, " +
-                " typelong bigint, " +
-                " typebytes blob, " +
-                " typetimestamp timestamp, " +
-                " typeansi ascii, " +
-                " typeboolean boolean, " +
-                " typedecimal decimal, " +
-                " typedouble double, " +
-                " typefloat float, " +
-                " typeinet inet, " +
-                " typevarchar varchar, " +
-                " typevarint varint, " +
-                " typetimeuuid timeuuid, " +
-                " typelist frozen <list<text>>, " +
-                " typemap frozen <map<int, bigint>>, " +
-                " typeset frozen <set<boolean>>, " +
-                " PRIMARY KEY ((" +
-                "   key, " +
-                "   typeuuid, " +
-                "   typeinteger, " +
-                "   typelong, " +
-                // TODO: NOT YET SUPPORTED AS A PARTITION KEY
+        session.execute(new StringBuilder().append("CREATE TABLE ").append(table).append(" (").append(" key text, ").append(" typeuuid uuid, ").append(" typeinteger int, ").append(" typelong bigint, ").append(" typebytes blob, ")
+				.append(" typetimestamp timestamp, ").append(" typeansi ascii, ").append(" typeboolean boolean, ").append(" typedecimal decimal, ").append(" typedouble double, ").append(" typefloat float, ").append(" typeinet inet, ").append(" typevarchar varchar, ").append(" typevarint varint, ")
+				.append(" typetimeuuid timeuuid, ").append(" typelist frozen <list<text>>, ").append(" typemap frozen <map<int, bigint>>, ").append(" typeset frozen <set<boolean>>, ").append(" PRIMARY KEY ((").append("   key, ").append("   typeuuid, ").append("   typeinteger, ").append("   typelong, ")
+				.append(// TODO: NOT YET SUPPORTED AS A PARTITION KEY
                 // "   typebytes, " +
-                "   typetimestamp, " +
-                "   typeansi, " +
-                "   typeboolean, " +
-                // TODO: PRECISION LOST. IMPLEMENT IT AS STRING
+                "   typetimestamp, ").append("   typeansi, ").append("   typeboolean, ").append(// TODO: PRECISION LOST. IMPLEMENT IT AS STRING
                 //  "   typedecimal, " +
-                "   typedouble, " +
-                "   typefloat, " +
-                "   typeinet, " +
-                "   typevarchar, " +
-                // TODO: NOT YET SUPPORTED AS A PARTITION KEY
+                "   typedouble, ").append("   typefloat, ").append("   typeinet, ").append("   typevarchar, ").append(// TODO: NOT YET SUPPORTED AS A PARTITION KEY
                 // "   typevarint, " +
-                "   typetimeuuid " +
-                // TODO: NOT YET SUPPORTED AS A PARTITION KEY
+                "   typetimeuuid ").append(// TODO: NOT YET SUPPORTED AS A PARTITION KEY
                 // "   typelist, " +
                 // "   typemap, " +
                 // "   typeset" +
-                " ))" +
-                ")");
+                " ))")
+				.append(")").toString());
 
         insertTestData(session, table, date, 9);
     }

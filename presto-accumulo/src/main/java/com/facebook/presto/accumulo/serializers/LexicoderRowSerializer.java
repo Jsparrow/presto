@@ -65,16 +65,6 @@ public class LexicoderRowSerializer
     private static final Map<TypeSignature, ListLexicoder<?>> LIST_LEXICODERS = new HashMap<>();
     private static final Map<TypeSignature, MapLexicoder<?, ?>> MAP_LEXICODERS = new HashMap<>();
 
-    private final Map<String, Map<String, String>> familyQualifierColumnMap = new HashMap<>();
-    private final Map<String, byte[]> columnValues = new HashMap<>();
-    private final Text rowId = new Text();
-    private final Text family = new Text();
-    private final Text qualifier = new Text();
-    private final Text value = new Text();
-
-    private boolean rowOnly;
-    private String rowIdName;
-
     static {
         LongLexicoder longLexicoder = new LongLexicoder();
         DoubleLexicoder doubleLexicoder = new DoubleLexicoder();
@@ -92,19 +82,28 @@ public class LexicoderRowSerializer
         LEXICODER_MAP.put(VARCHAR, new StringLexicoder());
     }
 
-    @Override
+	private final Map<String, Map<String, String>> familyQualifierColumnMap = new HashMap<>();
+	private final Map<String, byte[]> columnValues = new HashMap<>();
+	private final Text rowId = new Text();
+	private final Text family = new Text();
+	private final Text qualifier = new Text();
+	private final Text value = new Text();
+	private boolean rowOnly;
+	private String rowIdName;
+
+	@Override
     public void setRowIdName(String name)
     {
         rowIdName = name;
     }
 
-    @Override
+	@Override
     public void setRowOnly(boolean rowOnly)
     {
         this.rowOnly = rowOnly;
     }
 
-    @Override
+	@Override
     public void setMapping(String name, String family, String qualifier)
     {
         columnValues.put(name, null);
@@ -117,13 +116,13 @@ public class LexicoderRowSerializer
         qualifierToNameMap.put(qualifier, name);
     }
 
-    @Override
+	@Override
     public void reset()
     {
         columnValues.clear();
     }
 
-    @Override
+	@Override
     public void deserialize(Entry<Key, Value> entry)
     {
         if (!columnValues.containsKey(rowIdName)) {
@@ -146,187 +145,187 @@ public class LexicoderRowSerializer
         columnValues.put(familyQualifierColumnMap.get(family.toString()).get(qualifier.toString()), value.copyBytes());
     }
 
-    @Override
+	@Override
     public boolean isNull(String name)
     {
         return columnValues.get(name) == null;
     }
 
-    @Override
+	@Override
     public Block getArray(String name, Type type)
     {
         Type elementType = Types.getElementType(type);
         return AccumuloRowSerializer.getBlockFromArray(elementType, decode(type, getFieldValue(name)));
     }
 
-    @Override
+	@Override
     public void setArray(Text text, Type type, Block block)
     {
         text.set(encode(type, block));
     }
 
-    @Override
+	@Override
     public boolean getBoolean(String name)
     {
         return decode(BOOLEAN, getFieldValue(name));
     }
 
-    @Override
+	@Override
     public void setBoolean(Text text, Boolean value)
     {
         text.set(encode(BOOLEAN, value));
     }
 
-    @Override
+	@Override
     public byte getByte(String name)
     {
         return ((Long) decode(TINYINT, getFieldValue(name))).byteValue();
     }
 
-    @Override
+	@Override
     public void setByte(Text text, Byte value)
     {
         text.set(encode(TINYINT, value));
     }
 
-    @Override
+	@Override
     public Date getDate(String name)
     {
         return new Date(DAYS.toMillis(decode(BIGINT, getFieldValue(name))));
     }
 
-    @Override
+	@Override
     public void setDate(Text text, Date value)
     {
         text.set(encode(DATE, value));
     }
 
-    @Override
+	@Override
     public double getDouble(String name)
     {
         return decode(DOUBLE, getFieldValue(name));
     }
 
-    @Override
+	@Override
     public void setDouble(Text text, Double value)
     {
         text.set(encode(DOUBLE, value));
     }
 
-    @Override
+	@Override
     public float getFloat(String name)
     {
         return ((Double) decode(REAL, getFieldValue(name))).floatValue();
     }
 
-    @Override
+	@Override
     public void setFloat(Text text, Float value)
     {
         text.set(encode(REAL, value));
     }
 
-    @Override
+	@Override
     public int getInt(String name)
     {
         return ((Long) decode(INTEGER, getFieldValue(name))).intValue();
     }
 
-    @Override
+	@Override
     public void setInt(Text text, Integer value)
     {
         text.set(encode(INTEGER, value));
     }
 
-    @Override
+	@Override
     public long getLong(String name)
     {
         return decode(BIGINT, getFieldValue(name));
     }
 
-    @Override
+	@Override
     public void setLong(Text text, Long value)
     {
         text.set(encode(BIGINT, value));
     }
 
-    @Override
+	@Override
     public Block getMap(String name, Type type)
     {
         return AccumuloRowSerializer.getBlockFromMap(type, decode(type, getFieldValue(name)));
     }
 
-    @Override
+	@Override
     public void setMap(Text text, Type type, Block block)
     {
         text.set(encode(type, block));
     }
 
-    @Override
+	@Override
     public short getShort(String name)
     {
         return ((Long) decode(SMALLINT, getFieldValue(name))).shortValue();
     }
 
-    @Override
+	@Override
     public void setShort(Text text, Short value)
     {
         text.set(encode(SMALLINT, value));
     }
 
-    @Override
+	@Override
     public Time getTime(String name)
     {
         return new Time(decode(BIGINT, getFieldValue(name)));
     }
 
-    @Override
+	@Override
     public void setTime(Text text, Time value)
     {
         text.set(encode(TIME, value));
     }
 
-    @Override
+	@Override
     public Timestamp getTimestamp(String name)
     {
         return new Timestamp(decode(TIMESTAMP, getFieldValue(name)));
     }
 
-    @Override
+	@Override
     public void setTimestamp(Text text, Timestamp value)
     {
         text.set(encode(TIMESTAMP, value));
     }
 
-    @Override
+	@Override
     public byte[] getVarbinary(String name)
     {
         return decode(VARBINARY, getFieldValue(name));
     }
 
-    @Override
+	@Override
     public void setVarbinary(Text text, byte[] value)
     {
         text.set(encode(VARBINARY, value));
     }
 
-    @Override
+	@Override
     public String getVarchar(String name)
     {
         return decode(VARCHAR, getFieldValue(name));
     }
 
-    @Override
+	@Override
     public void setVarchar(Text text, String value)
     {
         text.set(encode(VARCHAR, value));
     }
 
-    private byte[] getFieldValue(String name)
+	private byte[] getFieldValue(String name)
     {
         return columnValues.get(name);
     }
 
-    @Override
+	@Override
     public byte[] encode(Type type, Object value)
     {
         Object toEncode;
@@ -373,13 +372,13 @@ public class LexicoderRowSerializer
         return getLexicoder(type).encode(toEncode);
     }
 
-    @Override
+	@Override
     public <T> T decode(Type type, byte[] value)
     {
         return (T) getLexicoder(type).decode(value);
     }
 
-    public static Lexicoder getLexicoder(Type type)
+	public static Lexicoder getLexicoder(Type type)
     {
         if (Types.isArrayType(type)) {
             return getListLexicoder(type);
@@ -399,7 +398,7 @@ public class LexicoderRowSerializer
         }
     }
 
-    private static ListLexicoder getListLexicoder(Type elementType)
+	private static ListLexicoder getListLexicoder(Type elementType)
     {
         ListLexicoder<?> listLexicoder = LIST_LEXICODERS.get(elementType.getTypeSignature());
         if (listLexicoder == null) {
@@ -409,7 +408,7 @@ public class LexicoderRowSerializer
         return listLexicoder;
     }
 
-    private static MapLexicoder getMapLexicoder(Type type)
+	private static MapLexicoder getMapLexicoder(Type type)
     {
         MapLexicoder<?, ?> mapLexicoder = MAP_LEXICODERS.get(type.getTypeSignature());
         if (mapLexicoder == null) {

@@ -47,15 +47,8 @@ public class TestPrecomputedHashes
     {
         // issue #11593
         assertions.assertQuery(
-                "SELECT a " +
-                        "FROM (" +
-                        "    SELECT a, b" +
-                        "    FROM (VALUES (1, 2)) t(a, b)" +
-                        "    WHERE a = 1" +
-                        "    GROUP BY a, b" +
-                        "    LIMIT 1" +
-                        ")" +
-                        "GROUP BY a",
+                new StringBuilder().append("SELECT a ").append("FROM (").append("    SELECT a, b").append("    FROM (VALUES (1, 2)) t(a, b)").append("    WHERE a = 1").append("    GROUP BY a, b").append("    LIMIT 1")
+						.append(")").append("GROUP BY a").toString(),
                 "VALUES (1)");
     }
 }

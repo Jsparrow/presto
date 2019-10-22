@@ -119,22 +119,6 @@ public class TestBlockRetainedSizeBreakdown
         checkRetainedSize(block, false);
     }
 
-    private static final class ObjectStrategy
-            implements Strategy<Object>
-    {
-        @Override
-        public int hashCode(Object object)
-        {
-            return System.identityHashCode(object);
-        }
-
-        @Override
-        public boolean equals(Object left, Object right)
-        {
-            return left == right;
-        }
-    }
-
     private static void checkRetainedSize(Block block, boolean getRegionCreateNewObjects)
     {
         AtomicLong objectSize = new AtomicLong();
@@ -156,19 +140,17 @@ public class TestBlockRetainedSizeBreakdown
         assertEquals(trackedObjects.getLong(copyBlock), 1);
         trackedObjects.remove(block);
         trackedObjects.remove(copyBlock);
-        for (long value : trackedObjects.values()) {
-            assertEquals(value, getRegionCreateNewObjects ? 1 : 2);
-        }
+        trackedObjects.values().stream().mapToLong(Long::valueOf).forEach(value -> assertEquals(value, getRegionCreateNewObjects ? 1 : 2));
     }
 
-    private static void writeEntries(int expectedEntries, BlockBuilder blockBuilder, Type type)
+	private static void writeEntries(int expectedEntries, BlockBuilder blockBuilder, Type type)
     {
         for (int i = 0; i < expectedEntries; i++) {
             writeNativeValue(type, blockBuilder, castIntegerToObject(i, type));
         }
     }
 
-    private static Object castIntegerToObject(int value, Type type)
+	private static Object castIntegerToObject(int value, Type type)
     {
         if (type == INTEGER || type == TINYINT || type == BIGINT) {
             return (long) value;
@@ -182,7 +164,7 @@ public class TestBlockRetainedSizeBreakdown
         throw new UnsupportedOperationException();
     }
 
-    private static Block createVariableWidthBlock(int entries)
+	private static Block createVariableWidthBlock(int entries)
     {
         int[] offsets = new int[entries + 1];
         DynamicSliceOutput dynamicSliceOutput = new DynamicSliceOutput(entries);
@@ -191,5 +173,21 @@ public class TestBlockRetainedSizeBreakdown
             offsets[i + 1] = dynamicSliceOutput.size();
         }
         return new VariableWidthBlock(entries, dynamicSliceOutput.slice(), offsets, Optional.empty());
+    }
+
+	private static final class ObjectStrategy
+            implements Strategy<Object>
+    {
+        @Override
+        public int hashCode(Object object)
+        {
+            return System.identityHashCode(object);
+        }
+
+        @Override
+        public boolean equals(Object left, Object right)
+        {
+            return left == right;
+        }
     }
 }

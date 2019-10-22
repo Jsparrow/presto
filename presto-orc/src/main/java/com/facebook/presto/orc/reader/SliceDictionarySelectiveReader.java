@@ -631,16 +631,17 @@ public class SliceDictionarySelectiveReader
     {
         verify(positionCount > 0);
         // only update the block if the array changed to prevent creation of new Block objects, since
-        // the engine currently uses identity equality to test if dictionaries are the same
-        if (currentDictionaryData != dictionaryData) {
-            boolean[] isNullVector = new boolean[positionCount];
-            isNullVector[positionCount - 1] = true;
-            dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
-            dictionary = new VariableWidthBlock(positionCount, wrappedBuffer(dictionaryData), dictionaryOffsets, Optional.of(isNullVector));
-            currentDictionaryData = dictionaryData;
-            evaluationStatus = ensureCapacity(evaluationStatus, positionCount - 1);
-            fill(evaluationStatus, 0, evaluationStatus.length, FILTER_NOT_EVALUATED);
-        }
+		// the engine currently uses identity equality to test if dictionaries are the same
+		if (currentDictionaryData == dictionaryData) {
+			return;
+		}
+		boolean[] isNullVector = new boolean[positionCount];
+		isNullVector[positionCount - 1] = true;
+		dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
+		dictionary = new VariableWidthBlock(positionCount, wrappedBuffer(dictionaryData), dictionaryOffsets, Optional.of(isNullVector));
+		currentDictionaryData = dictionaryData;
+		evaluationStatus = ensureCapacity(evaluationStatus, positionCount - 1);
+		fill(evaluationStatus, 0, evaluationStatus.length, FILTER_NOT_EVALUATED);
     }
 
     private BlockLease newLease(Block block)

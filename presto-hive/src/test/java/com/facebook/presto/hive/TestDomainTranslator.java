@@ -113,7 +113,7 @@ public class TestDomainTranslator
                 .put("c_struct.e[\"foo\"]", mapSubscript(dereference(C_STRUCT, 4), constant(Slices.utf8Slice("foo"), VARCHAR)))
                 .build();
 
-        for (Map.Entry<String, RowExpression> entry : expressions.entrySet()) {
+        expressions.entrySet().forEach(entry -> {
             String subfield = entry.getKey();
             RowExpression expression = entry.getValue();
 
@@ -126,7 +126,7 @@ public class TestDomainTranslator
             assertPredicateTranslates(bigintIn(expression, ImmutableList.of(1L)), subfield, Domain.singleValue(BIGINT, 1L));
 
             assertPredicateTranslates(bigintIn(expression, ImmutableList.of(1L, 2L)), subfield, Domain.create(ValueSet.ofRanges(Range.equal(BIGINT, 1L), Range.equal(BIGINT, 2L)), false));
-        }
+        });
 
         Type arrayType = C_BIGINT_ARRAY.getType();
         assertPredicateTranslates(isNull(C_BIGINT_ARRAY), C_BIGINT_ARRAY.getName(), Domain.create(ValueSet.none(arrayType), true));

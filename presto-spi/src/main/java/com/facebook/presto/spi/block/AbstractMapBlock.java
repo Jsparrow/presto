@@ -70,7 +70,8 @@ public abstract class AbstractMapBlock
     /**
      * offset is entry-based, not position-based. (see getOffsets)
      */
-    public abstract int getOffsetBase();
+    @Override
+	public abstract int getOffsetBase();
 
     @Nullable
     protected abstract boolean[] getMapIsNull();
@@ -358,7 +359,25 @@ public abstract class AbstractMapBlock
         }
     }
 
-    public static class HashTables
+    @Override
+    public Block getBlockUnchecked(int internalPosition)
+    {
+        assert internalPositionInRange(internalPosition, this.getOffsetBase(), getPositionCount());
+
+        int startEntryOffset = getOffsets()[internalPosition];
+        int endEntryOffset = getOffsets()[internalPosition + 1];
+        return new SingleMapBlock(startEntryOffset * 2, (endEntryOffset - startEntryOffset) * 2, this);
+    }
+
+	@Override
+    public boolean isNullUnchecked(int internalPosition)
+    {
+        assert mayHaveNull() : "no nulls present";
+        assert internalPositionInRange(internalPosition, this.getOffsetBase(), getPositionCount());
+        return getMapIsNull()[internalPosition];
+    }
+
+	public static class HashTables
     {
         private static final int INSTANCE_SIZE = ClassLayout.parseClass(HashTables.class).instanceSize();
 
@@ -413,23 +432,5 @@ public abstract class AbstractMapBlock
         {
             return INSTANCE_SIZE + sizeOfIntArray(expectedEntryCount);
         }
-    }
-
-    @Override
-    public Block getBlockUnchecked(int internalPosition)
-    {
-        assert internalPositionInRange(internalPosition, this.getOffsetBase(), getPositionCount());
-
-        int startEntryOffset = getOffsets()[internalPosition];
-        int endEntryOffset = getOffsets()[internalPosition + 1];
-        return new SingleMapBlock(startEntryOffset * 2, (endEntryOffset - startEntryOffset) * 2, this);
-    }
-
-    @Override
-    public boolean isNullUnchecked(int internalPosition)
-    {
-        assert mayHaveNull() : "no nulls present";
-        assert internalPositionInRange(internalPosition, this.getOffsetBase(), getPositionCount());
-        return getMapIsNull()[internalPosition];
     }
 }

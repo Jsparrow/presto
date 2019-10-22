@@ -75,40 +75,41 @@ public class RemoteNodeState
             log.warn("Node state update request to %s has not returned in %s", stateInfoUri, sinceUpdate.toString(SECONDS));
             lastWarningLogged.set(System.nanoTime());
         }
-        if (sinceUpdate.toMillis() > 1_000 && future.get() == null) {
-            Request request = prepareGet()
-                    .setUri(stateInfoUri)
-                    .setHeader(CONTENT_TYPE, JSON_UTF_8.toString())
-                    .build();
-            HttpResponseFuture<JsonResponse<NodeState>> responseFuture = httpClient.executeAsync(request, createFullJsonResponseHandler(jsonCodec(NodeState.class)));
-            future.compareAndSet(null, responseFuture);
+        if (!(sinceUpdate.toMillis() > 1_000 && future.get() == null)) {
+			return;
+		}
+		Request request = prepareGet()
+		        .setUri(stateInfoUri)
+		        .setHeader(CONTENT_TYPE, JSON_UTF_8.toString())
+		        .build();
+		HttpResponseFuture<JsonResponse<NodeState>> responseFuture = httpClient.executeAsync(request, createFullJsonResponseHandler(jsonCodec(NodeState.class)));
+		future.compareAndSet(null, responseFuture);
+		Futures.addCallback(responseFuture, new FutureCallback<JsonResponse<NodeState>>()
+		{
+		    @Override
+		    public void onSuccess(@Nullable JsonResponse<NodeState> result)
+		    {
+		        lastUpdateNanos.set(System.nanoTime());
+		        future.compareAndSet(responseFuture, null);
+		        if (result == null) {
+					return;
+				}
+				if (result.hasValue()) {
+				    nodeState.set(Optional.ofNullable(result.getValue()));
+				}
+				if (result.getStatusCode() != OK.code()) {
+				    log.warn("Error fetching node state from %s returned status %d: %s", stateInfoUri, result.getStatusCode(), result.getStatusMessage());
+				    return;
+				}
+		    }
 
-            Futures.addCallback(responseFuture, new FutureCallback<JsonResponse<NodeState>>()
-            {
-                @Override
-                public void onSuccess(@Nullable JsonResponse<NodeState> result)
-                {
-                    lastUpdateNanos.set(System.nanoTime());
-                    future.compareAndSet(responseFuture, null);
-                    if (result != null) {
-                        if (result.hasValue()) {
-                            nodeState.set(Optional.ofNullable(result.getValue()));
-                        }
-                        if (result.getStatusCode() != OK.code()) {
-                            log.warn("Error fetching node state from %s returned status %d: %s", stateInfoUri, result.getStatusCode(), result.getStatusMessage());
-                            return;
-                        }
-                    }
-                }
-
-                @Override
-                public void onFailure(Throwable t)
-                {
-                    log.warn("Error fetching node state from %s: %s", stateInfoUri, t.getMessage());
-                    lastUpdateNanos.set(System.nanoTime());
-                    future.compareAndSet(responseFuture, null);
-                }
-            }, directExecutor());
-        }
+		    @Override
+		    public void onFailure(Throwable t)
+		    {
+		        log.warn("Error fetching node state from %s: %s", stateInfoUri, t.getMessage());
+		        lastUpdateNanos.set(System.nanoTime());
+		        future.compareAndSet(responseFuture, null);
+		    }
+		}, directExecutor());
     }
 }

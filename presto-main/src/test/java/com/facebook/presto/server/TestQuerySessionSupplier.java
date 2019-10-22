@@ -58,7 +58,7 @@ public class TestQuerySessionSupplier
                     .put(PRESTO_CLIENT_INFO, "client-info")
                     .put(PRESTO_CLIENT_TAGS, "tag1,tag2 ,tag3, tag2")
                     .put(PRESTO_SESSION, QUERY_MAX_MEMORY + "=1GB")
-                    .put(PRESTO_SESSION, JOIN_DISTRIBUTION_TYPE + "=partitioned," + HASH_PARTITION_COUNT + " = 43")
+                    .put(PRESTO_SESSION, new StringBuilder().append(JOIN_DISTRIBUTION_TYPE).append("=partitioned,").append(HASH_PARTITION_COUNT).append(" = 43").toString())
                     .put(PRESTO_PREPARED_STATEMENT, "query1=select * from foo,query2=select * from bar")
                     .build(),
             "testRemote");

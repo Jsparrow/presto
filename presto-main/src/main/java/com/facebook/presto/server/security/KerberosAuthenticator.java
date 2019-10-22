@@ -67,7 +67,7 @@ public class KerberosAuthenticator
             String hostname = Optional.ofNullable(config.getPrincipalHostname())
                     .orElseGet(() -> getLocalHost().getCanonicalHostName())
                     .toLowerCase(Locale.US);
-            String servicePrincipal = config.getServiceName() + "/" + hostname;
+            String servicePrincipal = new StringBuilder().append(config.getServiceName()).append("/").append(hostname).toString();
             loginContext = new LoginContext("", null, null, new Configuration()
             {
                 @Override
@@ -93,7 +93,7 @@ public class KerberosAuthenticator
             loginContext.login();
 
             serverCredential = doAs(loginContext.getSubject(), () -> gssManager.createCredential(
-                    gssManager.createName(config.getServiceName() + "@" + hostname, GSSName.NT_HOSTBASED_SERVICE),
+                    gssManager.createName(new StringBuilder().append(config.getServiceName()).append("@").append(hostname).toString(), GSSName.NT_HOSTBASED_SERVICE),
                     INDEFINITE_LIFETIME,
                     new Oid[] {
                             new Oid("1.2.840.113554.1.2.2"), // kerberos 5
@@ -179,12 +179,6 @@ public class KerberosAuthenticator
         return Optional.empty();
     }
 
-    private interface GssSupplier<T>
-    {
-        T get()
-                throws GSSException;
-    }
-
     private static <T> T doAs(Subject subject, GssSupplier<T> action)
     {
         return Subject.doAs(subject, (PrivilegedAction<T>) () -> {
@@ -197,7 +191,7 @@ public class KerberosAuthenticator
         });
     }
 
-    private static InetAddress getLocalHost()
+	private static InetAddress getLocalHost()
     {
         try {
             return InetAddress.getLocalHost();
@@ -205,5 +199,11 @@ public class KerberosAuthenticator
         catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+    }
+
+	private interface GssSupplier<T>
+    {
+        T get()
+                throws GSSException;
     }
 }

@@ -50,7 +50,111 @@ import static java.util.Objects.requireNonNull;
 public class PartitionedOutputOperator
         implements Operator
 {
-    public static class PartitionedOutputFactory
+    private final OperatorContext operatorContext;
+	private final Function<Page, Page> pagePreprocessor;
+	private final PagePartitioner partitionFunction;
+	private final LocalMemoryContext systemMemoryContext;
+	private final long partitionsInitialRetainedSize;
+	private boolean finished;
+
+	public PartitionedOutputOperator(
+            OperatorContext operatorContext,
+            List<Type> sourceTypes,
+            Function<Page, Page> pagePreprocessor,
+            PartitionFunction partitionFunction,
+            List<Integer> partitionChannels,
+            List<Optional<ConstantExpression>> partitionConstants,
+            boolean replicatesAnyRow,
+            OptionalInt nullChannel,
+            OutputBuffer outputBuffer,
+            PagesSerdeFactory serdeFactory,
+            DataSize maxMemory)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
+        this.partitionFunction = new PagePartitioner(
+                partitionFunction,
+                partitionChannels,
+                partitionConstants,
+                replicatesAnyRow,
+                nullChannel,
+                outputBuffer,
+                serdeFactory,
+                sourceTypes,
+                maxMemory,
+                operatorContext);
+
+        operatorContext.setInfoSupplier(this::getInfo);
+        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(PartitionedOutputOperator.class.getSimpleName());
+        this.partitionsInitialRetainedSize = this.partitionFunction.getRetainedSizeInBytes();
+        this.systemMemoryContext.setBytes(partitionsInitialRetainedSize);
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	public PartitionedOutputInfo getInfo()
+    {
+        return partitionFunction.getInfo();
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+        partitionFunction.flush(true);
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished && isBlocked().isDone();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        ListenableFuture<?> blocked = partitionFunction.isFull();
+        return blocked.isDone() ? NOT_BLOCKED : blocked;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished && isBlocked().isDone();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+
+        if (page.getPositionCount() == 0) {
+            return;
+        }
+
+        page = pagePreprocessor.apply(page);
+        partitionFunction.partitionPage(page);
+
+        // We use getSizeInBytes() here instead of getRetainedSizeInBytes() for an approximation of
+        // the amount of memory used by the pageBuilders, because calculating the retained
+        // size can be expensive especially for complex types.
+        long partitionsSizeInBytes = partitionFunction.getSizeInBytes();
+
+        // We also add partitionsInitialRetainedSize as an approximation of the object overhead of the partitions.
+        systemMemoryContext.setBytes(partitionsSizeInBytes + partitionsInitialRetainedSize);
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class PartitionedOutputFactory
             implements OutputFactory
     {
         private final PartitionFunction partitionFunction;
@@ -187,110 +291,6 @@ public class PartitionedOutputOperator
                     serdeFactory,
                     maxMemory);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final Function<Page, Page> pagePreprocessor;
-    private final PagePartitioner partitionFunction;
-    private final LocalMemoryContext systemMemoryContext;
-    private final long partitionsInitialRetainedSize;
-    private boolean finished;
-
-    public PartitionedOutputOperator(
-            OperatorContext operatorContext,
-            List<Type> sourceTypes,
-            Function<Page, Page> pagePreprocessor,
-            PartitionFunction partitionFunction,
-            List<Integer> partitionChannels,
-            List<Optional<ConstantExpression>> partitionConstants,
-            boolean replicatesAnyRow,
-            OptionalInt nullChannel,
-            OutputBuffer outputBuffer,
-            PagesSerdeFactory serdeFactory,
-            DataSize maxMemory)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.pagePreprocessor = requireNonNull(pagePreprocessor, "pagePreprocessor is null");
-        this.partitionFunction = new PagePartitioner(
-                partitionFunction,
-                partitionChannels,
-                partitionConstants,
-                replicatesAnyRow,
-                nullChannel,
-                outputBuffer,
-                serdeFactory,
-                sourceTypes,
-                maxMemory,
-                operatorContext);
-
-        operatorContext.setInfoSupplier(this::getInfo);
-        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(PartitionedOutputOperator.class.getSimpleName());
-        this.partitionsInitialRetainedSize = this.partitionFunction.getRetainedSizeInBytes();
-        this.systemMemoryContext.setBytes(partitionsInitialRetainedSize);
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    public PartitionedOutputInfo getInfo()
-    {
-        return partitionFunction.getInfo();
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-        partitionFunction.flush(true);
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished && isBlocked().isDone();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        ListenableFuture<?> blocked = partitionFunction.isFull();
-        return blocked.isDone() ? NOT_BLOCKED : blocked;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished && isBlocked().isDone();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-
-        if (page.getPositionCount() == 0) {
-            return;
-        }
-
-        page = pagePreprocessor.apply(page);
-        partitionFunction.partitionPage(page);
-
-        // We use getSizeInBytes() here instead of getRetainedSizeInBytes() for an approximation of
-        // the amount of memory used by the pageBuilders, because calculating the retained
-        // size can be expensive especially for complex types.
-        long partitionsSizeInBytes = partitionFunction.getSizeInBytes();
-
-        // We also add partitionsInitialRetainedSize as an approximation of the object overhead of the partitions.
-        systemMemoryContext.setBytes(partitionsSizeInBytes + partitionsInitialRetainedSize);
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 
     private static class PagePartitioner

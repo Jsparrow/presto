@@ -23,8 +23,6 @@ import com.facebook.presto.spi.type.Type;
 import com.google.common.collect.ImmutableList;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
-
 import static com.facebook.presto.block.BlockAssertions.createArrayBigintBlock;
 import static com.facebook.presto.block.BlockAssertions.createDoublesBlock;
 import static com.facebook.presto.block.BlockAssertions.createLongsBlock;
@@ -37,6 +35,7 @@ import static com.facebook.presto.spi.type.DoubleType.DOUBLE;
 import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static com.facebook.presto.sql.analyzer.TypeSignatureProvider.fromTypes;
 import static org.testng.Assert.assertEquals;
+import java.util.Collections;
 
 public class TestMinMaxByNAggregation
 {
@@ -48,7 +47,7 @@ public class TestMinMaxByNAggregation
         InternalAggregationFunction function = getMaxByAggregation(DOUBLE, DOUBLE, BIGINT);
         assertAggregation(
                 function,
-                Arrays.asList((Double) null),
+                Collections.singletonList((Double) null),
                 createDoublesBlock(1.0, null),
                 createDoublesBlock(3.0, 5.0),
                 createRLEBlock(1L, 2));
@@ -62,14 +61,14 @@ public class TestMinMaxByNAggregation
 
         assertAggregation(
                 function,
-                Arrays.asList(1.0),
+                Collections.singletonList(1.0),
                 createDoublesBlock(null, 1.0, null, null),
                 createDoublesBlock(null, 0.0, null, null),
                 createRLEBlock(2L, 4));
 
         assertAggregation(
                 function,
-                Arrays.asList(1.0),
+                Collections.singletonList(1.0),
                 createDoublesBlock(1.0),
                 createDoublesBlock(0.0),
                 createRLEBlock(2L, 1));
@@ -102,7 +101,7 @@ public class TestMinMaxByNAggregation
         InternalAggregationFunction function = getMinByAggregation(DOUBLE, DOUBLE, BIGINT);
         assertAggregation(
                 function,
-                Arrays.asList((Double) null),
+                Collections.singletonList((Double) null),
                 createDoublesBlock(1.0, null),
                 createDoublesBlock(5.0, 3.0),
                 createRLEBlock(1L, 2));

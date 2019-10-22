@@ -46,9 +46,7 @@ public abstract class AbstractJdbiSourceQuerySupplier
         ImmutableList.Builder<SourceQuery> sourceQueries = ImmutableList.builder();
         try (Handle handle = jdbiProvider.get().open()) {
             VerifierDao verifierDao = handle.attach(VerifierDao.class);
-            for (String suite : suites) {
-                sourceQueries.addAll(verifierDao.getSourceQueries(tableName, suite, maxQueriesPerSuite));
-            }
+            suites.forEach(suite -> sourceQueries.addAll(verifierDao.getSourceQueries(tableName, suite, maxQueriesPerSuite)));
         }
         return sourceQueries.build();
     }

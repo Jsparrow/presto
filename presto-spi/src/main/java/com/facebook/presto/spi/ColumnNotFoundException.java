@@ -23,7 +23,7 @@ public class ColumnNotFoundException
 
     public ColumnNotFoundException(SchemaTableName tableName, String columnName)
     {
-        this(tableName, columnName, "Column " + columnName + " not found in table " + tableName);
+        this(tableName, columnName, new StringBuilder().append("Column ").append(columnName).append(" not found in table ").append(tableName).toString());
     }
 
     public ColumnNotFoundException(SchemaTableName tableName, String columnName, String message)
@@ -35,7 +35,7 @@ public class ColumnNotFoundException
 
     public ColumnNotFoundException(SchemaTableName tableName, String columnName, Throwable cause)
     {
-        this(tableName, columnName, "Table " + tableName + " not found", cause);
+        this(tableName, columnName, new StringBuilder().append("Table ").append(tableName).append(" not found").toString(), cause);
     }
 
     public ColumnNotFoundException(SchemaTableName tableName, String columnName, String message, Throwable cause)

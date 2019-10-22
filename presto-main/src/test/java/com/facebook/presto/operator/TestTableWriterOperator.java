@@ -181,8 +181,7 @@ public class TestTableWriterOperator
 
         long peakMemoryUsage = 0;
         long validationCpuNanos = 0;
-        for (int i = 0; i < pages.size(); i++) {
-            Page page = pages.get(i);
+        for (Page page : pages) {
             peakMemoryUsage += page.getRetainedSizeInBytes();
             validationCpuNanos += page.getPositionCount();
             tableWriterOperator.addInput(page);

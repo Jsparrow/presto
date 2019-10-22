@@ -88,13 +88,13 @@ public class AvroColumnDecoder
             return isSupportedPrimitive(type.getTypeParameters().get(0));
         }
 
-        if (type.getTypeSignature().getBase().equalsIgnoreCase(MAP)) {
-            List<Type> typeParameters = type.getTypeParameters();
-            checkArgument(typeParameters.size() == 2, "expecting exactly two type parameters for map");
-            checkArgument(typeParameters.get(0) instanceof VarcharType, "Unsupported column type '%s' for map key", typeParameters.get(0));
-            return isSupportedPrimitive(type.getTypeParameters().get(1));
-        }
-        return false;
+        if (!type.getTypeSignature().getBase().equalsIgnoreCase(MAP)) {
+			return false;
+		}
+		List<Type> typeParameters = type.getTypeParameters();
+		checkArgument(typeParameters.size() == 2, "expecting exactly two type parameters for map");
+		checkArgument(typeParameters.get(0) instanceof VarcharType, "Unsupported column type '%s' for map key", typeParameters.get(0));
+		return isSupportedPrimitive(type.getTypeParameters().get(1));
     }
 
     private boolean isSupportedPrimitive(Type type)
@@ -125,7 +125,127 @@ public class AvroColumnDecoder
         return value;
     }
 
-    private static class ObjectValueProvider
+    private static Slice getSlice(Object value, Type type, String columnName)
+    {
+        switch (type.getTypeSignature().getBase()) {
+            case VARCHAR:
+                if (value instanceof Utf8) {
+                    return truncateToLength(utf8Slice(value.toString()), type);
+                }
+            case VARBINARY:
+                if (value instanceof ByteBuffer) {
+                    return Slices.wrappedBuffer((ByteBuffer) value);
+                }
+            default:
+                throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("cannot decode object of '%s' as '%s' for column '%s'", value.getClass(), type, columnName));
+        }
+    }
+
+	private static Block serializeObject(BlockBuilder builder, Object value, Type type, String columnName)
+    {
+        switch (type.getTypeSignature().getBase()) {
+            case ARRAY:
+                return serializeList(builder, value, type, columnName);
+            case MAP:
+                return serializeMap(builder, value, type, columnName);
+            default:
+                serializeGeneric(builder, value, type, columnName);
+        }
+        return null;
+    }
+
+	private static Block serializeList(BlockBuilder blockBuilder, Object value, Type type, String columnName)
+    {
+        if (value == null) {
+            requireNonNull(blockBuilder, "parent blockBuilder is null").appendNull();
+            return blockBuilder.build();
+        }
+
+        List<?> list = (List) value;
+        List<Type> typeParameters = type.getTypeParameters();
+        Type elementType = typeParameters.get(0);
+
+        BlockBuilder currentBlockBuilder;
+        if (blockBuilder != null) {
+            currentBlockBuilder = blockBuilder.beginBlockEntry();
+        }
+        else {
+            currentBlockBuilder = elementType.createBlockBuilder(null, list.size());
+        }
+
+        list.forEach(element -> serializeObject(currentBlockBuilder, element, elementType, columnName));
+
+        if (blockBuilder == null) {
+			return currentBlockBuilder.build();
+		}
+		blockBuilder.closeEntry();
+		return null;
+    }
+
+	private static void serializeGeneric(BlockBuilder blockBuilder, Object value, Type type, String columnName)
+    {
+        requireNonNull(blockBuilder, "parent blockBuilder is null");
+
+        if (value == null) {
+            blockBuilder.appendNull();
+            return;
+        }
+
+        switch (type.getTypeSignature().getBase()) {
+            case BOOLEAN:
+                type.writeBoolean(blockBuilder, (Boolean) value);
+                break;
+            case BIGINT:
+                type.writeLong(blockBuilder, (Long) value);
+                break;
+            case DOUBLE:
+                type.writeDouble(blockBuilder, (Double) value);
+                break;
+            case VARCHAR:
+            case VARBINARY:
+                type.writeSlice(blockBuilder, getSlice(value, type, columnName));
+                break;
+            default:
+                throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("cannot decode object of '%s' as '%s' for column '%s'", value.getClass(), type, columnName));
+        }
+    }
+
+	private static Block serializeMap(BlockBuilder blockBuilder, Object value, Type type, String columnName)
+    {
+        if (value == null) {
+            requireNonNull(blockBuilder, "parent blockBuilder is null").appendNull();
+            return blockBuilder.build();
+        }
+
+        Map<?, ?> map = (Map) value;
+        List<Type> typeParameters = type.getTypeParameters();
+        Type keyType = typeParameters.get(0);
+        Type valueType = typeParameters.get(1);
+
+        BlockBuilder entryBuilder;
+        boolean builderSynthesized = false;
+
+        if (blockBuilder == null) {
+            builderSynthesized = true;
+            blockBuilder = type.createBlockBuilder(null, 1);
+        }
+        entryBuilder = blockBuilder.beginBlockEntry();
+
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (entry.getKey() != null) {
+                keyType.writeSlice(entryBuilder, truncateToLength(utf8Slice(entry.getKey().toString()), keyType));
+                serializeObject(entryBuilder, entry.getValue(), valueType, columnName);
+            }
+        }
+
+        blockBuilder.closeEntry();
+        if (builderSynthesized) {
+            return (Block) type.getObject(blockBuilder, 0);
+        }
+        return null;
+    }
+
+	private static class ObjectValueProvider
             extends FieldValueProvider
     {
         private final Object value;
@@ -183,127 +303,5 @@ public class AvroColumnDecoder
         {
             return serializeObject(null, value, columnType, columnName);
         }
-    }
-
-    private static Slice getSlice(Object value, Type type, String columnName)
-    {
-        switch (type.getTypeSignature().getBase()) {
-            case VARCHAR:
-                if (value instanceof Utf8) {
-                    return truncateToLength(utf8Slice(value.toString()), type);
-                }
-            case VARBINARY:
-                if (value instanceof ByteBuffer) {
-                    return Slices.wrappedBuffer((ByteBuffer) value);
-                }
-            default:
-                throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("cannot decode object of '%s' as '%s' for column '%s'", value.getClass(), type, columnName));
-        }
-    }
-
-    private static Block serializeObject(BlockBuilder builder, Object value, Type type, String columnName)
-    {
-        switch (type.getTypeSignature().getBase()) {
-            case ARRAY:
-                return serializeList(builder, value, type, columnName);
-            case MAP:
-                return serializeMap(builder, value, type, columnName);
-            default:
-                serializeGeneric(builder, value, type, columnName);
-        }
-        return null;
-    }
-
-    private static Block serializeList(BlockBuilder blockBuilder, Object value, Type type, String columnName)
-    {
-        if (value == null) {
-            requireNonNull(blockBuilder, "parent blockBuilder is null").appendNull();
-            return blockBuilder.build();
-        }
-
-        List<?> list = (List) value;
-        List<Type> typeParameters = type.getTypeParameters();
-        Type elementType = typeParameters.get(0);
-
-        BlockBuilder currentBlockBuilder;
-        if (blockBuilder != null) {
-            currentBlockBuilder = blockBuilder.beginBlockEntry();
-        }
-        else {
-            currentBlockBuilder = elementType.createBlockBuilder(null, list.size());
-        }
-
-        for (Object element : list) {
-            serializeObject(currentBlockBuilder, element, elementType, columnName);
-        }
-
-        if (blockBuilder != null) {
-            blockBuilder.closeEntry();
-            return null;
-        }
-        return currentBlockBuilder.build();
-    }
-
-    private static void serializeGeneric(BlockBuilder blockBuilder, Object value, Type type, String columnName)
-    {
-        requireNonNull(blockBuilder, "parent blockBuilder is null");
-
-        if (value == null) {
-            blockBuilder.appendNull();
-            return;
-        }
-
-        switch (type.getTypeSignature().getBase()) {
-            case BOOLEAN:
-                type.writeBoolean(blockBuilder, (Boolean) value);
-                break;
-            case BIGINT:
-                type.writeLong(blockBuilder, (Long) value);
-                break;
-            case DOUBLE:
-                type.writeDouble(blockBuilder, (Double) value);
-                break;
-            case VARCHAR:
-            case VARBINARY:
-                type.writeSlice(blockBuilder, getSlice(value, type, columnName));
-                break;
-            default:
-                throw new PrestoException(DECODER_CONVERSION_NOT_SUPPORTED, format("cannot decode object of '%s' as '%s' for column '%s'", value.getClass(), type, columnName));
-        }
-    }
-
-    private static Block serializeMap(BlockBuilder blockBuilder, Object value, Type type, String columnName)
-    {
-        if (value == null) {
-            requireNonNull(blockBuilder, "parent blockBuilder is null").appendNull();
-            return blockBuilder.build();
-        }
-
-        Map<?, ?> map = (Map) value;
-        List<Type> typeParameters = type.getTypeParameters();
-        Type keyType = typeParameters.get(0);
-        Type valueType = typeParameters.get(1);
-
-        BlockBuilder entryBuilder;
-        boolean builderSynthesized = false;
-
-        if (blockBuilder == null) {
-            builderSynthesized = true;
-            blockBuilder = type.createBlockBuilder(null, 1);
-        }
-        entryBuilder = blockBuilder.beginBlockEntry();
-
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (entry.getKey() != null) {
-                keyType.writeSlice(entryBuilder, truncateToLength(utf8Slice(entry.getKey().toString()), keyType));
-                serializeObject(entryBuilder, entry.getValue(), valueType, columnName);
-            }
-        }
-
-        blockBuilder.closeEntry();
-        if (builderSynthesized) {
-            return (Block) type.getObject(blockBuilder, 0);
-        }
-        return null;
     }
 }

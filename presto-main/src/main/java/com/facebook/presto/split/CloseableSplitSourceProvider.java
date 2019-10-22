@@ -56,17 +56,18 @@ public class CloseableSplitSourceProvider
     @Override
     public synchronized void close()
     {
-        if (!closed) {
-            closed = true;
-            for (SplitSource source : splitSources) {
-                try {
-                    source.close();
-                }
-                catch (Throwable t) {
-                    log.warn(t, "Error closing split source");
-                }
-            }
-            splitSources = null;
-        }
+        if (closed) {
+			return;
+		}
+		closed = true;
+		splitSources.forEach(source -> {
+		    try {
+		        source.close();
+		    }
+		    catch (Throwable t) {
+		        log.warn(t, "Error closing split source");
+		    }
+		});
+		splitSources = null;
     }
 }

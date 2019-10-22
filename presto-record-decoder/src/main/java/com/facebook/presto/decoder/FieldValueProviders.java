@@ -22,9 +22,18 @@ import static io.airlift.slice.Slices.wrappedBuffer;
  */
 public final class FieldValueProviders
 {
-    private FieldValueProviders() {}
+    private static final FieldValueProvider NULL_VALUE_PROVIDER = new FieldValueProvider()
+    {
+        @Override
+        public boolean isNull()
+        {
+            return true;
+        }
+    };
 
-    public static FieldValueProvider booleanValueProvider(boolean value)
+	private FieldValueProviders() {}
+
+	public static FieldValueProvider booleanValueProvider(boolean value)
     {
         return new FieldValueProvider()
         {
@@ -42,7 +51,7 @@ public final class FieldValueProviders
         };
     }
 
-    public static FieldValueProvider longValueProvider(long value)
+	public static FieldValueProvider longValueProvider(long value)
     {
         return new FieldValueProvider()
         {
@@ -60,7 +69,7 @@ public final class FieldValueProviders
         };
     }
 
-    public static FieldValueProvider bytesValueProvider(byte[] value)
+	public static FieldValueProvider bytesValueProvider(byte[] value)
     {
         return new FieldValueProvider()
         {
@@ -78,16 +87,7 @@ public final class FieldValueProviders
         };
     }
 
-    private static final FieldValueProvider NULL_VALUE_PROVIDER = new FieldValueProvider()
-    {
-        @Override
-        public boolean isNull()
-        {
-            return true;
-        }
-    };
-
-    public static FieldValueProvider nullValueProvider()
+	public static FieldValueProvider nullValueProvider()
     {
         return NULL_VALUE_PROVIDER;
     }

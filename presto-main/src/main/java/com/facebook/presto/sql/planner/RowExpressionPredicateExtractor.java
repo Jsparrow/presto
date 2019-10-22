@@ -69,6 +69,8 @@ import static com.facebook.presto.sql.relational.Expressions.specialForm;
 import static com.google.common.base.Predicates.in;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RowExpressionPredicateExtractor
 {
@@ -91,7 +93,8 @@ public class RowExpressionPredicateExtractor
     private static class Visitor
             extends InternalPlanVisitor<RowExpression, Void>
     {
-        private final RowExpressionDomainTranslator domainTranslator;
+        private final Logger logger = LoggerFactory.getLogger(Visitor.class);
+		private final RowExpressionDomainTranslator domainTranslator;
         private final LogicalRowExpressions logicalRowExpressions;
         private final RowExpressionDeterminismEvaluator determinismEvaluator;
         private final TypeManager typeManager;
@@ -293,9 +296,7 @@ public class RowExpressionPredicateExtractor
                     }
 
                     ImmutableList.Builder<RowExpression> nullConjuncts = ImmutableList.builder();
-                    for (VariableReferenceExpression variable : variables) {
-                        nullConjuncts.add(specialForm(IS_NULL, BOOLEAN, variable));
-                    }
+                    variables.forEach(variable -> nullConjuncts.add(specialForm(IS_NULL, BOOLEAN, variable)));
 
                     resultDisjunct.add(logicalRowExpressions.and(nullConjuncts.build()));
                 }
@@ -382,7 +383,8 @@ public class RowExpressionPredicateExtractor
                 return true;
             }
             catch (OperatorNotFoundException e) {
-                return false;
+                logger.error(e.getMessage(), e);
+				return false;
             }
         }
 

@@ -19,45 +19,45 @@ import static java.util.Objects.requireNonNull;
 
 public final class DateTimeEncoding
 {
-    private DateTimeEncoding()
+    private static final int TIME_ZONE_MASK = 0xFFF;
+	private static final int MILLIS_SHIFT = 12;
+
+	private DateTimeEncoding()
     {
     }
 
-    private static final int TIME_ZONE_MASK = 0xFFF;
-    private static final int MILLIS_SHIFT = 12;
-
-    private static long pack(long millisUtc, short timeZoneKey)
+	private static long pack(long millisUtc, short timeZoneKey)
     {
         return (millisUtc << MILLIS_SHIFT) | (timeZoneKey & TIME_ZONE_MASK);
     }
 
-    public static long packDateTimeWithZone(long millisUtc, String zoneId)
+	public static long packDateTimeWithZone(long millisUtc, String zoneId)
     {
         return packDateTimeWithZone(millisUtc, getTimeZoneKey(zoneId));
     }
 
-    public static long packDateTimeWithZone(long millisUtc, int offsetMinutes)
+	public static long packDateTimeWithZone(long millisUtc, int offsetMinutes)
     {
         return packDateTimeWithZone(millisUtc, getTimeZoneKeyForOffset(offsetMinutes));
     }
 
-    public static long packDateTimeWithZone(long millisUtc, TimeZoneKey timeZoneKey)
+	public static long packDateTimeWithZone(long millisUtc, TimeZoneKey timeZoneKey)
     {
         requireNonNull(timeZoneKey, "timeZoneKey is null");
         return pack(millisUtc, timeZoneKey.getKey());
     }
 
-    public static long unpackMillisUtc(long dateTimeWithTimeZone)
+	public static long unpackMillisUtc(long dateTimeWithTimeZone)
     {
         return dateTimeWithTimeZone >> MILLIS_SHIFT;
     }
 
-    public static TimeZoneKey unpackZoneKey(long dateTimeWithTimeZone)
+	public static TimeZoneKey unpackZoneKey(long dateTimeWithTimeZone)
     {
         return getTimeZoneKey((short) (dateTimeWithTimeZone & TIME_ZONE_MASK));
     }
 
-    public static long updateMillisUtc(long newMillsUtc, long dateTimeWithTimeZone)
+	public static long updateMillisUtc(long newMillsUtc, long dateTimeWithTimeZone)
     {
         return pack(newMillsUtc, (short) (dateTimeWithTimeZone & TIME_ZONE_MASK));
     }

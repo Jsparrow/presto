@@ -39,7 +39,7 @@ public class TestCastBytecodeExpression
     {
         assertBytecodeExpression(getStatic(getClass(), "OBJECT_FIELD").cast(String.class).invoke("length", int.class),
                 ((String) OBJECT_FIELD).length(),
-                "((String) " + getClass().getSimpleName() + ".OBJECT_FIELD).length()");
+                new StringBuilder().append("((String) ").append(getClass().getSimpleName()).append(".OBJECT_FIELD).length()").toString());
     }
 
     @Test
@@ -167,6 +167,6 @@ public class TestCastBytecodeExpression
 
     public static String expectedCastRendering(String expectedRendering, Class<?> castToType)
     {
-        return "((" + castToType.getSimpleName() + ") " + expectedRendering + ")";
+        return new StringBuilder().append("((").append(castToType.getSimpleName()).append(") ").append(expectedRendering).append(")").toString();
     }
 }

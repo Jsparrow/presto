@@ -34,33 +34,33 @@ import static java.util.Objects.requireNonNull;
 public class ArrayType
         extends AbstractType
 {
-    private final Type elementType;
     public static final String ARRAY_NULL_ELEMENT_MSG = "ARRAY comparison not supported for arrays with null elements";
+	private final Type elementType;
 
-    public ArrayType(Type elementType)
+	public ArrayType(Type elementType)
     {
         super(new TypeSignature(ARRAY, TypeSignatureParameter.of(elementType.getTypeSignature())), Block.class);
         this.elementType = requireNonNull(elementType, "elementType is null");
     }
 
-    public Type getElementType()
+	public Type getElementType()
     {
         return elementType;
     }
 
-    @Override
+	@Override
     public boolean isComparable()
     {
         return elementType.isComparable();
     }
 
-    @Override
+	@Override
     public boolean isOrderable()
     {
         return elementType.isOrderable();
     }
 
-    @Override
+	@Override
     public boolean equalTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         Block leftArray = leftBlock.getBlock(leftPosition);
@@ -81,7 +81,7 @@ public class ArrayType
         return true;
     }
 
-    @Override
+	@Override
     public long hash(Block block, int position)
     {
         Block array = getObject(block, position);
@@ -92,7 +92,7 @@ public class ArrayType
         return hash;
     }
 
-    @Override
+	@Override
     public int compareTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         if (!elementType.isOrderable()) {
@@ -121,7 +121,7 @@ public class ArrayType
         return 0;
     }
 
-    @Override
+	@Override
     public Object getObjectValue(ConnectorSession session, Block block, int position)
     {
         if (block.isNull(position)) {
@@ -137,7 +137,7 @@ public class ArrayType
         }
     }
 
-    private List<Object> arrayBlockToObjectValues(ConnectorSession session, Block block, int start, int length)
+	private List<Object> arrayBlockToObjectValues(ConnectorSession session, Block block, int start, int length)
     {
         List<Object> values = new ArrayList<>(length);
 
@@ -148,7 +148,7 @@ public class ArrayType
         return Collections.unmodifiableList(values);
     }
 
-    @Override
+	@Override
     public void appendTo(Block block, int position, BlockBuilder blockBuilder)
     {
         if (block.isNull(position)) {
@@ -159,63 +159,63 @@ public class ArrayType
         }
     }
 
-    @Override
+	@Override
     public Slice getSlice(Block block, int position)
     {
         return block.getSlice(position, 0, block.getSliceLength(position));
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value)
     {
         writeSlice(blockBuilder, value, 0, value.length());
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         blockBuilder.writeBytes(value, offset, length).closeEntry();
     }
 
-    @Override
+	@Override
     public Block getObject(Block block, int position)
     {
         return block.getBlock(position);
     }
 
-    @Override
+	@Override
     public Block getBlockUnchecked(Block block, int internalPosition)
     {
         return block.getBlockUnchecked(internalPosition);
     }
 
-    @Override
+	@Override
     public void writeObject(BlockBuilder blockBuilder, Object value)
     {
         blockBuilder.appendStructure((Block) value);
     }
 
-    @Override
+	@Override
     public BlockBuilder createBlockBuilder(BlockBuilderStatus blockBuilderStatus, int expectedEntries, int expectedBytesPerEntry)
     {
         return new ArrayBlockBuilder(elementType, blockBuilderStatus, expectedEntries, expectedBytesPerEntry);
     }
 
-    @Override
+	@Override
     public BlockBuilder createBlockBuilder(BlockBuilderStatus blockBuilderStatus, int expectedEntries)
     {
         return createBlockBuilder(blockBuilderStatus, expectedEntries, 100);
     }
 
-    @Override
+	@Override
     public List<Type> getTypeParameters()
     {
         return singletonList(getElementType());
     }
 
-    @Override
+	@Override
     public String getDisplayName()
     {
-        return ARRAY + "(" + elementType.getDisplayName() + ")";
+        return new StringBuilder().append(ARRAY).append("(").append(elementType.getDisplayName()).append(")").toString();
     }
 }

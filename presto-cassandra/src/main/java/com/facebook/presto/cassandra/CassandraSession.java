@@ -46,11 +46,9 @@ public interface CassandraSession
 
     List<String> getCaseSensitiveSchemaNames();
 
-    List<String> getCaseSensitiveTableNames(String caseInsensitiveSchemaName)
-            throws SchemaNotFoundException;
+    List<String> getCaseSensitiveTableNames(String caseInsensitiveSchemaName);
 
-    CassandraTable getTable(SchemaTableName schemaTableName)
-            throws TableNotFoundException;
+    CassandraTable getTable(SchemaTableName schemaTableName);
 
     /**
      * Get the list of partitions matching the given filters on partition keys.

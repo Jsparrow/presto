@@ -133,15 +133,14 @@ public final class InternalResourceGroupManager<C>
     public void loadConfigurationManager()
             throws Exception
     {
-        if (RESOURCE_GROUPS_CONFIGURATION.exists()) {
-            Map<String, String> properties = new HashMap<>(loadProperties(RESOURCE_GROUPS_CONFIGURATION));
-
-            String configurationManagerName = properties.remove(CONFIGURATION_MANAGER_PROPERTY_NAME);
-            checkArgument(!isNullOrEmpty(configurationManagerName),
-                    "Resource groups configuration %s does not contain %s", RESOURCE_GROUPS_CONFIGURATION.getAbsoluteFile(), CONFIGURATION_MANAGER_PROPERTY_NAME);
-
-            setConfigurationManager(configurationManagerName, properties);
-        }
+        if (!RESOURCE_GROUPS_CONFIGURATION.exists()) {
+			return;
+		}
+		Map<String, String> properties = new HashMap<>(loadProperties(RESOURCE_GROUPS_CONFIGURATION));
+		String configurationManagerName = properties.remove(CONFIGURATION_MANAGER_PROPERTY_NAME);
+		checkArgument(!isNullOrEmpty(configurationManagerName),
+		        "Resource groups configuration %s does not contain %s", RESOURCE_GROUPS_CONFIGURATION.getAbsoluteFile(), CONFIGURATION_MANAGER_PROPERTY_NAME);
+		setConfigurationManager(configurationManagerName, properties);
     }
 
     @VisibleForTesting
@@ -196,7 +195,7 @@ public final class InternalResourceGroupManager<C>
             // nano time has overflowed
             lastCpuQuotaGenerationNanos.set(nanoTime);
         }
-        for (RootInternalResourceGroup group : rootGroups) {
+        rootGroups.forEach(group -> {
             try {
                 if (elapsedSeconds > 0) {
                     group.generateCpuQuota(elapsedSeconds);
@@ -211,28 +210,29 @@ public final class InternalResourceGroupManager<C>
             catch (RuntimeException e) {
                 log.error(e, "Exception while processing queued queries for %s", group);
             }
-        }
+        });
     }
 
     private synchronized void createGroupIfNecessary(SelectionContext<C> context, Executor executor)
     {
         ResourceGroupId id = context.getResourceGroupId();
-        if (!groups.containsKey(id)) {
-            InternalResourceGroup group;
-            if (id.getParent().isPresent()) {
-                createGroupIfNecessary(new SelectionContext<>(id.getParent().get(), context.getContext()), executor);
-                InternalResourceGroup parent = groups.get(id.getParent().get());
-                requireNonNull(parent, "parent is null");
-                group = parent.getOrCreateSubGroup(id.getLastSegment());
-            }
-            else {
-                RootInternalResourceGroup root = new RootInternalResourceGroup(id.getSegments().get(0), this::exportGroup, executor);
-                group = root;
-                rootGroups.add(root);
-            }
-            configurationManager.get().configure(group, context);
-            checkState(groups.put(id, group) == null, "Unexpected existing resource group");
-        }
+        if (groups.containsKey(id)) {
+			return;
+		}
+		InternalResourceGroup group;
+		if (id.getParent().isPresent()) {
+		    createGroupIfNecessary(new SelectionContext<>(id.getParent().get(), context.getContext()), executor);
+		    InternalResourceGroup parent = groups.get(id.getParent().get());
+		    requireNonNull(parent, "parent is null");
+		    group = parent.getOrCreateSubGroup(id.getLastSegment());
+		}
+		else {
+		    RootInternalResourceGroup root = new RootInternalResourceGroup(id.getSegments().get(0), this::exportGroup, executor);
+		    group = root;
+		    rootGroups.add(root);
+		}
+		configurationManager.get().configure(group, context);
+		checkState(groups.put(id, group) == null, "Unexpected existing resource group");
     }
 
     private void exportGroup(InternalResourceGroup group, Boolean export)

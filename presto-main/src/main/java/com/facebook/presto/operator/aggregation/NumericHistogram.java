@@ -222,13 +222,11 @@ public class NumericHistogram
     private void store(PriorityQueue<Entry> queue)
     {
         nextIndex = 0;
-        for (Entry entry : queue) {
-            if (entry.isValid()) {
-                values[nextIndex] = entry.getValue();
-                weights[nextIndex] = entry.getWeight();
-                nextIndex++;
-            }
-        }
+        queue.stream().filter(Entry::isValid).forEach(entry -> {
+		    values[nextIndex] = entry.getValue();
+		    weights[nextIndex] = entry.getWeight();
+		    nextIndex++;
+		});
         sort(values, weights, nextIndex);
     }
 
@@ -295,20 +293,15 @@ public class NumericHistogram
             {
                 return Doubles.compare(values[a], values[b]);
             }
-        }, new Swapper()
-        {
-            @Override
-            public void swap(int a, int b)
-            {
-                double temp = values[a];
-                values[a] = values[b];
-                values[b] = temp;
+        }, (int a, int b) -> {
+		    double temp = values[a];
+		    values[a] = values[b];
+		    values[b] = temp;
 
-                temp = weights[a];
-                weights[a] = weights[b];
-                weights[b] = temp;
-            }
-        });
+		    temp = weights[a];
+		    weights[a] = weights[b];
+		    weights[b] = temp;
+		});
     }
 
     private static double computePenalty(double value1, double value2, double weight1, double weight2)

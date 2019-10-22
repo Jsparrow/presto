@@ -71,9 +71,8 @@ public class TestSphericalGeoFunctions
                 "GEOMETRYCOLLECTION (POINT (-40.2 28.9), LINESTRING (-40.2 28.9, -40.2 31.9, -37.2 31.9), POLYGON ((-40.2 28.9, -37.2 28.9, -37.2 31.9, -40.2 31.9, -40.2 28.9)))");
 
         BlockBuilder builder = SPHERICAL_GEOGRAPHY.createBlockBuilder(null, wktList.size());
-        for (String wkt : wktList) {
-            SPHERICAL_GEOGRAPHY.writeSlice(builder, GeoFunctions.toSphericalGeography(GeoFunctions.stGeometryFromText(utf8Slice(wkt))));
-        }
+        wktList.forEach(wkt -> SPHERICAL_GEOGRAPHY.writeSlice(builder,
+				GeoFunctions.toSphericalGeography(GeoFunctions.stGeometryFromText(utf8Slice(wkt)))));
         Block block = builder.build();
         for (int i = 0; i < wktList.size(); i++) {
             assertEquals(wktList.get(i), SPHERICAL_GEOGRAPHY.getObjectValue(null, block, i));
@@ -194,9 +193,7 @@ public class TestSphericalGeoFunctions
                 .filter(parts -> parts.length >= 2)
                 .collect(Collectors.toMap(parts -> parts[0], parts -> Double.valueOf(parts[1])));
 
-        for (String state : stateGeometries.keySet()) {
-            assertArea(stateGeometries.get(state), stateAreas.get(state));
-        }
+        stateGeometries.keySet().forEach(state -> assertArea(stateGeometries.get(state), stateAreas.get(state)));
     }
 
     private void assertArea(String wkt, double expectedArea)

@@ -25,12 +25,13 @@ import java.util.List;
 
 public interface PrestoAction
 {
-    @FunctionalInterface
+    QueryStats execute(Statement statement, QueryStage queryStage);
+
+	<R> QueryResult<R> execute(Statement statement, QueryStage queryStage, ResultSetConverter<R> converter);
+
+	@FunctionalInterface
     interface ResultSetConverter<R>
     {
-        R apply(ResultSet resultSet)
-                throws SQLException;
-
         ResultSetConverter<List<Object>> DEFAULT = resultSet -> {
             ImmutableList.Builder<Object> row = ImmutableList.builder();
             for (int i = 0; i < resultSet.getMetaData().getColumnCount(); i++) {
@@ -38,9 +39,8 @@ public interface PrestoAction
             }
             return row.build();
         };
+
+		R apply(ResultSet resultSet)
+                throws SQLException;
     }
-
-    QueryStats execute(Statement statement, QueryStage queryStage);
-
-    <R> QueryResult<R> execute(Statement statement, QueryStage queryStage, ResultSetConverter<R> converter);
 }
