@@ -23,40 +23,40 @@ public class ShardRange
     private final Tuple minTuple;
     private final Tuple maxTuple;
 
-    public static ShardRange of(Tuple min, Tuple max)
-    {
-        return new ShardRange(min, max);
-    }
-
     private ShardRange(Tuple minTuple, Tuple maxTuple)
     {
         this.minTuple = requireNonNull(minTuple, "minTuple is null");
         this.maxTuple = requireNonNull(maxTuple, "maxTuple is null");
     }
 
-    public Tuple getMinTuple()
+	public static ShardRange of(Tuple min, Tuple max)
+    {
+        return new ShardRange(min, max);
+    }
+
+	public Tuple getMinTuple()
     {
         return minTuple;
     }
 
-    public Tuple getMaxTuple()
+	public Tuple getMaxTuple()
     {
         return maxTuple;
     }
 
-    public boolean encloses(ShardRange other)
+	public boolean encloses(ShardRange other)
     {
         return this.getMinTuple().compareTo(other.getMinTuple()) <= 0 &&
                 this.getMaxTuple().compareTo(other.getMaxTuple()) >= 0;
     }
 
-    public boolean overlaps(ShardRange other)
+	public boolean overlaps(ShardRange other)
     {
         return this.getMinTuple().compareTo(other.getMaxTuple()) <= 0 &&
                 other.getMinTuple().compareTo(this.getMaxTuple()) <= 0;
     }
 
-    public boolean adjacent(ShardRange other)
+	public boolean adjacent(ShardRange other)
     {
         Object o1Min = this.getMinTuple().getValues().get(0);
         Object o1Max = this.getMaxTuple().getValues().get(0);
@@ -67,7 +67,7 @@ public class ShardRange
         return o1Max.equals(o2Min) || o2Max.equals(o1Min);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -81,13 +81,13 @@ public class ShardRange
                 Objects.equals(maxTuple, that.maxTuple);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(minTuple, maxTuple);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

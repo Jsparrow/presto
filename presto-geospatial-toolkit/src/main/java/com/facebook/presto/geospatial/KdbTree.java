@@ -40,168 +40,7 @@ public class KdbTree
 {
     private static final int MAX_LEVELS = 10_000;
 
-    private final Node root;
-
-    public static final class Node
-    {
-        private final Rectangle extent;
-        private final OptionalInt leafId;
-        private final Optional<Node> left;
-        private final Optional<Node> right;
-
-        public static Node newLeaf(Rectangle extent, int leafId)
-        {
-            return new Node(extent, OptionalInt.of(leafId), Optional.empty(), Optional.empty());
-        }
-
-        public static Node newInternal(Rectangle extent, Node left, Node right)
-        {
-            return new Node(extent, OptionalInt.empty(), Optional.of(left), Optional.of(right));
-        }
-
-        @JsonCreator
-        public Node(
-                @JsonProperty("extent") Rectangle extent,
-                @JsonProperty("leafId") OptionalInt leafId,
-                @JsonProperty("left") Optional<Node> left,
-                @JsonProperty("right") Optional<Node> right)
-        {
-            this.extent = requireNonNull(extent, "extent is null");
-            this.leafId = requireNonNull(leafId, "leafId is null");
-            this.left = requireNonNull(left, "left is null");
-            this.right = requireNonNull(right, "right is null");
-            if (leafId.isPresent()) {
-                checkArgument(leafId.getAsInt() >= 0, "leafId must be >= 0");
-                checkArgument(!left.isPresent(), "Leaf node cannot have left child");
-                checkArgument(!right.isPresent(), "Leaf node cannot have right child");
-            }
-            else {
-                checkArgument(left.isPresent(), "Intermediate node must have left child");
-                checkArgument(right.isPresent(), "Intermediate node must have right child");
-            }
-        }
-
-        @JsonProperty
-        public Rectangle getExtent()
-        {
-            return extent;
-        }
-
-        @JsonProperty
-        public OptionalInt getLeafId()
-        {
-            return leafId;
-        }
-
-        @JsonProperty
-        public Optional<Node> getLeft()
-        {
-            return left;
-        }
-
-        @JsonProperty
-        public Optional<Node> getRight()
-        {
-            return right;
-        }
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if (obj == null) {
-                return false;
-            }
-
-            if (!(obj instanceof Node)) {
-                return false;
-            }
-
-            Node other = (Node) obj;
-            return this.extent.equals(other.extent)
-                    && Objects.equals(this.leafId, other.leafId)
-                    && Objects.equals(this.left, other.left)
-                    && Objects.equals(this.right, other.right);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(extent, leafId, left, right);
-        }
-    }
-
-    @JsonCreator
-    public KdbTree(@JsonProperty("root") Node root)
-    {
-        this.root = requireNonNull(root, "root is null");
-    }
-
-    @JsonProperty
-    public Node getRoot()
-    {
-        return root;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (obj == null) {
-            return false;
-        }
-
-        if (!(obj instanceof KdbTree)) {
-            return false;
-        }
-
-        KdbTree other = (KdbTree) obj;
-        return this.root.equals(other.root);
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(root);
-    }
-
-    public Map<Integer, Rectangle> getLeaves()
-    {
-        ImmutableMap.Builder<Integer, Rectangle> leaves = ImmutableMap.builder();
-        addLeaves(root, leaves, node -> true);
-        return leaves.build();
-    }
-
-    public Map<Integer, Rectangle> findIntersectingLeaves(Rectangle envelope)
-    {
-        ImmutableMap.Builder<Integer, Rectangle> leaves = ImmutableMap.builder();
-        addLeaves(root, leaves, node -> node.extent.intersects(envelope));
-        return leaves.build();
-    }
-
-    private static void addLeaves(Node node, ImmutableMap.Builder<Integer, Rectangle> leaves, Predicate<Node> predicate)
-    {
-        if (!predicate.apply(node)) {
-            return;
-        }
-
-        if (node.leafId.isPresent()) {
-            leaves.put(node.leafId.getAsInt(), node.extent);
-        }
-        else {
-            addLeaves(node.left.get(), leaves, predicate);
-            addLeaves(node.right.get(), leaves, predicate);
-        }
-    }
-
-    private interface SplitDimension
-    {
-        Comparator<Rectangle> getComparator();
-
-        double getValue(Rectangle rectangle);
-
-        SplitResult<Rectangle> split(Rectangle rectangle, double value);
-    }
-
-    private static final SplitDimension BY_X = new SplitDimension() {
+	private static final SplitDimension BY_X = new SplitDimension() {
         private final Comparator<Rectangle> comparator = (first, second) -> ComparisonChain.start()
                 .compare(first.getXMin(), second.getXMin())
                 .compare(first.getYMin(), second.getYMin())
@@ -229,7 +68,7 @@ public class KdbTree
         }
     };
 
-    private static final SplitDimension BY_Y = new SplitDimension() {
+	private static final SplitDimension BY_Y = new SplitDimension() {
         private final Comparator<Rectangle> comparator = (first, second) -> ComparisonChain.start()
                 .compare(first.getYMin(), second.getYMin())
                 .compare(first.getXMin(), second.getXMin())
@@ -257,17 +96,71 @@ public class KdbTree
         }
     };
 
-    private static final class LeafIdAllocator
-    {
-        private int nextId;
+	private final Node root;
 
-        public int next()
-        {
-            return nextId++;
+	@JsonCreator
+    public KdbTree(@JsonProperty("root") Node root)
+    {
+        this.root = requireNonNull(root, "root is null");
+    }
+
+	@JsonProperty
+    public Node getRoot()
+    {
+        return root;
+    }
+
+	@Override
+    public boolean equals(Object obj)
+    {
+        if (obj == null) {
+            return false;
+        }
+
+        if (!(obj instanceof KdbTree)) {
+            return false;
+        }
+
+        KdbTree other = (KdbTree) obj;
+        return this.root.equals(other.root);
+    }
+
+	@Override
+    public int hashCode()
+    {
+        return Objects.hash(root);
+    }
+
+	public Map<Integer, Rectangle> getLeaves()
+    {
+        ImmutableMap.Builder<Integer, Rectangle> leaves = ImmutableMap.builder();
+        addLeaves(root, leaves, node -> true);
+        return leaves.build();
+    }
+
+	public Map<Integer, Rectangle> findIntersectingLeaves(Rectangle envelope)
+    {
+        ImmutableMap.Builder<Integer, Rectangle> leaves = ImmutableMap.builder();
+        addLeaves(root, leaves, node -> node.extent.intersects(envelope));
+        return leaves.build();
+    }
+
+	private static void addLeaves(Node node, ImmutableMap.Builder<Integer, Rectangle> leaves, Predicate<Node> predicate)
+    {
+        if (!predicate.apply(node)) {
+            return;
+        }
+
+        if (node.leafId.isPresent()) {
+            leaves.put(node.leafId.getAsInt(), node.extent);
+        }
+        else {
+            addLeaves(node.left.get(), leaves, predicate);
+            addLeaves(node.right.get(), leaves, predicate);
         }
     }
 
-    public static KdbTree buildKdbTree(int maxItemsPerNode, Rectangle extent, List<Rectangle> items)
+	public static KdbTree buildKdbTree(int maxItemsPerNode, Rectangle extent, List<Rectangle> items)
     {
         checkArgument(maxItemsPerNode > 0, "maxItemsPerNode must be > 0");
         requireNonNull(extent, "extent is null");
@@ -275,7 +168,7 @@ public class KdbTree
         return new KdbTree(buildKdbTreeNode(maxItemsPerNode, 0, extent, items, new LeafIdAllocator()));
     }
 
-    private static Node buildKdbTreeNode(int maxItemsPerNode, int level, Rectangle extent, List<Rectangle> items, LeafIdAllocator leafIdAllocator)
+	private static Node buildKdbTreeNode(int maxItemsPerNode, int level, Rectangle extent, List<Rectangle> items, LeafIdAllocator leafIdAllocator)
     {
         checkArgument(maxItemsPerNode > 0, "maxItemsPerNode must be > 0");
         checkArgument(level >= 0, "level must be >= 0");
@@ -302,29 +195,7 @@ public class KdbTree
         return newInternal(extent, splitResult.get().getLeft(), splitResult.get().getRight());
     }
 
-    private static final class SplitResult<T>
-    {
-        private final T left;
-        private final T right;
-
-        private SplitResult(T left, T right)
-        {
-            this.left = requireNonNull(left, "left is null");
-            this.right = requireNonNull(right, "right is null");
-        }
-
-        public T getLeft()
-        {
-            return left;
-        }
-
-        public T getRight()
-        {
-            return right;
-        }
-    }
-
-    private static Optional<SplitResult<Node>> trySplit(SplitDimension splitDimension, int maxItemsPerNode, int level, Rectangle extent, List<Rectangle> items, LeafIdAllocator leafIdAllocator)
+	private static Optional<SplitResult<Node>> trySplit(SplitDimension splitDimension, int maxItemsPerNode, int level, Rectangle extent, List<Rectangle> items, LeafIdAllocator leafIdAllocator)
     {
         checkArgument(items.size() > 1, "Number of items to split must be > 1");
 
@@ -359,5 +230,134 @@ public class KdbTree
         return Optional.of(new SplitResult(
                 buildKdbTreeNode(maxItemsPerNode, level + 1, childExtents.getLeft(), sortedItems.subList(0, splitIndex), leafIdAllocator),
                 buildKdbTreeNode(maxItemsPerNode, level + 1, childExtents.getRight(), sortedItems.subList(splitIndex, sortedItems.size()), leafIdAllocator)));
+    }
+
+    public static final class Node
+    {
+        private final Rectangle extent;
+        private final OptionalInt leafId;
+        private final Optional<Node> left;
+        private final Optional<Node> right;
+
+        @JsonCreator
+        public Node(
+                @JsonProperty("extent") Rectangle extent,
+                @JsonProperty("leafId") OptionalInt leafId,
+                @JsonProperty("left") Optional<Node> left,
+                @JsonProperty("right") Optional<Node> right)
+        {
+            this.extent = requireNonNull(extent, "extent is null");
+            this.leafId = requireNonNull(leafId, "leafId is null");
+            this.left = requireNonNull(left, "left is null");
+            this.right = requireNonNull(right, "right is null");
+            if (leafId.isPresent()) {
+                checkArgument(leafId.getAsInt() >= 0, "leafId must be >= 0");
+                checkArgument(!left.isPresent(), "Leaf node cannot have left child");
+                checkArgument(!right.isPresent(), "Leaf node cannot have right child");
+            }
+            else {
+                checkArgument(left.isPresent(), "Intermediate node must have left child");
+                checkArgument(right.isPresent(), "Intermediate node must have right child");
+            }
+        }
+
+		public static Node newLeaf(Rectangle extent, int leafId)
+        {
+            return new Node(extent, OptionalInt.of(leafId), Optional.empty(), Optional.empty());
+        }
+
+		public static Node newInternal(Rectangle extent, Node left, Node right)
+        {
+            return new Node(extent, OptionalInt.empty(), Optional.of(left), Optional.of(right));
+        }
+
+		@JsonProperty
+        public Rectangle getExtent()
+        {
+            return extent;
+        }
+
+		@JsonProperty
+        public OptionalInt getLeafId()
+        {
+            return leafId;
+        }
+
+		@JsonProperty
+        public Optional<Node> getLeft()
+        {
+            return left;
+        }
+
+		@JsonProperty
+        public Optional<Node> getRight()
+        {
+            return right;
+        }
+
+		@Override
+        public boolean equals(Object obj)
+        {
+            if (obj == null) {
+                return false;
+            }
+
+            if (!(obj instanceof Node)) {
+                return false;
+            }
+
+            Node other = (Node) obj;
+            return this.extent.equals(other.extent)
+                    && Objects.equals(this.leafId, other.leafId)
+                    && Objects.equals(this.left, other.left)
+                    && Objects.equals(this.right, other.right);
+        }
+
+		@Override
+        public int hashCode()
+        {
+            return Objects.hash(extent, leafId, left, right);
+        }
+    }
+
+    private interface SplitDimension
+    {
+        Comparator<Rectangle> getComparator();
+
+        double getValue(Rectangle rectangle);
+
+        SplitResult<Rectangle> split(Rectangle rectangle, double value);
+    }
+
+    private static final class LeafIdAllocator
+    {
+        private int nextId;
+
+        public int next()
+        {
+            return nextId++;
+        }
+    }
+
+    private static final class SplitResult<T>
+    {
+        private final T left;
+        private final T right;
+
+        private SplitResult(T left, T right)
+        {
+            this.left = requireNonNull(left, "left is null");
+            this.right = requireNonNull(right, "right is null");
+        }
+
+        public T getLeft()
+        {
+            return left;
+        }
+
+        public T getRight()
+        {
+            return right;
+        }
     }
 }

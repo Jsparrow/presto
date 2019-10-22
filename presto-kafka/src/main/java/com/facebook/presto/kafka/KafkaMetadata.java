@@ -76,9 +76,7 @@ public class KafkaMetadata
     public List<String> listSchemaNames(ConnectorSession session)
     {
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
-        for (SchemaTableName tableName : tableDescriptions.keySet()) {
-            builder.add(tableName.getSchemaName());
-        }
+        tableDescriptions.keySet().forEach(tableName -> builder.add(tableName.getSchemaName()));
         return ImmutableList.copyOf(builder.build());
     }
 
@@ -115,11 +113,7 @@ public class KafkaMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, String schemaNameOrNull)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (SchemaTableName tableName : tableDescriptions.keySet()) {
-            if (schemaNameOrNull == null || tableName.getSchemaName().equals(schemaNameOrNull)) {
-                builder.add(tableName);
-            }
-        }
+        tableDescriptions.keySet().stream().filter(tableName -> schemaNameOrNull == null || tableName.getSchemaName().equals(schemaNameOrNull)).forEach(builder::add);
 
         return builder.build();
     }
@@ -143,9 +137,8 @@ public class KafkaMetadata
         {
             List<KafkaTopicFieldDescription> fields = key.getFields();
             if (fields != null) {
-                for (KafkaTopicFieldDescription kafkaTopicFieldDescription : fields) {
-                    columnHandles.put(kafkaTopicFieldDescription.getName(), kafkaTopicFieldDescription.getColumnHandle(connectorId, true, index.getAndIncrement()));
-                }
+                fields.forEach(kafkaTopicFieldDescription -> columnHandles.put(kafkaTopicFieldDescription.getName(),
+						kafkaTopicFieldDescription.getColumnHandle(connectorId, true, index.getAndIncrement())));
             }
         });
 
@@ -153,9 +146,8 @@ public class KafkaMetadata
         {
             List<KafkaTopicFieldDescription> fields = message.getFields();
             if (fields != null) {
-                for (KafkaTopicFieldDescription kafkaTopicFieldDescription : fields) {
-                    columnHandles.put(kafkaTopicFieldDescription.getName(), kafkaTopicFieldDescription.getColumnHandle(connectorId, false, index.getAndIncrement()));
-                }
+                fields.forEach(kafkaTopicFieldDescription -> columnHandles.put(kafkaTopicFieldDescription.getName(),
+						kafkaTopicFieldDescription.getColumnHandle(connectorId, false, index.getAndIncrement())));
             }
         });
 
@@ -227,18 +219,14 @@ public class KafkaMetadata
         table.getKey().ifPresent(key -> {
             List<KafkaTopicFieldDescription> fields = key.getFields();
             if (fields != null) {
-                for (KafkaTopicFieldDescription fieldDescription : fields) {
-                    builder.add(fieldDescription.getColumnMetadata());
-                }
+                fields.forEach(fieldDescription -> builder.add(fieldDescription.getColumnMetadata()));
             }
         });
 
         table.getMessage().ifPresent(message -> {
             List<KafkaTopicFieldDescription> fields = message.getFields();
             if (fields != null) {
-                for (KafkaTopicFieldDescription fieldDescription : fields) {
-                    builder.add(fieldDescription.getColumnMetadata());
-                }
+                fields.forEach(fieldDescription -> builder.add(fieldDescription.getColumnMetadata()));
             }
         });
 

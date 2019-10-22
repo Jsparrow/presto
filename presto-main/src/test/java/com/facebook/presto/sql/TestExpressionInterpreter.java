@@ -415,18 +415,18 @@ public class TestExpressionInterpreter
         DateTime dateTime = new DateTime(2001, 8, 22, 3, 4, 5, 321, getDateTimeZone(TEST_SESSION.getTimeZoneKey()));
         double seconds = dateTime.getMillis() / 1000.0;
 
-        assertOptimizedEquals("extract (YEAR from from_unixtime(" + seconds + "))", "2001");
-        assertOptimizedEquals("extract (QUARTER from from_unixtime(" + seconds + "))", "3");
-        assertOptimizedEquals("extract (MONTH from from_unixtime(" + seconds + "))", "8");
-        assertOptimizedEquals("extract (WEEK from from_unixtime(" + seconds + "))", "34");
-        assertOptimizedEquals("extract (DOW from from_unixtime(" + seconds + "))", "3");
-        assertOptimizedEquals("extract (DOY from from_unixtime(" + seconds + "))", "234");
-        assertOptimizedEquals("extract (DAY from from_unixtime(" + seconds + "))", "22");
-        assertOptimizedEquals("extract (HOUR from from_unixtime(" + seconds + "))", "3");
-        assertOptimizedEquals("extract (MINUTE from from_unixtime(" + seconds + "))", "4");
-        assertOptimizedEquals("extract (SECOND from from_unixtime(" + seconds + "))", "5");
-        assertOptimizedEquals("extract (TIMEZONE_HOUR from from_unixtime(" + seconds + ", 7, 9))", "7");
-        assertOptimizedEquals("extract (TIMEZONE_MINUTE from from_unixtime(" + seconds + ", 7, 9))", "9");
+        assertOptimizedEquals(new StringBuilder().append("extract (YEAR from from_unixtime(").append(seconds).append("))").toString(), "2001");
+        assertOptimizedEquals(new StringBuilder().append("extract (QUARTER from from_unixtime(").append(seconds).append("))").toString(), "3");
+        assertOptimizedEquals(new StringBuilder().append("extract (MONTH from from_unixtime(").append(seconds).append("))").toString(), "8");
+        assertOptimizedEquals(new StringBuilder().append("extract (WEEK from from_unixtime(").append(seconds).append("))").toString(), "34");
+        assertOptimizedEquals(new StringBuilder().append("extract (DOW from from_unixtime(").append(seconds).append("))").toString(), "3");
+        assertOptimizedEquals(new StringBuilder().append("extract (DOY from from_unixtime(").append(seconds).append("))").toString(), "234");
+        assertOptimizedEquals(new StringBuilder().append("extract (DAY from from_unixtime(").append(seconds).append("))").toString(), "22");
+        assertOptimizedEquals(new StringBuilder().append("extract (HOUR from from_unixtime(").append(seconds).append("))").toString(), "3");
+        assertOptimizedEquals(new StringBuilder().append("extract (MINUTE from from_unixtime(").append(seconds).append("))").toString(), "4");
+        assertOptimizedEquals(new StringBuilder().append("extract (SECOND from from_unixtime(").append(seconds).append("))").toString(), "5");
+        assertOptimizedEquals(new StringBuilder().append("extract (TIMEZONE_HOUR from from_unixtime(").append(seconds).append(", 7, 9))").toString(), "7");
+        assertOptimizedEquals(new StringBuilder().append("extract (TIMEZONE_MINUTE from from_unixtime(").append(seconds).append(", 7, 9))").toString(), "9");
 
         assertOptimizedEquals("extract (YEAR from bound_timestamp)", "2001");
         assertOptimizedEquals("extract (QUARTER from bound_timestamp)", "3");
@@ -538,16 +538,16 @@ public class TestExpressionInterpreter
     public void testCurrentTimestamp()
     {
         double current = TEST_SESSION.getStartTime() / 1000.0;
-        assertOptimizedEquals("current_timestamp = from_unixtime(" + current + ")", "true");
+        assertOptimizedEquals(new StringBuilder().append("current_timestamp = from_unixtime(").append(current).append(")").toString(), "true");
         double future = current + TimeUnit.MINUTES.toSeconds(1);
-        assertOptimizedEquals("current_timestamp > from_unixtime(" + future + ")", "false");
+        assertOptimizedEquals(new StringBuilder().append("current_timestamp > from_unixtime(").append(future).append(")").toString(), "false");
     }
 
     @Test
     public void testCurrentUser()
             throws Exception
     {
-        assertOptimizedEquals("current_user", "'" + TEST_SESSION.getUser() + "'");
+        assertOptimizedEquals("current_user", new StringBuilder().append("'").append(TEST_SESSION.getUser()).append("'").toString());
     }
 
     @Test
@@ -803,113 +803,57 @@ public class TestExpressionInterpreter
     @Test
     public void testSearchCase()
     {
-        assertOptimizedEquals("case " +
-                        "when true then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when true then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case " +
-                        "when false then 1 " +
-                        "else 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 1 ").append("else 33 ").append("end").toString(),
                 "33");
 
-        assertOptimizedEquals("case " +
-                        "when false then 10000000000 " +
-                        "else 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 10000000000 ").append("else 33 ").append("end").toString(),
                 "33");
 
-        assertOptimizedEquals("case " +
-                        "when bound_long = 1234 then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when bound_long = 1234 then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case " +
-                        "when true then bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when true then bound_long ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case " +
-                        "when false then 1 " +
-                        "else bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 1 ").append("else bound_long ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case " +
-                        "when bound_integer = 1234 then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when bound_integer = 1234 then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case " +
-                        "when true then bound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when true then bound_integer ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case " +
-                        "when false then 1 " +
-                        "else bound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 1 ").append("else bound_integer ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case " +
-                        "when bound_long = 1234 then 33 " +
-                        "else unbound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when bound_long = 1234 then 33 ").append("else unbound_long ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case " +
-                        "when true then bound_long " +
-                        "else unbound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when true then bound_long ").append("else unbound_long ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case " +
-                        "when false then unbound_long " +
-                        "else bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then unbound_long ").append("else bound_long ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case " +
-                        "when bound_integer = 1234 then 33 " +
-                        "else unbound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when bound_integer = 1234 then 33 ").append("else unbound_integer ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case " +
-                        "when true then bound_integer " +
-                        "else unbound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when true then bound_integer ").append("else unbound_integer ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case " +
-                        "when false then unbound_integer " +
-                        "else bound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then unbound_integer ").append("else bound_integer ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case " +
-                        "when unbound_long = 1234 then 33 " +
-                        "else 1 " +
-                        "end",
-                "" +
-                        "case " +
-                        "when unbound_long = 1234 then 33 " +
-                        "else 1 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when unbound_long = 1234 then 33 ").append("else 1 ").append("end").toString(),
+                new StringBuilder().append("").append("case ").append("when unbound_long = 1234 then 33 ").append("else 1 ").append("end").toString());
 
         assertOptimizedMatches("case when 0 / 0 = 0 then 1 end",
                 "case when cast(fail() as boolean) then 1 end");
 
         assertOptimizedMatches("if(false, 1, 0 / 0)", "cast(fail() as integer)");
 
-        assertOptimizedEquals("case " +
-                        "when false then 2.2 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 2.2 ").append("when true then 2.2 ").append("end").toString(),
                 "2.2");
 
-        assertOptimizedEquals("case " +
-                        "when false then 1234567890.0987654321 " +
-                        "when true then 3.3 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 1234567890.0987654321 ").append("when true then 3.3 ").append("end").toString(),
                 "CAST(3.3 AS DECIMAL(20,10))");
 
-        assertOptimizedEquals("case " +
-                        "when false then 1 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case ").append("when false then 1 ").append("when true then 2.2 ").append("end").toString(),
                 "2.2");
 
         assertOptimizedEquals("case when ARRAY[CAST(1 AS BIGINT)] = ARRAY[CAST(1 AS BIGINT)] then 'matched' else 'not_matched' end", "'matched'");
@@ -920,219 +864,86 @@ public class TestExpressionInterpreter
     @Test
     public void testSimpleCase()
     {
-        assertOptimizedEquals("case 1 " +
-                        "when 1 then 32 + 1 " +
-                        "when 1 then 34 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 1 ").append("when 1 then 32 + 1 ").append("when 1 then 34 ").append("end").toString(),
                 "33");
 
-        assertOptimizedEquals("case null " +
-                        "when true then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case null ").append("when true then 33 ").append("end").toString(),
                 "null");
-        assertOptimizedEquals("case null " +
-                        "when true then 33 " +
-                        "else 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case null ").append("when true then 33 ").append("else 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case 33 " +
-                        "when null then 1 " +
-                        "else 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when null then 1 ").append("else 33 ").append("end").toString(),
                 "33");
 
-        assertOptimizedEquals("case null " +
-                        "when true then 3300000000 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case null ").append("when true then 3300000000 ").append("end").toString(),
                 "null");
-        assertOptimizedEquals("case null " +
-                        "when true then 3300000000 " +
-                        "else 3300000000 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case null ").append("when true then 3300000000 ").append("else 3300000000 ").append("end").toString(),
                 "3300000000");
-        assertOptimizedEquals("case 33 " +
-                        "when null then 3300000000 " +
-                        "else 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when null then 3300000000 ").append("else 33 ").append("end").toString(),
                 "33");
 
-        assertOptimizedEquals("case true " +
-                        "when true then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when true then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case true " +
-                        "when false then 1 " +
-                        "else 33 end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then 1 ").append("else 33 end").toString(),
                 "33");
 
-        assertOptimizedEquals("case bound_long " +
-                        "when 1234 then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case bound_long ").append("when 1234 then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case 1234 " +
-                        "when bound_long then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 1234 ").append("when bound_long then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case true " +
-                        "when true then bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when true then bound_long ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case true " +
-                        "when false then 1 " +
-                        "else bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then 1 ").append("else bound_long ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case bound_integer " +
-                        "when 1234 then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case bound_integer ").append("when 1234 then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case 1234 " +
-                        "when bound_integer then 33 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 1234 ").append("when bound_integer then 33 ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case true " +
-                        "when true then bound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when true then bound_integer ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case true " +
-                        "when false then 1 " +
-                        "else bound_integer " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then 1 ").append("else bound_integer ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case bound_long " +
-                        "when 1234 then 33 " +
-                        "else unbound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case bound_long ").append("when 1234 then 33 ").append("else unbound_long ").append("end").toString(),
                 "33");
-        assertOptimizedEquals("case true " +
-                        "when true then bound_long " +
-                        "else unbound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when true then bound_long ").append("else unbound_long ").append("end").toString(),
                 "1234");
-        assertOptimizedEquals("case true " +
-                        "when false then unbound_long " +
-                        "else bound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then unbound_long ").append("else bound_long ").append("end").toString(),
                 "1234");
 
-        assertOptimizedEquals("case unbound_long " +
-                        "when 1234 then 33 " +
-                        "else 1 " +
-                        "end",
-                "" +
-                        "case unbound_long " +
-                        "when 1234 then 33 " +
-                        "else 1 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case unbound_long ").append("when 1234 then 33 ").append("else 1 ").append("end").toString(),
+                new StringBuilder().append("").append("case unbound_long ").append("when 1234 then 33 ").append("else 1 ").append("end").toString());
 
-        assertOptimizedEquals("case 33 " +
-                        "when 0 then 0 " +
-                        "when 33 then unbound_long " +
-                        "else 1 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when 0 then 0 ").append("when 33 then unbound_long ").append("else 1 ").append("end").toString(),
                 "unbound_long");
-        assertOptimizedEquals("case 33 " +
-                        "when 0 then 0 " +
-                        "when 33 then 1 " +
-                        "when unbound_long then 2 " +
-                        "else 1 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when 0 then 0 ").append("when 33 then 1 ").append("when unbound_long then 2 ").append("else 1 ").append("end").toString(),
                 "1");
-        assertOptimizedEquals("case 33 " +
-                        "when unbound_long then 0 " +
-                        "when 1 then 1 " +
-                        "when 33 then 2 " +
-                        "else 0 " +
-                        "end",
-                "case 33 " +
-                        "when unbound_long then 0 " +
-                        "else 2 " +
-                        "end");
-        assertOptimizedEquals("case 33 " +
-                        "when 0 then 0 " +
-                        "when 1 then 1 " +
-                        "else unbound_long " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when unbound_long then 0 ").append("when 1 then 1 ").append("when 33 then 2 ").append("else 0 ").append("end").toString(),
+                new StringBuilder().append("case 33 ").append("when unbound_long then 0 ").append("else 2 ").append("end").toString());
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when 0 then 0 ").append("when 1 then 1 ").append("else unbound_long ").append("end").toString(),
                 "unbound_long");
-        assertOptimizedEquals("case 33 " +
-                        "when unbound_long then 0 " +
-                        "when 1 then 1 " +
-                        "when unbound_long2 then 2 " +
-                        "else 3 " +
-                        "end",
-                "case 33 " +
-                        "when unbound_long then 0 " +
-                        "when unbound_long2 then 2 " +
-                        "else 3 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case 33 ").append("when unbound_long then 0 ").append("when 1 then 1 ").append("when unbound_long2 then 2 ").append("else 3 ").append("end").toString(),
+                new StringBuilder().append("case 33 ").append("when unbound_long then 0 ").append("when unbound_long2 then 2 ").append("else 3 ").append("end").toString());
 
-        assertOptimizedEquals("case true " +
-                        "when unbound_long = 1 then 1 " +
-                        "when 0 / 0 = 0 then 2 " +
-                        "else 33 end",
-                "" +
-                        "case true " +
-                        "when unbound_long = 1 then 1 " +
-                        "when 0 / 0 = 0 then 2 else 33 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when unbound_long = 1 then 1 ").append("when 0 / 0 = 0 then 2 ").append("else 33 end").toString(),
+                new StringBuilder().append("").append("case true ").append("when unbound_long = 1 then 1 ").append("when 0 / 0 = 0 then 2 else 33 ").append("end").toString());
 
-        assertOptimizedEquals("case bound_long " +
-                        "when 123 * 10 + unbound_long then 1 = 1 " +
-                        "else 1 = 2 " +
-                        "end",
-                "" +
-                        "case bound_long when 1230 + unbound_long then true " +
-                        "else false " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case bound_long ").append("when 123 * 10 + unbound_long then 1 = 1 ").append("else 1 = 2 ").append("end").toString(),
+                new StringBuilder().append("").append("case bound_long when 1230 + unbound_long then true ").append("else false ").append("end").toString());
 
-        assertOptimizedEquals("case bound_long " +
-                        "when unbound_long then 2 + 2 " +
-                        "end",
-                "" +
-                        "case bound_long " +
-                        "when unbound_long then 4 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case bound_long ").append("when unbound_long then 2 + 2 ").append("end").toString(),
+                new StringBuilder().append("").append("case bound_long ").append("when unbound_long then 4 ").append("end").toString());
 
-        assertOptimizedEquals("case bound_long " +
-                        "when unbound_long then 2 + 2 " +
-                        "when 1 then null " +
-                        "when 2 then null " +
-                        "end",
-                "" +
-                        "case bound_long " +
-                        "when unbound_long then 4 " +
-                        "end");
+        assertOptimizedEquals(new StringBuilder().append("case bound_long ").append("when unbound_long then 2 + 2 ").append("when 1 then null ").append("when 2 then null ").append("end").toString(),
+                new StringBuilder().append("").append("case bound_long ").append("when unbound_long then 4 ").append("end").toString());
 
-        assertOptimizedMatches("case 1 " +
-                        "when unbound_long then 1 " +
-                        "when 0 / 0 then 2 " +
-                        "else 1 " +
-                        "end",
-                "" +
-                        "case BIGINT '1' " +
-                        "when unbound_long then 1 " +
-                        "when cast(fail() AS integer) then 2 " +
-                        "else 1 " +
-                        "end");
+        assertOptimizedMatches(new StringBuilder().append("case 1 ").append("when unbound_long then 1 ").append("when 0 / 0 then 2 ").append("else 1 ").append("end").toString(),
+                new StringBuilder().append("").append("case BIGINT '1' ").append("when unbound_long then 1 ").append("when cast(fail() AS integer) then 2 ").append("else 1 ").append("end").toString());
 
-        assertOptimizedMatches("case 1 " +
-                        "when 0 / 0 then 1 " +
-                        "when 0 / 0 then 2 " +
-                        "else 1 " +
-                        "end",
-                "" +
-                        "case 1 " +
-                        "when cast(fail() as integer) then 1 " +
-                        "when cast(fail() as integer) then 2 " +
-                        "else 1 " +
-                        "end");
+        assertOptimizedMatches(new StringBuilder().append("case 1 ").append("when 0 / 0 then 1 ").append("when 0 / 0 then 2 ").append("else 1 ").append("end").toString(),
+                new StringBuilder().append("").append("case 1 ").append("when cast(fail() as integer) then 1 ").append("when cast(fail() as integer) then 2 ").append("else 1 ").append("end").toString());
 
-        assertOptimizedEquals("case true " +
-                        "when false then 2.2 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then 2.2 ").append("when true then 2.2 ").append("end").toString(),
                 "2.2");
 
         // TODO enabled when DECIMAL is default for literal:
@@ -1142,10 +953,7 @@ public class TestExpressionInterpreter
 //                        "end",
 //                "CAST(3.3 AS DECIMAL(20,10))");
 
-        assertOptimizedEquals("case true " +
-                        "when false then 1 " +
-                        "when true then 2.2 " +
-                        "end",
+        assertOptimizedEquals(new StringBuilder().append("case true ").append("when false then 1 ").append("when true then 2.2 ").append("end").toString(),
                 "2.2");
 
         assertOptimizedEquals("case ARRAY[CAST(1 AS BIGINT)] when ARRAY[CAST(1 AS BIGINT)] then 'matched' else 'not_matched' end", "'matched'");
@@ -1377,12 +1185,12 @@ public class TestExpressionInterpreter
         assertRowExpressionOptimizedEquals(
                 OPTIMIZED,
                 "SEQUENCE(1, 999)",
-                format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(1, 1000).mapToObj(i -> "(BIGINT '" + i + "')").iterator())));
+                format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(1, 1000).mapToObj(i -> new StringBuilder().append("(BIGINT '").append(i).append("')").toString()).iterator())));
         assertDoNotOptimize("SEQUENCE(1, 1000)", SERIALIZABLE);
-        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> "(bound_long + " + i + ")").iterator())));
-        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> "(bound_integer + " + i + ")").iterator())));
-        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> "'" + i + "'").iterator())));
-        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> "ARRAY['" + i + "']").iterator())));
+        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> new StringBuilder().append("(bound_long + ").append(i).append(")").toString()).iterator())));
+        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> new StringBuilder().append("(bound_integer + ").append(i).append(")").toString()).iterator())));
+        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> new StringBuilder().append("'").append(i).append("'").toString()).iterator())));
+        optimize(format("ARRAY [%s]", Joiner.on(", ").join(IntStream.range(0, 10_000).mapToObj(i -> new StringBuilder().append("ARRAY['").append(i).append("']").toString()).iterator())));
     }
 
     @Test
@@ -1708,13 +1516,13 @@ public class TestExpressionInterpreter
 
     private static boolean isRemovableCast(Object value)
     {
-        if (value instanceof CallExpression &&
-                new FunctionResolution(METADATA.getFunctionManager()).isCastFunction(((CallExpression) value).getFunctionHandle())) {
-            Type targetType = ((CallExpression) value).getType();
-            Type sourceType = ((CallExpression) value).getArguments().get(0).getType();
-            return METADATA.getTypeManager().canCoerce(sourceType, targetType);
-        }
-        return false;
+        if (!(value instanceof CallExpression &&
+                new FunctionResolution(METADATA.getFunctionManager()).isCastFunction(((CallExpression) value).getFunctionHandle()))) {
+			return false;
+		}
+		Type targetType = ((CallExpression) value).getType();
+		Type sourceType = ((CallExpression) value).getArguments().get(0).getType();
+		return METADATA.getTypeManager().canCoerce(sourceType, targetType);
     }
 
     private static Slice blockToSlice(Block block)

@@ -181,9 +181,7 @@ public class ArbitraryOutputBuffer
             outputBuffers = newOutputBuffers;
 
             // add the new buffers
-            for (OutputBufferId outputBufferId : outputBuffers.getBuffers().keySet()) {
-                getBuffer(outputBufferId);
-            }
+			outputBuffers.getBuffers().keySet().forEach(this::getBuffer);
 
             // update state if no more buffers is set
             if (outputBuffers.isNoMoreBufferIds()) {
@@ -304,9 +302,7 @@ public class ArbitraryOutputBuffer
         masterBuffer.setNoMorePages();
 
         // process any pending reads from the client buffers
-        for (ClientBuffer clientBuffer : safeGetBuffersSnapshot()) {
-            clientBuffer.loadPagesIfNecessary(masterBuffer);
-        }
+		safeGetBuffersSnapshot().forEach(clientBuffer -> clientBuffer.loadPagesIfNecessary(masterBuffer));
 
         checkFlushComplete();
     }
@@ -317,27 +313,26 @@ public class ArbitraryOutputBuffer
         checkState(!Thread.holdsLock(this), "Can not destroy while holding a lock on this");
 
         // ignore destroy if the buffer already in a terminal state.
-        if (state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
-            noMoreBuffers();
-
-            masterBuffer.destroy();
-
-            safeGetBuffersSnapshot().forEach(ClientBuffer::destroy);
-
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-        }
+		if (!state.setIf(FINISHED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		noMoreBuffers();
+		masterBuffer.destroy();
+		safeGetBuffersSnapshot().forEach(ClientBuffer::destroy);
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
     }
 
     @Override
     public void fail()
     {
         // ignore fail if the buffer already in a terminal state.
-        if (state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
-            memoryManager.setNoBlockOnFull();
-            forceFreeMemory();
-            // DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
-        }
+		if (!state.setIf(FAILED, oldState -> !oldState.isTerminal())) {
+			return;
+		}
+		memoryManager.setNoBlockOnFull();
+		forceFreeMemory();
+		// DO NOT destroy buffers or set no more pages.  The coordinator manages the teardown of failed queries.
     }
 
     @Override
@@ -402,11 +397,12 @@ public class ArbitraryOutputBuffer
 
     private synchronized void noMoreBuffers()
     {
-        if (outputBuffers.isNoMoreBufferIds()) {
-            // verify all created buffers have been declared
-            SetView<OutputBufferId> undeclaredCreatedBuffers = Sets.difference(buffers.keySet(), outputBuffers.getBuffers().keySet());
-            checkState(undeclaredCreatedBuffers.isEmpty(), "Final output buffers does not contain all created buffer ids: %s", undeclaredCreatedBuffers);
-        }
+        if (!outputBuffers.isNoMoreBufferIds()) {
+			return;
+		}
+		// verify all created buffers have been declared
+		SetView<OutputBufferId> undeclaredCreatedBuffers = Sets.difference(buffers.keySet(), outputBuffers.getBuffers().keySet());
+		checkState(undeclaredCreatedBuffers.isEmpty(), "Final output buffers does not contain all created buffer ids: %s", undeclaredCreatedBuffers);
     }
 
     @GuardedBy("this")
@@ -416,14 +412,30 @@ public class ArbitraryOutputBuffer
         // so we don't need to wait for no-more-buffers to finish the buffer.
         // Any readers added after finish will simply receive no data.
         BufferState state = this.state.get();
-        if ((state == FLUSHING) || ((state == NO_MORE_PAGES) && masterBuffer.isEmpty())) {
-            if (safeGetBuffersSnapshot().stream().allMatch(ClientBuffer::isDestroyed)) {
-                destroy();
-            }
-        }
+        boolean condition = ((state == FLUSHING) || ((state == NO_MORE_PAGES) && masterBuffer.isEmpty())) && safeGetBuffersSnapshot().stream().allMatch(ClientBuffer::isDestroyed);
+		if (condition) {
+		    destroy();
+		}
     }
 
-    @ThreadSafe
+    @VisibleForTesting
+    OutputBufferMemoryManager getMemoryManager()
+    {
+        return memoryManager;
+    }
+
+	private void dereferencePage(SerializedPage pageSplit, Lifespan lifespan)
+    {
+        long outstandingPageCount = outstandingPageCountPerLifespan.get(lifespan).decrementAndGet();
+        if (outstandingPageCount == 0 && noMorePagesForLifespan.contains(lifespan)) {
+            checkState(lifespanCompletionCallback != null, "lifespanCompletionCallback is not null");
+            lifespanCompletionCallback.accept(lifespan);
+        }
+
+        memoryManager.updateMemoryUsage(-pageSplit.getRetainedSizeInBytes());
+    }
+
+	@ThreadSafe
     private static class MasterBuffer
             implements PagesSupplier
     {
@@ -510,22 +522,5 @@ public class ArbitraryOutputBuffer
                     .add("bufferedPages", bufferedPages.get())
                     .toString();
         }
-    }
-
-    @VisibleForTesting
-    OutputBufferMemoryManager getMemoryManager()
-    {
-        return memoryManager;
-    }
-
-    private void dereferencePage(SerializedPage pageSplit, Lifespan lifespan)
-    {
-        long outstandingPageCount = outstandingPageCountPerLifespan.get(lifespan).decrementAndGet();
-        if (outstandingPageCount == 0 && noMorePagesForLifespan.contains(lifespan)) {
-            checkState(lifespanCompletionCallback != null, "lifespanCompletionCallback is not null");
-            lifespanCompletionCallback.accept(lifespan);
-        }
-
-        memoryManager.updateMemoryUsage(-pageSplit.getRetainedSizeInBytes());
     }
 }

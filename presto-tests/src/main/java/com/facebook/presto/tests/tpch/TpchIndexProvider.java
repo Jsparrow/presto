@@ -68,10 +68,10 @@ public class TpchIndexProvider
         // Extract the fixedValues as their raw values and types
         List<Object> rawFixedValues = new ArrayList<>(fixedValueColumns.size());
         List<Type> rawFixedTypes = new ArrayList<>(fixedValueColumns.size());
-        for (ColumnHandle fixedValueColumn : fixedValueColumns) {
+        fixedValueColumns.forEach(fixedValueColumn -> {
             rawFixedValues.add(fixedValues.get(fixedValueColumn).getValue());
             rawFixedTypes.add(((TpchColumnHandle) fixedValueColumn).getType());
-        }
+        });
 
         // Establish the schema after we append the fixed values to the lookup keys.
         List<ColumnHandle> finalLookupSchema = ImmutableList.<ColumnHandle>builder()
@@ -97,11 +97,11 @@ public class TpchIndexProvider
     private static List<Integer> computeRemap(List<String> startSchema, List<String> endSchema)
     {
         ImmutableList.Builder<Integer> builder = ImmutableList.builder();
-        for (String columnName : endSchema) {
+        endSchema.forEach(columnName -> {
             int index = startSchema.indexOf(columnName);
             checkArgument(index != -1, "Column name in end that is not in the start: %s", columnName);
             builder.add(index);
-        }
+        });
         return builder.build();
     }
 

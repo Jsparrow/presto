@@ -82,6 +82,6 @@ public class AnalyzeTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + connectorHandle + ":" + transactionHandle;
+        return new StringBuilder().append(connectorId).append(":").append(connectorHandle).append(":").append(transactionHandle).toString();
     }
 }

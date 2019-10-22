@@ -81,12 +81,7 @@ public class MockHttpServletRequest
     @Override
     public Enumeration<String> getHeaders(String name)
     {
-        for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
-            if (entry.getKey().equalsIgnoreCase(name)) {
-                return enumeration(entry.getValue());
-            }
-        }
-        return emptyEnumeration();
+        return headers.asMap().entrySet().stream().filter(entry -> entry.getKey().equalsIgnoreCase(name)).findFirst().map(entry -> enumeration(entry.getValue())).orElse(emptyEnumeration());
     }
 
     @Override
@@ -439,14 +434,12 @@ public class MockHttpServletRequest
 
     @Override
     public AsyncContext startAsync()
-            throws IllegalStateException
     {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public AsyncContext startAsync(ServletRequest servletRequest, ServletResponse servletResponse)
-            throws IllegalStateException
     {
         throw new UnsupportedOperationException();
     }

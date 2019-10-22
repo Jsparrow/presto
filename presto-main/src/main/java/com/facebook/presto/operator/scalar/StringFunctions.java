@@ -54,6 +54,8 @@ import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.SURROGATE;
 import static java.lang.Math.toIntExact;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Current implementation is based on code points from Unicode and does ignore grapheme cluster boundaries.
@@ -61,7 +63,9 @@ import static java.lang.Math.toIntExact;
  */
 public final class StringFunctions
 {
-    private StringFunctions() {}
+    private static final Logger logger = LoggerFactory.getLogger(StringFunctions.class);
+
+	private StringFunctions() {}
 
     @Description("convert Unicode code point to a string")
     @ScalarFunction
@@ -670,7 +674,7 @@ public final class StringFunctions
         checkCondition(
                 0 <= targetLength && targetLength <= Integer.MAX_VALUE,
                 INVALID_FUNCTION_ARGUMENT,
-                "Target length must be in the range [0.." + Integer.MAX_VALUE + "]");
+                new StringBuilder().append("Target length must be in the range [0..").append(Integer.MAX_VALUE).append("]").toString());
         checkCondition(padString.length() > 0, INVALID_FUNCTION_ARGUMENT, "Padding string must not be empty");
 
         int textLength = countCodePoints(text);
@@ -830,7 +834,8 @@ public final class StringFunctions
             targetForm = Normalizer.Form.valueOf(form.toStringUtf8());
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Normalization form must be one of [NFD, NFC, NFKD, NFKC]");
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Normalization form must be one of [NFD, NFC, NFKD, NFKC]");
         }
         return utf8Slice(Normalizer.normalize(slice.toStringUtf8(), targetForm));
     }
@@ -860,7 +865,8 @@ public final class StringFunctions
                 replacementCodePoint = OptionalInt.of(getCodePointAt(replacementCharacter, 0));
             }
             catch (InvalidUtf8Exception e) {
-                throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Invalid replacement character");
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Invalid replacement character");
             }
         }
         else {

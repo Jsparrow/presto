@@ -34,31 +34,31 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class ExpressionVariableInliner
 {
-    public static Expression inlineVariables(Map<VariableReferenceExpression, ? extends Expression> mapping, Expression expression, TypeProvider types)
-    {
-        return inlineVariables(mapping::get, expression, types);
-    }
-
-    public static Expression inlineVariables(Function<VariableReferenceExpression, Expression> mapping, Expression expression, TypeProvider types)
-    {
-        return new ExpressionVariableInliner(mapping, types).rewrite(expression);
-    }
-
     private final Function<VariableReferenceExpression, Expression> mapping;
-    private final TypeProvider types;
+	private final TypeProvider types;
 
-    private ExpressionVariableInliner(Function<VariableReferenceExpression, Expression> mapping, TypeProvider types)
+	private ExpressionVariableInliner(Function<VariableReferenceExpression, Expression> mapping, TypeProvider types)
     {
         this.mapping = mapping;
         this.types = types;
     }
 
-    private Expression rewrite(Expression expression)
+	public static Expression inlineVariables(Map<VariableReferenceExpression, ? extends Expression> mapping, Expression expression, TypeProvider types)
+    {
+        return inlineVariables(mapping::get, expression, types);
+    }
+
+	public static Expression inlineVariables(Function<VariableReferenceExpression, Expression> mapping, Expression expression, TypeProvider types)
+    {
+        return new ExpressionVariableInliner(mapping, types).rewrite(expression);
+    }
+
+	private Expression rewrite(Expression expression)
     {
         return ExpressionTreeRewriter.rewriteWith(new ExpressionVariableInliner.Visitor(), expression);
     }
 
-    private class Visitor
+	private class Visitor
             extends ExpressionRewriter<Void>
     {
         private final Set<String> excludedNames = new HashSet<>();
@@ -78,16 +78,13 @@ public class ExpressionVariableInliner
         @Override
         public Expression rewriteLambdaExpression(LambdaExpression node, Void context, ExpressionTreeRewriter<Void> treeRewriter)
         {
-            for (LambdaArgumentDeclaration argument : node.getArguments()) {
-                String argumentName = argument.getName().getValue();
-                // Variable names are unique. As a result, a variable should never be excluded multiple times.
+            node.getArguments().stream().map(argument -> argument.getName().getValue()).forEach(argumentName -> {
+				// Variable names are unique. As a result, a variable should never be excluded multiple times.
                 checkArgument(!excludedNames.contains(argumentName));
-                excludedNames.add(argumentName);
-            }
+				excludedNames.add(argumentName);
+			});
             Expression result = treeRewriter.defaultRewrite(node, context);
-            for (LambdaArgumentDeclaration argument : node.getArguments()) {
-                excludedNames.remove(argument.getName().getValue());
-            }
+            node.getArguments().forEach(argument -> excludedNames.remove(argument.getName().getValue()));
             return result;
         }
     }

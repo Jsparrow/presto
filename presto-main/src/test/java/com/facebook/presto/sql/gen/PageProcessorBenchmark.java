@@ -164,14 +164,14 @@ public class PageProcessorBenchmark
         ImmutableList.Builder<RowExpression> builder = ImmutableList.builder();
         if (type == BIGINT) {
             for (int i = 0; i < columnCount; i++) {
-                builder.add(rowExpression("bigint" + i + " + 5"));
+                builder.add(rowExpression(new StringBuilder().append("bigint").append(i).append(" + 5").toString()));
             }
         }
         else if (type == VARCHAR) {
             for (int i = 0; i < columnCount; i++) {
                 // alternatively use identity expression rowExpression("varchar" + i, type) or
                 // rowExpression("substr(varchar" + i + ", 1, 1)", type)
-                builder.add(rowExpression("concat(varchar" + i + ", 'foo')"));
+                builder.add(rowExpression(new StringBuilder().append("concat(varchar").append(i).append(", 'foo')").toString()));
             }
         }
         return builder.build();
@@ -202,7 +202,7 @@ public class PageProcessorBenchmark
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + PageProcessorBenchmark.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(PageProcessorBenchmark.class.getSimpleName()).append(".*").toString())
                 .build();
 
         new Runner(options).run();

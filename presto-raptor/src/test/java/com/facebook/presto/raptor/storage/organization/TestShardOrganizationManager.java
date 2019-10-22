@@ -53,18 +53,16 @@ import static org.testng.Assert.assertEquals;
 @Test(singleThreaded = true)
 public class TestShardOrganizationManager
 {
-    private IDBI dbi;
-    private Handle dummyHandle;
-    private MetadataDao metadataDao;
-    private ShardOrganizerDao organizerDao;
-
     private static final Table tableInfo = new Table(1L, OptionalLong.empty(), Optional.empty(), OptionalInt.empty(), OptionalLong.empty(), true);
-    private static final Table temporalTableInfo = new Table(1L, OptionalLong.empty(), Optional.empty(), OptionalInt.empty(), OptionalLong.of(1), true);
+	private static final Table temporalTableInfo = new Table(1L, OptionalLong.empty(), Optional.empty(), OptionalInt.empty(), OptionalLong.of(1), true);
+	private static final List<Type> types = ImmutableList.of(BIGINT, VARCHAR, DATE, TIMESTAMP);
+	private static final TemporalFunction TEMPORAL_FUNCTION = new TemporalFunction(UTC);
+	private IDBI dbi;
+	private Handle dummyHandle;
+	private MetadataDao metadataDao;
+	private ShardOrganizerDao organizerDao;
 
-    private static final List<Type> types = ImmutableList.of(BIGINT, VARCHAR, DATE, TIMESTAMP);
-    private static final TemporalFunction TEMPORAL_FUNCTION = new TemporalFunction(UTC);
-
-    @BeforeMethod
+	@BeforeMethod
     public void setup()
     {
         dbi = new DBI("jdbc:h2:mem:test" + System.nanoTime());
@@ -75,13 +73,13 @@ public class TestShardOrganizationManager
         createTablesWithRetry(dbi);
     }
 
-    @AfterMethod(alwaysRun = true)
+	@AfterMethod(alwaysRun = true)
     public void teardown()
     {
         dummyHandle.close();
     }
 
-    @Test
+	@Test
     public void testOrganizationEligibleTables()
     {
         long table1 = metadataDao.insertTable("schema", "table1", false, true, null, 0);
@@ -92,7 +90,7 @@ public class TestShardOrganizationManager
         assertEquals(metadataDao.getOrganizationEligibleTables(), ImmutableSet.of(table1));
     }
 
-    @Test
+	@Test
     public void testTableDiscovery()
             throws Exception
     {
@@ -125,7 +123,7 @@ public class TestShardOrganizationManager
         assertEquals(organizationManager.discoverAndInitializeTablesToOrganize(), ImmutableSet.of(table1, table2));
     }
 
-    @Test
+	@Test
     public void testSimple()
     {
         long timestamp = 1L;
@@ -143,7 +141,7 @@ public class TestShardOrganizationManager
         assertEquals(getOnlyElement(actual).getShards(), extractIndexes(shards, 0, 1, 2));
     }
 
-    @Test
+	@Test
     public void testSimpleTemporal()
     {
         List<Type> temporalType = ImmutableList.of(DATE);
@@ -170,7 +168,7 @@ public class TestShardOrganizationManager
         assertEquals(actual, ImmutableSet.of(extractIndexes(shards, 0, 2), extractIndexes(shards, 1, 3)));
     }
 
-    private static ShardIndexInfo shardWithSortRange(int bucketNumber, ShardRange sortRange)
+	private static ShardIndexInfo shardWithSortRange(int bucketNumber, ShardRange sortRange)
     {
         return new ShardIndexInfo(
                 1,
@@ -182,7 +180,7 @@ public class TestShardOrganizationManager
                 Optional.empty());
     }
 
-    private static ShardIndexInfo shardWithTemporalRange(int bucketNumber, ShardRange sortRange, ShardRange temporalRange)
+	private static ShardIndexInfo shardWithTemporalRange(int bucketNumber, ShardRange sortRange, ShardRange temporalRange)
     {
         return new ShardIndexInfo(
                 1,
@@ -194,7 +192,7 @@ public class TestShardOrganizationManager
                 Optional.of(temporalRange));
     }
 
-    private ShardOrganizationManager createShardOrganizationManager(long intervalMillis)
+	private ShardOrganizationManager createShardOrganizationManager(long intervalMillis)
     {
         return new ShardOrganizationManager(dbi,
                 "node1",

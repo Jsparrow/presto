@@ -32,19 +32,19 @@ import static com.facebook.presto.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 
 public final class MySqlQueryRunner
 {
-    private MySqlQueryRunner()
+    private static final String TPCH_SCHEMA = "tpch";
+
+	private MySqlQueryRunner()
     {
     }
 
-    private static final String TPCH_SCHEMA = "tpch";
-
-    public static QueryRunner createMySqlQueryRunner(TestingMySqlServer server, TpchTable<?>... tables)
+	public static QueryRunner createMySqlQueryRunner(TestingMySqlServer server, TpchTable<?>... tables)
             throws Exception
     {
         return createMySqlQueryRunner(server, ImmutableMap.of(), ImmutableList.copyOf(tables));
     }
 
-    public static QueryRunner createMySqlQueryRunner(TestingMySqlServer server, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
+	public static QueryRunner createMySqlQueryRunner(TestingMySqlServer server, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         try {
@@ -56,7 +56,7 @@ public final class MySqlQueryRunner
         }
     }
 
-    public static QueryRunner createMySqlQueryRunner(String jdbcUrl, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
+	public static QueryRunner createMySqlQueryRunner(String jdbcUrl, Map<String, String> connectorProperties, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -83,7 +83,7 @@ public final class MySqlQueryRunner
         }
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder()
                 .setCatalog("mysql")

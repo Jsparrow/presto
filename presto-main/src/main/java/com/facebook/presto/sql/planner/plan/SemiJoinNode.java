@@ -66,67 +66,61 @@ public class SemiJoinNode
         checkArgument(filteringSource.getOutputVariables().contains(filteringSourceJoinVariable), "Filtering source does not contain filtering join symbol");
     }
 
-    public enum DistributionType
-    {
-        PARTITIONED,
-        REPLICATED
-    }
-
     @JsonProperty
     public PlanNode getSource()
     {
         return source;
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getFilteringSource()
     {
         return filteringSource;
     }
 
-    @JsonProperty
+	@JsonProperty
     public VariableReferenceExpression getSourceJoinVariable()
     {
         return sourceJoinVariable;
     }
 
-    @JsonProperty
+	@JsonProperty
     public VariableReferenceExpression getFilteringSourceJoinVariable()
     {
         return filteringSourceJoinVariable;
     }
 
-    @JsonProperty
+	@JsonProperty
     public VariableReferenceExpression getSemiJoinOutput()
     {
         return semiJoinOutput;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<VariableReferenceExpression> getSourceHashVariable()
     {
         return sourceHashVariable;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<VariableReferenceExpression> getFilteringSourceHashVariable()
     {
         return filteringSourceHashVariable;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<DistributionType> getDistributionType()
     {
         return distributionType;
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return ImmutableList.of(source, filteringSource);
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return ImmutableList.<VariableReferenceExpression>builder()
@@ -135,13 +129,13 @@ public class SemiJoinNode
                 .build();
     }
 
-    @Override
+	@Override
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitSemiJoin(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
@@ -157,7 +151,7 @@ public class SemiJoinNode
                 distributionType);
     }
 
-    public SemiJoinNode withDistributionType(DistributionType distributionType)
+	public SemiJoinNode withDistributionType(DistributionType distributionType)
     {
         return new SemiJoinNode(
                 getId(),
@@ -169,5 +163,11 @@ public class SemiJoinNode
                 sourceHashVariable,
                 filteringSourceHashVariable,
                 Optional.of(distributionType));
+    }
+
+	public enum DistributionType
+    {
+        PARTITIONED,
+        REPLICATED
     }
 }

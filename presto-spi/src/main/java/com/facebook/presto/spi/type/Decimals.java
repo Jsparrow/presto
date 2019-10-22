@@ -38,24 +38,19 @@ import static java.math.RoundingMode.UNNECESSARY;
 
 public final class Decimals
 {
-    private Decimals() {}
-
     public static final int MAX_PRECISION = 38;
-    public static final int MAX_SHORT_PRECISION = 18;
-
-    public static final BigInteger MAX_DECIMAL_UNSCALED_VALUE = new BigInteger(
+	public static final int MAX_SHORT_PRECISION = 18;
+	public static final BigInteger MAX_DECIMAL_UNSCALED_VALUE = new BigInteger(
             // repeat digit '9' MAX_PRECISION times
             new String(new char[MAX_PRECISION]).replace("\0", "9"));
-    public static final BigInteger MIN_DECIMAL_UNSCALED_VALUE = MAX_DECIMAL_UNSCALED_VALUE.negate();
+	public static final BigInteger MIN_DECIMAL_UNSCALED_VALUE = MAX_DECIMAL_UNSCALED_VALUE.negate();
+	private static final Pattern DECIMAL_PATTERN = Pattern.compile("(\\+?|-?)((0*)(\\d*))(\\.(\\d*))?");
+	private static final int LONG_POWERS_OF_TEN_TABLE_LENGTH = 19;
+	private static final int BIG_INTEGER_POWERS_OF_TEN_TABLE_LENGTH = 100;
+	private static final long[] LONG_POWERS_OF_TEN = new long[LONG_POWERS_OF_TEN_TABLE_LENGTH];
+	private static final BigInteger[] BIG_INTEGER_POWERS_OF_TEN = new BigInteger[BIG_INTEGER_POWERS_OF_TEN_TABLE_LENGTH];
 
-    private static final Pattern DECIMAL_PATTERN = Pattern.compile("(\\+?|-?)((0*)(\\d*))(\\.(\\d*))?");
-
-    private static final int LONG_POWERS_OF_TEN_TABLE_LENGTH = 19;
-    private static final int BIG_INTEGER_POWERS_OF_TEN_TABLE_LENGTH = 100;
-    private static final long[] LONG_POWERS_OF_TEN = new long[LONG_POWERS_OF_TEN_TABLE_LENGTH];
-    private static final BigInteger[] BIG_INTEGER_POWERS_OF_TEN = new BigInteger[BIG_INTEGER_POWERS_OF_TEN_TABLE_LENGTH];
-
-    static {
+	static {
         for (int i = 0; i < LONG_POWERS_OF_TEN.length; ++i) {
             // Although this computes using doubles, incidentally, this is exact for all powers of 10 that fit in a long.
             LONG_POWERS_OF_TEN[i] = round(pow(10, i));
@@ -66,32 +61,34 @@ public final class Decimals
         }
     }
 
-    public static long longTenToNth(int n)
+	private Decimals() {}
+
+	public static long longTenToNth(int n)
     {
         return LONG_POWERS_OF_TEN[n];
     }
 
-    public static BigInteger bigIntegerTenToNth(int n)
+	public static BigInteger bigIntegerTenToNth(int n)
     {
         return BIG_INTEGER_POWERS_OF_TEN[n];
     }
 
-    public static DecimalParseResult parse(String stringValue)
+	public static DecimalParseResult parse(String stringValue)
     {
         return parse(stringValue, false);
     }
 
-    // visible for testing
+	// visible for testing
     public static DecimalParseResult parseIncludeLeadingZerosInPrecision(String stringValue)
     {
         return parse(stringValue, true);
     }
 
-    private static DecimalParseResult parse(String stringValue, boolean includeLeadingZerosInPrecision)
+	private static DecimalParseResult parse(String stringValue, boolean includeLeadingZerosInPrecision)
     {
         Matcher matcher = DECIMAL_PATTERN.matcher(stringValue);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Invalid decimal value '" + stringValue + "'");
+            throw new IllegalArgumentException(new StringBuilder().append("Invalid decimal value '").append(stringValue).append("'").toString());
         }
 
         String sign = getMatcherGroup(matcher, 1);
@@ -103,7 +100,7 @@ public final class Decimals
         String fractionalPart = getMatcherGroup(matcher, 6);
 
         if (leadingZeros.isEmpty() && integralPart.isEmpty() && fractionalPart.isEmpty()) {
-            throw new IllegalArgumentException("Invalid decimal value '" + stringValue + "'");
+            throw new IllegalArgumentException(new StringBuilder().append("Invalid decimal value '").append(stringValue).append("'").toString());
         }
 
         int scale = fractionalPart.length();
@@ -118,7 +115,7 @@ public final class Decimals
             }
         }
 
-        String unscaledValue = sign + leadingZeros + integralPart + fractionalPart;
+        String unscaledValue = new StringBuilder().append(sign).append(leadingZeros).append(integralPart).append(fractionalPart).toString();
         Object value;
         if (precision <= MAX_SHORT_PRECISION) {
             value = Long.parseLong(unscaledValue);
@@ -129,7 +126,7 @@ public final class Decimals
         return new DecimalParseResult(value, createDecimalType(precision, scale));
     }
 
-    private static String getMatcherGroup(Matcher matcher, int group)
+	private static String getMatcherGroup(Matcher matcher, int group)
     {
         String groupValue = matcher.group(group);
         if (groupValue == null) {
@@ -138,30 +135,30 @@ public final class Decimals
         return groupValue;
     }
 
-    @SuppressWarnings("NumericCastThatLosesPrecision")
+	@SuppressWarnings("NumericCastThatLosesPrecision")
     public static Slice encodeUnscaledValue(BigInteger unscaledValue)
     {
         return unscaledDecimal(unscaledValue);
     }
 
-    public static Slice encodeUnscaledValue(long unscaledValue)
+	public static Slice encodeUnscaledValue(long unscaledValue)
     {
         return unscaledDecimal(unscaledValue);
     }
 
-    public static long encodeShortScaledValue(BigDecimal value, int scale)
+	public static long encodeShortScaledValue(BigDecimal value, int scale)
     {
         checkArgument(scale >= 0);
         return value.setScale(scale, UNNECESSARY).unscaledValue().longValueExact();
     }
 
-    public static Slice encodeScaledValue(BigDecimal value, int scale)
+	public static Slice encodeScaledValue(BigDecimal value, int scale)
     {
         checkArgument(scale >= 0);
         return encodeScaledValue(value.setScale(scale, UNNECESSARY));
     }
 
-    /**
+	/**
      * Converts {@link BigDecimal} to {@link Slice} representing it for long {@link DecimalType}.
      * It is caller responsibility to ensure that {@code value.scale()} equals to {@link DecimalType#getScale()}.
      */
@@ -170,27 +167,27 @@ public final class Decimals
         return encodeUnscaledValue(value.unscaledValue());
     }
 
-    public static BigInteger decodeUnscaledValue(Slice valueSlice)
+	public static BigInteger decodeUnscaledValue(Slice valueSlice)
     {
         return unscaledDecimalToBigInteger(valueSlice);
     }
 
-    public static String toString(long unscaledValue, int scale)
+	public static String toString(long unscaledValue, int scale)
     {
         return toString(Long.toString(unscaledValue), scale);
     }
 
-    public static String toString(Slice unscaledValue, int scale)
+	public static String toString(Slice unscaledValue, int scale)
     {
         return toString(toUnscaledString(unscaledValue), scale);
     }
 
-    public static String toString(BigInteger unscaledValue, int scale)
+	public static String toString(BigInteger unscaledValue, int scale)
     {
         return toString(unscaledValue.toString(), scale);
     }
 
-    private static String toString(String unscaledValueString, int scale)
+	private static String toString(String unscaledValueString, int scale)
     {
         StringBuilder resultBuilder = new StringBuilder();
         // add sign
@@ -225,7 +222,7 @@ public final class Decimals
         return resultBuilder.toString();
     }
 
-    public static boolean overflows(long value, int precision)
+	public static boolean overflows(long value, int precision)
     {
         if (precision > MAX_SHORT_PRECISION) {
             throw new IllegalArgumentException("expected precision to be less than " + MAX_SHORT_PRECISION);
@@ -233,29 +230,29 @@ public final class Decimals
         return abs(value) >= longTenToNth(precision);
     }
 
-    public static boolean overflows(BigInteger value, int precision)
+	public static boolean overflows(BigInteger value, int precision)
     {
         return value.abs().compareTo(bigIntegerTenToNth(precision)) >= 0;
     }
 
-    public static boolean overflows(BigInteger value)
+	public static boolean overflows(BigInteger value)
     {
         return value.compareTo(MAX_DECIMAL_UNSCALED_VALUE) > 0 || value.compareTo(MIN_DECIMAL_UNSCALED_VALUE) < 0;
     }
 
-    public static boolean overflows(BigDecimal value, long precision)
+	public static boolean overflows(BigDecimal value, long precision)
     {
         return value.precision() > precision;
     }
 
-    public static void checkOverflow(BigInteger value)
+	public static void checkOverflow(BigInteger value)
     {
         if (overflows(value)) {
             throw new PrestoException(NUMERIC_VALUE_OUT_OF_RANGE, format("Value is out of range: %s", value.toString()));
         }
     }
 
-    public static BigDecimal readBigDecimal(DecimalType type, Block block, int position)
+	public static BigDecimal readBigDecimal(DecimalType type, Block block, int position)
     {
         BigInteger unscaledValue = type.isShort()
                 ? BigInteger.valueOf(type.getLong(block, position))
@@ -263,12 +260,12 @@ public final class Decimals
         return new BigDecimal(unscaledValue, type.getScale(), new MathContext(type.getPrecision()));
     }
 
-    public static void writeBigDecimal(DecimalType decimalType, BlockBuilder blockBuilder, BigDecimal value)
+	public static void writeBigDecimal(DecimalType decimalType, BlockBuilder blockBuilder, BigDecimal value)
     {
         decimalType.writeSlice(blockBuilder, encodeScaledValue(value));
     }
 
-    public static BigDecimal rescale(BigDecimal value, DecimalType type)
+	public static BigDecimal rescale(BigDecimal value, DecimalType type)
     {
         value = value.setScale(type.getScale(), UNNECESSARY);
 
@@ -278,12 +275,12 @@ public final class Decimals
         return value;
     }
 
-    public static void writeShortDecimal(BlockBuilder blockBuilder, long value)
+	public static void writeShortDecimal(BlockBuilder blockBuilder, long value)
     {
         blockBuilder.writeLong(value).closeEntry();
     }
 
-    public static long rescale(long value, int fromScale, int toScale)
+	public static long rescale(long value, int fromScale, int toScale)
     {
         if (toScale < fromScale) {
             throw new IllegalArgumentException("target scale must be larger than source scale");
@@ -291,7 +288,7 @@ public final class Decimals
         return value * longTenToNth(toScale - fromScale);
     }
 
-    public static BigInteger rescale(BigInteger value, int fromScale, int toScale)
+	public static BigInteger rescale(BigInteger value, int fromScale, int toScale)
     {
         if (toScale < fromScale) {
             throw new IllegalArgumentException("target scale must be larger than source scale");
@@ -299,17 +296,17 @@ public final class Decimals
         return value.multiply(bigIntegerTenToNth(toScale - fromScale));
     }
 
-    public static boolean isShortDecimal(Type type)
+	public static boolean isShortDecimal(Type type)
     {
         return type instanceof ShortDecimalType;
     }
 
-    public static boolean isLongDecimal(Type type)
+	public static boolean isLongDecimal(Type type)
     {
         return type instanceof LongDecimalType;
     }
 
-    private static void checkArgument(boolean condition)
+	private static void checkArgument(boolean condition)
     {
         if (!condition) {
             throw new IllegalArgumentException();

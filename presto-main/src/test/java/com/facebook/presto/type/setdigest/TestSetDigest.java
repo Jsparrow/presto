@@ -63,7 +63,7 @@ public class TestSetDigest
             sizes.add(rand.nextInt(i) + 10);
         }
 
-        for (int size : sizes) {
+        sizes.stream().mapToInt(Integer::valueOf).forEach(size -> {
             int expectedCardinality = 0;
             SetDigest digest1 = new SetDigest(maxHashes1, numBuckets1);
             SetDigest digest2 = new SetDigest(maxHashes2, numBuckets2);
@@ -87,7 +87,7 @@ public class TestSetDigest
             long estimatedCardinality = intersectionCardinality(digest1.serialize(), digest2.serialize());
             assertTrue(Math.abs(expectedCardinality - estimatedCardinality) / (double) expectedCardinality < 0.10,
                     format("Expected intersection cardinality %d +/- 10%%, got %d, for set of size %d", expectedCardinality, estimatedCardinality, size));
-        }
+        });
     }
 
     @Test
@@ -155,7 +155,7 @@ public class TestSetDigest
                     smallerSets.put(digest2, expectedCardinality);
                 }
             }
-            for (Map.Entry<SetDigest, Integer> pair : smallerSets.entrySet()) {
+            smallerSets.entrySet().forEach(pair -> {
                 SetDigest digest2 = pair.getKey();
                 long estIntersectionCardinality =
                         intersectionCardinality(digest1.serialize(), digest2.serialize());
@@ -164,7 +164,7 @@ public class TestSetDigest
                 int expectedCardinality = pair.getValue();
                 assertTrue(Math.abs(expectedCardinality - estIntersectionCardinality) /
                         (double) size1 < 0.05);
-            }
+            });
         }
     }
 }

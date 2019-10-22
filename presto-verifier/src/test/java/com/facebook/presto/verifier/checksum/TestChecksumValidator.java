@@ -98,23 +98,9 @@ public class TestChecksumValidator
                         ROW_ARRAY_COLUMN,
                         MAP_ARRAY_COLUMN));
         Statement expectedChecksumQuery = sqlParser.createStatement(
-                "SELECT\n" +
-                        "  \"count\"(*)\n" +
-                        ", \"checksum\"(\"bigint\") \"bigint_checksum\"\n" +
-                        ", \"checksum\"(\"varchar\") \"varchar_checksum\"\n" +
-                        ", \"sum\"(\"double\") FILTER (WHERE \"is_finite\"(\"double\")) \"double_sum\"\n" +
-                        ", \"count\"(\"double\") FILTER (WHERE \"is_nan\"(\"double\")) \"double_nan_count\"\n" +
-                        ", \"count\"(\"double\") FILTER (WHERE (\"double\" = \"infinity\"())) \"double_pos_inf_count\"\n" +
-                        ", \"count\"(\"double\") FILTER (WHERE (\"double\" = -\"infinity\"())) \"double_neg_inf_count\"\n" +
-                        ", \"sum\"(CAST(\"real\" AS double)) FILTER (WHERE \"is_finite\"(\"real\")) \"real_sum\"\n" +
-                        ", \"count\"(\"real\") FILTER (WHERE \"is_nan\"(\"real\")) \"real_nan_count\"\n" +
-                        ", \"count\"(\"real\") FILTER (WHERE (\"real\" = \"infinity\"())) \"real_pos_inf_count\"\n" +
-                        ", \"count\"(\"real\") FILTER (WHERE (\"real\" = -\"infinity\"())) \"real_neg_inf_count\"\n" +
-                        ", \"checksum\"(\"array_sort\"(\"int_array\")) int_array_checksum\n" +
-                        ", COALESCE(\"checksum\"(TRY(\"array_sort\"(\"row_array\"))), \"checksum\"(\"row_array\")) \"row_array_checksum\"" +
-                        ", \"checksum\"(\"map_array\") \"map_array_checksum\"\n" +
-                        "FROM\n" +
-                        "  test:di",
+                new StringBuilder().append("SELECT\n").append("  \"count\"(*)\n").append(", \"checksum\"(\"bigint\") \"bigint_checksum\"\n").append(", \"checksum\"(\"varchar\") \"varchar_checksum\"\n").append(", \"sum\"(\"double\") FILTER (WHERE \"is_finite\"(\"double\")) \"double_sum\"\n").append(", \"count\"(\"double\") FILTER (WHERE \"is_nan\"(\"double\")) \"double_nan_count\"\n").append(", \"count\"(\"double\") FILTER (WHERE (\"double\" = \"infinity\"())) \"double_pos_inf_count\"\n")
+						.append(", \"count\"(\"double\") FILTER (WHERE (\"double\" = -\"infinity\"())) \"double_neg_inf_count\"\n").append(", \"sum\"(CAST(\"real\" AS double)) FILTER (WHERE \"is_finite\"(\"real\")) \"real_sum\"\n").append(", \"count\"(\"real\") FILTER (WHERE \"is_nan\"(\"real\")) \"real_nan_count\"\n").append(", \"count\"(\"real\") FILTER (WHERE (\"real\" = \"infinity\"())) \"real_pos_inf_count\"\n").append(", \"count\"(\"real\") FILTER (WHERE (\"real\" = -\"infinity\"())) \"real_neg_inf_count\"\n").append(", \"checksum\"(\"array_sort\"(\"int_array\")) int_array_checksum\n").append(", COALESCE(\"checksum\"(TRY(\"array_sort\"(\"row_array\"))), \"checksum\"(\"row_array\")) \"row_array_checksum\"").append(", \"checksum\"(\"map_array\") \"map_array_checksum\"\n")
+						.append("FROM\n").append("  test:di").toString(),
                 PARSING_OPTIONS);
         assertEquals(checksumQuery, expectedChecksumQuery, "Actual: " + formatSql(checksumQuery, Optional.empty()));
     }

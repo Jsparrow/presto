@@ -38,7 +38,7 @@ public class TestPruneLimitColumns
     public void testNotAllInputsReferenced()
     {
         tester().assertThat(new PruneLimitColumns())
-                .on(p -> buildProjectedLimit(p, variable -> variable.getName().equals("b")))
+                .on(p -> buildProjectedLimit(p, variable -> "b".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("b", expression("b")),

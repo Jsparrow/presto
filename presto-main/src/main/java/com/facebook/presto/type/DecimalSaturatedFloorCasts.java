@@ -40,8 +40,6 @@ import static java.math.RoundingMode.FLOOR;
 
 public final class DecimalSaturatedFloorCasts
 {
-    private DecimalSaturatedFloorCasts() {}
-
     public static final SqlScalarFunction DECIMAL_TO_DECIMAL_SATURATED_FLOOR_CAST = SqlScalarFunction.builder(DecimalSaturatedFloorCasts.class, SATURATED_FLOOR_CAST)
             .signature(SignatureBuilder.builder()
                     .kind(SCALAR)
@@ -61,37 +59,47 @@ public final class DecimalSaturatedFloorCasts
                                 return ImmutableList.of(sourcePrecision, sourceScale, resultPrecision, resultScale);
                             })))
             .build();
+	public static final SqlScalarFunction DECIMAL_TO_BIGINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(BIGINT, Long.MIN_VALUE, Long.MAX_VALUE);
+	public static final SqlScalarFunction DECIMAL_TO_INTEGER_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(INTEGER, Integer.MIN_VALUE, Integer.MAX_VALUE);
+	public static final SqlScalarFunction DECIMAL_TO_SMALLINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(SMALLINT, Short.MIN_VALUE, Short.MAX_VALUE);
+	public static final SqlScalarFunction DECIMAL_TO_TINYINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(TINYINT, Byte.MIN_VALUE, Byte.MAX_VALUE);
+	public static final SqlScalarFunction BIGINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(BIGINT);
+	public static final SqlScalarFunction INTEGER_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(INTEGER);
+	public static final SqlScalarFunction SMALLINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(SMALLINT);
+	public static final SqlScalarFunction TINYINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(TINYINT);
 
-    @UsedByGeneratedCode
+	private DecimalSaturatedFloorCasts() {}
+
+	@UsedByGeneratedCode
     public static long shortDecimalToShortDecimal(long value, int sourcePrecision, int sourceScale, int resultPrecision, int resultScale)
     {
         return bigintToBigintFloorSaturatedCast(BigInteger.valueOf(value), sourceScale, resultPrecision, resultScale).longValueExact();
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Slice shortDecimalToLongDecimal(long value, int sourcePrecision, int sourceScale, int resultPrecision, int resultScale)
     {
         return encodeUnscaledValue(bigintToBigintFloorSaturatedCast(BigInteger.valueOf(value), sourceScale, resultPrecision, resultScale));
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static long longDecimalToShortDecimal(Slice value, int sourcePrecision, int sourceScale, int resultPrecision, int resultScale)
     {
         return bigintToBigintFloorSaturatedCast(decodeUnscaledValue(value), sourceScale, resultPrecision, resultScale).longValueExact();
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Slice longDecimalToLongDecimal(Slice value, int sourcePrecision, int sourceScale, int resultPrecision, int resultScale)
     {
         return encodeUnscaledValue(bigintToBigintFloorSaturatedCast(decodeUnscaledValue(value), sourceScale, resultPrecision, resultScale));
     }
 
-    private static BigInteger bigintToBigintFloorSaturatedCast(BigInteger value, int sourceScale, int resultPrecision, int resultScale)
+	private static BigInteger bigintToBigintFloorSaturatedCast(BigInteger value, int sourceScale, int resultPrecision, int resultScale)
     {
         return bigDecimalToBigintFloorSaturatedCast(new BigDecimal(value, sourceScale), resultPrecision, resultScale);
     }
 
-    private static BigInteger bigDecimalToBigintFloorSaturatedCast(BigDecimal bigDecimal, int resultPrecision, int resultScale)
+	private static BigInteger bigDecimalToBigintFloorSaturatedCast(BigDecimal bigDecimal, int resultPrecision, int resultScale)
     {
         BigDecimal rescaledValue = bigDecimal.setScale(resultScale, FLOOR);
         BigInteger unscaledValue = rescaledValue.unscaledValue();
@@ -106,12 +114,7 @@ public final class DecimalSaturatedFloorCasts
         return unscaledValue;
     }
 
-    public static final SqlScalarFunction DECIMAL_TO_BIGINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(BIGINT, Long.MIN_VALUE, Long.MAX_VALUE);
-    public static final SqlScalarFunction DECIMAL_TO_INTEGER_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(INTEGER, Integer.MIN_VALUE, Integer.MAX_VALUE);
-    public static final SqlScalarFunction DECIMAL_TO_SMALLINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(SMALLINT, Short.MIN_VALUE, Short.MAX_VALUE);
-    public static final SqlScalarFunction DECIMAL_TO_TINYINT_SATURATED_FLOOR_CAST = decimalToGenericIntegerTypeSaturatedFloorCast(TINYINT, Byte.MIN_VALUE, Byte.MAX_VALUE);
-
-    private static SqlScalarFunction decimalToGenericIntegerTypeSaturatedFloorCast(Type type, long minValue, long maxValue)
+	private static SqlScalarFunction decimalToGenericIntegerTypeSaturatedFloorCast(Type type, long minValue, long maxValue)
     {
         return SqlScalarFunction.builder(DecimalSaturatedFloorCasts.class, SATURATED_FLOOR_CAST)
                 .signature(SignatureBuilder.builder()
@@ -131,19 +134,19 @@ public final class DecimalSaturatedFloorCasts
                 .build();
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static long shortDecimalToGenericIntegerType(long value, int sourceScale, long minValue, long maxValue)
     {
         return bigIntegerDecimalToGenericIntegerType(BigInteger.valueOf(value), sourceScale, minValue, maxValue);
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static long longDecimalToGenericIntegerType(Slice value, int sourceScale, long minValue, long maxValue)
     {
         return bigIntegerDecimalToGenericIntegerType(decodeUnscaledValue(value), sourceScale, minValue, maxValue);
     }
 
-    private static long bigIntegerDecimalToGenericIntegerType(BigInteger bigInteger, int sourceScale, long minValue, long maxValue)
+	private static long bigIntegerDecimalToGenericIntegerType(BigInteger bigInteger, int sourceScale, long minValue, long maxValue)
     {
         BigDecimal bigDecimal = new BigDecimal(bigInteger, sourceScale);
         BigInteger unscaledValue = bigDecimal.setScale(0, FLOOR).unscaledValue();
@@ -156,12 +159,7 @@ public final class DecimalSaturatedFloorCasts
         return unscaledValue.longValueExact();
     }
 
-    public static final SqlScalarFunction BIGINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(BIGINT);
-    public static final SqlScalarFunction INTEGER_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(INTEGER);
-    public static final SqlScalarFunction SMALLINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(SMALLINT);
-    public static final SqlScalarFunction TINYINT_TO_DECIMAL_SATURATED_FLOOR_CAST = genericIntegerTypeToDecimalSaturatedFloorCast(TINYINT);
-
-    private static SqlScalarFunction genericIntegerTypeToDecimalSaturatedFloorCast(Type integerType)
+	private static SqlScalarFunction genericIntegerTypeToDecimalSaturatedFloorCast(Type integerType)
     {
         return SqlScalarFunction.builder(DecimalSaturatedFloorCasts.class, SATURATED_FLOOR_CAST)
                 .signature(SignatureBuilder.builder()
@@ -182,13 +180,13 @@ public final class DecimalSaturatedFloorCasts
                 .build();
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static long genericIntegerTypeToShortDecimal(long value, int resultPrecision, int resultScale)
     {
         return bigDecimalToBigintFloorSaturatedCast(BigDecimal.valueOf(value), resultPrecision, resultScale).longValueExact();
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Slice genericIntegerTypeToLongDecimal(long value, int resultPrecision, int resultScale)
     {
         return encodeUnscaledValue(bigDecimalToBigintFloorSaturatedCast(BigDecimal.valueOf(value), resultPrecision, resultScale));

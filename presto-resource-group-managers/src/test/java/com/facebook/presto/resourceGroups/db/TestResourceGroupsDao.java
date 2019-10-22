@@ -60,7 +60,7 @@ public class TestResourceGroupsDao
 
     static H2ResourceGroupsDao setup(String prefix)
     {
-        DbResourceGroupConfig config = new DbResourceGroupConfig().setConfigDbUrl("jdbc:h2:mem:test_" + prefix + System.nanoTime());
+        DbResourceGroupConfig config = new DbResourceGroupConfig().setConfigDbUrl(new StringBuilder().append("jdbc:h2:mem:test_").append(prefix).append(System.nanoTime()).toString());
         return new H2DaoProvider(config).get();
     }
 
@@ -280,21 +280,21 @@ public class TestResourceGroupsDao
     private static void compareResourceGroups(Map<Long, ResourceGroupSpecBuilder> map, List<ResourceGroupSpecBuilder> records)
     {
         assertEquals(map.size(), records.size());
-        for (ResourceGroupSpecBuilder record : records) {
+        records.forEach(record -> {
             ResourceGroupSpecBuilder expected = map.get(record.getId());
             assertEquals(record.build(), expected.build());
-        }
+        });
     }
 
     private static void compareSelectors(Map<Long, SelectorRecord> map, List<SelectorRecord> records)
     {
         assertEquals(map.size(), records.size());
-        for (SelectorRecord record : records) {
+        records.forEach(record -> {
             SelectorRecord expected = map.get(record.getResourceGroupId());
             assertEquals(record.getResourceGroupId(), expected.getResourceGroupId());
             assertEquals(record.getUserRegex().map(Pattern::pattern), expected.getUserRegex().map(Pattern::pattern));
             assertEquals(record.getSourceRegex().map(Pattern::pattern), expected.getSourceRegex().map(Pattern::pattern));
             assertEquals(record.getSelectorResourceEstimate(), expected.getSelectorResourceEstimate());
-        }
+        });
     }
 }

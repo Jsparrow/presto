@@ -68,7 +68,8 @@ public final class FunctionResolution
         return functionManager.lookupFunction("not", fromTypes(BOOLEAN));
     }
 
-    public boolean isNotFunction(FunctionHandle functionHandle)
+    @Override
+	public boolean isNotFunction(FunctionHandle functionHandle)
     {
         return notFunction().equals(functionHandle);
     }

@@ -76,7 +76,7 @@ public class TableLayoutResult
         Map<ColumnHandle, Domain> predicateDomains = predicate.getDomains().get();
         Map<ColumnHandle, Domain> unenforcedDomains = unenforced.getDomains().get();
         ImmutableMap.Builder<ColumnHandle, Domain> enforcedDomainsBuilder = ImmutableMap.builder();
-        for (Map.Entry<ColumnHandle, Domain> entry : predicateDomains.entrySet()) {
+        predicateDomains.entrySet().forEach(entry -> {
             ColumnHandle predicateColumnHandle = entry.getKey();
             if (unenforcedDomains.containsKey(predicateColumnHandle)) {
                 checkArgument(
@@ -86,7 +86,7 @@ public class TableLayoutResult
             else {
                 enforcedDomainsBuilder.put(predicateColumnHandle, entry.getValue());
             }
-        }
+        });
         Map<ColumnHandle, Domain> enforcedDomains = enforcedDomainsBuilder.build();
         checkArgument(
                 enforcedDomains.size() + unenforcedDomains.size() == predicateDomains.size(),

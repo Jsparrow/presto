@@ -34,27 +34,27 @@ public final class StorageType
 
     private final String hiveTypeName;
 
-    public static StorageType arrayOf(StorageType elementStorageType)
-    {
-        return new StorageType(format("%s<%s>", LIST_TYPE_NAME, elementStorageType.getHiveTypeName()));
-    }
-
-    public static StorageType mapOf(StorageType keyStorageType, StorageType valueStorageType)
-    {
-        return new StorageType(format("%s<%s,%s>", MAP_TYPE_NAME, keyStorageType.getHiveTypeName(), valueStorageType.getHiveTypeName()));
-    }
-
-    public static StorageType decimal(int precision, int scale)
-    {
-        return new StorageType(format("%s(%d,%d)", DECIMAL_TYPE_NAME, precision, scale));
-    }
-
     private StorageType(String hiveTypeName)
     {
         this.hiveTypeName = requireNonNull(hiveTypeName, "hiveTypeName is null");
     }
 
-    public String getHiveTypeName()
+	public static StorageType arrayOf(StorageType elementStorageType)
+    {
+        return new StorageType(format("%s<%s>", LIST_TYPE_NAME, elementStorageType.getHiveTypeName()));
+    }
+
+	public static StorageType mapOf(StorageType keyStorageType, StorageType valueStorageType)
+    {
+        return new StorageType(format("%s<%s,%s>", MAP_TYPE_NAME, keyStorageType.getHiveTypeName(), valueStorageType.getHiveTypeName()));
+    }
+
+	public static StorageType decimal(int precision, int scale)
+    {
+        return new StorageType(format("%s(%d,%d)", DECIMAL_TYPE_NAME, precision, scale));
+    }
+
+	public String getHiveTypeName()
     {
         return hiveTypeName;
     }

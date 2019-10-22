@@ -113,9 +113,7 @@ public final class Expressions
                 public Void visitCall(CallExpression call, Void context)
                 {
                     builder.add(call);
-                    for (RowExpression argument : call.getArguments()) {
-                        argument.accept(this, context);
-                    }
+                    call.getArguments().forEach(argument -> argument.accept(this, context));
                     return null;
                 }
 
@@ -152,9 +150,7 @@ public final class Expressions
                 public Void visitSpecialForm(SpecialFormExpression specialForm, Void context)
                 {
                     builder.add(specialForm);
-                    for (RowExpression argument : specialForm.getArguments()) {
-                        argument.accept(this, context);
-                    }
+                    specialForm.getArguments().forEach(argument -> argument.accept(this, context));
                     return null;
                 }
             }, null);

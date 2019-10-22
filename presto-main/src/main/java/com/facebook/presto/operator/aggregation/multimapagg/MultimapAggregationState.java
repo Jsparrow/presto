@@ -37,7 +37,8 @@ public interface MultimapAggregationState
         throw new UnsupportedOperationException();
     }
 
-    long getEstimatedSize();
+    @Override
+	long getEstimatedSize();
 
     int getEntryCount();
 }

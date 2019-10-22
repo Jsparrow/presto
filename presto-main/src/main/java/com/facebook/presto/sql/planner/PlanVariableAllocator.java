@@ -68,7 +68,8 @@ public class PlanVariableAllocator
         return newVariable(nameHint.getSuffix(), type, null);
     }
 
-    public VariableReferenceExpression newVariable(String nameHint, Type type)
+    @Override
+	public VariableReferenceExpression newVariable(String nameHint, Type type)
     {
         return newVariable(nameHint, type, null);
     }
@@ -101,14 +102,14 @@ public class PlanVariableAllocator
         String unique = nameHint;
 
         if (suffix != null) {
-            unique = unique + "$" + suffix;
+            unique = new StringBuilder().append(unique).append("$").append(suffix).toString();
         }
         // remove special characters for other special serde
         unique = DISALLOWED_CHAR_PATTERN.matcher(unique).replaceAll("_");
 
         String attempt = unique;
         while (variables.containsKey(attempt)) {
-            attempt = unique + "_" + nextId();
+            attempt = new StringBuilder().append(unique).append("_").append(nextId()).toString();
         }
 
         variables.put(attempt, type);

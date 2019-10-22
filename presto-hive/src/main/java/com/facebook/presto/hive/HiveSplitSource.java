@@ -402,27 +402,29 @@ class HiveSplitSource
 
     void noMoreSplits()
     {
-        if (setIf(stateReference, State.noMoreSplits(), state -> state.getKind() == INITIAL)) {
-            // Stop the split loader before finishing the queue.
-            // Once the queue is finished, it will always return a completed future to avoid blocking any caller.
-            // This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
-            splitLoader.stop();
-            queues.noMoreSplits();
-        }
+        if (!setIf(stateReference, State.noMoreSplits(), state -> state.getKind() == INITIAL)) {
+			return;
+		}
+		// Stop the split loader before finishing the queue.
+		// Once the queue is finished, it will always return a completed future to avoid blocking any caller.
+		// This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
+		splitLoader.stop();
+		queues.noMoreSplits();
     }
 
     void fail(Throwable e)
     {
         // The error must be recorded before setting the noMoreSplits marker to make sure
-        // isFinished will observe failure instead of successful completion.
-        // Only record the first error message.
-        if (setIf(stateReference, State.failed(e), state -> state.getKind() == INITIAL)) {
-            // Stop the split loader before finishing the queue.
-            // Once the queue is finished, it will always return a completed future to avoid blocking any caller.
-            // This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
-            splitLoader.stop();
-            queues.noMoreSplits();
-        }
+		// isFinished will observe failure instead of successful completion.
+		// Only record the first error message.
+		if (!setIf(stateReference, State.failed(e), state -> state.getKind() == INITIAL)) {
+			return;
+		}
+		// Stop the split loader before finishing the queue.
+		// Once the queue is finished, it will always return a completed future to avoid blocking any caller.
+		// This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
+		splitLoader.stop();
+		queues.noMoreSplits();
     }
 
     @Override
@@ -452,11 +454,10 @@ class HiveSplitSource
             int removedEstimatedSizeInBytes = 0;
             for (InternalHiveSplit internalSplit : internalSplits) {
                 long maxSplitBytes = maxSplitSize.toBytes();
-                if (remainingInitialSplits.get() > 0) {
-                    if (remainingInitialSplits.getAndDecrement() > 0) {
-                        maxSplitBytes = maxInitialSplitSize.toBytes();
-                    }
-                }
+                boolean condition = remainingInitialSplits.get() > 0 && remainingInitialSplits.getAndDecrement() > 0;
+				if (condition) {
+				    maxSplitBytes = maxInitialSplitSize.toBytes();
+				}
                 InternalHiveBlock block = internalSplit.currentBlock();
                 long splitBytes;
                 if (internalSplit.isSplittable()) {
@@ -563,13 +564,14 @@ class HiveSplitSource
     @Override
     public void close()
     {
-        if (setIf(stateReference, State.closed(), state -> state.getKind() == INITIAL || state.getKind() == NO_MORE_SPLITS)) {
-            // Stop the split loader before finishing the queue.
-            // Once the queue is finished, it will always return a completed future to avoid blocking any caller.
-            // This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
-            splitLoader.stop();
-            queues.noMoreSplits();
-        }
+        if (!setIf(stateReference, State.closed(), state -> state.getKind() == INITIAL || state.getKind() == NO_MORE_SPLITS)) {
+			return;
+		}
+		// Stop the split loader before finishing the queue.
+		// Once the queue is finished, it will always return a completed future to avoid blocking any caller.
+		// This could lead to a short period of busy loop in splitLoader (although unlikely in general setup).
+		splitLoader.stop();
+		queues.noMoreSplits();
     }
 
     private static OptionalInt toBucketNumber(ConnectorPartitionHandle partitionHandle)
@@ -604,7 +606,15 @@ class HiveSplitSource
         throw new PrestoException(HIVE_UNKNOWN_ERROR, throwable);
     }
 
-    interface PerBucket
+    enum StateKind
+    {
+        INITIAL,
+        NO_MORE_SPLITS,
+        FAILED,
+        CLOSED,
+    }
+
+	interface PerBucket
     {
         ListenableFuture<?> offer(OptionalInt bucketNumber, InternalHiveSplit split);
 
@@ -664,13 +674,5 @@ class HiveSplitSource
         {
             return new State(CLOSED, null);
         }
-    }
-
-    enum StateKind
-    {
-        INITIAL,
-        NO_MORE_SPLITS,
-        FAILED,
-        CLOSED,
     }
 }

@@ -141,33 +141,6 @@ public class SqlTaskExecution
 
     private final Status status;
 
-    static SqlTaskExecution createSqlTaskExecution(
-            TaskStateMachine taskStateMachine,
-            TaskContext taskContext,
-            OutputBuffer outputBuffer,
-            List<TaskSource> sources,
-            LocalExecutionPlan localExecutionPlan,
-            TaskExecutor taskExecutor,
-            Executor notificationExecutor,
-            SplitMonitor queryMonitor)
-    {
-        SqlTaskExecution task = new SqlTaskExecution(
-                taskStateMachine,
-                taskContext,
-                outputBuffer,
-                localExecutionPlan,
-                taskExecutor,
-                queryMonitor,
-                notificationExecutor);
-        try (SetThreadName ignored = new SetThreadName("Task-%s", task.getTaskId())) {
-            // The scheduleDriversForTaskLifeCycle method calls enqueueDriverSplitRunner, which registers a callback with access to this object.
-            // The call back is accessed from another thread, so this code can not be placed in the constructor.
-            task.scheduleDriversForTaskLifeCycle();
-            task.addSources(sources);
-            return task;
-        }
-    }
-
     private SqlTaskExecution(
             TaskStateMachine taskStateMachine,
             TaskContext taskContext,
@@ -228,14 +201,14 @@ public class SqlTaskExecution
                     "Fragment is partitioned, but not all partitioned drivers were found");
 
             // Pre-register Lifespans for ungrouped partitioned drivers in case they end up get no splits.
-            for (Entry<PlanNodeId, DriverSplitRunnerFactory> entry : this.driverRunnerFactoriesWithSplitLifeCycle.entrySet()) {
+			this.driverRunnerFactoriesWithSplitLifeCycle.entrySet().forEach(entry -> {
                 PlanNodeId planNodeId = entry.getKey();
                 DriverSplitRunnerFactory driverSplitRunnerFactory = entry.getValue();
                 if (driverSplitRunnerFactory.getPipelineExecutionStrategy() == UNGROUPED_EXECUTION) {
                     this.schedulingLifespanManager.addLifespanIfAbsent(Lifespan.taskWide());
                     this.pendingSplitsByPlanNode.get(planNodeId).getLifespan(Lifespan.taskWide());
                 }
-            }
+            });
 
             // don't register the task if it is already completed (most likely failed during planning above)
             if (!taskStateMachine.getState().isDone()) {
@@ -250,7 +223,34 @@ public class SqlTaskExecution
         }
     }
 
-    // this is a separate method to ensure that the `this` reference is not leaked during construction
+	static SqlTaskExecution createSqlTaskExecution(
+            TaskStateMachine taskStateMachine,
+            TaskContext taskContext,
+            OutputBuffer outputBuffer,
+            List<TaskSource> sources,
+            LocalExecutionPlan localExecutionPlan,
+            TaskExecutor taskExecutor,
+            Executor notificationExecutor,
+            SplitMonitor queryMonitor)
+    {
+        SqlTaskExecution task = new SqlTaskExecution(
+                taskStateMachine,
+                taskContext,
+                outputBuffer,
+                localExecutionPlan,
+                taskExecutor,
+                queryMonitor,
+                notificationExecutor);
+        try (SetThreadName ignored = new SetThreadName("Task-%s", task.getTaskId())) {
+            // The scheduleDriversForTaskLifeCycle method calls enqueueDriverSplitRunner, which registers a callback with access to this object.
+            // The call back is accessed from another thread, so this code can not be placed in the constructor.
+            task.scheduleDriversForTaskLifeCycle();
+            task.addSources(sources);
+            return task;
+        }
+    }
+
+	// this is a separate method to ensure that the `this` reference is not leaked during construction
     private static TaskHandle createTaskHandle(
             TaskStateMachine taskStateMachine,
             TaskContext taskContext,
@@ -267,25 +267,23 @@ public class SqlTaskExecution
         taskStateMachine.addStateChangeListener(state -> {
             if (state.isDone()) {
                 taskExecutor.removeTask(taskHandle);
-                for (DriverFactory factory : localExecutionPlan.getDriverFactories()) {
-                    factory.noMoreDrivers();
-                }
+                localExecutionPlan.getDriverFactories().forEach(DriverFactory::noMoreDrivers);
             }
         });
         return taskHandle;
     }
 
-    public TaskId getTaskId()
+	public TaskId getTaskId()
     {
         return taskId;
     }
 
-    public TaskContext getTaskContext()
+	public TaskContext getTaskContext()
     {
         return taskContext;
     }
 
-    public void addSources(List<TaskSource> sources)
+	public void addSources(List<TaskSource> sources)
     {
         requireNonNull(sources, "sources is null");
         checkState(!Thread.holdsLock(this), "Can not add sources while holding a lock on the %s", getClass().getSimpleName());
@@ -322,7 +320,7 @@ public class SqlTaskExecution
         }
     }
 
-    private synchronized Map<PlanNodeId, TaskSource> updateSources(List<TaskSource> sources)
+	private synchronized Map<PlanNodeId, TaskSource> updateSources(List<TaskSource> sources)
     {
         Map<PlanNodeId, TaskSource> updatedRemoteSources = new HashMap<>();
 
@@ -341,14 +339,14 @@ public class SqlTaskExecution
                 .collect(toList());
 
         // update task with new sources
-        for (TaskSource source : sources) {
+		sources.forEach(source -> {
             if (driverRunnerFactoriesWithSplitLifeCycle.containsKey(source.getPlanNodeId())) {
                 scheduleTableScanSource(source);
             }
             else {
                 scheduleRemoteSource(source, updatedRemoteSources);
             }
-        }
+        });
 
         for (DriverSplitRunnerFactory driverSplitRunnerFactory :
                 Iterables.concat(driverRunnerFactoriesWithSplitLifeCycle.values(), driverRunnerFactoriesWithTaskLifeCycle, driverRunnerFactoriesWithDriverGroupLifeCycle)) {
@@ -364,7 +362,7 @@ public class SqlTaskExecution
         return updatedRemoteSources;
     }
 
-    @GuardedBy("this")
+	@GuardedBy("this")
     private void mergeIntoPendingSplits(PlanNodeId planNodeId, Set<ScheduledSplit> scheduledSplits, Set<Lifespan> noMoreSplitsForLifespan, boolean noMoreSplits)
     {
         checkHoldsLock();
@@ -373,23 +371,23 @@ public class SqlTaskExecution
         PendingSplitsForPlanNode pendingSplitsForPlanNode = pendingSplitsByPlanNode.get(planNodeId);
 
         partitionedDriverFactory.splitsAdded(scheduledSplits.size());
-        for (ScheduledSplit scheduledSplit : scheduledSplits) {
+        scheduledSplits.forEach(scheduledSplit -> {
             Lifespan lifespan = scheduledSplit.getSplit().getLifespan();
             checkLifespan(partitionedDriverFactory.getPipelineExecutionStrategy(), lifespan);
             pendingSplitsForPlanNode.getLifespan(lifespan).addSplit(scheduledSplit);
             schedulingLifespanManager.addLifespanIfAbsent(lifespan);
-        }
-        for (Lifespan lifespanWithNoMoreSplits : noMoreSplitsForLifespan) {
+        });
+        noMoreSplitsForLifespan.forEach(lifespanWithNoMoreSplits -> {
             checkLifespan(partitionedDriverFactory.getPipelineExecutionStrategy(), lifespanWithNoMoreSplits);
             pendingSplitsForPlanNode.getLifespan(lifespanWithNoMoreSplits).noMoreSplits();
             schedulingLifespanManager.addLifespanIfAbsent(lifespanWithNoMoreSplits);
-        }
+        });
         if (noMoreSplits) {
             pendingSplitsForPlanNode.setNoMoreSplits();
         }
     }
 
-    private synchronized void scheduleTableScanSource(TaskSource sourceUpdate)
+	private synchronized void scheduleTableScanSource(TaskSource sourceUpdate)
     {
         mergeIntoPendingSplits(sourceUpdate.getPlanNodeId(), sourceUpdate.getSplits(), sourceUpdate.getNoMoreSplitsForLifespan(), sourceUpdate.isNoMoreSplits());
 
@@ -452,10 +450,8 @@ public class SqlTaskExecution
 
                     // Enqueue driver runners with split lifecycle for this plan node and driver life cycle combination.
                     ImmutableList.Builder<DriverSplitRunner> runners = ImmutableList.builder();
-                    for (ScheduledSplit scheduledSplit : pendingSplits.removeAllSplits()) {
-                        // create a new driver for the split
-                        runners.add(partitionedDriverRunnerFactory.createDriverRunner(scheduledSplit, lifespan));
-                    }
+                    // create a new driver for the split
+					pendingSplits.removeAllSplits().forEach(scheduledSplit -> runners.add(partitionedDriverRunnerFactory.createDriverRunner(scheduledSplit, lifespan)));
                     enqueueDriverSplitRunner(false, runners.build());
 
                     // If all driver runners have been enqueued for this plan node and driver life cycle combination,
@@ -484,7 +480,7 @@ public class SqlTaskExecution
         }
     }
 
-    private synchronized void scheduleRemoteSource(TaskSource sourceUpdate, Map<PlanNodeId, TaskSource> updatedRemoteSources)
+	private synchronized void scheduleRemoteSource(TaskSource sourceUpdate, Map<PlanNodeId, TaskSource> updatedRemoteSources)
     {
         // create new source
         TaskSource newSource;
@@ -497,13 +493,14 @@ public class SqlTaskExecution
         }
 
         // only record new source if something changed
-        if (newSource != currentSource) {
-            remoteSources.put(sourceUpdate.getPlanNodeId(), newSource);
-            updatedRemoteSources.put(sourceUpdate.getPlanNodeId(), newSource);
-        }
+		if (newSource == currentSource) {
+			return;
+		}
+		remoteSources.put(sourceUpdate.getPlanNodeId(), newSource);
+		updatedRemoteSources.put(sourceUpdate.getPlanNodeId(), newSource);
     }
 
-    // scheduleDriversForTaskLifeCycle and scheduleDriversForDriverGroupLifeCycle are similar.
+	// scheduleDriversForTaskLifeCycle and scheduleDriversForDriverGroupLifeCycle are similar.
     // They are invoked under different circumstances, and schedules a disjoint set of drivers, as suggested by their names.
     // They also have a few differences, making it more convenient to keep the two methods separate.
     private void scheduleDriversForTaskLifeCycle()
@@ -511,19 +508,19 @@ public class SqlTaskExecution
         // This method is called at the beginning of the task.
         // It schedules drivers for all the pipelines that have task life cycle.
         List<DriverSplitRunner> runners = new ArrayList<>();
-        for (DriverSplitRunnerFactory driverRunnerFactory : driverRunnerFactoriesWithTaskLifeCycle) {
+        driverRunnerFactoriesWithTaskLifeCycle.forEach(driverRunnerFactory -> {
             for (int i = 0; i < driverRunnerFactory.getDriverInstances().orElse(1); i++) {
                 runners.add(driverRunnerFactory.createDriverRunner(null, Lifespan.taskWide()));
             }
-        }
+        });
         enqueueDriverSplitRunner(true, runners);
-        for (DriverSplitRunnerFactory driverRunnerFactory : driverRunnerFactoriesWithTaskLifeCycle) {
+        driverRunnerFactoriesWithTaskLifeCycle.forEach(driverRunnerFactory -> {
             driverRunnerFactory.noMoreDriverRunner(ImmutableList.of(Lifespan.taskWide()));
             verify(driverRunnerFactory.isNoMoreDriverRunner());
-        }
+        });
     }
 
-    private void scheduleDriversForDriverGroupLifeCycle(Lifespan lifespan)
+	private void scheduleDriversForDriverGroupLifeCycle(Lifespan lifespan)
     {
         // This method is called when a split that belongs to a previously unseen driver group is scheduled.
         // It schedules drivers for all the pipelines that have driver group life cycle.
@@ -533,18 +530,16 @@ public class SqlTaskExecution
         }
 
         List<DriverSplitRunner> runners = new ArrayList<>();
-        for (DriverSplitRunnerFactory driverSplitRunnerFactory : driverRunnerFactoriesWithDriverGroupLifeCycle) {
+        driverRunnerFactoriesWithDriverGroupLifeCycle.forEach(driverSplitRunnerFactory -> {
             for (int i = 0; i < driverSplitRunnerFactory.getDriverInstances().orElse(1); i++) {
                 runners.add(driverSplitRunnerFactory.createDriverRunner(null, lifespan));
             }
-        }
+        });
         enqueueDriverSplitRunner(true, runners);
-        for (DriverSplitRunnerFactory driverRunnerFactory : driverRunnerFactoriesWithDriverGroupLifeCycle) {
-            driverRunnerFactory.noMoreDriverRunner(ImmutableList.of(lifespan));
-        }
+        driverRunnerFactoriesWithDriverGroupLifeCycle.forEach(driverRunnerFactory -> driverRunnerFactory.noMoreDriverRunner(ImmutableList.of(lifespan)));
     }
 
-    private synchronized void enqueueDriverSplitRunner(boolean forceRunSplit, List<DriverSplitRunner> runners)
+	private synchronized void enqueueDriverSplitRunner(boolean forceRunSplit, List<DriverSplitRunner> runners)
     {
         // schedule driver to be executed
         List<ListenableFuture<?>> finishedFutures = taskExecutor.enqueueSplits(taskHandle, forceRunSplit, runners);
@@ -605,23 +600,15 @@ public class SqlTaskExecution
         }
     }
 
-    public synchronized Set<PlanNodeId> getNoMoreSplits()
+	public synchronized Set<PlanNodeId> getNoMoreSplits()
     {
         ImmutableSet.Builder<PlanNodeId> noMoreSplits = ImmutableSet.builder();
-        for (Entry<PlanNodeId, DriverSplitRunnerFactory> entry : driverRunnerFactoriesWithSplitLifeCycle.entrySet()) {
-            if (entry.getValue().isNoMoreDriverRunner()) {
-                noMoreSplits.add(entry.getKey());
-            }
-        }
-        for (TaskSource taskSource : remoteSources.values()) {
-            if (taskSource.isNoMoreSplits()) {
-                noMoreSplits.add(taskSource.getPlanNodeId());
-            }
-        }
+        driverRunnerFactoriesWithSplitLifeCycle.entrySet().stream().filter(entry -> entry.getValue().isNoMoreDriverRunner()).forEach(entry -> noMoreSplits.add(entry.getKey()));
+        remoteSources.values().stream().filter(TaskSource::isNoMoreSplits).forEach(taskSource -> noMoreSplits.add(taskSource.getPlanNodeId()));
         return noMoreSplits.build();
     }
 
-    private synchronized void checkTaskCompletion()
+	private synchronized void checkTaskCompletion()
     {
         if (taskStateMachine.getState().isDone()) {
             return;
@@ -650,7 +637,7 @@ public class SqlTaskExecution
         taskStateMachine.finished();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -660,7 +647,7 @@ public class SqlTaskExecution
                 .toString();
     }
 
-    private void checkLifespan(PipelineExecutionStrategy executionStrategy, Lifespan lifespan)
+	private void checkLifespan(PipelineExecutionStrategy executionStrategy, Lifespan lifespan)
     {
         switch (executionStrategy) {
             case GROUPED_EXECUTION:
@@ -674,7 +661,7 @@ public class SqlTaskExecution
         }
     }
 
-    private void checkHoldsLock()
+	private void checkHoldsLock()
     {
         // This method serves a similar purpose at runtime as GuardedBy on method serves during static analysis.
         // This method should not have significant performance impact. If it does, it may be reasonably to remove this method.
@@ -684,7 +671,17 @@ public class SqlTaskExecution
         }
     }
 
-    // Splits for a particular plan node (all driver groups)
+	enum SplitsState
+    {
+        ADDING_SPLITS,
+        // All splits have been received from scheduler.
+        // No more splits will be added to the pendingSplits set.
+        NO_MORE_SPLITS,
+        // All splits has been turned into DriverSplitRunner.
+        FINISHED,
+    }
+
+	// Splits for a particular plan node (all driver groups)
     @NotThreadSafe
     private static class PendingSplitsForPlanNode
     {
@@ -702,9 +699,7 @@ public class SqlTaskExecution
                 return;
             }
             noMoreSplits = true;
-            for (PendingSplits splitsForLifespan : splitsByLifespan.values()) {
-                splitsForLifespan.noMoreSplits();
-            }
+            splitsByLifespan.values().forEach(SqlTaskExecution.PendingSplits::noMoreSplits);
         }
     }
 
@@ -747,16 +742,6 @@ public class SqlTaskExecution
             checkState(state == NO_MORE_SPLITS);
             state = FINISHED;
         }
-    }
-
-    enum SplitsState
-    {
-        ADDING_SPLITS,
-        // All splits have been received from scheduler.
-        // No more splits will be added to the pendingSplits set.
-        NO_MORE_SPLITS,
-        // All splits has been turned into DriverSplitRunner.
-        FINISHED,
     }
 
     private static class SchedulingLifespanManager
@@ -832,12 +817,11 @@ public class SqlTaskExecution
                 @Override
                 protected SchedulingLifespan computeNext()
                 {
-                    if (lastSchedulingLifespan != null) {
-                        if (lastSchedulingLifespan.isDone()) {
-                            completedLifespans.add(lastSchedulingLifespan.getLifespan());
-                            lifespansIterator.remove();
-                        }
-                    }
+                    boolean condition = lastSchedulingLifespan != null && lastSchedulingLifespan.isDone();
+					if (condition) {
+					    completedLifespans.add(lastSchedulingLifespan.getLifespan());
+					    lifespansIterator.remove();
+					}
                     if (!lifespansIterator.hasNext()) {
                         return endOfData();
                     }
@@ -953,12 +937,12 @@ public class SqlTaskExecution
 
             // add remote sources
             Optional<PlanNodeId> sourceId = driver.getSourceId();
-            if (sourceId.isPresent()) {
-                TaskSource taskSource = remoteSources.get(sourceId.get());
+            sourceId.ifPresent(value -> {
+                TaskSource taskSource = remoteSources.get(value);
                 if (taskSource != null) {
                     driver.updateSource(taskSource);
                 }
-            }
+            });
 
             status.decrementPendingCreation(pipelineContext.getPipelineId(), driverContext.getLifespan());
             closeDriverFactoryIfFullyCreated();
@@ -984,9 +968,7 @@ public class SqlTaskExecution
             if (closed) {
                 return;
             }
-            for (Lifespan lifespan : status.getAndAcknowledgeLifespansWithNoMoreDrivers(pipelineContext.getPipelineId())) {
-                driverFactory.noMoreDrivers(lifespan);
-            }
+            status.getAndAcknowledgeLifespansWithNoMoreDrivers(pipelineContext.getPipelineId()).forEach(driverFactory::noMoreDrivers);
             if (!isNoMoreDriverRunner() || status.getPendingCreation(pipelineContext.getPipelineId()) != 0) {
                 return;
             }
@@ -1112,12 +1094,13 @@ public class SqlTaskExecution
         @Override
         public void stateChanged(BufferState newState)
         {
-            if (newState == BufferState.FINISHED) {
-                SqlTaskExecution sqlTaskExecution = sqlTaskExecutionReference.get();
-                if (sqlTaskExecution != null) {
-                    sqlTaskExecution.checkTaskCompletion();
-                }
-            }
+            if (newState != BufferState.FINISHED) {
+				return;
+			}
+			SqlTaskExecution sqlTaskExecution = sqlTaskExecutionReference.get();
+			if (sqlTaskExecution != null) {
+			    sqlTaskExecution.checkTaskCompletion();
+			}
         }
     }
 
@@ -1330,12 +1313,11 @@ public class SqlTaskExecution
             // no more output will be created
             outputBuffer.setNoMorePagesForLifespan(lifespan);
 
-            if (!taskContext.isLegacyLifespanCompletionCondition()) {
-                // are there still pages in the output buffer?
-                if (!outputBuffer.isFinishedForLifespan(lifespan)) {
-                    return;
-                }
-            }
+            boolean condition = !taskContext.isLegacyLifespanCompletionCondition() && !outputBuffer.isFinishedForLifespan(lifespan);
+			// are there still pages in the output buffer?
+			if (condition) {
+			    return;
+			}
 
             // Cool! All done!
             taskContext.addCompletedDriverGroup(lifespan);

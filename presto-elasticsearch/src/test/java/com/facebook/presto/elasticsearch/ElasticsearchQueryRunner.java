@@ -41,13 +41,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class ElasticsearchQueryRunner
 {
-    private ElasticsearchQueryRunner() {}
-
     private static final Logger LOG = Logger.get(ElasticsearchQueryRunner.class);
-    private static final String TPCH_SCHEMA = "tpch";
-    private static final int NODE_COUNT = 2;
+	private static final String TPCH_SCHEMA = "tpch";
+	private static final int NODE_COUNT = 2;
 
-    public static DistributedQueryRunner createElasticsearchQueryRunner(EmbeddedElasticsearchNode embeddedElasticsearchNode, Iterable<TpchTable<?>> tables)
+	private ElasticsearchQueryRunner() {}
+
+	public static DistributedQueryRunner createElasticsearchQueryRunner(EmbeddedElasticsearchNode embeddedElasticsearchNode, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -84,7 +84,7 @@ public final class ElasticsearchQueryRunner
         }
     }
 
-    private static ElasticsearchTableDescriptionProvider createTableDescriptions(Metadata metadata)
+	private static ElasticsearchTableDescriptionProvider createTableDescriptions(Metadata metadata)
             throws Exception
     {
         JsonCodec<ElasticsearchTableDescription> codec = new CodecSupplier<>(ElasticsearchTableDescription.class, metadata).get();
@@ -96,7 +96,7 @@ public final class ElasticsearchQueryRunner
         return new ElasticsearchTableDescriptionProvider(config, codec);
     }
 
-    private static void installElasticsearchPlugin(QueryRunner queryRunner, TestingElasticsearchConnectorFactory factory)
+	private static void installElasticsearchPlugin(QueryRunner queryRunner, TestingElasticsearchConnectorFactory factory)
             throws Exception
     {
         queryRunner.installPlugin(new ElasticsearchPlugin(factory));
@@ -115,7 +115,7 @@ public final class ElasticsearchQueryRunner
         queryRunner.createCatalog("elasticsearch", "elasticsearch", config);
     }
 
-    private static void loadTpchTopic(EmbeddedElasticsearchNode embeddedElasticsearchNode, TestingPrestoClient prestoClient, TpchTable<?> table)
+	private static void loadTpchTopic(EmbeddedElasticsearchNode embeddedElasticsearchNode, TestingPrestoClient prestoClient, TpchTable<?> table)
     {
         long start = System.nanoTime();
         LOG.info("Running import for %s", table.getTableName());
@@ -124,12 +124,12 @@ public final class ElasticsearchQueryRunner
         LOG.info("Imported %s in %s", table.getTableName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder().setCatalog("elasticsearch").setSchema(TPCH_SCHEMA).build();
     }
 
-    public static void main(String[] args)
+	public static void main(String[] args)
             throws Exception
     {
         Logging.initialize();

@@ -86,13 +86,13 @@ public class MemoryPool
     public synchronized MemoryPoolInfo getInfo()
     {
         Map<QueryId, List<MemoryAllocation>> memoryAllocations = new HashMap<>();
-        for (Entry<QueryId, Map<String, Long>> entry : taggedMemoryAllocations.entrySet()) {
+        taggedMemoryAllocations.entrySet().forEach(entry -> {
             List<MemoryAllocation> allocations = new ArrayList<>();
             if (entry.getValue() != null) {
                 entry.getValue().forEach((tag, allocation) -> allocations.add(new MemoryAllocation(tag, allocation)));
             }
             memoryAllocations.put(entry.getKey(), allocations);
-        }
+        });
         return new MemoryPoolInfo(maxBytes, reservedBytes, reservedRevocableBytes, queryMemoryReservations, memoryAllocations, queryMemoryRevocableReservations);
     }
 
@@ -210,10 +210,11 @@ public class MemoryPool
             updateTaggedMemoryAllocations(queryId, allocationTag, -bytes);
         }
         reservedBytes -= bytes;
-        if (getFreeBytes() > 0 && future != null) {
-            future.set(null);
-            future = null;
-        }
+        if (!(getFreeBytes() > 0 && future != null)) {
+			return;
+		}
+		future.set(null);
+		future = null;
     }
 
     public synchronized void freeRevocable(QueryId queryId, long bytes)
@@ -236,10 +237,11 @@ public class MemoryPool
             queryMemoryRevocableReservations.put(queryId, queryReservation);
         }
         reservedRevocableBytes -= bytes;
-        if (getFreeBytes() > 0 && future != null) {
-            future.set(null);
-            future = null;
-        }
+        if (!(getFreeBytes() > 0 && future != null)) {
+			return;
+		}
+		future.set(null);
+		future = null;
     }
 
     // When this method returns the MOVE_QUERY_TAG won't be visible in the tagged memory allocations map.
@@ -310,27 +312,6 @@ public class MemoryPool
                 .toString();
     }
 
-    private static class NonCancellableMemoryFuture<V>
-            extends AbstractFuture<V>
-    {
-        public static <V> NonCancellableMemoryFuture<V> create()
-        {
-            return new NonCancellableMemoryFuture<>();
-        }
-
-        @Override
-        public boolean set(@Nullable V value)
-        {
-            return super.set(value);
-        }
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning)
-        {
-            throw new UnsupportedOperationException("cancellation is not supported");
-        }
-    }
-
     private synchronized void updateTaggedMemoryAllocations(QueryId queryId, String allocationTag, long delta)
     {
         if (delta == 0) {
@@ -350,14 +331,14 @@ public class MemoryPool
         });
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     synchronized Map<QueryId, Map<String, Long>> getTaggedMemoryAllocations()
     {
         return taggedMemoryAllocations.keySet().stream()
                 .collect(toImmutableMap(identity(), this::getTaggedMemoryAllocations));
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     synchronized Map<String, Long> getTaggedMemoryAllocations(QueryId targetQueryId)
     {
         if (taggedMemoryAllocations.get(targetQueryId) == null) {
@@ -367,5 +348,26 @@ public class MemoryPool
                 .entrySet().stream()
                 .filter(entry -> !entry.getKey().equals(FORCE_FREE_TAG))
                 .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+	private static class NonCancellableMemoryFuture<V>
+            extends AbstractFuture<V>
+    {
+        public static <V> NonCancellableMemoryFuture<V> create()
+        {
+            return new NonCancellableMemoryFuture<>();
+        }
+
+        @Override
+        public boolean set(@Nullable V value)
+        {
+            return super.set(value);
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning)
+        {
+            throw new UnsupportedOperationException("cancellation is not supported");
+        }
     }
 }

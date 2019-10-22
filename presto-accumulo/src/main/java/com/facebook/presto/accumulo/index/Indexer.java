@@ -153,24 +153,22 @@ public class Indexer
         Map<ByteBuffer, Map<ByteBuffer, Type>> indexColumnTypesBuilder = new HashMap<>();
 
         // Initialize metadata
-        table.getColumns().forEach(columnHandle -> {
-            if (columnHandle.isIndexed()) {
-                // Wrap the column family and qualifier for this column and add it to
-                // collection of indexed columns
-                ByteBuffer family = wrap(columnHandle.getFamily().get().getBytes(UTF_8));
-                ByteBuffer qualifier = wrap(columnHandle.getQualifier().get().getBytes(UTF_8));
-                indexColumnsBuilder.put(family, qualifier);
+        table.getColumns().stream().filter(AccumuloColumnHandle::isIndexed).forEach(columnHandle -> {
+		    // Wrap the column family and qualifier for this column and add it to
+		    // collection of indexed columns
+		    ByteBuffer family = wrap(columnHandle.getFamily().get().getBytes(UTF_8));
+		    ByteBuffer qualifier = wrap(columnHandle.getQualifier().get().getBytes(UTF_8));
+		    indexColumnsBuilder.put(family, qualifier);
 
-                // Create a mapping for this column's Presto type, again creating a new one for the
-                // family if necessary
-                Map<ByteBuffer, Type> types = indexColumnTypesBuilder.get(family);
-                if (types == null) {
-                    types = new HashMap<>();
-                    indexColumnTypesBuilder.put(family, types);
-                }
-                types.put(qualifier, columnHandle.getType());
-            }
-        });
+		    // Create a mapping for this column's Presto type, again creating a new one for the
+		    // family if necessary
+		    Map<ByteBuffer, Type> types = indexColumnTypesBuilder.get(family);
+		    if (types == null) {
+		        types = new HashMap<>();
+		        indexColumnTypesBuilder.put(family, types);
+		    }
+		    types.put(qualifier, columnHandle.getType());
+		});
 
         indexColumns = indexColumnsBuilder.build();
         indexColumnTypes = ImmutableMap.copyOf(indexColumnTypesBuilder);
@@ -213,7 +211,7 @@ public class Indexer
         }
 
         // For each column update in this mutation
-        for (ColumnUpdate columnUpdate : mutation.getUpdates()) {
+		mutation.getUpdates().forEach(columnUpdate -> {
             // Get the column qualifiers we want to index for this column family (if any)
             ByteBuffer family = wrap(columnUpdate.getColumnFamily());
             Collection<ByteBuffer> indexQualifiers = indexColumns.get(family);
@@ -236,16 +234,15 @@ public class Indexer
                     if (Types.isArrayType(type)) {
                         Type elementType = Types.getElementType(type);
                         List<?> elements = serializer.decode(type, columnUpdate.getValue());
-                        for (Object element : elements) {
-                            addIndexMutation(wrap(serializer.encode(elementType, element)), indexFamily, visibility, mutation.getRow());
-                        }
+                        elements.forEach(element -> addIndexMutation(wrap(serializer.encode(elementType, element)), indexFamily, visibility,
+								mutation.getRow()));
                     }
                     else {
                         addIndexMutation(wrap(columnUpdate.getValue()), indexFamily, visibility, mutation.getRow());
                     }
                 }
             }
-        }
+        });
     }
 
     public void index(Iterable<Mutation> mutations)
@@ -325,7 +322,7 @@ public class Indexer
     {
         ImmutableList.Builder<Mutation> mutationBuilder = ImmutableList.builder();
         // Mapping of column value to column to number of row IDs that contain that value
-        for (Entry<MetricsKey, AtomicLong> entry : metrics.entrySet()) {
+		metrics.entrySet().forEach(entry -> {
             // Row ID: Column value
             // Family: columnfamily_columnqualifier
             // Qualifier: CARDINALITY_CQ
@@ -336,7 +333,7 @@ public class Indexer
 
             // Add to our list of mutations
             mutationBuilder.add(mut);
-        }
+        });
 
         // If the first row and last row are both not null,
         // which would really be for a brand new table that has zero rows and no indexed elements...
@@ -367,15 +364,13 @@ public class Indexer
 
         // Build a string for all columns where the summing combiner should be applied,
         // i.e. all indexed columns
-        StringBuilder cardBuilder = new StringBuilder(rowsFamily + ":" + cardQualifier + ",");
-        for (String s : getLocalityGroups(table).keySet()) {
-            cardBuilder.append(s).append(":").append(cardQualifier).append(',');
-        }
+        StringBuilder cardBuilder = new StringBuilder(new StringBuilder().append(rowsFamily).append(":").append(cardQualifier).append(",").toString());
+        getLocalityGroups(table).keySet().forEach(s -> cardBuilder.append(s).append(":").append(cardQualifier).append(','));
         cardBuilder.deleteCharAt(cardBuilder.length() - 1);
 
         // Configuration rows for the Min/Max combiners
-        String firstRowColumn = rowsFamily + ":" + new String(METRICS_TABLE_FIRST_ROW_CQ.array());
-        String lastRowColumn = rowsFamily + ":" + new String(METRICS_TABLE_LAST_ROW_CQ.array());
+        String firstRowColumn = new StringBuilder().append(rowsFamily).append(":").append(new String(METRICS_TABLE_FIRST_ROW_CQ.array())).toString();
+        String lastRowColumn = new StringBuilder().append(rowsFamily).append(":").append(new String(METRICS_TABLE_LAST_ROW_CQ.array())).toString();
 
         // Summing combiner for cardinality columns
         IteratorSetting s1 = new IteratorSetting(1, SummingCombiner.class, ImmutableMap.of("columns", cardBuilder.toString(), "type", "STRING"));
@@ -409,15 +404,11 @@ public class Indexer
     public static Map<String, Set<Text>> getLocalityGroups(AccumuloTable table)
     {
         Map<String, Set<Text>> groups = new HashMap<>();
-        // For each indexed column
-        for (AccumuloColumnHandle columnHandle : table.getColumns().stream().filter(AccumuloColumnHandle::isIndexed).collect(Collectors.toList())) {
-            // Create a Text version of the index column family
-            Text indexColumnFamily = new Text(getIndexColumnFamily(columnHandle.getFamily().get().getBytes(UTF_8), columnHandle.getQualifier().get().getBytes(UTF_8)).array());
-
-            // Add this to the locality groups,
-            // it is a 1:1 mapping of locality group to column families
-            groups.put(indexColumnFamily.toString(), ImmutableSet.of(indexColumnFamily));
-        }
+        // Create a Text version of the index column family
+		// Add this to the locality groups,
+		// it is a 1:1 mapping of locality group to column families
+		// For each indexed column
+		table.getColumns().stream().filter(AccumuloColumnHandle::isIndexed).collect(Collectors.toList()).stream().map(columnHandle -> new Text(getIndexColumnFamily(columnHandle.getFamily().get().getBytes(UTF_8), columnHandle.getQualifier().get().getBytes(UTF_8)).array())).forEach(indexColumnFamily -> groups.put(indexColumnFamily.toString(), ImmutableSet.of(indexColumnFamily)));
         return groups;
     }
 
@@ -430,7 +421,7 @@ public class Indexer
      */
     public static String getIndexTableName(String schema, String table)
     {
-        return schema.equals("default") ? table + "_idx" : schema + '.' + table + "_idx";
+        return "default".equals(schema) ? table + "_idx" : new StringBuilder().append(schema).append('.').append(table).append("_idx").toString();
     }
 
     /**
@@ -453,8 +444,8 @@ public class Indexer
      */
     public static String getMetricsTableName(String schema, String table)
     {
-        return schema.equals("default") ? table + "_idx_metrics"
-                : schema + '.' + table + "_idx_metrics";
+        return "default".equals(schema) ? table + "_idx_metrics"
+                : new StringBuilder().append(schema).append('.').append(table).append("_idx_metrics").toString();
     }
 
     /**

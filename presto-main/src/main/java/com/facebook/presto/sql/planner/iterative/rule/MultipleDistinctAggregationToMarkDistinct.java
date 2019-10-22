@@ -82,7 +82,7 @@ public class MultipleDistinctAggregationToMarkDistinct
     {
         return aggregation.getAggregations()
                 .values().stream()
-                .filter(e -> e.isDistinct())
+                .filter(AggregationNode.Aggregation::isDistinct)
                 .map(Aggregation::getArguments)
                 .map(HashSet::new)
                 .distinct()

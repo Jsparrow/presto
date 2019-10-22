@@ -978,19 +978,13 @@ public class HiveClientConfig
         return this;
     }
 
-    public enum HiveMetastoreAuthenticationType
-    {
-        NONE,
-        KERBEROS
-    }
-
     @NotNull
     public HiveMetastoreAuthenticationType getHiveMetastoreAuthenticationType()
     {
         return hiveMetastoreAuthenticationType;
     }
 
-    @Config("hive.metastore.authentication.type")
+	@Config("hive.metastore.authentication.type")
     @ConfigDescription("Hive Metastore authentication type")
     public HiveClientConfig setHiveMetastoreAuthenticationType(HiveMetastoreAuthenticationType hiveMetastoreAuthenticationType)
     {
@@ -998,19 +992,13 @@ public class HiveClientConfig
         return this;
     }
 
-    public enum HdfsAuthenticationType
-    {
-        NONE,
-        KERBEROS,
-    }
-
-    @NotNull
+	@NotNull
     public HdfsAuthenticationType getHdfsAuthenticationType()
     {
         return hdfsAuthenticationType;
     }
 
-    @Config("hive.hdfs.authentication.type")
+	@Config("hive.hdfs.authentication.type")
     @ConfigDescription("HDFS authentication type")
     public HiveClientConfig setHdfsAuthenticationType(HdfsAuthenticationType hdfsAuthenticationType)
     {
@@ -1018,12 +1006,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isHdfsImpersonationEnabled()
+	public boolean isHdfsImpersonationEnabled()
     {
         return hdfsImpersonationEnabled;
     }
 
-    @Config("hive.hdfs.impersonation.enabled")
+	@Config("hive.hdfs.impersonation.enabled")
     @ConfigDescription("Should Presto user be impersonated when communicating with HDFS")
     public HiveClientConfig setHdfsImpersonationEnabled(boolean hdfsImpersonationEnabled)
     {
@@ -1031,12 +1019,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isHdfsWireEncryptionEnabled()
+	public boolean isHdfsWireEncryptionEnabled()
     {
         return hdfsWireEncryptionEnabled;
     }
 
-    @Config("hive.hdfs.wire-encryption.enabled")
+	@Config("hive.hdfs.wire-encryption.enabled")
     @ConfigDescription("Should be turned on when HDFS wire encryption is enabled")
     public HiveClientConfig setHdfsWireEncryptionEnabled(boolean hdfsWireEncryptionEnabled)
     {
@@ -1044,12 +1032,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isSkipDeletionForAlter()
+	public boolean isSkipDeletionForAlter()
     {
         return skipDeletionForAlter;
     }
 
-    @Config("hive.skip-deletion-for-alter")
+	@Config("hive.skip-deletion-for-alter")
     @ConfigDescription("Skip deletion of old partition data when a partition is deleted and then inserted in the same transaction")
     public HiveClientConfig setSkipDeletionForAlter(boolean skipDeletionForAlter)
     {
@@ -1057,12 +1045,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isSkipTargetCleanupOnRollback()
+	public boolean isSkipTargetCleanupOnRollback()
     {
         return skipTargetCleanupOnRollback;
     }
 
-    @Config("hive.skip-target-cleanup-on-rollback")
+	@Config("hive.skip-target-cleanup-on-rollback")
     @ConfigDescription("Skip deletion of target directories when a metastore operation fails and the write mode is DIRECT_TO_TARGET_NEW_DIRECTORY")
     public HiveClientConfig setSkipTargetCleanupOnRollback(boolean skipTargetCleanupOnRollback)
     {
@@ -1070,12 +1058,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isBucketExecutionEnabled()
+	public boolean isBucketExecutionEnabled()
     {
         return bucketExecutionEnabled;
     }
 
-    @Config("hive.bucket-execution")
+	@Config("hive.bucket-execution")
     @ConfigDescription("Enable bucket-aware execution: only use a single worker per bucket")
     public HiveClientConfig setBucketExecutionEnabled(boolean bucketExecutionEnabled)
     {
@@ -1083,12 +1071,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isSortedWritingEnabled()
+	public boolean isSortedWritingEnabled()
     {
         return sortedWritingEnabled;
     }
 
-    @Config("hive.sorted-writing")
+	@Config("hive.sorted-writing")
     @ConfigDescription("Enable writing to bucketed sorted tables")
     public HiveClientConfig setSortedWritingEnabled(boolean sortedWritingEnabled)
     {
@@ -1096,7 +1084,7 @@ public class HiveClientConfig
         return this;
     }
 
-    @Config("hive.ignore-table-bucketing")
+	@Config("hive.ignore-table-bucketing")
     @ConfigDescription("Ignore table bucketing to allow reading from unbucketed partitions")
     public HiveClientConfig setIgnoreTableBucketing(boolean ignoreTableBucketing)
     {
@@ -1104,12 +1092,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isIgnoreTableBucketing()
+	public boolean isIgnoreTableBucketing()
     {
         return ignoreTableBucketing;
     }
 
-    @Config("hive.max-buckets-for-grouped-execution")
+	@Config("hive.max-buckets-for-grouped-execution")
     @ConfigDescription("Maximum number of buckets to run with grouped execution")
     public HiveClientConfig setMaxBucketsForGroupedExecution(int maxBucketsForGroupedExecution)
     {
@@ -1117,12 +1105,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public int getMaxBucketsForGroupedExecution()
+	public int getMaxBucketsForGroupedExecution()
     {
         return maxBucketsForGroupedExecution;
     }
 
-    @Config("hive.sorted-write-to-temp-path-enabled")
+	@Config("hive.sorted-write-to-temp-path-enabled")
     @ConfigDescription("Enable writing temp files to temp path when writing to bucketed sorted tables")
     public HiveClientConfig setSortedWriteToTempPathEnabled(boolean sortedWriteToTempPathEnabled)
     {
@@ -1130,12 +1118,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isSortedWriteToTempPathEnabled()
+	public boolean isSortedWriteToTempPathEnabled()
     {
         return sortedWriteToTempPathEnabled;
     }
 
-    @Config("hive.sorted-write-temp-path-subdirectory-count")
+	@Config("hive.sorted-write-temp-path-subdirectory-count")
     @ConfigDescription("Number of directories per partition for temp files generated by writing sorted table")
     public HiveClientConfig setSortedWriteTempPathSubdirectoryCount(int sortedWriteTempPathSubdirectoryCount)
     {
@@ -1143,17 +1131,17 @@ public class HiveClientConfig
         return this;
     }
 
-    public int getSortedWriteTempPathSubdirectoryCount()
+	public int getSortedWriteTempPathSubdirectoryCount()
     {
         return sortedWriteTempPathSubdirectoryCount;
     }
 
-    public int getFileSystemMaxCacheSize()
+	public int getFileSystemMaxCacheSize()
     {
         return fileSystemMaxCacheSize;
     }
 
-    @Config("hive.fs.cache.max-size")
+	@Config("hive.fs.cache.max-size")
     @ConfigDescription("Hadoop FileSystem cache size")
     public HiveClientConfig setFileSystemMaxCacheSize(int fileSystemMaxCacheSize)
     {
@@ -1161,12 +1149,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean getWritesToNonManagedTablesEnabled()
+	public boolean getWritesToNonManagedTablesEnabled()
     {
         return writesToNonManagedTablesEnabled;
     }
 
-    @Config("hive.non-managed-table-writes-enabled")
+	@Config("hive.non-managed-table-writes-enabled")
     @ConfigDescription("Enable writes to non-managed (external) tables")
     public HiveClientConfig setWritesToNonManagedTablesEnabled(boolean writesToNonManagedTablesEnabled)
     {
@@ -1174,12 +1162,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean getCreatesOfNonManagedTablesEnabled()
+	public boolean getCreatesOfNonManagedTablesEnabled()
     {
         return createsOfNonManagedTablesEnabled;
     }
 
-    @Config("hive.non-managed-table-creates-enabled")
+	@Config("hive.non-managed-table-creates-enabled")
     @ConfigDescription("Enable non-managed (external) table creates")
     public HiveClientConfig setCreatesOfNonManagedTablesEnabled(boolean createsOfNonManagedTablesEnabled)
     {
@@ -1187,12 +1175,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isTableStatisticsEnabled()
+	public boolean isTableStatisticsEnabled()
     {
         return tableStatisticsEnabled;
     }
 
-    @Config("hive.table-statistics-enabled")
+	@Config("hive.table-statistics-enabled")
     @ConfigDescription("Enable use of table statistics")
     public HiveClientConfig setTableStatisticsEnabled(boolean tableStatisticsEnabled)
     {
@@ -1200,13 +1188,13 @@ public class HiveClientConfig
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getPartitionStatisticsSampleSize()
     {
         return partitionStatisticsSampleSize;
     }
 
-    @Config("hive.partition-statistics-sample-size")
+	@Config("hive.partition-statistics-sample-size")
     @ConfigDescription("Maximum sample size of the partitions column statistics")
     public HiveClientConfig setPartitionStatisticsSampleSize(int partitionStatisticsSampleSize)
     {
@@ -1214,12 +1202,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isIgnoreCorruptedStatistics()
+	public boolean isIgnoreCorruptedStatistics()
     {
         return ignoreCorruptedStatistics;
     }
 
-    @Config("hive.ignore-corrupted-statistics")
+	@Config("hive.ignore-corrupted-statistics")
     @ConfigDescription("Ignore corrupted statistics rather than failing")
     public HiveClientConfig setIgnoreCorruptedStatistics(boolean ignoreCorruptedStatistics)
     {
@@ -1227,12 +1215,12 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isCollectColumnStatisticsOnWrite()
+	public boolean isCollectColumnStatisticsOnWrite()
     {
         return collectColumnStatisticsOnWrite;
     }
 
-    @Config("hive.collect-column-statistics-on-write")
+	@Config("hive.collect-column-statistics-on-write")
     @ConfigDescription("Enables automatic column level statistics collection on write")
     public HiveClientConfig setCollectColumnStatisticsOnWrite(boolean collectColumnStatisticsOnWrite)
     {
@@ -1240,49 +1228,49 @@ public class HiveClientConfig
         return this;
     }
 
-    public String getRecordingPath()
+	public String getRecordingPath()
     {
         return recordingPath;
     }
 
-    @Config("hive.metastore-recording-path")
+	@Config("hive.metastore-recording-path")
     public HiveClientConfig setRecordingPath(String recordingPath)
     {
         this.recordingPath = recordingPath;
         return this;
     }
 
-    public boolean isReplay()
+	public boolean isReplay()
     {
         return replay;
     }
 
-    @Config("hive.replay-metastore-recording")
+	@Config("hive.replay-metastore-recording")
     public HiveClientConfig setReplay(boolean replay)
     {
         this.replay = replay;
         return this;
     }
 
-    @NotNull
+	@NotNull
     public Duration getRecordingDuration()
     {
         return recordingDuration;
     }
 
-    @Config("hive.metastore-recoding-duration")
+	@Config("hive.metastore-recoding-duration")
     public HiveClientConfig setRecordingDuration(Duration recordingDuration)
     {
         this.recordingDuration = recordingDuration;
         return this;
     }
 
-    public boolean isS3SelectPushdownEnabled()
+	public boolean isS3SelectPushdownEnabled()
     {
         return s3SelectPushdownEnabled;
     }
 
-    @Config("hive.s3select-pushdown.enabled")
+	@Config("hive.s3select-pushdown.enabled")
     @ConfigDescription("Enable query pushdown to AWS S3 Select service")
     public HiveClientConfig setS3SelectPushdownEnabled(boolean s3SelectPushdownEnabled)
     {
@@ -1290,25 +1278,25 @@ public class HiveClientConfig
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getS3SelectPushdownMaxConnections()
     {
         return s3SelectPushdownMaxConnections;
     }
 
-    @Config("hive.s3select-pushdown.max-connections")
+	@Config("hive.s3select-pushdown.max-connections")
     public HiveClientConfig setS3SelectPushdownMaxConnections(int s3SelectPushdownMaxConnections)
     {
         this.s3SelectPushdownMaxConnections = s3SelectPushdownMaxConnections;
         return this;
     }
 
-    public boolean isTemporaryStagingDirectoryEnabled()
+	public boolean isTemporaryStagingDirectoryEnabled()
     {
         return isTemporaryStagingDirectoryEnabled;
     }
 
-    @Config("hive.temporary-staging-directory-enabled")
+	@Config("hive.temporary-staging-directory-enabled")
     @ConfigDescription("Should use (if possible) temporary staging directory for write operations")
     public HiveClientConfig setTemporaryStagingDirectoryEnabled(boolean temporaryStagingDirectoryEnabled)
     {
@@ -1316,13 +1304,13 @@ public class HiveClientConfig
         return this;
     }
 
-    @NotNull
+	@NotNull
     public String getTemporaryStagingDirectoryPath()
     {
         return temporaryStagingDirectoryPath;
     }
 
-    @Config("hive.temporary-staging-directory-path")
+	@Config("hive.temporary-staging-directory-path")
     @ConfigDescription("Location of temporary staging directory for write operations. Use ${USER} placeholder to use different location for each user.")
     public HiveClientConfig setTemporaryStagingDirectoryPath(String temporaryStagingDirectoryPath)
     {
@@ -1330,51 +1318,51 @@ public class HiveClientConfig
         return this;
     }
 
-    @NotNull
+	@NotNull
     public String getTemporaryTableSchema()
     {
         return temporaryTableSchema;
     }
 
-    @Config("hive.temporary-table-schema")
+	@Config("hive.temporary-table-schema")
     public HiveClientConfig setTemporaryTableSchema(String temporaryTableSchema)
     {
         this.temporaryTableSchema = temporaryTableSchema;
         return this;
     }
 
-    @NotNull
+	@NotNull
     public HiveStorageFormat getTemporaryTableStorageFormat()
     {
         return temporaryTableStorageFormat;
     }
 
-    @Config("hive.temporary-table-storage-format")
+	@Config("hive.temporary-table-storage-format")
     public HiveClientConfig setTemporaryTableStorageFormat(HiveStorageFormat temporaryTableStorageFormat)
     {
         this.temporaryTableStorageFormat = temporaryTableStorageFormat;
         return this;
     }
 
-    @NotNull
+	@NotNull
     public HiveCompressionCodec getTemporaryTableCompressionCodec()
     {
         return temporaryTableCompressionCodec;
     }
 
-    @Config("hive.temporary-table-compression-codec")
+	@Config("hive.temporary-table-compression-codec")
     public HiveClientConfig setTemporaryTableCompressionCodec(HiveCompressionCodec temporaryTableCompressionCodec)
     {
         this.temporaryTableCompressionCodec = temporaryTableCompressionCodec;
         return this;
     }
 
-    public boolean isPushdownFilterEnabled()
+	public boolean isPushdownFilterEnabled()
     {
         return pushdownFilterEnabled;
     }
 
-    @Config("hive.pushdown-filter-enabled")
+	@Config("hive.pushdown-filter-enabled")
     @ConfigDescription("Experimental: enable complex filter pushdown")
     public HiveClientConfig setPushdownFilterEnabled(boolean pushdownFilterEnabled)
     {
@@ -1382,16 +1370,28 @@ public class HiveClientConfig
         return this;
     }
 
-    public boolean isNestedColumnsFilterEnabled()
+	public boolean isNestedColumnsFilterEnabled()
     {
         return nestedColumnsFilterEnabled;
     }
 
-    @Config("hive.nested-columns-filter-enabled")
+	@Config("hive.nested-columns-filter-enabled")
     @ConfigDescription("Experimental: enable filters on nested columns")
     public HiveClientConfig setNestedColumnsFilterEnabled(boolean nestedColumnsFilterEnabled)
     {
         this.nestedColumnsFilterEnabled = nestedColumnsFilterEnabled;
         return this;
+    }
+
+	public enum HiveMetastoreAuthenticationType
+    {
+        NONE,
+        KERBEROS
+    }
+
+	public enum HdfsAuthenticationType
+    {
+        NONE,
+        KERBEROS,
     }
 }

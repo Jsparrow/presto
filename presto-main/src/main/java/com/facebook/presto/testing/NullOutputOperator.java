@@ -31,7 +31,51 @@ import static java.util.Objects.requireNonNull;
 public class NullOutputOperator
         implements Operator
 {
-    public static class NullOutputFactory
+    private final OperatorContext operatorContext;
+	private boolean finished;
+
+	public NullOutputOperator(OperatorContext operatorContext)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return true;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class NullOutputFactory
             implements OutputFactory
     {
         @Override
@@ -70,49 +114,5 @@ public class NullOutputOperator
         {
             return new NullOutputOperatorFactory(operatorId, planNodeId);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private boolean finished;
-
-    public NullOutputOperator(OperatorContext operatorContext)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return true;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 }

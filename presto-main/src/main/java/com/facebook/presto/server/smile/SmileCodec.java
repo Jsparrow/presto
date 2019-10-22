@@ -35,22 +35,32 @@ public class SmileCodec<T>
 {
     private static final Supplier<ObjectMapper> OBJECT_MAPPER_SUPPLIER =
             Suppliers.memoize(() -> new SmileObjectMapperProvider().get());
+	private final ObjectMapper mapper;
+	private final Type type;
+	private final JavaType javaType;
 
-    public static <T> SmileCodec<T> smileCodec(Class<T> type)
+	SmileCodec(ObjectMapper mapper, Type type)
+    {
+        this.mapper = mapper;
+        this.type = type;
+        this.javaType = mapper.getTypeFactory().constructType(type);
+    }
+
+	public static <T> SmileCodec<T> smileCodec(Class<T> type)
     {
         requireNonNull(type, "type is null");
 
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), type);
     }
 
-    public static <T> SmileCodec<T> smileCodec(TypeToken<T> type)
+	public static <T> SmileCodec<T> smileCodec(TypeToken<T> type)
     {
         requireNonNull(type, "type is null");
 
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), type.getType());
     }
 
-    public static <T> SmileCodec<List<T>> listSmileCodec(Class<T> type)
+	public static <T> SmileCodec<List<T>> listSmileCodec(Class<T> type)
     {
         requireNonNull(type, "type is null");
 
@@ -61,7 +71,7 @@ public class SmileCodec<T>
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), listType);
     }
 
-    public static <T> SmileCodec<List<T>> listSmileCodec(SmileCodec<T> type)
+	public static <T> SmileCodec<List<T>> listSmileCodec(SmileCodec<T> type)
     {
         requireNonNull(type, "type is null");
 
@@ -72,7 +82,7 @@ public class SmileCodec<T>
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), listType);
     }
 
-    public static <K, V> SmileCodec<Map<K, V>> mapSmileCodec(Class<K> keyType, Class<V> valueType)
+	public static <K, V> SmileCodec<Map<K, V>> mapSmileCodec(Class<K> keyType, Class<V> valueType)
     {
         requireNonNull(keyType, "keyType is null");
         requireNonNull(valueType, "valueType is null");
@@ -85,7 +95,7 @@ public class SmileCodec<T>
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), mapType);
     }
 
-    public static <K, V> SmileCodec<Map<K, V>> mapSmileCodec(Class<K> keyType, SmileCodec<V> valueType)
+	public static <K, V> SmileCodec<Map<K, V>> mapSmileCodec(Class<K> keyType, SmileCodec<V> valueType)
     {
         requireNonNull(keyType, "keyType is null");
         requireNonNull(valueType, "valueType is null");
@@ -98,18 +108,7 @@ public class SmileCodec<T>
         return new SmileCodec<>(OBJECT_MAPPER_SUPPLIER.get(), mapType);
     }
 
-    private final ObjectMapper mapper;
-    private final Type type;
-    private final JavaType javaType;
-
-    SmileCodec(ObjectMapper mapper, Type type)
-    {
-        this.mapper = mapper;
-        this.type = type;
-        this.javaType = mapper.getTypeFactory().constructType(type);
-    }
-
-    /**
+	/**
      * Gets the type this codec supports.
      */
     public Type getType()
@@ -117,7 +116,7 @@ public class SmileCodec<T>
         return type;
     }
 
-    /**
+	/**
      * Converts the specified smile bytes (UTF-8) into an instance of type T.
      *
      * @param bytes the bytes (UTF-8) to parse
@@ -125,7 +124,6 @@ public class SmileCodec<T>
      * @throws IllegalArgumentException if the bytes bytes can not be converted to the type T
      */
     public T fromSmile(byte[] bytes)
-            throws IllegalArgumentException
     {
         try {
             return mapper.readValue(bytes, javaType);
@@ -135,7 +133,7 @@ public class SmileCodec<T>
         }
     }
 
-    /**
+	/**
      * Converts the specified instance to smile encoded bytes.
      *
      * @param instance the instance to convert to smile encoded bytes
@@ -144,7 +142,6 @@ public class SmileCodec<T>
      */
     @Override
     public byte[] toBytes(T instance)
-            throws IllegalArgumentException
     {
         try {
             return mapper.writeValueAsBytes(instance);
@@ -154,7 +151,7 @@ public class SmileCodec<T>
         }
     }
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
     TypeToken<T> getTypeToken()
     {
         return (TypeToken<T>) TypeToken.of(type);

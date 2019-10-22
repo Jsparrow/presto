@@ -81,8 +81,8 @@ public class TestCharacterStringCasts
                 utf8Slice("123" + nonBmpCharacter));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
-                utf8Slice("12" + nonBmpCharacter + "3")),
-                utf8Slice("12" + nonBmpCharacter + "3"));
+                utf8Slice(new StringBuilder().append("12").append(nonBmpCharacter).append("3").toString())),
+                utf8Slice(new StringBuilder().append("12").append(nonBmpCharacter).append("3").toString()));
 
         // Size fits, preserved except char(4) representation has trailing spaces removed
         assertEquals(varcharToCharSaturatedFloorCast(
@@ -98,33 +98,33 @@ public class TestCharacterStringCasts
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice("12 ")),
-                utf8Slice("12" + codePointBeforeSpace + maxCodePoint));
+                utf8Slice(new StringBuilder().append("12").append(codePointBeforeSpace).append(maxCodePoint).toString()));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice("1  ")),
-                utf8Slice("1 " + codePointBeforeSpace + maxCodePoint));
+                utf8Slice(new StringBuilder().append("1 ").append(codePointBeforeSpace).append(maxCodePoint).toString()));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice(" ")),
-                utf8Slice(codePointBeforeSpace + maxCodePoint + maxCodePoint + maxCodePoint));
+                utf8Slice(new StringBuilder().append(codePointBeforeSpace).append(maxCodePoint).append(maxCodePoint).append(maxCodePoint).toString()));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice("12" + nonBmpCharacter)),
-                utf8Slice("12" + nonBmpCharacterMinusOne + maxCodePoint));
+                utf8Slice(new StringBuilder().append("12").append(nonBmpCharacterMinusOne).append(maxCodePoint).toString()));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
-                utf8Slice("1" + nonBmpCharacter + "3")),
-                utf8Slice("1" + nonBmpCharacter + "2" + maxCodePoint));
+                utf8Slice(new StringBuilder().append("1").append(nonBmpCharacter).append("3").toString())),
+                utf8Slice(new StringBuilder().append("1").append(nonBmpCharacter).append("2").append(maxCodePoint).toString()));
 
         // Too short, casted back would be padded with ' ' and thus made greater (VarcharOperators.lessThan), previous to last needs decrementing since last is \0
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice("12\0")),
-                utf8Slice("11" + maxCodePoint + maxCodePoint));
+                utf8Slice(new StringBuilder().append("11").append(maxCodePoint).append(maxCodePoint).toString()));
         assertEquals(varcharToCharSaturatedFloorCast(
                 4L,
                 utf8Slice("1\0")),
-                utf8Slice("0" + maxCodePoint + maxCodePoint + maxCodePoint));
+                utf8Slice(new StringBuilder().append("0").append(maxCodePoint).append(maxCodePoint).append(maxCodePoint).toString()));
 
         // Smaller than any char(4) casted back to varchar, so the result is lowest char(4) possible
         assertEquals(varcharToCharSaturatedFloorCast(

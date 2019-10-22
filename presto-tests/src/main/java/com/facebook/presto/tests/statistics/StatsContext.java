@@ -31,7 +31,7 @@ public class StatsContext
 
     public VariableReferenceExpression getVariableForColumn(String columnName)
     {
-        checkArgument(columnVariables.containsKey(columnName), "no variable found for column '" + columnName + "'");
+        checkArgument(columnVariables.containsKey(columnName), new StringBuilder().append("no variable found for column '").append(columnName).append("'").toString());
         return columnVariables.get(columnName);
     }
 }

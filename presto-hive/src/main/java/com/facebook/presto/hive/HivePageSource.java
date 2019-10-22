@@ -77,6 +77,8 @@ import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HivePageSource
         implements ConnectorPageSource
@@ -288,7 +290,17 @@ public class HivePageSource
         throw new PrestoException(NOT_SUPPORTED, format("Unsupported coercion from %s to %s", fromHiveType, toHiveType));
     }
 
-    private static class IntegerNumberUpscaleCoercer
+    private static Page extractColumns(Page page, int[] columns)
+    {
+        Block[] blocks = new Block[columns.length];
+        for (int i = 0; i < columns.length; i++) {
+            int dataColumn = columns[i];
+            blocks[i] = page.getBlock(dataColumn);
+        }
+        return new Page(page.getPositionCount(), blocks);
+    }
+
+	private static class IntegerNumberUpscaleCoercer
             implements Function<Block, Block>
     {
         private final Type fromType;
@@ -345,7 +357,8 @@ public class HivePageSource
     private static class VarcharToIntegerNumberCoercer
             implements Function<Block, Block>
     {
-        private final Type fromType;
+        private final Logger logger = LoggerFactory.getLogger(VarcharToIntegerNumberCoercer.class);
+		private final Type fromType;
         private final Type toType;
 
         private final long minValue;
@@ -396,7 +409,8 @@ public class HivePageSource
                     }
                 }
                 catch (NumberFormatException e) {
-                    blockBuilder.appendNull();
+                    logger.error(e.getMessage(), e);
+					blockBuilder.appendNull();
                 }
             }
             return blockBuilder.build();
@@ -591,16 +605,6 @@ public class HivePageSource
             // clear reference to loader to free resources, since load was successful
             block = null;
         }
-    }
-
-    private static Page extractColumns(Page page, int[] columns)
-    {
-        Block[] blocks = new Block[columns.length];
-        for (int i = 0; i < columns.length; i++) {
-            int dataColumn = columns[i];
-            blocks[i] = page.getBlock(dataColumn);
-        }
-        return new Page(page.getPositionCount(), blocks);
     }
 
     public static class BucketAdapter

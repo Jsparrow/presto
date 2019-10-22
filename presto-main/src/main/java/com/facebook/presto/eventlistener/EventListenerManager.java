@@ -58,15 +58,14 @@ public class EventListenerManager
     public void loadConfiguredEventListener()
             throws Exception
     {
-        if (EVENT_LISTENER_CONFIGURATION.exists()) {
-            Map<String, String> properties = new HashMap<>(loadProperties(EVENT_LISTENER_CONFIGURATION));
-
-            String eventListenerName = properties.remove(EVENT_LISTENER_PROPERTY_NAME);
-            checkArgument(!isNullOrEmpty(eventListenerName),
-                    "Access control configuration %s does not contain %s", EVENT_LISTENER_CONFIGURATION.getAbsoluteFile(), EVENT_LISTENER_PROPERTY_NAME);
-
-            setConfiguredEventListener(eventListenerName, properties);
-        }
+        if (!EVENT_LISTENER_CONFIGURATION.exists()) {
+			return;
+		}
+		Map<String, String> properties = new HashMap<>(loadProperties(EVENT_LISTENER_CONFIGURATION));
+		String eventListenerName = properties.remove(EVENT_LISTENER_PROPERTY_NAME);
+		checkArgument(!isNullOrEmpty(eventListenerName),
+		        "Access control configuration %s does not contain %s", EVENT_LISTENER_CONFIGURATION.getAbsoluteFile(), EVENT_LISTENER_PROPERTY_NAME);
+		setConfiguredEventListener(eventListenerName, properties);
     }
 
     @VisibleForTesting
@@ -90,22 +89,16 @@ public class EventListenerManager
 
     public void queryCompleted(QueryCompletedEvent queryCompletedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().queryCompleted(queryCompletedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.queryCompleted(queryCompletedEvent));
     }
 
     public void queryCreated(QueryCreatedEvent queryCreatedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().queryCreated(queryCreatedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.queryCreated(queryCreatedEvent));
     }
 
     public void splitCompleted(SplitCompletedEvent splitCompletedEvent)
     {
-        if (configuredEventListener.get().isPresent()) {
-            configuredEventListener.get().get().splitCompleted(splitCompletedEvent);
-        }
+        configuredEventListener.get().ifPresent(value -> value.splitCompleted(splitCompletedEvent));
     }
 }

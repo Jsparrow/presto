@@ -43,12 +43,12 @@ public class CassandraRecordCursor
     @Override
     public boolean advanceNextPosition()
     {
-        if (!rs.isExhausted()) {
-            currentRow = rs.one();
-            count++;
-            return true;
-        }
-        return false;
+        if (rs.isExhausted()) {
+			return false;
+		}
+		currentRow = rs.one();
+		count++;
+		return true;
     }
 
     @Override

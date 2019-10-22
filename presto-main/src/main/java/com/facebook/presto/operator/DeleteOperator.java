@@ -39,7 +39,154 @@ import static java.util.Objects.requireNonNull;
 public class DeleteOperator
         implements Operator
 {
-    public static class DeleteOperatorFactory
+    private final OperatorContext operatorContext;
+	private final int rowIdChannel;
+	private final JsonCodec<TableCommitContext> tableCommitContextCodec;
+	private State state = State.RUNNING;
+	private long rowCount;
+	private boolean closed;
+	private ListenableFuture<Collection<Slice>> finishFuture;
+	private Supplier<Optional<UpdatablePageSource>> pageSource = Optional::empty;
+
+	public DeleteOperator(OperatorContext operatorContext, int rowIdChannel, JsonCodec<TableCommitContext> tableCommitContextCodec)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.rowIdChannel = rowIdChannel;
+        this.tableCommitContextCodec = requireNonNull(tableCommitContextCodec, "tableCommitContextCodec is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        if (state != State.RUNNING) {
+			return;
+		}
+		state = State.FINISHING;
+		finishFuture = toListenableFuture(pageSource().finish());
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return state == State.FINISHED;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return state == State.RUNNING;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(state == State.RUNNING, "Operator is %s", state);
+
+        Block rowIds = page.getBlock(rowIdChannel);
+        pageSource().deleteRows(rowIds);
+        rowCount += rowIds.getPositionCount();
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        if (finishFuture == null) {
+            return NOT_BLOCKED;
+        }
+        return finishFuture;
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if ((state != State.FINISHING) || !finishFuture.isDone()) {
+            return null;
+        }
+        state = State.FINISHED;
+
+        // There are three channels in the output page of DeleteOperator
+        // 1. Row count (BIGINT)
+        // 2. Delete fragments (VARBINARY)
+        // 3. Table commit context (VARBINARY)
+        //
+        // Page layout:
+        //
+        // row     fragments     context
+        //  X         null          X
+        // null        X            X
+        // null        X            X
+        // null        X            X
+        // ...
+        Collection<Slice> fragments = getFutureValue(finishFuture);
+        int positionCount = fragments.size() + 1;
+
+        // Output page will only be constructed once, and the table commit context channel will be constructed using RunLengthEncodedBlock.
+        // Thus individual BlockBuilder is used for each channel, instead of using PageBuilder.
+        BlockBuilder rowsBuilder = BIGINT.createBlockBuilder(null, positionCount);
+        BlockBuilder fragmentBuilder = VARBINARY.createBlockBuilder(null, positionCount);
+
+        // write row count
+        rowsBuilder.writeLong(rowCount);
+        fragmentBuilder.appendNull();
+
+        // write fragments
+		fragments.forEach(fragment -> {
+            rowsBuilder.appendNull();
+            VARBINARY.writeSlice(fragmentBuilder, fragment);
+        });
+
+        // create table commit context
+        TaskId taskId = operatorContext.getDriverContext().getPipelineContext().getTaskId();
+        Slice tableCommitContext = wrappedBuffer(tableCommitContextCodec.toJsonBytes(
+                new TableCommitContext(
+                        operatorContext.getDriverContext().getLifespan(),
+                        taskId,
+                        false,
+                        true)));
+
+        return new Page(positionCount, rowsBuilder.build(), fragmentBuilder.build(), RunLengthEncodedBlock.create(VARBINARY, tableCommitContext, positionCount));
+    }
+
+	@Override
+    public void close()
+    {
+        if (closed) {
+			return;
+		}
+		closed = true;
+		if (finishFuture != null) {
+		    finishFuture.cancel(true);
+		}
+		else {
+		    pageSource.get().ifPresent(UpdatablePageSource::abort);
+		}
+    }
+
+	public void setPageSource(Supplier<Optional<UpdatablePageSource>> pageSource)
+    {
+        this.pageSource = requireNonNull(pageSource, "pageSource is null");
+    }
+
+	private UpdatablePageSource pageSource()
+    {
+        Optional<UpdatablePageSource> source = pageSource.get();
+        checkState(source.isPresent(), "UpdatablePageSource not set");
+        return source.get();
+    }
+
+	private enum State
+    {
+        RUNNING, FINISHING, FINISHED
+    }
+
+	public static class DeleteOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -75,151 +222,5 @@ public class DeleteOperator
         {
             return new DeleteOperatorFactory(operatorId, planNodeId, rowIdChannel, tableCommitContextCodec);
         }
-    }
-
-    private enum State
-    {
-        RUNNING, FINISHING, FINISHED
-    }
-
-    private final OperatorContext operatorContext;
-    private final int rowIdChannel;
-    private final JsonCodec<TableCommitContext> tableCommitContextCodec;
-
-    private State state = State.RUNNING;
-    private long rowCount;
-    private boolean closed;
-    private ListenableFuture<Collection<Slice>> finishFuture;
-    private Supplier<Optional<UpdatablePageSource>> pageSource = Optional::empty;
-
-    public DeleteOperator(OperatorContext operatorContext, int rowIdChannel, JsonCodec<TableCommitContext> tableCommitContextCodec)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.rowIdChannel = rowIdChannel;
-        this.tableCommitContextCodec = requireNonNull(tableCommitContextCodec, "tableCommitContextCodec is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        if (state == State.RUNNING) {
-            state = State.FINISHING;
-            finishFuture = toListenableFuture(pageSource().finish());
-        }
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return state == State.FINISHED;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return state == State.RUNNING;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(state == State.RUNNING, "Operator is %s", state);
-
-        Block rowIds = page.getBlock(rowIdChannel);
-        pageSource().deleteRows(rowIds);
-        rowCount += rowIds.getPositionCount();
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        if (finishFuture == null) {
-            return NOT_BLOCKED;
-        }
-        return finishFuture;
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if ((state != State.FINISHING) || !finishFuture.isDone()) {
-            return null;
-        }
-        state = State.FINISHED;
-
-        // There are three channels in the output page of DeleteOperator
-        // 1. Row count (BIGINT)
-        // 2. Delete fragments (VARBINARY)
-        // 3. Table commit context (VARBINARY)
-        //
-        // Page layout:
-        //
-        // row     fragments     context
-        //  X         null          X
-        // null        X            X
-        // null        X            X
-        // null        X            X
-        // ...
-        Collection<Slice> fragments = getFutureValue(finishFuture);
-        int positionCount = fragments.size() + 1;
-
-        // Output page will only be constructed once, and the table commit context channel will be constructed using RunLengthEncodedBlock.
-        // Thus individual BlockBuilder is used for each channel, instead of using PageBuilder.
-        BlockBuilder rowsBuilder = BIGINT.createBlockBuilder(null, positionCount);
-        BlockBuilder fragmentBuilder = VARBINARY.createBlockBuilder(null, positionCount);
-
-        // write row count
-        rowsBuilder.writeLong(rowCount);
-        fragmentBuilder.appendNull();
-
-        // write fragments
-        for (Slice fragment : fragments) {
-            rowsBuilder.appendNull();
-            VARBINARY.writeSlice(fragmentBuilder, fragment);
-        }
-
-        // create table commit context
-        TaskId taskId = operatorContext.getDriverContext().getPipelineContext().getTaskId();
-        Slice tableCommitContext = wrappedBuffer(tableCommitContextCodec.toJsonBytes(
-                new TableCommitContext(
-                        operatorContext.getDriverContext().getLifespan(),
-                        taskId,
-                        false,
-                        true)));
-
-        return new Page(positionCount, rowsBuilder.build(), fragmentBuilder.build(), RunLengthEncodedBlock.create(VARBINARY, tableCommitContext, positionCount));
-    }
-
-    @Override
-    public void close()
-    {
-        if (!closed) {
-            closed = true;
-            if (finishFuture != null) {
-                finishFuture.cancel(true);
-            }
-            else {
-                pageSource.get().ifPresent(UpdatablePageSource::abort);
-            }
-        }
-    }
-
-    public void setPageSource(Supplier<Optional<UpdatablePageSource>> pageSource)
-    {
-        this.pageSource = requireNonNull(pageSource, "pageSource is null");
-    }
-
-    private UpdatablePageSource pageSource()
-    {
-        Optional<UpdatablePageSource> source = pageSource.get();
-        checkState(source.isPresent(), "UpdatablePageSource not set");
-        return source.get();
     }
 }

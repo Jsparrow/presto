@@ -102,12 +102,15 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.hadoop.hive.common.FileUtils.unescapePathName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ThreadSafe
 public class FileHiveMetastore
         implements ExtendedHiveMetastore
 {
-    private static final String PUBLIC_ROLE_NAME = "public";
+    private static final Logger logger = LoggerFactory.getLogger(FileHiveMetastore.class);
+	private static final String PUBLIC_ROLE_NAME = "public";
     private static final String ADMIN_ROLE_NAME = "admin";
     private static final String PRESTO_SCHEMA_FILE_NAME = ".prestoSchema";
     private static final String PRESTO_PERMISSIONS_DIRECTORY_NAME = ".prestoPermissions";
@@ -126,21 +129,13 @@ public class FileHiveMetastore
     private final JsonCodec<List<String>> rolesCodec = JsonCodec.listJsonCodec(String.class);
     private final JsonCodec<List<RoleGrant>> roleGrantsCodec = JsonCodec.listJsonCodec(RoleGrant.class);
 
-    public static FileHiveMetastore createTestingFileHiveMetastore(File catalogDirectory)
-    {
-        HiveClientConfig hiveClientConfig = new HiveClientConfig();
-        HdfsConfiguration hdfsConfiguration = new HiveHdfsConfiguration(new HdfsConfigurationInitializer(hiveClientConfig), ImmutableSet.of());
-        HdfsEnvironment hdfsEnvironment = new HdfsEnvironment(hdfsConfiguration, hiveClientConfig, new NoHdfsAuthentication());
-        return new FileHiveMetastore(hdfsEnvironment, catalogDirectory.toURI().toString(), "test");
-    }
-
     @Inject
     public FileHiveMetastore(HdfsEnvironment hdfsEnvironment, FileHiveMetastoreConfig config)
     {
         this(hdfsEnvironment, config.getCatalogDirectory(), config.getMetastoreUser());
     }
 
-    public FileHiveMetastore(HdfsEnvironment hdfsEnvironment, String catalogDirectory, String metastoreUser)
+	public FileHiveMetastore(HdfsEnvironment hdfsEnvironment, String catalogDirectory, String metastoreUser)
     {
         this.hdfsEnvironment = requireNonNull(hdfsEnvironment, "hdfsEnvironment is null");
         this.catalogDirectory = new Path(requireNonNull(catalogDirectory, "baseDirectory is null"));
@@ -153,7 +148,15 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	public static FileHiveMetastore createTestingFileHiveMetastore(File catalogDirectory)
+    {
+        HiveClientConfig hiveClientConfig = new HiveClientConfig();
+        HdfsConfiguration hdfsConfiguration = new HiveHdfsConfiguration(new HdfsConfigurationInitializer(hiveClientConfig), ImmutableSet.of());
+        HdfsEnvironment hdfsEnvironment = new HdfsEnvironment(hdfsConfiguration, hiveClientConfig, new NoHdfsAuthentication());
+        return new FileHiveMetastore(hdfsEnvironment, catalogDirectory.toURI().toString(), "test");
+    }
+
+	@Override
     public synchronized void createDatabase(Database database)
     {
         requireNonNull(database, "database is null");
@@ -168,20 +171,20 @@ public class FileHiveMetastore
         writeSchemaFile("database", databaseMetadataDirectory, databaseCodec, new DatabaseMetadata(database), false);
     }
 
-    @Override
+	@Override
     public synchronized void dropDatabase(String databaseName)
     {
         requireNonNull(databaseName, "databaseName is null");
 
         getRequiredDatabase(databaseName);
         if (!getAllTables(databaseName).orElse(ImmutableList.of()).isEmpty()) {
-            throw new PrestoException(HIVE_METASTORE_ERROR, "Database " + databaseName + " is not empty");
+            throw new PrestoException(HIVE_METASTORE_ERROR, new StringBuilder().append("Database ").append(databaseName).append(" is not empty").toString());
         }
 
         deleteMetadataDirectory(getDatabaseMetadataDirectory(databaseName));
     }
 
-    @Override
+	@Override
     public synchronized void renameDatabase(String databaseName, String newDatabaseName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -200,7 +203,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized Optional<Database> getDatabase(String databaseName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -210,20 +213,20 @@ public class FileHiveMetastore
                 .map(databaseMetadata -> databaseMetadata.toDatabase(databaseName, databaseMetadataDirectory.toString()));
     }
 
-    private Database getRequiredDatabase(String databaseName)
+	private Database getRequiredDatabase(String databaseName)
     {
         return getDatabase(databaseName)
                 .orElseThrow(() -> new SchemaNotFoundException(databaseName));
     }
 
-    private void verifyDatabaseNotExists(String databaseName)
+	private void verifyDatabaseNotExists(String databaseName)
     {
         if (getDatabase(databaseName).isPresent()) {
             throw new SchemaAlreadyExistsException(databaseName);
         }
     }
 
-    @Override
+	@Override
     public synchronized List<String> getAllDatabases()
     {
         List<String> databases = getChildSchemaDirectories(catalogDirectory).stream()
@@ -232,7 +235,7 @@ public class FileHiveMetastore
         return ImmutableList.copyOf(databases);
     }
 
-    @Override
+	@Override
     public synchronized void createTable(Table table, PrincipalPrivileges principalPrivileges)
     {
         checkArgument(!table.getTableType().equals(TEMPORARY_TABLE), "temporary tables must never be committed to the metastore");
@@ -242,15 +245,15 @@ public class FileHiveMetastore
         Path tableMetadataDirectory = getTableMetadataDirectory(table);
 
         // validate table location
-        if (table.getTableType().equals(VIRTUAL_VIEW)) {
+        if (table.getTableType() == VIRTUAL_VIEW) {
             checkArgument(table.getStorage().getLocation().isEmpty(), "Storage location for view must be empty");
         }
-        else if (table.getTableType().equals(MANAGED_TABLE)) {
+        else if (table.getTableType() == MANAGED_TABLE) {
             if (!tableMetadataDirectory.equals(new Path(table.getStorage().getLocation()))) {
                 throw new PrestoException(HIVE_METASTORE_ERROR, "Table directory must be " + tableMetadataDirectory);
             }
         }
-        else if (table.getTableType().equals(EXTERNAL_TABLE)) {
+        else if (table.getTableType() == EXTERNAL_TABLE) {
             try {
                 Path externalLocation = new Path(table.getStorage().getLocation());
                 FileSystem externalFileSystem = hdfsEnvironment.getFileSystem(hdfsContext, externalLocation);
@@ -271,15 +274,13 @@ public class FileHiveMetastore
 
         writeSchemaFile("table", tableMetadataDirectory, tableCodec, new TableMetadata(table), false);
 
-        for (Entry<String, Collection<HivePrivilegeInfo>> entry : principalPrivileges.getUserPrivileges().asMap().entrySet()) {
-            setTablePrivileges(new PrestoPrincipal(USER, entry.getKey()), table.getDatabaseName(), table.getTableName(), entry.getValue());
-        }
-        for (Entry<String, Collection<HivePrivilegeInfo>> entry : principalPrivileges.getRolePrivileges().asMap().entrySet()) {
-            setTablePrivileges(new PrestoPrincipal(ROLE, entry.getKey()), table.getDatabaseName(), table.getTableName(), entry.getValue());
-        }
+        principalPrivileges.getUserPrivileges().asMap().entrySet().forEach(entry -> setTablePrivileges(new PrestoPrincipal(USER, entry.getKey()), table.getDatabaseName(), table.getTableName(),
+				entry.getValue()));
+        principalPrivileges.getRolePrivileges().asMap().entrySet().forEach(entry -> setTablePrivileges(new PrestoPrincipal(ROLE, entry.getKey()), table.getDatabaseName(), table.getTableName(),
+				entry.getValue()));
     }
 
-    @Override
+	@Override
     public synchronized Optional<Table> getTable(String databaseName, String tableName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -290,13 +291,13 @@ public class FileHiveMetastore
                 .map(tableMetadata -> tableMetadata.toTable(databaseName, tableName, tableMetadataDirectory.toString()));
     }
 
-    @Override
+	@Override
     public Set<ColumnStatisticType> getSupportedColumnStatistics(Type type)
     {
         return ThriftMetastoreUtil.getSupportedColumnStatistics(type);
     }
 
-    @Override
+	@Override
     public synchronized PartitionStatistics getTableStatistics(String databaseName, String tableName)
     {
         Path tableMetadataDirectory = getTableMetadataDirectory(databaseName, tableName);
@@ -307,7 +308,7 @@ public class FileHiveMetastore
         return new PartitionStatistics(basicStatistics, columnStatistics);
     }
 
-    @Override
+	@Override
     public synchronized Map<String, PartitionStatistics> getPartitionStatistics(String databaseName, String tableName, Set<String> partitionNames)
     {
         Table table = getRequiredTable(databaseName, tableName);
@@ -323,20 +324,20 @@ public class FileHiveMetastore
         return statistics.build();
     }
 
-    private Table getRequiredTable(String databaseName, String tableName)
+	private Table getRequiredTable(String databaseName, String tableName)
     {
         return getTable(databaseName, tableName)
                 .orElseThrow(() -> new TableNotFoundException(new SchemaTableName(databaseName, tableName)));
     }
 
-    private void verifyTableNotExists(String newDatabaseName, String newTableName)
+	private void verifyTableNotExists(String newDatabaseName, String newTableName)
     {
         if (getTable(newDatabaseName, newTableName).isPresent()) {
             throw new TableAlreadyExistsException(new SchemaTableName(newDatabaseName, newTableName));
         }
     }
 
-    @Override
+	@Override
     public synchronized void updateTableStatistics(String databaseName, String tableName, Function<PartitionStatistics, PartitionStatistics> update)
     {
         PartitionStatistics originalStatistics = getTableStatistics(databaseName, tableName);
@@ -353,7 +354,7 @@ public class FileHiveMetastore
         writeSchemaFile("table", tableMetadataDirectory, tableCodec, updatedMetadata, true);
     }
 
-    @Override
+	@Override
     public synchronized void updatePartitionStatistics(String databaseName, String tableName, String partitionName, Function<PartitionStatistics, PartitionStatistics> update)
     {
         PartitionStatistics originalStatistics = getPartitionStatistics(databaseName, tableName, ImmutableSet.of(partitionName)).get(partitionName);
@@ -375,7 +376,7 @@ public class FileHiveMetastore
         writeSchemaFile("partition", partitionDirectory, partitionCodec, updatedMetadata, true);
     }
 
-    @Override
+	@Override
     public synchronized Optional<List<String>> getAllTables(String databaseName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -392,7 +393,7 @@ public class FileHiveMetastore
         return Optional.of(ImmutableList.copyOf(tables));
     }
 
-    @Override
+	@Override
     public synchronized Optional<List<String>> getAllViews(String databaseName)
     {
         Optional<List<String>> tables = getAllTables(databaseName);
@@ -411,7 +412,7 @@ public class FileHiveMetastore
         return Optional.of(ImmutableList.copyOf(views));
     }
 
-    @Override
+	@Override
     public synchronized void dropTable(String databaseName, String tableName, boolean deleteData)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -422,7 +423,7 @@ public class FileHiveMetastore
         Path tableMetadataDirectory = getTableMetadataDirectory(databaseName, tableName);
 
         // It is safe to delete the whole meta directory for external tables and views
-        if (!table.getTableType().equals(MANAGED_TABLE) || deleteData) {
+        if (table.getTableType() != MANAGED_TABLE || deleteData) {
             deleteMetadataDirectory(tableMetadataDirectory);
         }
         else {
@@ -432,13 +433,13 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized void replaceTable(String databaseName, String tableName, Table newTable, PrincipalPrivileges principalPrivileges)
     {
         checkArgument(!newTable.getTableType().equals(TEMPORARY_TABLE), "temporary tables must never be stored in the metastore");
 
         Table table = getRequiredTable(databaseName, tableName);
-        if (!table.getTableType().equals(VIRTUAL_VIEW) || !newTable.getTableType().equals(VIRTUAL_VIEW)) {
+        if (table.getTableType() != VIRTUAL_VIEW || newTable.getTableType() != VIRTUAL_VIEW) {
             throw new PrestoException(HIVE_METASTORE_ERROR, "Only views can be updated with replaceTable");
         }
         if (!table.getDatabaseName().equals(databaseName) || !table.getTableName().equals(tableName)) {
@@ -451,15 +452,13 @@ public class FileHiveMetastore
         // replace existing permissions
         deleteTablePrivileges(table);
 
-        for (Entry<String, Collection<HivePrivilegeInfo>> entry : principalPrivileges.getUserPrivileges().asMap().entrySet()) {
-            setTablePrivileges(new PrestoPrincipal(USER, entry.getKey()), table.getDatabaseName(), table.getTableName(), entry.getValue());
-        }
-        for (Entry<String, Collection<HivePrivilegeInfo>> entry : principalPrivileges.getRolePrivileges().asMap().entrySet()) {
-            setTablePrivileges(new PrestoPrincipal(ROLE, entry.getKey()), table.getDatabaseName(), table.getTableName(), entry.getValue());
-        }
+        principalPrivileges.getUserPrivileges().asMap().entrySet().forEach(entry -> setTablePrivileges(new PrestoPrincipal(USER, entry.getKey()), table.getDatabaseName(), table.getTableName(),
+				entry.getValue()));
+        principalPrivileges.getRolePrivileges().asMap().entrySet().forEach(entry -> setTablePrivileges(new PrestoPrincipal(ROLE, entry.getKey()), table.getDatabaseName(), table.getTableName(),
+				entry.getValue()));
     }
 
-    @Override
+	@Override
     public synchronized void renameTable(String databaseName, String tableName, String newDatabaseName, String newTableName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -483,7 +482,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized void addColumn(String databaseName, String tableName, String columnName, HiveType columnType, String columnComment)
     {
         alterTable(databaseName, tableName, oldTable -> {
@@ -498,7 +497,7 @@ public class FileHiveMetastore
         });
     }
 
-    @Override
+	@Override
     public synchronized void renameColumn(String databaseName, String tableName, String oldColumnName, String newColumnName)
     {
         alterTable(databaseName, tableName, oldTable -> {
@@ -516,20 +515,20 @@ public class FileHiveMetastore
             }
 
             ImmutableList.Builder<Column> newDataColumns = ImmutableList.builder();
-            for (Column fieldSchema : oldTable.getDataColumns()) {
+            oldTable.getDataColumns().forEach(fieldSchema -> {
                 if (fieldSchema.getName().equals(oldColumnName)) {
                     newDataColumns.add(new Column(newColumnName, fieldSchema.getType(), fieldSchema.getComment()));
                 }
                 else {
                     newDataColumns.add(fieldSchema);
                 }
-            }
+            });
 
             return oldTable.withDataColumns(newDataColumns.build());
         });
     }
 
-    @Override
+	@Override
     public synchronized void dropColumn(String databaseName, String tableName, String columnName)
     {
         alterTable(databaseName, tableName, oldTable -> {
@@ -540,17 +539,13 @@ public class FileHiveMetastore
             }
 
             ImmutableList.Builder<Column> newDataColumns = ImmutableList.builder();
-            for (Column fieldSchema : oldTable.getDataColumns()) {
-                if (!fieldSchema.getName().equals(columnName)) {
-                    newDataColumns.add(fieldSchema);
-                }
-            }
+            oldTable.getDataColumns().stream().filter(fieldSchema -> !fieldSchema.getName().equals(columnName)).forEach(newDataColumns::add);
 
             return oldTable.withDataColumns(newDataColumns.build());
         });
     }
 
-    private void alterTable(String databaseName, String tableName, Function<TableMetadata, TableMetadata> alterFunction)
+	private void alterTable(String databaseName, String tableName, Function<TableMetadata, TableMetadata> alterFunction)
     {
         requireNonNull(databaseName, "databaseName is null");
         requireNonNull(tableName, "tableName is null");
@@ -567,7 +562,7 @@ public class FileHiveMetastore
         writeSchemaFile("table", tableMetadataDirectory, tableCodec, newTableSchema, true);
     }
 
-    @Override
+	@Override
     public synchronized void addPartitions(String databaseName, String tableName, List<PartitionWithStatistics> partitions)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -605,13 +600,14 @@ public class FileHiveMetastore
                 }
             }
             catch (Throwable e) {
-                for (Path createdFile : createdFiles) {
+                createdFiles.forEach(createdFile -> {
                     try {
                         metadataFileSystem.delete(createdFile, false);
                     }
                     catch (IOException ignored) {
+						logger.error(ignored.getMessage(), ignored);
                     }
-                }
+                });
                 throw e;
             }
         }
@@ -620,16 +616,16 @@ public class FileHiveMetastore
         }
     }
 
-    private void verifiedPartition(Table table, Partition partition)
+	private void verifiedPartition(Table table, Partition partition)
     {
         Path partitionMetadataDirectory = getPartitionMetadataDirectory(table, partition.getValues());
 
-        if (table.getTableType().equals(MANAGED_TABLE)) {
+        if (table.getTableType() == MANAGED_TABLE) {
             if (!partitionMetadataDirectory.equals(new Path(partition.getStorage().getLocation()))) {
                 throw new PrestoException(HIVE_METASTORE_ERROR, "Partition directory must be " + partitionMetadataDirectory);
             }
         }
-        else if (table.getTableType().equals(EXTERNAL_TABLE)) {
+        else if (table.getTableType() == EXTERNAL_TABLE) {
             try {
                 Path externalLocation = new Path(partition.getStorage().getLocation());
                 FileSystem externalFileSystem = hdfsEnvironment.getFileSystem(hdfsContext, externalLocation);
@@ -649,7 +645,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized void dropPartition(String databaseName, String tableName, List<String> partitionValues, boolean deleteData)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -671,7 +667,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized void alterPartition(String databaseName, String tableName, PartitionWithStatistics partitionWithStatistics)
     {
         Table table = getRequiredTable(databaseName, tableName);
@@ -683,7 +679,7 @@ public class FileHiveMetastore
         writeSchemaFile("partition", partitionMetadataDirectory, partitionCodec, new PartitionMetadata(table, partitionWithStatistics), true);
     }
 
-    @Override
+	@Override
     public synchronized void createRole(String role, String grantor)
     {
         Set<String> roles = new HashSet<>(listRoles());
@@ -691,7 +687,7 @@ public class FileHiveMetastore
         writeFile("roles", getRolesFile(), rolesCodec, ImmutableList.copyOf(roles), true);
     }
 
-    @Override
+	@Override
     public synchronized void dropRole(String role)
     {
         Set<String> roles = new HashSet<>(listRoles());
@@ -701,13 +697,13 @@ public class FileHiveMetastore
         writeRoleGrantsFile(grants);
     }
 
-    @Override
+	@Override
     public synchronized Set<String> listRoles()
     {
         return ImmutableSet.copyOf(readFile("roles", getRolesFile(), rolesCodec).orElse(ImmutableList.of()));
     }
 
-    @Override
+	@Override
     public synchronized void grantRoles(Set<String> roles, Set<PrestoPrincipal> grantees, boolean withAdminOption, PrestoPrincipal grantor)
     {
         Set<String> existingRoles = listRoles();
@@ -739,7 +735,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized void revokeRoles(Set<String> roles, Set<PrestoPrincipal> grantees, boolean adminOptionFor, PrestoPrincipal grantor)
     {
         Set<RoleGrant> existingGrants = listRoleGrantsSanitized();
@@ -767,7 +763,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized Set<RoleGrant> listRoleGrants(PrestoPrincipal principal)
     {
         ImmutableSet.Builder<RoleGrant> result = ImmutableSet.builder();
@@ -783,24 +779,24 @@ public class FileHiveMetastore
         return result.build();
     }
 
-    private synchronized Set<RoleGrant> listRoleGrantsSanitized()
+	private synchronized Set<RoleGrant> listRoleGrantsSanitized()
     {
         Set<RoleGrant> grants = readRoleGrantsFile();
         Set<String> existingRoles = listRoles();
         return removeDuplicatedEntries(removeNonExistingRoles(grants, existingRoles));
     }
 
-    private Set<RoleGrant> removeDuplicatedEntries(Set<RoleGrant> grants)
+	private Set<RoleGrant> removeDuplicatedEntries(Set<RoleGrant> grants)
     {
         Map<RoleGranteeTuple, RoleGrant> map = new HashMap<>();
-        for (RoleGrant grant : grants) {
+        grants.forEach(grant -> {
             RoleGranteeTuple tuple = new RoleGranteeTuple(grant.getRoleName(), grant.getGrantee());
             map.merge(tuple, grant, (first, second) -> first.isGrantable() ? first : second);
-        }
+        });
         return ImmutableSet.copyOf(map.values());
     }
 
-    private static Set<RoleGrant> removeNonExistingRoles(Set<RoleGrant> grants, Set<String> existingRoles)
+	private static Set<RoleGrant> removeNonExistingRoles(Set<RoleGrant> grants, Set<String> existingRoles)
     {
         ImmutableSet.Builder<RoleGrant> result = ImmutableSet.builder();
         for (RoleGrant grant : grants) {
@@ -816,17 +812,17 @@ public class FileHiveMetastore
         return result.build();
     }
 
-    private Set<RoleGrant> readRoleGrantsFile()
+	private Set<RoleGrant> readRoleGrantsFile()
     {
         return ImmutableSet.copyOf(readFile("roleGrants", getRoleGrantsFile(), roleGrantsCodec).orElse(ImmutableList.of()));
     }
 
-    private void writeRoleGrantsFile(Set<RoleGrant> roleGrants)
+	private void writeRoleGrantsFile(Set<RoleGrant> roleGrants)
     {
         writeFile("roleGrants", getRoleGrantsFile(), roleGrantsCodec, ImmutableList.copyOf(roleGrants), true);
     }
 
-    @Override
+	@Override
     public synchronized Optional<List<String>> getPartitionNames(String databaseName, String tableName)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -849,7 +845,7 @@ public class FileHiveMetastore
         return Optional.of(ImmutableList.copyOf(partitionNames));
     }
 
-    private List<ArrayDeque<String>> listPartitions(Path director, List<Column> partitionColumns)
+	private List<ArrayDeque<String>> listPartitions(Path director, List<Column> partitionColumns)
     {
         if (partitionColumns.isEmpty()) {
             return ImmutableList.of();
@@ -876,10 +872,10 @@ public class FileHiveMetastore
                 }
 
                 String value = unescapePathName(fileStatus.getPath().getName().substring(directoryPrefix.length()));
-                for (ArrayDeque<String> childPartition : childPartitionValues) {
+                childPartitionValues.forEach(childPartition -> {
                     childPartition.addFirst(value);
                     partitionValues.add(childPartition);
-                }
+                });
             }
             return partitionValues;
         }
@@ -888,7 +884,7 @@ public class FileHiveMetastore
         }
     }
 
-    @Override
+	@Override
     public synchronized Optional<Partition> getPartition(String databaseName, String tableName, List<String> partitionValues)
     {
         requireNonNull(databaseName, "databaseName is null");
@@ -906,7 +902,7 @@ public class FileHiveMetastore
                 .map(partitionMetadata -> partitionMetadata.toPartition(databaseName, tableName, partitionValues, partitionDirectory.toString()));
     }
 
-    @Override
+	@Override
     public synchronized Optional<List<String>> getPartitionNamesByParts(String databaseName, String tableName, List<String> parts)
     {
         // todo this should be more efficient by selectively walking the directory tree
@@ -915,7 +911,7 @@ public class FileHiveMetastore
                 .collect(toList()));
     }
 
-    private static boolean partitionMatches(String partitionName, List<String> parts)
+	private static boolean partitionMatches(String partitionName, List<String> parts)
     {
         List<String> values = toPartitionValues(partitionName);
         if (values.size() != parts.size()) {
@@ -930,18 +926,18 @@ public class FileHiveMetastore
         return true;
     }
 
-    @Override
+	@Override
     public synchronized Map<String, Optional<Partition>> getPartitionsByNames(String databaseName, String tableName, List<String> partitionNames)
     {
         ImmutableMap.Builder<String, Optional<Partition>> builder = ImmutableMap.builder();
-        for (String partitionName : partitionNames) {
+        partitionNames.forEach(partitionName -> {
             List<String> partitionValues = toPartitionValues(partitionName);
             builder.put(partitionName, getPartition(databaseName, tableName, partitionValues));
-        }
+        });
         return builder.build();
     }
 
-    @Override
+	@Override
     public synchronized Set<HivePrivilegeInfo> listTablePrivileges(String databaseName, String tableName, PrestoPrincipal principal)
     {
         ImmutableSet.Builder<HivePrivilegeInfo> result = ImmutableSet.builder();
@@ -956,13 +952,13 @@ public class FileHiveMetastore
         return result.build();
     }
 
-    @Override
+	@Override
     public synchronized void grantTablePrivileges(String databaseName, String tableName, PrestoPrincipal grantee, Set<HivePrivilegeInfo> privileges)
     {
         setTablePrivileges(grantee, databaseName, tableName, privileges);
     }
 
-    @Override
+	@Override
     public synchronized void revokeTablePrivileges(String databaseName, String tableName, PrestoPrincipal grantee, Set<HivePrivilegeInfo> privileges)
     {
         Set<HivePrivilegeInfo> currentPrivileges = listTablePrivileges(databaseName, tableName, grantee);
@@ -971,7 +967,7 @@ public class FileHiveMetastore
         setTablePrivileges(grantee, databaseName, tableName, currentPrivileges);
     }
 
-    private synchronized void setTablePrivileges(
+	private synchronized void setTablePrivileges(
             PrestoPrincipal grantee,
             String databaseName,
             String tableName,
@@ -1003,7 +999,7 @@ public class FileHiveMetastore
         }
     }
 
-    private synchronized void deleteTablePrivileges(Table table)
+	private synchronized void deleteTablePrivileges(Table table)
     {
         try {
             Path permissionsDirectory = getPermissionsDirectory(table);
@@ -1014,44 +1010,44 @@ public class FileHiveMetastore
         }
     }
 
-    private Path getDatabaseMetadataDirectory(String databaseName)
+	private Path getDatabaseMetadataDirectory(String databaseName)
     {
         return new Path(catalogDirectory, databaseName);
     }
 
-    private Path getTableMetadataDirectory(Table table)
+	private Path getTableMetadataDirectory(Table table)
     {
         return getTableMetadataDirectory(table.getDatabaseName(), table.getTableName());
     }
 
-    private Path getTableMetadataDirectory(String databaseName, String tableName)
+	private Path getTableMetadataDirectory(String databaseName, String tableName)
     {
         return new Path(getDatabaseMetadataDirectory(databaseName), tableName);
     }
 
-    private Path getPartitionMetadataDirectory(Table table, List<String> values)
+	private Path getPartitionMetadataDirectory(Table table, List<String> values)
     {
         String partitionName = makePartName(table.getPartitionColumns(), values);
         return getPartitionMetadataDirectory(table, partitionName);
     }
 
-    private Path getPartitionMetadataDirectory(Table table, String partitionName)
+	private Path getPartitionMetadataDirectory(Table table, String partitionName)
     {
         Path tableMetadataDirectory = getTableMetadataDirectory(table);
         return new Path(tableMetadataDirectory, partitionName);
     }
 
-    private Path getPermissionsDirectory(Table table)
+	private Path getPermissionsDirectory(Table table)
     {
         return new Path(getTableMetadataDirectory(table), PRESTO_PERMISSIONS_DIRECTORY_NAME);
     }
 
-    private static Path getPermissionsPath(Path permissionsDirectory, PrestoPrincipal grantee)
+	private static Path getPermissionsPath(Path permissionsDirectory, PrestoPrincipal grantee)
     {
-        return new Path(permissionsDirectory, grantee.getType().toString().toLowerCase(Locale.US) + "_" + grantee.getName());
+        return new Path(permissionsDirectory, new StringBuilder().append(grantee.getType().toString().toLowerCase(Locale.US)).append("_").append(grantee.getName()).toString());
     }
 
-    private List<Path> getChildSchemaDirectories(Path metadataDirectory)
+	private List<Path> getChildSchemaDirectories(Path metadataDirectory)
     {
         try {
             if (!metadataFileSystem.isDirectory(metadataDirectory)) {
@@ -1078,17 +1074,17 @@ public class FileHiveMetastore
         }
     }
 
-    private Path getRolesFile()
+	private Path getRolesFile()
     {
         return new Path(catalogDirectory, ".roles");
     }
 
-    private Path getRoleGrantsFile()
+	private Path getRoleGrantsFile()
     {
         return new Path(catalogDirectory, ".roleGrants");
     }
 
-    private void deleteMetadataDirectory(Path metadataDirectory)
+	private void deleteMetadataDirectory(Path metadataDirectory)
     {
         try {
             Path schemaPath = new Path(metadataDirectory, PRESTO_SCHEMA_FILE_NAME);
@@ -1106,13 +1102,13 @@ public class FileHiveMetastore
         }
     }
 
-    private <T> Optional<T> readSchemaFile(String type, Path metadataDirectory, JsonCodec<T> codec)
+	private <T> Optional<T> readSchemaFile(String type, Path metadataDirectory, JsonCodec<T> codec)
     {
         Path schemaPath = new Path(metadataDirectory, PRESTO_SCHEMA_FILE_NAME);
         return readFile(type + " schema", schemaPath, codec);
     }
 
-    private <T> Optional<T> readFile(String type, Path path, JsonCodec<T> codec)
+	private <T> Optional<T> readFile(String type, Path path, JsonCodec<T> codec)
     {
         try {
             if (!metadataFileSystem.isFile(path)) {
@@ -1129,22 +1125,21 @@ public class FileHiveMetastore
         }
     }
 
-    private <T> void writeSchemaFile(String type, Path directory, JsonCodec<T> codec, T value, boolean overwrite)
+	private <T> void writeSchemaFile(String type, Path directory, JsonCodec<T> codec, T value, boolean overwrite)
     {
         Path schemaPath = new Path(directory, PRESTO_SCHEMA_FILE_NAME);
         writeFile(type + " schema", schemaPath, codec, value, overwrite);
     }
 
-    private <T> void writeFile(String type, Path path, JsonCodec<T> codec, T value, boolean overwrite)
+	private <T> void writeFile(String type, Path path, JsonCodec<T> codec, T value, boolean overwrite)
     {
         try {
             byte[] json = codec.toJsonBytes(value);
 
-            if (!overwrite) {
-                if (metadataFileSystem.exists(path)) {
-                    throw new PrestoException(HIVE_METASTORE_ERROR, type + " file already exists");
-                }
-            }
+            boolean condition = !overwrite && metadataFileSystem.exists(path);
+			if (condition) {
+			    throw new PrestoException(HIVE_METASTORE_ERROR, type + " file already exists");
+			}
 
             metadataFileSystem.mkdirs(path.getParent());
 
@@ -1158,19 +1153,19 @@ public class FileHiveMetastore
         }
     }
 
-    private void deleteSchemaFile(String type, Path metadataDirectory)
+	private void deleteSchemaFile(String type, Path metadataDirectory)
     {
         try {
             if (!metadataFileSystem.delete(new Path(metadataDirectory, PRESTO_SCHEMA_FILE_NAME), false)) {
-                throw new PrestoException(HIVE_METASTORE_ERROR, "Could not delete " + type + " schema");
+                throw new PrestoException(HIVE_METASTORE_ERROR, new StringBuilder().append("Could not delete ").append(type).append(" schema").toString());
             }
         }
         catch (IOException e) {
-            throw new PrestoException(HIVE_METASTORE_ERROR, "Could not delete " + type + " schema", e);
+            throw new PrestoException(HIVE_METASTORE_ERROR, new StringBuilder().append("Could not delete ").append(type).append(" schema").toString(), e);
         }
     }
 
-    private static boolean isChildDirectory(Path parentDirectory, Path childDirectory)
+	private static boolean isChildDirectory(Path parentDirectory, Path childDirectory)
     {
         if (parentDirectory.equals(childDirectory)) {
             return true;
@@ -1181,7 +1176,7 @@ public class FileHiveMetastore
         return isChildDirectory(parentDirectory, childDirectory.getParent());
     }
 
-    private static class RoleGranteeTuple
+	private static class RoleGranteeTuple
     {
         private final String role;
         private final PrestoPrincipal grantee;

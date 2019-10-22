@@ -211,17 +211,13 @@ public class PruneUnreferencedOutputs
 
             ImmutableSet.Builder<VariableReferenceExpression> leftInputsBuilder = ImmutableSet.builder();
             leftInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), JoinNode.EquiJoinClause::getLeft));
-            if (node.getLeftHashVariable().isPresent()) {
-                leftInputsBuilder.add(node.getLeftHashVariable().get());
-            }
+            node.getLeftHashVariable().ifPresent(leftInputsBuilder::add);
             leftInputsBuilder.addAll(expectedFilterInputs);
             Set<VariableReferenceExpression> leftInputs = leftInputsBuilder.build();
 
             ImmutableSet.Builder<VariableReferenceExpression> rightInputsBuilder = ImmutableSet.builder();
             rightInputsBuilder.addAll(context.get()).addAll(Iterables.transform(node.getCriteria(), JoinNode.EquiJoinClause::getRight));
-            if (node.getRightHashVariable().isPresent()) {
-                rightInputsBuilder.add(node.getRightHashVariable().get());
-            }
+            node.getRightHashVariable().ifPresent(rightInputsBuilder::add);
             rightInputsBuilder.addAll(expectedFilterInputs);
             Set<VariableReferenceExpression> rightInputs = rightInputsBuilder.build();
 
@@ -252,16 +248,12 @@ public class PruneUnreferencedOutputs
         {
             ImmutableSet.Builder<VariableReferenceExpression> sourceInputsBuilder = ImmutableSet.builder();
             sourceInputsBuilder.addAll(context.get()).add(node.getSourceJoinVariable());
-            if (node.getSourceHashVariable().isPresent()) {
-                sourceInputsBuilder.add(node.getSourceHashVariable().get());
-            }
+            node.getSourceHashVariable().ifPresent(sourceInputsBuilder::add);
             Set<VariableReferenceExpression> sourceInputs = sourceInputsBuilder.build();
 
             ImmutableSet.Builder<VariableReferenceExpression> filteringSourceInputBuilder = ImmutableSet.builder();
             filteringSourceInputBuilder.add(node.getFilteringSourceJoinVariable());
-            if (node.getFilteringSourceHashVariable().isPresent()) {
-                filteringSourceInputBuilder.add(node.getFilteringSourceHashVariable().get());
-            }
+            node.getFilteringSourceHashVariable().ifPresent(filteringSourceInputBuilder::add);
             Set<VariableReferenceExpression> filteringSourceInputs = filteringSourceInputBuilder.build();
 
             PlanNode source = context.rewrite(node.getSource(), sourceInputs);
@@ -316,17 +308,13 @@ public class PruneUnreferencedOutputs
             ImmutableSet.Builder<VariableReferenceExpression> probeInputsBuilder = ImmutableSet.builder();
             probeInputsBuilder.addAll(context.get())
                     .addAll(Iterables.transform(node.getCriteria(), IndexJoinNode.EquiJoinClause::getProbe));
-            if (node.getProbeHashVariable().isPresent()) {
-                probeInputsBuilder.add(node.getProbeHashVariable().get());
-            }
+            node.getProbeHashVariable().ifPresent(probeInputsBuilder::add);
             Set<VariableReferenceExpression> probeInputs = probeInputsBuilder.build();
 
             ImmutableSet.Builder<VariableReferenceExpression> indexInputBuilder = ImmutableSet.builder();
             indexInputBuilder.addAll(context.get())
                     .addAll(Iterables.transform(node.getCriteria(), IndexJoinNode.EquiJoinClause::getIndex));
-            if (node.getIndexHashVariable().isPresent()) {
-                indexInputBuilder.add(node.getIndexHashVariable().get());
-            }
+            node.getIndexHashVariable().ifPresent(indexInputBuilder::add);
             Set<VariableReferenceExpression> indexInputs = indexInputBuilder.build();
 
             PlanNode probeSource = context.rewrite(node.getProbeSource(), probeInputs);
@@ -357,12 +345,10 @@ public class PruneUnreferencedOutputs
         {
             ImmutableSet.Builder<VariableReferenceExpression> expectedInputs = ImmutableSet.<VariableReferenceExpression>builder()
                     .addAll(node.getGroupingKeys());
-            if (node.getHashVariable().isPresent()) {
-                expectedInputs.add(node.getHashVariable().get());
-            }
+            node.getHashVariable().ifPresent(expectedInputs::add);
 
             ImmutableMap.Builder<VariableReferenceExpression, Aggregation> aggregations = ImmutableMap.builder();
-            for (Map.Entry<VariableReferenceExpression, Aggregation> entry : node.getAggregations().entrySet()) {
+            node.getAggregations().entrySet().forEach(entry -> {
                 VariableReferenceExpression variable = entry.getKey();
 
                 if (context.get().contains(variable)) {
@@ -371,7 +357,7 @@ public class PruneUnreferencedOutputs
                     aggregation.getMask().ifPresent(expectedInputs::add);
                     aggregations.put(variable, aggregation);
                 }
-            }
+            });
 
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
 
@@ -396,34 +382,28 @@ public class PruneUnreferencedOutputs
                     orderingScheme.getOrderByVariables()
                             .forEach(expectedInputs::add));
 
-            for (WindowNode.Frame frame : node.getFrames()) {
-                if (frame.getStartValue().isPresent()) {
-                    expectedInputs.add(frame.getStartValue().get());
-                }
-                if (frame.getEndValue().isPresent()) {
-                    expectedInputs.add(frame.getEndValue().get());
-                }
-            }
+            node.getFrames().forEach(frame -> {
+                frame.getStartValue().ifPresent(expectedInputs::add);
+                frame.getEndValue().ifPresent(expectedInputs::add);
+            });
 
-            if (node.getHashVariable().isPresent()) {
-                expectedInputs.add(node.getHashVariable().get());
-            }
+            node.getHashVariable().ifPresent(expectedInputs::add);
 
             ImmutableMap.Builder<VariableReferenceExpression, WindowNode.Function> functionsBuilder = ImmutableMap.builder();
-            for (Map.Entry<VariableReferenceExpression, WindowNode.Function> entry : node.getWindowFunctions().entrySet()) {
+            node.getWindowFunctions().entrySet().forEach(entry -> {
                 VariableReferenceExpression variable = entry.getKey();
                 WindowNode.Function function = entry.getValue();
                 if (context.get().contains(variable)) {
                     expectedInputs.addAll(WindowNodeUtil.extractWindowFunctionUniqueVariables(function, variableAllocator.getTypes()));
                     functionsBuilder.put(variable, entry.getValue());
                 }
-            }
+            });
 
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
 
             Map<VariableReferenceExpression, WindowNode.Function> functions = functionsBuilder.build();
 
-            if (functions.size() == 0) {
+            if (functions.isEmpty()) {
                 return source;
             }
 
@@ -491,18 +471,16 @@ public class PruneUnreferencedOutputs
             ImmutableList.Builder<List<VariableReferenceExpression>> newGroupingSets = ImmutableList.builder();
             Map<VariableReferenceExpression, VariableReferenceExpression> newGroupingMapping = new HashMap<>();
 
-            for (List<VariableReferenceExpression> groupingSet : node.getGroupingSets()) {
+            node.getGroupingSets().forEach(groupingSet -> {
                 ImmutableList.Builder<VariableReferenceExpression> newGroupingSet = ImmutableList.builder();
 
-                for (VariableReferenceExpression output : groupingSet) {
-                    if (context.get().contains(output)) {
-                        newGroupingSet.add(output);
-                        newGroupingMapping.putIfAbsent(output, node.getGroupingColumns().get(output));
-                        expectedInputs.add(node.getGroupingColumns().get(output));
-                    }
-                }
+                groupingSet.stream().filter(output -> context.get().contains(output)).forEach(output -> {
+				    newGroupingSet.add(output);
+				    newGroupingMapping.putIfAbsent(output, node.getGroupingColumns().get(output));
+				    expectedInputs.add(node.getGroupingColumns().get(output));
+				});
                 newGroupingSets.add(newGroupingSet.build());
-            }
+            });
 
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
             return new GroupIdNode(node.getId(), source, newGroupingSets.build(), newGroupingMapping, newAggregationArguments, node.getGroupIdVariable());
@@ -521,9 +499,7 @@ public class PruneUnreferencedOutputs
                             .filter(variable -> !variable.equals(node.getMarkerVariable()))
                             .collect(toImmutableList()));
 
-            if (node.getHashVariable().isPresent()) {
-                expectedInputs.add(node.getHashVariable().get());
-            }
+            node.getHashVariable().ifPresent(expectedInputs::add);
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
 
             return new MarkDistinctNode(node.getId(), source, node.getMarkerVariable(), node.getDistinctVariables(), node.getHashVariable());
@@ -623,9 +599,7 @@ public class PruneUnreferencedOutputs
                     .addAll(context.get())
                     .addAll(node.getPartitionBy());
 
-            if (node.getHashVariable().isPresent()) {
-                inputsBuilder.add(node.getHashVariable().get());
-            }
+            node.getHashVariable().ifPresent(inputsBuilder::add);
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
 
             return new RowNumberNode(node.getId(), source, node.getPartitionBy(), node.getRowNumberVariable(), node.getMaxRowCountPerPartition(), node.getHashVariable());
@@ -639,9 +613,7 @@ public class PruneUnreferencedOutputs
                     .addAll(node.getPartitionBy())
                     .addAll(node.getOrderingScheme().getOrderByVariables());
 
-            if (node.getHashVariable().isPresent()) {
-                expectedInputs.add(node.getHashVariable().get());
-            }
+            node.getHashVariable().ifPresent(expectedInputs::add);
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
 
             return new TopNRowNumberNode(node.getId(),
@@ -668,18 +640,16 @@ public class PruneUnreferencedOutputs
         {
             ImmutableSet.Builder<VariableReferenceExpression> expectedInputs = ImmutableSet.<VariableReferenceExpression>builder()
                     .addAll(node.getColumns());
-            if (node.getPartitioningScheme().isPresent()) {
-                PartitioningScheme partitioningScheme = node.getPartitioningScheme().get();
+            node.getPartitioningScheme().ifPresent(partitioningScheme -> {
                 partitioningScheme.getPartitioning().getVariableReferences().forEach(expectedInputs::add);
                 partitioningScheme.getHashColumn().ifPresent(expectedInputs::add);
-            }
-            if (node.getStatisticsAggregation().isPresent()) {
-                StatisticAggregations aggregations = node.getStatisticsAggregation().get();
+            });
+            node.getStatisticsAggregation().ifPresent(aggregations -> {
                 expectedInputs.addAll(aggregations.getGroupingVariables());
                 aggregations.getAggregations()
                         .values()
                         .forEach(aggregation -> expectedInputs.addAll(extractAggregationUniqueVariables(aggregation, variableAllocator.getTypes())));
-            }
+            });
             PlanNode source = context.rewrite(node.getSource(), expectedInputs.build());
             return new TableWriterNode(
                     node.getId(),
@@ -768,13 +738,7 @@ public class PruneUnreferencedOutputs
         {
             // Find out which output variables we need to keep
             ImmutableListMultimap.Builder<VariableReferenceExpression, VariableReferenceExpression> rewrittenVariableMappingBuilder = ImmutableListMultimap.builder();
-            for (VariableReferenceExpression variable : node.getOutputVariables()) {
-                if (context.get().contains(variable)) {
-                    rewrittenVariableMappingBuilder.putAll(
-                            variable,
-                            node.getVariableMapping().get(variable));
-                }
-            }
+            node.getOutputVariables().stream().filter(variable -> context.get().contains(variable)).forEach(variable -> rewrittenVariableMappingBuilder.putAll(variable, node.getVariableMapping().get(variable)));
             return rewrittenVariableMappingBuilder.build();
         }
 
@@ -830,7 +794,7 @@ public class PruneUnreferencedOutputs
             // extract symbols required subquery plan
             ImmutableSet.Builder<VariableReferenceExpression> subqueryAssignmentsVariablesBuilder = ImmutableSet.builder();
             Assignments.Builder subqueryAssignments = Assignments.builder();
-            for (Map.Entry<VariableReferenceExpression, RowExpression> entry : node.getSubqueryAssignments().getMap().entrySet()) {
+            node.getSubqueryAssignments().getMap().entrySet().forEach(entry -> {
                 VariableReferenceExpression output = entry.getKey();
                 RowExpression expression = entry.getValue();
                 if (context.get().contains(output)) {
@@ -842,7 +806,7 @@ public class PruneUnreferencedOutputs
                     }
                     subqueryAssignments.put(output, expression);
                 }
-            }
+            });
 
             Set<VariableReferenceExpression> subqueryAssignmentsVariables = subqueryAssignmentsVariablesBuilder.build();
             PlanNode subquery = context.rewrite(node.getSubquery(), subqueryAssignmentsVariables);

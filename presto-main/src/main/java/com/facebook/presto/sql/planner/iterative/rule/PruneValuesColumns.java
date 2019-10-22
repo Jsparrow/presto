@@ -52,11 +52,7 @@ public class PruneValuesColumns
         }
 
         ImmutableList.Builder<List<RowExpression>> rowsBuilder = ImmutableList.builder();
-        for (List<RowExpression> row : valuesNode.getRows()) {
-            rowsBuilder.add(Arrays.stream(mapping)
-                    .mapToObj(row::get)
-                    .collect(Collectors.toList()));
-        }
+        valuesNode.getRows().forEach(row -> rowsBuilder.add(Arrays.stream(mapping).mapToObj(row::get).collect(Collectors.toList())));
 
         return Optional.of(new ValuesNode(valuesNode.getId(), newOutputVariables, rowsBuilder.build()));
     }

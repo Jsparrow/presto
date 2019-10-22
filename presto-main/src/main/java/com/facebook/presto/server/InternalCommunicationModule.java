@@ -58,7 +58,7 @@ public class InternalCommunicationModule
                 kerberosConfig.setUseCanonicalHostname(clientKerberosConfig.isKerberosUseCanonicalHostname());
             });
 
-            String kerberosPrincipal = serverKerberosConfig.getServiceName() + "/" + getLocalCanonicalHostName();
+            String kerberosPrincipal = new StringBuilder().append(serverKerberosConfig.getServiceName()).append("/").append(getLocalCanonicalHostName()).toString();
             configBinder(binder).bindConfigGlobalDefaults(HttpClientConfig.class, httpClientConfig -> {
                 httpClientConfig.setAuthenticationEnabled(true);
                 httpClientConfig.setKerberosPrincipal(kerberosPrincipal);

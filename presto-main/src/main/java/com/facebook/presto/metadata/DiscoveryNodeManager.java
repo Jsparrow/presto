@@ -173,10 +173,8 @@ public final class DiscoveryNodeManager
         nodeStates.keySet().removeAll(deadNodes);
 
         // Add new nodes
-        for (InternalNode node : aliveNodes) {
-            nodeStates.putIfAbsent(node.getNodeIdentifier(),
-                    new RemoteNodeState(httpClient, uriBuilderFrom(node.getInternalUri()).appendPath("/v1/info/state").build()));
-        }
+		aliveNodes.forEach(node -> nodeStates.putIfAbsent(node.getNodeIdentifier(), new RemoteNodeState(httpClient,
+				uriBuilderFrom(node.getInternalUri()).appendPath("/v1/info/state").build())));
 
         // Schedule refresh
         nodeStates.values().forEach(RemoteNodeState::asyncRefresh);
@@ -253,9 +251,8 @@ public final class DiscoveryNodeManager
         if (allNodes != null) {
             // log node that are no longer active (but not shutting down)
             SetView<InternalNode> missingNodes = difference(allNodes.getActiveNodes(), Sets.union(activeNodesBuilder.build(), shuttingDownNodesBuilder.build()));
-            for (InternalNode missingNode : missingNodes) {
-                log.info("Previously active node is missing: %s (last seen at %s)", missingNode.getNodeIdentifier(), missingNode.getHost());
-            }
+            missingNodes.forEach(missingNode -> log.info("Previously active node is missing: %s (last seen at %s)", missingNode.getNodeIdentifier(),
+					missingNode.getHost()));
         }
 
         // nodes by connector id changes anytime a node adds or removes a connector (note: this is not part of the listener system)
@@ -263,15 +260,15 @@ public final class DiscoveryNodeManager
 
         AllNodes allNodes = new AllNodes(activeNodesBuilder.build(), inactiveNodesBuilder.build(), shuttingDownNodesBuilder.build(), coordinatorsBuilder.build());
         // only update if all nodes actually changed (note: this does not include the connectors registered with the nodes)
-        if (!allNodes.equals(this.allNodes)) {
-            // assign allNodes to a local variable for use in the callback below
-            this.allNodes = allNodes;
-            coordinators = coordinatorsBuilder.build();
-
-            // notify listeners
-            List<Consumer<AllNodes>> listeners = ImmutableList.copyOf(this.listeners);
-            nodeStateEventExecutor.submit(() -> listeners.forEach(listener -> listener.accept(allNodes)));
-        }
+		if (allNodes.equals(this.allNodes)) {
+			return;
+		}
+		// assign allNodes to a local variable for use in the callback below
+		this.allNodes = allNodes;
+		coordinators = coordinatorsBuilder.build();
+		// notify listeners
+		List<Consumer<AllNodes>> listeners = ImmutableList.copyOf(this.listeners);
+		nodeStateEventExecutor.submit(() -> listeners.forEach(listener -> listener.accept(allNodes)));
     }
 
     private NodeState getNodeState(InternalNode node)

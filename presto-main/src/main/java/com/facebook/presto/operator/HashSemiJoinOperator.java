@@ -33,6 +33,107 @@ public class HashSemiJoinOperator
         implements Operator
 {
     private final OperatorContext operatorContext;
+	private final int probeJoinChannel;
+	private final ListenableFuture<ChannelSet> channelSetFuture;
+	private ChannelSet channelSet;
+	private Page outputPage;
+	private boolean finishing;
+
+	public HashSemiJoinOperator(OperatorContext operatorContext, SetSupplier channelSetFuture, int probeJoinChannel)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+
+        // todo pass in desired projection
+        requireNonNull(channelSetFuture, "hashProvider is null");
+        checkArgument(probeJoinChannel >= 0, "probeJoinChannel is negative");
+
+        this.channelSetFuture = channelSetFuture.getChannelSet();
+        this.probeJoinChannel = probeJoinChannel;
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && outputPage == null;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        return channelSetFuture;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        if (finishing || outputPage != null) {
+            return false;
+        }
+
+        if (channelSet == null) {
+            channelSet = tryGetFutureValue(channelSetFuture).orElse(null);
+        }
+        return channelSet != null;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!finishing, "Operator is finishing");
+        checkState(channelSet != null, "Set has not been built yet");
+        checkState(outputPage == null, "Operator still has pending output");
+
+        // create the block builder for the new boolean column
+        // we know the exact size required for the block
+        BlockBuilder blockBuilder = BOOLEAN.createFixedSizeBlockBuilder(page.getPositionCount());
+
+        Page probeJoinPage = new Page(page.getBlock(probeJoinChannel));
+
+        // update hashing strategy to use probe cursor
+        for (int position = 0; position < page.getPositionCount(); position++) {
+            if (probeJoinPage.getBlock(0).isNull(position)) {
+                if (channelSet.isEmpty()) {
+                    BOOLEAN.writeBoolean(blockBuilder, false);
+                }
+                else {
+                    blockBuilder.appendNull();
+                }
+            }
+            else {
+                boolean contains = channelSet.contains(position, probeJoinPage);
+                if (!contains && channelSet.containsNull()) {
+                    blockBuilder.appendNull();
+                }
+                else {
+                    BOOLEAN.writeBoolean(blockBuilder, contains);
+                }
+            }
+        }
+
+        // add the new boolean column to the page
+        outputPage = page.appendColumn(blockBuilder.build());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        Page result = outputPage;
+        outputPage = null;
+        return result;
+    }
 
     public static class HashSemiJoinOperatorFactory
             implements OperatorFactory
@@ -73,108 +174,5 @@ public class HashSemiJoinOperator
         {
             return new HashSemiJoinOperatorFactory(operatorId, planNodeId, setSupplier, probeTypes, probeJoinChannel);
         }
-    }
-
-    private final int probeJoinChannel;
-    private final ListenableFuture<ChannelSet> channelSetFuture;
-
-    private ChannelSet channelSet;
-    private Page outputPage;
-    private boolean finishing;
-
-    public HashSemiJoinOperator(OperatorContext operatorContext, SetSupplier channelSetFuture, int probeJoinChannel)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-
-        // todo pass in desired projection
-        requireNonNull(channelSetFuture, "hashProvider is null");
-        checkArgument(probeJoinChannel >= 0, "probeJoinChannel is negative");
-
-        this.channelSetFuture = channelSetFuture.getChannelSet();
-        this.probeJoinChannel = probeJoinChannel;
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && outputPage == null;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        return channelSetFuture;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        if (finishing || outputPage != null) {
-            return false;
-        }
-
-        if (channelSet == null) {
-            channelSet = tryGetFutureValue(channelSetFuture).orElse(null);
-        }
-        return channelSet != null;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!finishing, "Operator is finishing");
-        checkState(channelSet != null, "Set has not been built yet");
-        checkState(outputPage == null, "Operator still has pending output");
-
-        // create the block builder for the new boolean column
-        // we know the exact size required for the block
-        BlockBuilder blockBuilder = BOOLEAN.createFixedSizeBlockBuilder(page.getPositionCount());
-
-        Page probeJoinPage = new Page(page.getBlock(probeJoinChannel));
-
-        // update hashing strategy to use probe cursor
-        for (int position = 0; position < page.getPositionCount(); position++) {
-            if (probeJoinPage.getBlock(0).isNull(position)) {
-                if (channelSet.isEmpty()) {
-                    BOOLEAN.writeBoolean(blockBuilder, false);
-                }
-                else {
-                    blockBuilder.appendNull();
-                }
-            }
-            else {
-                boolean contains = channelSet.contains(position, probeJoinPage);
-                if (!contains && channelSet.containsNull()) {
-                    blockBuilder.appendNull();
-                }
-                else {
-                    BOOLEAN.writeBoolean(blockBuilder, contains);
-                }
-            }
-        }
-
-        // add the new boolean column to the page
-        outputPage = page.appendColumn(blockBuilder.build());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        Page result = outputPage;
-        outputPage = null;
-        return result;
     }
 }

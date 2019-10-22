@@ -33,28 +33,19 @@ public class CreateDropViewTests
     @Test(groups = CREATE_DROP_VIEW)
     public void createSimpleView()
     {
-        executeWith(createViewAs("SELECT * FROM nation"), view -> {
-            assertThat(query(format("SELECT * FROM %s", view.getName())))
-                    .hasRowsCount(25);
-        });
+        executeWith(createViewAs("SELECT * FROM nation"), view -> assertThat(query(format("SELECT * FROM %s", view.getName()))).hasRowsCount(25));
     }
 
     @Test(groups = CREATE_DROP_VIEW)
     public void querySimpleViewQualified()
     {
-        executeWith(createViewAs("SELECT * FROM nation"), view -> {
-            assertThat(query(format("SELECT %s.n_regionkey FROM %s", view.getName(), view.getName())))
-                    .hasRowsCount(25);
-        });
+        executeWith(createViewAs("SELECT * FROM nation"), view -> assertThat(query(format("SELECT %s.n_regionkey FROM %s", view.getName(), view.getName()))).hasRowsCount(25));
     }
 
     @Test(groups = CREATE_DROP_VIEW)
     public void createViewWithAggregate()
     {
-        executeWith(createViewAs("SELECT n_regionkey, count(*) countries FROM nation GROUP BY n_regionkey ORDER BY n_regionkey"), view -> {
-            assertThat(query(format("SELECT * FROM %s", view.getName())))
-                    .hasRowsCount(5);
-        });
+        executeWith(createViewAs("SELECT n_regionkey, count(*) countries FROM nation GROUP BY n_regionkey ORDER BY n_regionkey"), view -> assertThat(query(format("SELECT * FROM %s", view.getName()))).hasRowsCount(5));
     }
 
     @Test(groups = {CREATE_DROP_VIEW, SMOKE})

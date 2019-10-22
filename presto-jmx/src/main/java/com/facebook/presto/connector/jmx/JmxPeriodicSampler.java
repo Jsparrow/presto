@@ -57,11 +57,9 @@ public class JmxPeriodicSampler
 
         ImmutableList.Builder<JmxTableHandle> tableHandleBuilder = ImmutableList.builder();
 
-        for (String tableName : jmxHistoricalData.getTables()) {
-            tableHandleBuilder.add(requireNonNull(
-                    jmxMetadata.getTableHandle(new SchemaTableName(JmxMetadata.HISTORY_SCHEMA_NAME, tableName)),
-                    format("tableHandle is null for table [%s]", tableName)));
-        }
+        jmxHistoricalData.getTables().forEach(tableName -> tableHandleBuilder.add(requireNonNull(
+				jmxMetadata.getTableHandle(new SchemaTableName(JmxMetadata.HISTORY_SCHEMA_NAME, tableName)),
+				format("tableHandle is null for table [%s]", tableName))));
 
         tableHandles = tableHandleBuilder.build();
     }
@@ -69,10 +67,11 @@ public class JmxPeriodicSampler
     @PostConstruct
     public void start()
     {
-        if (tableHandles.size() > 0) {
-            lastDumpTimestamp = roundToPeriod(currentTimeMillis());
-            schedule();
-        }
+        if (tableHandles.size() <= 0) {
+			return;
+		}
+		lastDumpTimestamp = roundToPeriod(currentTimeMillis());
+		schedule();
     }
 
     private void schedule()

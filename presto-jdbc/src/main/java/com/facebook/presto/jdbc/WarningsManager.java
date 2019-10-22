@@ -58,11 +58,7 @@ public class WarningsManager
 
     public synchronized void addWarnings(List<PrestoWarning> warnings)
     {
-        for (PrestoWarning warning : warnings) {
-            if (warningsSeen.add(warning.getWarningCode())) {
-                addWarning(warning);
-            }
-        }
+        warnings.stream().filter(warning -> warningsSeen.add(warning.getWarningCode())).forEach(this::addWarning);
     }
 
     public synchronized SQLWarning getWarnings()

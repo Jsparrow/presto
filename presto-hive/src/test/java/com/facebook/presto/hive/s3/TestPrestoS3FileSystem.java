@@ -181,7 +181,7 @@ public class TestPrestoS3FileSystem
         try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
             MockAmazonS3 s3 = new MockAmazonS3();
             String expectedBucketName = "test-bucket_underscore";
-            fs.initialize(new URI("s3n://" + expectedBucketName + "/"), config);
+            fs.initialize(new URI(new StringBuilder().append("s3n://").append(expectedBucketName).append("/").toString()), config);
             fs.setS3Client(s3);
             fs.getS3ObjectMetadata(new Path("/test/path"));
             assertEquals(expectedBucketName, s3.getGetObjectMetadataRequest().getBucketName());
@@ -525,7 +525,101 @@ public class TestPrestoS3FileSystem
         }
     }
 
-    private static class TestEncryptionMaterialsProvider
+    @Test
+    public void testDefaultAcl()
+            throws Exception
+    {
+        Configuration config = new Configuration();
+
+        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
+            MockAmazonS3 s3 = new MockAmazonS3();
+            String expectedBucketName = "test-bucket";
+            fs.initialize(new URI(new StringBuilder().append("s3n://").append(expectedBucketName).append("/").toString()), config);
+            fs.setS3Client(s3);
+            try (FSDataOutputStream stream = fs.create(new Path("s3n://test-bucket/test"))) {
+                // initiate an upload by creating a stream & closing it immediately
+            }
+            assertEquals(CannedAccessControlList.Private, s3.getAcl());
+        }
+    }
+
+	@Test
+    public void testFullBucketOwnerControlAcl()
+            throws Exception
+    {
+        Configuration config = new Configuration();
+        config.set(S3_ACL_TYPE, "BUCKET_OWNER_FULL_CONTROL");
+
+        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
+            MockAmazonS3 s3 = new MockAmazonS3();
+            String expectedBucketName = "test-bucket";
+            fs.initialize(new URI(new StringBuilder().append("s3n://").append(expectedBucketName).append("/").toString()), config);
+            fs.setS3Client(s3);
+            try (FSDataOutputStream stream = fs.create(new Path("s3n://test-bucket/test"))) {
+                // initiate an upload by creating a stream & closing it immediately
+            }
+            assertEquals(CannedAccessControlList.BucketOwnerFullControl, s3.getAcl());
+        }
+    }
+
+	@Test
+    public void testEmptyDirectory()
+            throws Exception
+    {
+        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
+            MockAmazonS3 s3 = new MockAmazonS3()
+            {
+                @Override
+                public ObjectMetadata getObjectMetadata(GetObjectMetadataRequest getObjectMetadataRequest)
+                {
+                    if (!"empty-dir/".equals(getObjectMetadataRequest.getKey())) {
+						return super.getObjectMetadata(getObjectMetadataRequest);
+					}
+					ObjectMetadata objectMetadata = new ObjectMetadata();
+					objectMetadata.setContentType(S3_DIRECTORY_OBJECT_CONTENT_TYPE);
+					return objectMetadata;
+                }
+            };
+            fs.initialize(new URI("s3n://test-bucket/"), new Configuration());
+            fs.setS3Client(s3);
+
+            FileStatus fileStatus = fs.getFileStatus(new Path("s3n://test-bucket/empty-dir/"));
+            assertTrue(fileStatus.isDirectory());
+        }
+    }
+
+	@Test
+    public void testPrestoS3InputStreamEOS() throws Exception
+    {
+        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
+            AtomicInteger readableBytes = new AtomicInteger(1);
+            MockAmazonS3 s3 = new MockAmazonS3()
+            {
+                @Override
+                public S3Object getObject(GetObjectRequest req)
+                {
+                    return new S3Object()
+                    {
+                        @Override
+                        public S3ObjectInputStream getObjectContent()
+                        {
+                            return new S3ObjectInputStream(new ByteArrayInputStream(new byte[readableBytes.get()]), null);
+                        }
+                    };
+                }
+            };
+            fs.initialize(new URI("s3n://test-bucket/"), new Configuration());
+            fs.setS3Client(s3);
+
+            try (FSDataInputStream inputStream = fs.open(new Path("s3n://test-bucket/test"))) {
+                assertEquals(inputStream.read(0, new byte[2], 0, 2), 1);
+                readableBytes.set(0);
+                assertEquals(inputStream.read(0, new byte[1], 0, 1), -1);
+            }
+        }
+    }
+
+	private static class TestEncryptionMaterialsProvider
             implements EncryptionMaterialsProvider
     {
         private final EncryptionMaterials encryptionMaterials;
@@ -567,99 +661,5 @@ public class TestPrestoS3FileSystem
 
         @Override
         public void refresh() {}
-    }
-
-    @Test
-    public void testDefaultAcl()
-            throws Exception
-    {
-        Configuration config = new Configuration();
-
-        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
-            MockAmazonS3 s3 = new MockAmazonS3();
-            String expectedBucketName = "test-bucket";
-            fs.initialize(new URI("s3n://" + expectedBucketName + "/"), config);
-            fs.setS3Client(s3);
-            try (FSDataOutputStream stream = fs.create(new Path("s3n://test-bucket/test"))) {
-                // initiate an upload by creating a stream & closing it immediately
-            }
-            assertEquals(CannedAccessControlList.Private, s3.getAcl());
-        }
-    }
-
-    @Test
-    public void testFullBucketOwnerControlAcl()
-            throws Exception
-    {
-        Configuration config = new Configuration();
-        config.set(S3_ACL_TYPE, "BUCKET_OWNER_FULL_CONTROL");
-
-        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
-            MockAmazonS3 s3 = new MockAmazonS3();
-            String expectedBucketName = "test-bucket";
-            fs.initialize(new URI("s3n://" + expectedBucketName + "/"), config);
-            fs.setS3Client(s3);
-            try (FSDataOutputStream stream = fs.create(new Path("s3n://test-bucket/test"))) {
-                // initiate an upload by creating a stream & closing it immediately
-            }
-            assertEquals(CannedAccessControlList.BucketOwnerFullControl, s3.getAcl());
-        }
-    }
-
-    @Test
-    public void testEmptyDirectory()
-            throws Exception
-    {
-        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
-            MockAmazonS3 s3 = new MockAmazonS3()
-            {
-                @Override
-                public ObjectMetadata getObjectMetadata(GetObjectMetadataRequest getObjectMetadataRequest)
-                {
-                    if (getObjectMetadataRequest.getKey().equals("empty-dir/")) {
-                        ObjectMetadata objectMetadata = new ObjectMetadata();
-                        objectMetadata.setContentType(S3_DIRECTORY_OBJECT_CONTENT_TYPE);
-                        return objectMetadata;
-                    }
-                    return super.getObjectMetadata(getObjectMetadataRequest);
-                }
-            };
-            fs.initialize(new URI("s3n://test-bucket/"), new Configuration());
-            fs.setS3Client(s3);
-
-            FileStatus fileStatus = fs.getFileStatus(new Path("s3n://test-bucket/empty-dir/"));
-            assertTrue(fileStatus.isDirectory());
-        }
-    }
-
-    @Test
-    public void testPrestoS3InputStreamEOS() throws Exception
-    {
-        try (PrestoS3FileSystem fs = new PrestoS3FileSystem()) {
-            AtomicInteger readableBytes = new AtomicInteger(1);
-            MockAmazonS3 s3 = new MockAmazonS3()
-            {
-                @Override
-                public S3Object getObject(GetObjectRequest req)
-                {
-                    return new S3Object()
-                    {
-                        @Override
-                        public S3ObjectInputStream getObjectContent()
-                        {
-                            return new S3ObjectInputStream(new ByteArrayInputStream(new byte[readableBytes.get()]), null);
-                        }
-                    };
-                }
-            };
-            fs.initialize(new URI("s3n://test-bucket/"), new Configuration());
-            fs.setS3Client(s3);
-
-            try (FSDataInputStream inputStream = fs.open(new Path("s3n://test-bucket/test"))) {
-                assertEquals(inputStream.read(0, new byte[2], 0, 2), 1);
-                readableBytes.set(0);
-                assertEquals(inputStream.read(0, new byte[1], 0, 1), -1);
-            }
-        }
     }
 }

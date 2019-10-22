@@ -62,7 +62,7 @@ public class TestPolymorphicScalarFunction
             .argumentTypes(parseTypeSignature("varchar(x)", ImmutableSet.of("x")))
             .build();
     private static final long INPUT_VARCHAR_LENGTH = 10;
-    private static final String INPUT_VARCHAR_SIGNATURE = "varchar(" + INPUT_VARCHAR_LENGTH + ")";
+    private static final String INPUT_VARCHAR_SIGNATURE = new StringBuilder().append("varchar(").append(INPUT_VARCHAR_LENGTH).append(")").toString();
     private static final TypeSignature INPUT_VARCHAR_TYPE = parseTypeSignature(INPUT_VARCHAR_SIGNATURE);
     private static final Slice INPUT_SLICE = Slices.allocate(toIntExact(INPUT_VARCHAR_LENGTH));
     private static final BoundVariables BOUND_VARIABLES = new BoundVariables(

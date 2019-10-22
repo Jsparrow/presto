@@ -39,8 +39,8 @@ public class TestSecondsSinceEpochJsonFieldDecoder
         tester.assertDecodedAs("\"33701\"", TIME_WITH_TIME_ZONE, packDateTimeWithZone(33701000, UTC_KEY));
         tester.assertDecodedAs("1519032101", TIMESTAMP, 1519032101000L);
         tester.assertDecodedAs("\"1519032101\"", TIMESTAMP, 1519032101000L);
-        tester.assertDecodedAs("" + (Long.MAX_VALUE / 1000), TIMESTAMP, Long.MAX_VALUE / 1000 * 1000);
-        tester.assertDecodedAs("" + (Long.MIN_VALUE / 1000), TIMESTAMP, Long.MIN_VALUE / 1000 * 1000);
+        tester.assertDecodedAs(Long.toString((Long.MAX_VALUE / 1000)), TIMESTAMP, Long.MAX_VALUE / 1000 * 1000);
+        tester.assertDecodedAs(Long.toString((Long.MIN_VALUE / 1000)), TIMESTAMP, Long.MIN_VALUE / 1000 * 1000);
         tester.assertDecodedAs("1519032101", TIMESTAMP_WITH_TIME_ZONE, packDateTimeWithZone(1519032101000L, UTC_KEY));
         tester.assertDecodedAs("\"1519032101\"", TIMESTAMP_WITH_TIME_ZONE, packDateTimeWithZone(1519032101000L, UTC_KEY));
     }
@@ -48,30 +48,30 @@ public class TestSecondsSinceEpochJsonFieldDecoder
     @Test
     public void testDecodeNulls()
     {
-        for (Type type : asList(TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE)) {
+        asList(TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE).forEach(type -> {
             tester.assertDecodedAsNull("null", type);
             tester.assertMissingDecodedAsNull(type);
-        }
+        });
     }
 
     @Test
     public void testDecodeInvalid()
     {
-        for (Type type : asList(TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE)) {
+        asList(TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE).forEach(type -> {
             tester.assertInvalidInput("{}", type, "could not parse non-value node as '.*' for column 'some_column'");
             tester.assertInvalidInput("[]", type, "could not parse non-value node as '.*' for column 'some_column'");
             tester.assertInvalidInput("[10]", type, "could not parse non-value node as '.*' for column 'some_column'");
             tester.assertInvalidInput("\"a\"", type, "could not parse value 'a' as '.*' for column 'some_column'");
             tester.assertInvalidInput("12345678901234567890", type, "could not parse value '12345678901234567890' as '.*' for column 'some_column'");
-            tester.assertInvalidInput("" + (Long.MAX_VALUE / 1000 + 1), type, "could not parse value '9223372036854776' as '.*' for column 'some_column'");
-            tester.assertInvalidInput("" + (Long.MIN_VALUE / 1000 - 1), type, "could not parse value '-9223372036854776' as '.*' for column 'some_column'");
+            tester.assertInvalidInput(Long.toString((Long.MAX_VALUE / 1000 + 1)), type, "could not parse value '9223372036854776' as '.*' for column 'some_column'");
+            tester.assertInvalidInput(Long.toString((Long.MIN_VALUE / 1000 - 1)), type, "could not parse value '-9223372036854776' as '.*' for column 'some_column'");
             tester.assertInvalidInput("362016000.5", type, "could not parse value '3.620160005E8' as '.*' for column 'some_column'");
-        }
+        });
 
         // TIME specific range checks
         tester.assertInvalidInput("-1", TIME, "could not parse value '-1' as 'time' for column 'some_column'");
-        tester.assertInvalidInput("" + TimeUnit.DAYS.toSeconds(1) + 1, TIME, "could not parse value '864001' as 'time' for column 'some_column'");
+        tester.assertInvalidInput(Long.toString(TimeUnit.DAYS.toSeconds(1)) + 1, TIME, "could not parse value '864001' as 'time' for column 'some_column'");
         tester.assertInvalidInput("-1", TIME_WITH_TIME_ZONE, "could not parse value '-1' as 'time with time zone' for column 'some_column'");
-        tester.assertInvalidInput("" + TimeUnit.DAYS.toSeconds(1) + 1, TIME_WITH_TIME_ZONE, "could not parse value '864001' as 'time with time zone' for column 'some_column'");
+        tester.assertInvalidInput(Long.toString(TimeUnit.DAYS.toSeconds(1)) + 1, TIME_WITH_TIME_ZONE, "could not parse value '864001' as 'time with time zone' for column 'some_column'");
     }
 }

@@ -91,16 +91,16 @@ public class ValidateAggregationsWithDefaultValues
         {
             Optional<SeenExchanges> seenExchangesOptional = aggregatedSeenExchanges(node.getSources());
 
-            if (node.getStep().equals(PARTIAL)) {
+            if (node.getStep() == PARTIAL) {
                 return Optional.of(new SeenExchanges(false, false));
             }
 
-            if (node.getStep().equals(INTERMEDIATE)) {
+            if (node.getStep() == INTERMEDIATE) {
                 return seenExchangesOptional;
             }
 
             // We only validate FINAL aggregations with empty grouping set
-            if (!node.getStep().equals(FINAL) || !node.hasEmptyGroupingSet()) {
+            if (node.getStep() != FINAL || !node.hasEmptyGroupingSet()) {
                 return Optional.empty();
             }
 
@@ -138,7 +138,7 @@ public class ValidateAggregationsWithDefaultValues
                 return Optional.empty();
             }
 
-            if (!node.getType().equals(REPARTITION)) {
+            if (node.getType() != REPARTITION) {
                 return seenExchangesOptional;
             }
 

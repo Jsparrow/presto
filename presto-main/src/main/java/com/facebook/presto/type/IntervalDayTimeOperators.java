@@ -176,7 +176,14 @@ public final class IntervalDayTimeOperators
         return AbstractLongType.hash(value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.INTERVAL_DAY_TO_SECOND) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class IntervalDayTimeDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -210,12 +217,5 @@ public final class IntervalDayTimeOperators
             }
             return notEqual(INTERVAL_DAY_TIME.getLong(left, leftPosition), INTERVAL_DAY_TIME.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.INTERVAL_DAY_TO_SECOND) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

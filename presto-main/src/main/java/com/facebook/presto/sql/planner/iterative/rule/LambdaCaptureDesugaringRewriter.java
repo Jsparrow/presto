@@ -39,14 +39,14 @@ import static java.util.Objects.requireNonNull;
 
 public class LambdaCaptureDesugaringRewriter
 {
-    public static Expression rewrite(Expression expression, PlanVariableAllocator variableAllocator)
+    private LambdaCaptureDesugaringRewriter() {}
+
+	public static Expression rewrite(Expression expression, PlanVariableAllocator variableAllocator)
     {
         return ExpressionTreeRewriter.rewriteWith(new Visitor(variableAllocator), expression, new Context());
     }
 
-    private LambdaCaptureDesugaringRewriter() {}
-
-    private static class Visitor
+	private static class Visitor
             extends ExpressionRewriter<Context>
     {
         private final PlanVariableAllocator variableAllocator;
@@ -76,11 +76,11 @@ public class LambdaCaptureDesugaringRewriter
 
             ImmutableMap.Builder<VariableReferenceExpression, VariableReferenceExpression> captureVariableToExtraVariable = ImmutableMap.builder();
             ImmutableList.Builder<LambdaArgumentDeclaration> newLambdaArguments = ImmutableList.builder();
-            for (VariableReferenceExpression captureVariable : captureVariables) {
+            captureVariables.forEach(captureVariable -> {
                 VariableReferenceExpression extraVariable = variableAllocator.newVariable(captureVariable);
                 captureVariableToExtraVariable.put(captureVariable, extraVariable);
                 newLambdaArguments.add(new LambdaArgumentDeclaration(new Identifier(extraVariable.getName())));
-            }
+            });
             newLambdaArguments.addAll(node.getArguments());
 
             ImmutableMap<VariableReferenceExpression, VariableReferenceExpression> variablesMap = captureVariableToExtraVariable.build();

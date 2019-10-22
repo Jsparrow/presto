@@ -216,12 +216,12 @@ public final class BlockAssertions
     public static <K, V> Block createMapBlock(MapType type, Map<K, V> map)
     {
         BlockBuilder blockBuilder = type.createBlockBuilder(null, map.size());
-        for (Map.Entry<K, V> entry : map.entrySet()) {
+        map.entrySet().forEach(entry -> {
             BlockBuilder entryBuilder = blockBuilder.beginBlockEntry();
             appendToBlockBuilder(BIGINT, entry.getKey(), entryBuilder);
             appendToBlockBuilder(BIGINT, entry.getValue(), entryBuilder);
             blockBuilder.closeEntry();
-        }
+        });
         return blockBuilder.build();
     }
 
@@ -761,16 +761,16 @@ public final class BlockAssertions
                 keyBlockHashCode);
     }
 
-    public enum Encoding
-    {
-        DICTIONARY,
-        RUN_LENGTH
-    }
-
     private static String generateRandomStringWithLength(int length)
     {
         byte[] array = new byte[length];
         ThreadLocalRandom.current().nextBytes(array);
         return new String(array, UTF_8);
+    }
+
+	public enum Encoding
+    {
+        DICTIONARY,
+        RUN_LENGTH
     }
 }

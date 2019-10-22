@@ -69,7 +69,122 @@ import static org.testng.Assert.assertEquals;
 @Measurement(iterations = 10, time = 2, timeUnit = SECONDS)
 public class BenchmarkWindowOperator
 {
-    @State(Thread)
+    @Benchmark
+    public List<Page> benchmark(BenchmarkWindowOperator.Context context)
+    {
+        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+        Operator operator = context.getOperatorFactory().createOperator(driverContext);
+
+        Iterator<Page> input = context.getPages().iterator();
+        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
+
+        boolean finishing = false;
+        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
+            if (operator.needsInput()) {
+                if (input.hasNext()) {
+                    Page inputPage = input.next();
+                    operator.addInput(inputPage);
+                }
+                else if (!finishing) {
+                    operator.finish();
+                    finishing = true;
+                }
+            }
+
+            Page outputPage = operator.getOutput();
+            if (outputPage != null) {
+                outputPages.add(outputPage);
+            }
+        }
+
+        return outputPages.build();
+    }
+
+	@Test
+    public void verifyUnGroupedWithMultiplePartitions()
+    {
+        verify(10, 0, false);
+    }
+
+	@Test
+    public void verifyUnGroupedWithSinglePartition()
+    {
+        verify(10, 0, true);
+    }
+
+	@Test
+    public void verifyPartiallyGroupedWithMultiplePartitions()
+    {
+        verify(10, 1, false);
+    }
+
+	@Test
+    public void verifyPartiallyGroupedWithSinglePartition()
+    {
+        verify(10, 1, true);
+    }
+
+	@Test
+    public void verifyFullyGroupedWithMultiplePartitions()
+    {
+        verify(10, 2, false);
+    }
+
+	@Test
+    public void verifyFullyGroupedWithSinglePartition()
+    {
+        verify(10, 2, true);
+    }
+
+	@Test
+    public void verifyFullyGroupedAndFullySortedWithMultiplePartitions()
+    {
+        verify(10, 3, false);
+    }
+
+	@Test
+    public void verifyFullyGroupedAndFullySortedWithSinglePartition()
+    {
+        verify(10, 3, true);
+    }
+
+	private void verify(
+            int numberOfRowsPerPartition,
+            int numberOfPreGroupedColumns,
+            boolean useSinglePartition)
+    {
+        Context context = new Context();
+
+        context.rowsPerPartition = numberOfRowsPerPartition;
+        context.numberOfPregroupedColumns = numberOfPreGroupedColumns;
+
+        if (useSinglePartition) {
+            context.partitionsPerGroup = 1;
+            context.rowsPerPartition = ROWS_PER_PAGE;
+        }
+
+        context.setup();
+
+        assertEquals(TOTAL_PAGES, context.getPages().size());
+        for (int i = 0; i < TOTAL_PAGES; i++) {
+            assertEquals(ROWS_PER_PAGE, context.getPages().get(i).getPositionCount());
+        }
+
+        benchmark(context);
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkWindowOperator.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class Context
     {
         public static final int NUMBER_OF_GROUP_COLUMNS = 2;
@@ -211,120 +326,5 @@ public class BenchmarkWindowOperator
         {
             return pages;
         }
-    }
-
-    @Benchmark
-    public List<Page> benchmark(BenchmarkWindowOperator.Context context)
-    {
-        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
-        Operator operator = context.getOperatorFactory().createOperator(driverContext);
-
-        Iterator<Page> input = context.getPages().iterator();
-        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
-
-        boolean finishing = false;
-        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
-            if (operator.needsInput()) {
-                if (input.hasNext()) {
-                    Page inputPage = input.next();
-                    operator.addInput(inputPage);
-                }
-                else if (!finishing) {
-                    operator.finish();
-                    finishing = true;
-                }
-            }
-
-            Page outputPage = operator.getOutput();
-            if (outputPage != null) {
-                outputPages.add(outputPage);
-            }
-        }
-
-        return outputPages.build();
-    }
-
-    @Test
-    public void verifyUnGroupedWithMultiplePartitions()
-    {
-        verify(10, 0, false);
-    }
-
-    @Test
-    public void verifyUnGroupedWithSinglePartition()
-    {
-        verify(10, 0, true);
-    }
-
-    @Test
-    public void verifyPartiallyGroupedWithMultiplePartitions()
-    {
-        verify(10, 1, false);
-    }
-
-    @Test
-    public void verifyPartiallyGroupedWithSinglePartition()
-    {
-        verify(10, 1, true);
-    }
-
-    @Test
-    public void verifyFullyGroupedWithMultiplePartitions()
-    {
-        verify(10, 2, false);
-    }
-
-    @Test
-    public void verifyFullyGroupedWithSinglePartition()
-    {
-        verify(10, 2, true);
-    }
-
-    @Test
-    public void verifyFullyGroupedAndFullySortedWithMultiplePartitions()
-    {
-        verify(10, 3, false);
-    }
-
-    @Test
-    public void verifyFullyGroupedAndFullySortedWithSinglePartition()
-    {
-        verify(10, 3, true);
-    }
-
-    private void verify(
-            int numberOfRowsPerPartition,
-            int numberOfPreGroupedColumns,
-            boolean useSinglePartition)
-    {
-        Context context = new Context();
-
-        context.rowsPerPartition = numberOfRowsPerPartition;
-        context.numberOfPregroupedColumns = numberOfPreGroupedColumns;
-
-        if (useSinglePartition) {
-            context.partitionsPerGroup = 1;
-            context.rowsPerPartition = ROWS_PER_PAGE;
-        }
-
-        context.setup();
-
-        assertEquals(TOTAL_PAGES, context.getPages().size());
-        for (int i = 0; i < TOTAL_PAGES; i++) {
-            assertEquals(ROWS_PER_PAGE, context.getPages().get(i).getPositionCount());
-        }
-
-        benchmark(context);
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkWindowOperator.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

@@ -72,9 +72,7 @@ public class TestHivePartitionsTable
 
     private static TableDefinition partitionedTableDefinition()
     {
-        String createTableDdl = "CREATE EXTERNAL TABLE %NAME%(col INT) " +
-                "PARTITIONED BY (part_col INT) " +
-                "STORED AS ORC";
+        String createTableDdl = new StringBuilder().append("CREATE EXTERNAL TABLE %NAME%(col INT) ").append("PARTITIONED BY (part_col INT) ").append("STORED AS ORC").toString();
 
         HiveDataSource dataSource = createResourceDataSource(PARTITIONED_TABLE, "com/facebook/presto/tests/hive/data/single_int_column/data.orc");
         HiveDataSource invalidData = createStringDataSource(PARTITIONED_TABLE, "INVALID DATA");
@@ -87,9 +85,7 @@ public class TestHivePartitionsTable
 
     private static TableDefinition partitionedTableWithVariablePartitionsDefinition()
     {
-        String createTableDdl = "CREATE TABLE %NAME%(col INT) " +
-                "PARTITIONED BY (part_col INT) " +
-                "STORED AS ORC";
+        String createTableDdl = new StringBuilder().append("CREATE TABLE %NAME%(col INT) ").append("PARTITIONED BY (part_col INT) ").append("STORED AS ORC").toString();
 
         return HiveTableDefinition.builder(PARTITIONED_TABLE_WITH_VARIABLE_PARTITIONS)
                 .setCreateTableDDLTemplate(createTableDdl)
@@ -101,7 +97,7 @@ public class TestHivePartitionsTable
     public void testShowPartitionsFromHiveTable()
     {
         String tableNameInDatabase = tablesState.get(PARTITIONED_TABLE).getNameInDatabase();
-        String partitionsTable = "\"" + tableNameInDatabase + "$partitions\"";
+        String partitionsTable = new StringBuilder().append("\"").append(tableNameInDatabase).append("$partitions\"").toString();
 
         QueryResult partitionListResult;
 
@@ -130,7 +126,7 @@ public class TestHivePartitionsTable
     public void testShowPartitionsFromHiveTableWithTooManyPartitions()
     {
         String tableName = tablesState.get(PARTITIONED_TABLE_WITH_VARIABLE_PARTITIONS).getNameInDatabase();
-        String partitionsTable = "\"" + tableName + "$partitions\"";
+        String partitionsTable = new StringBuilder().append("\"").append(tableName).append("$partitions\"").toString();
         createPartitions(tableName, TOO_MANY_PARTITIONS);
 
         // Verify we created enough partitions for the test to be meaningful

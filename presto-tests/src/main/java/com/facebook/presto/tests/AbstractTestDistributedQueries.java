@@ -261,28 +261,10 @@ public abstract class AbstractTestDistributedQueries
         assertExplainAnalyze("EXPLAIN ANALYZE SELECT * FROM orders");
         assertExplainAnalyze("EXPLAIN ANALYZE SELECT count(*), clerk FROM orders GROUP BY clerk");
         assertExplainAnalyze(
-                "EXPLAIN ANALYZE SELECT x + y FROM (" +
-                        "   SELECT orderdate, COUNT(*) x FROM orders GROUP BY orderdate) a JOIN (" +
-                        "   SELECT orderdate, COUNT(*) y FROM orders GROUP BY orderdate) b ON a.orderdate = b.orderdate");
-        assertExplainAnalyze("" +
-                "EXPLAIN ANALYZE SELECT *, o2.custkey\n" +
-                "  IN (\n" +
-                "    SELECT orderkey\n" +
-                "    FROM lineitem\n" +
-                "    WHERE orderkey % 5 = 0)\n" +
-                "FROM (SELECT * FROM orders WHERE custkey % 256 = 0) o1\n" +
-                "JOIN (SELECT * FROM orders WHERE custkey % 256 = 0) o2\n" +
-                "  ON (o1.orderkey IN (SELECT orderkey FROM lineitem WHERE orderkey % 4 = 0)) = (o2.orderkey IN (SELECT orderkey FROM lineitem WHERE orderkey % 4 = 0))\n" +
-                "WHERE o1.orderkey\n" +
-                "  IN (\n" +
-                "    SELECT orderkey\n" +
-                "    FROM lineitem\n" +
-                "    WHERE orderkey % 4 = 0)\n" +
-                "ORDER BY o1.orderkey\n" +
-                "  IN (\n" +
-                "    SELECT orderkey\n" +
-                "    FROM lineitem\n" +
-                "    WHERE orderkey % 7 = 0)");
+                new StringBuilder().append("EXPLAIN ANALYZE SELECT x + y FROM (").append("   SELECT orderdate, COUNT(*) x FROM orders GROUP BY orderdate) a JOIN (").append("   SELECT orderdate, COUNT(*) y FROM orders GROUP BY orderdate) b ON a.orderdate = b.orderdate").toString());
+        assertExplainAnalyze(new StringBuilder().append("").append("EXPLAIN ANALYZE SELECT *, o2.custkey\n").append("  IN (\n").append("    SELECT orderkey\n").append("    FROM lineitem\n").append("    WHERE orderkey % 5 = 0)\n").append("FROM (SELECT * FROM orders WHERE custkey % 256 = 0) o1\n").append("JOIN (SELECT * FROM orders WHERE custkey % 256 = 0) o2\n")
+				.append("  ON (o1.orderkey IN (SELECT orderkey FROM lineitem WHERE orderkey % 4 = 0)) = (o2.orderkey IN (SELECT orderkey FROM lineitem WHERE orderkey % 4 = 0))\n").append("WHERE o1.orderkey\n").append("  IN (\n").append("    SELECT orderkey\n").append("    FROM lineitem\n").append("    WHERE orderkey % 4 = 0)\n").append("ORDER BY o1.orderkey\n").append("  IN (\n").append("    SELECT orderkey\n")
+				.append("    FROM lineitem\n").append("    WHERE orderkey % 7 = 0)").toString());
         assertExplainAnalyze("EXPLAIN ANALYZE SELECT count(*), clerk FROM orders GROUP BY clerk UNION ALL SELECT sum(orderkey), clerk FROM orders GROUP BY clerk");
 
         assertExplainAnalyze("EXPLAIN ANALYZE SHOW COLUMNS FROM orders");
@@ -331,7 +313,7 @@ public abstract class AbstractTestDistributedQueries
 
     protected void assertCreateTableAsSelect(Session session, String table, @Language("SQL") String query, @Language("SQL") String expectedQuery, @Language("SQL") String rowCountQuery)
     {
-        assertUpdate(session, "CREATE TABLE " + table + " AS " + query, rowCountQuery);
+        assertUpdate(session, new StringBuilder().append("CREATE TABLE ").append(table).append(" AS ").append(query).toString(), rowCountQuery);
         assertQuery(session, "SELECT * FROM " + table, expectedQuery);
         assertUpdate(session, "DROP TABLE " + table);
 
@@ -344,14 +326,11 @@ public abstract class AbstractTestDistributedQueries
         skipTestUnless(supportsNotNullColumns());
 
         String catalog = getSession().getCatalog().get();
-        String createTableStatement = "CREATE TABLE " + catalog + ".tpch.test_not_null_with_insert (\n" +
-                "   column_a date,\n" +
-                "   column_b date NOT NULL\n" +
-                ")";
+        String createTableStatement = new StringBuilder().append("CREATE TABLE ").append(catalog).append(".tpch.test_not_null_with_insert (\n").append("   column_a date,\n").append("   column_b date NOT NULL\n").append(")").toString();
         assertUpdate("CREATE TABLE test_not_null_with_insert (column_a DATE, column_b DATE NOT NULL)");
         assertQuery(
                 "SHOW CREATE TABLE test_not_null_with_insert",
-                "VALUES '" + createTableStatement + "'");
+                new StringBuilder().append("VALUES '").append(createTableStatement).append("'").toString());
 
         assertQueryFails("INSERT INTO test_not_null_with_insert (column_a) VALUES (date '2012-12-31')", "(?s).*column_b.*null.*");
         assertQueryFails("INSERT INTO test_not_null_with_insert (column_a, column_b) VALUES (date '2012-12-31', null)", "(?s).*column_b.*null.*");
@@ -359,11 +338,8 @@ public abstract class AbstractTestDistributedQueries
         assertUpdate("ALTER TABLE test_not_null_with_insert ADD COLUMN column_c BIGINT NOT NULL");
         assertQuery(
                 "SHOW CREATE TABLE test_not_null_with_insert",
-                "VALUES 'CREATE TABLE " + catalog + ".tpch.test_not_null_with_insert (\n" +
-                        "   column_a date,\n" +
-                        "   column_b date NOT NULL,\n" +
-                        "   column_c bigint NOT NULL\n" +
-                        ")'");
+                new StringBuilder().append("VALUES 'CREATE TABLE ").append(catalog).append(".tpch.test_not_null_with_insert (\n").append("   column_a date,\n").append("   column_b date NOT NULL,\n").append("   column_c bigint NOT NULL\n").append(")'")
+						.toString());
 
         assertQueryFails("INSERT INTO test_not_null_with_insert (column_b) VALUES (date '2012-12-31')", "(?s).*column_c.*null.*");
         assertQueryFails("INSERT INTO test_not_null_with_insert (column_b, column_c) VALUES (date '2012-12-31', null)", "(?s).*column_c.*null.*");
@@ -470,7 +446,7 @@ public abstract class AbstractTestDistributedQueries
     {
         @Language("SQL") String query = "SELECT orderdate, orderkey, totalprice FROM orders";
 
-        assertUpdate("CREATE TABLE test_insert AS " + query + " WITH NO DATA", 0);
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_insert AS ").append(query).append(" WITH NO DATA").toString(), 0);
         assertQuery("SELECT count(*) FROM test_insert", "SELECT 0");
 
         assertUpdate("INSERT INTO test_insert " + query, "SELECT count(*) FROM orders");
@@ -484,21 +460,12 @@ public abstract class AbstractTestDistributedQueries
         assertUpdate("INSERT INTO test_insert (orderdate, orderkey) VALUES (DATE '2001-01-03', -3)", 1);
         assertUpdate("INSERT INTO test_insert (totalprice) VALUES (1234)", 1);
 
-        assertQuery("SELECT * FROM test_insert", query
-                + " UNION ALL SELECT null, -1, null"
-                + " UNION ALL SELECT null, null, null"
-                + " UNION ALL SELECT DATE '2001-01-01', null, null"
-                + " UNION ALL SELECT DATE '2001-01-02', -2, null"
-                + " UNION ALL SELECT DATE '2001-01-03', -3, null"
-                + " UNION ALL SELECT null, null, 1234");
+        assertQuery("SELECT * FROM test_insert", new StringBuilder().append(query).append(" UNION ALL SELECT null, -1, null").append(" UNION ALL SELECT null, null, null").append(" UNION ALL SELECT DATE '2001-01-01', null, null").append(" UNION ALL SELECT DATE '2001-01-02', -2, null").append(" UNION ALL SELECT DATE '2001-01-03', -3, null").append(" UNION ALL SELECT null, null, 1234").toString());
 
         // UNION query produces columns in the opposite order
         // of how they are declared in the table schema
         assertUpdate(
-                "INSERT INTO test_insert (orderkey, orderdate, totalprice) " +
-                        "SELECT orderkey, orderdate, totalprice FROM orders " +
-                        "UNION ALL " +
-                        "SELECT orderkey, orderdate, totalprice FROM orders",
+                new StringBuilder().append("INSERT INTO test_insert (orderkey, orderdate, totalprice) ").append("SELECT orderkey, orderdate, totalprice FROM orders ").append("UNION ALL ").append("SELECT orderkey, orderdate, totalprice FROM orders").toString(),
                 "SELECT 2 * count(*) FROM orders");
 
         assertUpdate("DROP TABLE test_insert");
@@ -584,17 +551,11 @@ public abstract class AbstractTestDistributedQueries
         assertUpdate("CREATE TABLE test_delete AS SELECT * FROM lineitem", "SELECT count(*) FROM lineitem");
 
         assertUpdate(
-                "DELETE FROM test_delete\n" +
-                        "WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus = 'F')\n" +
-                        "  AND orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 = 0)\n",
-                "SELECT count(*) FROM lineitem\n" +
-                        "WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus = 'F')\n" +
-                        "  AND orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 = 0)");
+                new StringBuilder().append("DELETE FROM test_delete\n").append("WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus = 'F')\n").append("  AND orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 = 0)\n").toString(),
+                new StringBuilder().append("SELECT count(*) FROM lineitem\n").append("WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus = 'F')\n").append("  AND orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 = 0)").toString());
         assertQuery(
                 "SELECT * FROM test_delete",
-                "SELECT * FROM lineitem\n" +
-                        "WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus <> 'F')\n" +
-                        "  OR orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 <> 0)");
+                new StringBuilder().append("SELECT * FROM lineitem\n").append("WHERE orderkey IN (SELECT orderkey FROM orders WHERE orderstatus <> 'F')\n").append("  OR orderkey IN (SELECT orderkey FROM orders WHERE custkey % 5 <> 0)").toString());
 
         assertUpdate("DROP TABLE test_delete");
 
@@ -754,9 +715,7 @@ public abstract class AbstractTestDistributedQueries
         actual = computeActual("SHOW TABLES");
 
         MaterializedResult.Builder builder = resultBuilder(getSession(), actual.getTypes());
-        for (MaterializedRow row : expected.getMaterializedRows()) {
-            builder.row(row.getField(0));
-        }
+        expected.getMaterializedRows().forEach(row -> builder.row(row.getField(0)));
         expected = builder.build();
 
         assertContains(actual, expected);
@@ -901,7 +860,7 @@ public abstract class AbstractTestDistributedQueries
     {
         skipTestUnless(supportsViews());
 
-        assertAccessDenied("SET SESSION " + QUERY_MAX_MEMORY + " = '10MB'",
+        assertAccessDenied(new StringBuilder().append("SET SESSION ").append(QUERY_MAX_MEMORY).append(" = '10MB'").toString(),
                 "Cannot set system session property " + QUERY_MAX_MEMORY,
                 privilege(QUERY_MAX_MEMORY, SET_SESSION));
 
@@ -915,7 +874,7 @@ public abstract class AbstractTestDistributedQueries
         // todo add DROP VIEW test... not all connectors have view support
 
         try {
-            assertAccessDenied("SELECT 1", "Principal .* cannot become user " + getSession().getUser() + ".*", privilege(getSession().getUser(), SET_USER));
+            assertAccessDenied("SELECT 1", new StringBuilder().append("Principal .* cannot become user ").append(getSession().getUser()).append(".*").toString(), privilege(getSession().getUser(), SET_USER));
         }
         catch (AssertionError e) {
             // There is no clean exception message for authorization failure.  We simply get a 403
@@ -991,7 +950,8 @@ public abstract class AbstractTestDistributedQueries
         assertAccessAllowed(viewOwnerSession, "DROP VIEW test_view_access");
     }
 
-    @Test
+    @Override
+	@Test
     public void testJoinWithStatefulFilterFunction()
     {
         super.testJoinWithStatefulFilterFunction();

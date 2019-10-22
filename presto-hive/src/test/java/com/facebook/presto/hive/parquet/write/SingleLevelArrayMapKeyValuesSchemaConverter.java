@@ -55,8 +55,7 @@ public class SingleLevelArrayMapKeyValuesSchemaConverter
     private static Type[] convertTypes(final List<String> columnNames, final List<TypeInfo> columnTypes)
     {
         if (columnNames.size() != columnTypes.size()) {
-            throw new IllegalStateException("Mismatched Hive columns and types. Hive columns names" +
-                    " found : " + columnNames + " . And Hive types found : " + columnTypes);
+            throw new IllegalStateException(new StringBuilder().append("Mismatched Hive columns and types. Hive columns names").append(" found : ").append(columnNames).append(" . And Hive types found : ").append(columnTypes).toString());
         }
         final Type[] types = new Type[columnNames.size()];
         for (int i = 0; i < columnNames.size(); ++i) {
@@ -73,7 +72,7 @@ public class SingleLevelArrayMapKeyValuesSchemaConverter
     private static Type convertType(final String name, final TypeInfo typeInfo,
             final Repetition repetition)
     {
-        if (typeInfo.getCategory().equals(Category.PRIMITIVE)) {
+        if (typeInfo.getCategory() == Category.PRIMITIVE) {
             if (typeInfo.equals(TypeInfoFactory.stringTypeInfo)) {
                 return Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8)
                         .named(name);
@@ -144,16 +143,16 @@ public class SingleLevelArrayMapKeyValuesSchemaConverter
                 throw new IllegalArgumentException("Unknown type: " + typeInfo);
             }
         }
-        else if (typeInfo.getCategory().equals(Category.LIST)) {
+        else if (typeInfo.getCategory() == Category.LIST) {
             return convertArrayType(name, (ListTypeInfo) typeInfo, repetition);
         }
-        else if (typeInfo.getCategory().equals(Category.STRUCT)) {
+        else if (typeInfo.getCategory() == Category.STRUCT) {
             return convertStructType(name, (StructTypeInfo) typeInfo, repetition);
         }
-        else if (typeInfo.getCategory().equals(Category.MAP)) {
+        else if (typeInfo.getCategory() == Category.MAP) {
             return convertMapType(name, (MapTypeInfo) typeInfo, repetition);
         }
-        else if (typeInfo.getCategory().equals(Category.UNION)) {
+        else if (typeInfo.getCategory() == Category.UNION) {
             throw new UnsupportedOperationException("Union type not implemented");
         }
         else {
@@ -201,7 +200,7 @@ public class SingleLevelArrayMapKeyValuesSchemaConverter
                             keyType));
         }
         else {
-            if (!valueType.getName().equals("value")) {
+            if (!"value".equals(valueType.getName())) {
                 throw new RuntimeException(valueType.getName() + " should be value");
             }
             return listWrapper(

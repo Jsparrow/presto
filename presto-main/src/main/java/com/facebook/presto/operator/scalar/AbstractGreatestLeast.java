@@ -137,7 +137,7 @@ public abstract class AbstractGreatestLeast
 
         ClassDefinition definition = new ClassDefinition(
                 a(PUBLIC, FINAL),
-                makeClassName(javaTypeName + "$" + getSignature().getNameSuffix()),
+                makeClassName(new StringBuilder().append(javaTypeName).append("$").append(getSignature().getNameSuffix()).toString()),
                 type(Object.class));
 
         definition.declareDefaultConstructor(a(PRIVATE));
@@ -158,10 +158,10 @@ public abstract class AbstractGreatestLeast
         CallSiteBinder binder = new CallSiteBinder();
 
         if (type.getTypeSignature().getBase().equals(StandardTypes.DOUBLE)) {
-            for (Parameter parameter : parameters) {
+            parameters.forEach(parameter -> {
                 body.append(parameter);
                 body.append(invoke(binder.bind(CHECK_NOT_NAN.bindTo(getSignature().getNameSuffix())), "checkNotNaN"));
-            }
+            });
         }
 
         Variable value = scope.declareVariable(javaTypes.get(0), "value");

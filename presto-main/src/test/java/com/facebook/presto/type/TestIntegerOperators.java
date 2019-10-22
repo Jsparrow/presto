@@ -37,7 +37,7 @@ public class TestIntegerOperators
     {
         assertFunction("INTEGER'37'", INTEGER, 37);
         assertFunction("INTEGER'17'", INTEGER, 17);
-        assertInvalidCast("INTEGER'" + ((long) Integer.MAX_VALUE + 1L) + "'");
+        assertInvalidCast(new StringBuilder().append("INTEGER'").append((long) Integer.MAX_VALUE + 1L).append("'").toString());
     }
 
     @Test
@@ -52,7 +52,7 @@ public class TestIntegerOperators
     {
         assertFunction("INTEGER'-37'", INTEGER, -37);
         assertFunction("INTEGER'-17'", INTEGER, -17);
-        assertInvalidFunction("INTEGER'-" + Integer.MIN_VALUE + "'", INVALID_CAST_ARGUMENT);
+        assertInvalidFunction(new StringBuilder().append("INTEGER'-").append(Integer.MIN_VALUE).append("'").toString(), INVALID_CAST_ARGUMENT);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class TestIntegerOperators
     {
         assertFunction("-(INTEGER'37')", INTEGER, -37);
         assertFunction("-(INTEGER'17')", INTEGER, -17);
-        assertFunction("-(INTEGER'" + Integer.MAX_VALUE + "')", INTEGER, Integer.MIN_VALUE + 1);
+        assertFunction(new StringBuilder().append("-(INTEGER'").append(Integer.MAX_VALUE).append("')").toString(), INTEGER, Integer.MIN_VALUE + 1);
         assertNumericOverflow(format("-(INTEGER'%s')", Integer.MIN_VALUE), "integer negation overflow: -2147483648");
     }
 

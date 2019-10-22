@@ -71,7 +71,13 @@ public class GatherAndMergeWindows
                 .collect(toImmutableSet());
     }
 
-    private abstract static class ManipulateAdjacentWindowsOverProjects
+    private static Set<VariableReferenceExpression> extractUnique(Assignments assignments, TypeProvider types)
+    {
+        Collection<RowExpression> expressions = assignments.getExpressions();
+        return VariablesExtractor.extractUnique(expressions.stream().map(OriginalExpressionUtils::castToExpression).collect(toImmutableList()), types);
+    }
+
+	private abstract static class ManipulateAdjacentWindowsOverProjects
             implements Rule<WindowNode>
     {
         private final Capture<WindowNode> childCapture = newCapture();
@@ -174,12 +180,6 @@ public class GatherAndMergeWindows
             }
             return Optional.of(newTarget);
         }
-    }
-
-    private static Set<VariableReferenceExpression> extractUnique(Assignments assignments, TypeProvider types)
-    {
-        Collection<RowExpression> expressions = assignments.getExpressions();
-        return VariablesExtractor.extractUnique(expressions.stream().map(OriginalExpressionUtils::castToExpression).collect(toImmutableList()), types);
     }
 
     public static class MergeAdjacentWindowsOverProjects

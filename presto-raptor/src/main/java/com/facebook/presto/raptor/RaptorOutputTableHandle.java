@@ -158,6 +158,6 @@ public class RaptorOutputTableHandle
     @Override
     public String toString()
     {
-        return "raptor:" + schemaName + "." + tableName;
+        return new StringBuilder().append("raptor:").append(schemaName).append(".").append(tableName).toString();
     }
 }

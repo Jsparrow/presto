@@ -191,15 +191,8 @@ public abstract class AbstractTestParquetReader
     public void testCustomSchemaArrayOfStucts()
             throws Exception
     {
-        MessageType customSchemaArrayOfStucts = parseMessageType("message ParquetSchema { " +
-                "  optional group self (LIST) { " +
-                "    repeated group self_tuple { " +
-                "      optional int64 a; " +
-                "      optional boolean b; " +
-                "      required binary c (UTF8); " +
-                "    } " +
-                "  } " +
-                "}");
+        MessageType customSchemaArrayOfStucts = parseMessageType(new StringBuilder().append("message ParquetSchema { ").append("  optional group self (LIST) { ").append("    repeated group self_tuple { ").append("      optional int64 a; ").append("      optional boolean b; ").append("      required binary c (UTF8); ").append("    } ").append("  } ")
+				.append("}").toString());
         Iterable<Long> aValues = limit(cycle(asList(1L, null, 3L, 5L, null, null, null, 7L, 11L, null, 13L, 17L)), 30_000);
         Iterable<Boolean> bValues = limit(cycle(asList(null, true, false, null, null, true, false)), 30_000);
         Iterable<String> cValues = transform(intsBetween(0, 31_234), Object::toString);
@@ -885,24 +878,9 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRepeatedOptionalRequiredFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group address_book {" +
-                "    required binary owner (UTF8);" +
-                "    optional group owner_phone_numbers (LIST) {" +
-                "      repeated group bag {" +
-                "        optional binary array_element (UTF8);" +
-                "      }" +
-                "    }" +
-                "    optional group contacts (LIST) {" +
-                "      repeated group bag {" +
-                "        optional group array_element {" +
-                "          required binary name (UTF8);" +
-                "          optional binary phone_number (UTF8);" +
-                "        }" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group address_book {").append("    required binary owner (UTF8);").append("    optional group owner_phone_numbers (LIST) {").append("      repeated group bag {").append("        optional binary array_element (UTF8);").append("      }").append("    }")
+				.append("    optional group contacts (LIST) {").append("      repeated group bag {").append("        optional group array_element {").append("          required binary name (UTF8);").append("          optional binary phone_number (UTF8);").append("        }").append("      }").append("    }").append("  }")
+				.append("} ").toString());
 
         Iterable<String> owner = limit(cycle(asList("owner1", "owner2", "owner3")), 50_000);
         Iterable<List<String>> ownerPhoneNumbers = limit(cycle(asList(null, asList("phoneNumber2", "phoneNumber3", null), asList(null, "phoneNumber6", "phoneNumber7"))), 50_000);
@@ -928,15 +906,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithOptionalOptionalRequiredFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    optional group b {" +
-                "      optional group c {" +
-                "        required binary d (UTF8);" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    optional group b {").append("      optional group c {").append("        required binary d (UTF8);").append("      }").append("    }").append("  }")
+				.append("} ").toString());
         Type cType = RowType.from(singletonList(field("d", VARCHAR)));
         Type bType = RowType.from(singletonList(field("c", cType)));
         Type aType = RowType.from(singletonList(field("b", bType)));
@@ -954,15 +925,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithOptionalRequiredOptionalFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    optional group b {" +
-                "      required group c {" +
-                "        optional int32 d;" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    optional group b {").append("      required group c {").append("        optional int32 d;").append("      }").append("    }").append("  }")
+				.append("} ").toString());
         Type cType = RowType.from(singletonList(field("d", INTEGER)));
         Type bType = RowType.from(singletonList(field("c", cType)));
         Type aType = RowType.from(singletonList(field("b", bType)));
@@ -980,15 +944,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRequiredRequiredOptionalFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    required group b {" +
-                "      required group c {" +
-                "        optional int32 d;" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    required group b {").append("      required group c {").append("        optional int32 d;").append("      }").append("    }").append("  }")
+				.append("} ").toString());
         Type cType = RowType.from(singletonList(field("d", INTEGER)));
         Type bType = RowType.from(singletonList(field("c", cType)));
         Type aType = RowType.from(singletonList(field("b", bType)));
@@ -1006,15 +963,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRequiredOptionalOptionalFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    required group b {" +
-                "      optional group c {" +
-                "        optional int32 d;" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    required group b {").append("      optional group c {").append("        optional int32 d;").append("      }").append("    }").append("  }")
+				.append("} ").toString());
         Type cType = RowType.from(singletonList(field("d", INTEGER)));
         Type bType = RowType.from(singletonList(field("c", cType)));
         Type aType = RowType.from(singletonList(field("b", bType)));
@@ -1032,15 +982,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRequiredOptionalRequiredFields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    required group b {" +
-                "      optional group c {" +
-                "        required binary d (UTF8);" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    required group b {").append("      optional group c {").append("        required binary d (UTF8);").append("      }").append("    }").append("  }")
+				.append("} ").toString());
         Type cType = RowType.from(singletonList(field("d", VARCHAR)));
         Type bType = RowType.from(singletonList(field("c", cType)));
         Type aType = RowType.from(singletonList(field("b", bType)));
@@ -1058,15 +1001,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRequiredStruct()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  required group a {" +
-                "    required group b {" +
-                "        required binary c (UTF8);" +
-                "        required int32 d;" +
-                "    }" +
-                "    required binary e (UTF8);" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  required group a {").append("    required group b {").append("        required binary c (UTF8);").append("        required int32 d;").append("    }").append("    required binary e (UTF8);").append("  }")
+				.append("} ").toString());
         Type bType = RowType.from(asList(field("c", VARCHAR), field("d", INTEGER)));
         Type aType = RowType.from(asList(field("b", bType), field("e", VARCHAR)));
         Iterable<String> cValues = limit(cycle(asList("c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7")), 30000);
@@ -1084,22 +1020,8 @@ public abstract class AbstractTestParquetReader
     public void testSchemaWithRequiredOptionalRequired2Fields()
             throws Exception
     {
-        MessageType parquetSchema = parseMessageType("message hive_schema {" +
-                "  optional group a {" +
-                "    required group b {" +
-                "      optional group c {" +
-                "        required binary d (UTF8);" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "  optional group e {" +
-                "    required group f {" +
-                "      optional group g {" +
-                "        required binary h (UTF8);" +
-                "      }" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group a {").append("    required group b {").append("      optional group c {").append("        required binary d (UTF8);").append("      }").append("    }").append("  }")
+				.append("  optional group e {").append("    required group f {").append("      optional group g {").append("        required binary h (UTF8);").append("      }").append("    }").append("  }").append("} ").toString());
 
         Type cType = RowType.from(singletonList(field("d", VARCHAR)));
         Type bType = RowType.from(singletonList(field("c", cType)));
@@ -1132,11 +1054,7 @@ public abstract class AbstractTestParquetReader
     public void testOldAvroArray()
             throws Exception
     {
-        MessageType parquetMrAvroSchema = parseMessageType("message avro_schema_old {" +
-                "  optional group my_list (LIST){" +
-                "        repeated int32 array;" +
-                "  }" +
-                "} ");
+        MessageType parquetMrAvroSchema = parseMessageType(new StringBuilder().append("message avro_schema_old {").append("  optional group my_list (LIST){").append("        repeated int32 array;").append("  }").append("} ").toString());
         Iterable<List<Integer>> nonNullArrayElements = createTestArrays(intsBetween(0, 31_234));
         tester.testSingleLevelArrayRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), nonNullArrayElements, nonNullArrayElements, "my_list", new ArrayType(INTEGER), Optional.of(parquetMrAvroSchema));
     }
@@ -1145,13 +1063,7 @@ public abstract class AbstractTestParquetReader
     public void testNewAvroArray()
             throws Exception
     {
-        MessageType parquetMrAvroSchema = parseMessageType("message avro_schema_new { " +
-                "  optional group my_list (LIST) { " +
-                "    repeated group list { " +
-                "      optional int32 element; " +
-                "    } " +
-                "  } " +
-                "}");
+        MessageType parquetMrAvroSchema = parseMessageType(new StringBuilder().append("message avro_schema_new { ").append("  optional group my_list (LIST) { ").append("    repeated group list { ").append("      optional int32 element; ").append("    } ").append("  } ").append("}").toString());
         Iterable<List<Integer>> values = createTestArrays(limit(cycle(asList(1, null, 3, 5, null, null, null, 7, 11, null, 13, 17)), 30_000));
         tester.testRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), values, values, "my_list", new ArrayType(INTEGER), Optional.of(parquetMrAvroSchema));
     }
@@ -1164,52 +1076,22 @@ public abstract class AbstractTestParquetReader
     public void testArraySchemas()
             throws Exception
     {
-        MessageType parquetMrNullableSpecSchema = parseMessageType("message hive_schema {" +
-                "  optional group my_list (LIST){" +
-                "    repeated group list {" +
-                "        required int32 element;" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetMrNullableSpecSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group my_list (LIST){").append("    repeated group list {").append("        required int32 element;").append("    }").append("  }").append("} ").toString());
         Iterable<List<Integer>> nonNullArrayElements = createTestArrays(intsBetween(0, 31_234));
         tester.testRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), nonNullArrayElements, nonNullArrayElements, "my_list", new ArrayType(INTEGER), Optional.of(parquetMrNullableSpecSchema));
 
-        MessageType parquetMrNonNullSpecSchema = parseMessageType("message hive_schema {" +
-                "  required group my_list (LIST){" +
-                "    repeated group list {" +
-                "        optional int32 element;" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType parquetMrNonNullSpecSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  required group my_list (LIST){").append("    repeated group list {").append("        optional int32 element;").append("    }").append("  }").append("} ").toString());
         Iterable<List<Integer>> values = createTestArrays(limit(cycle(asList(1, null, 3, 5, null, null, null, 7, 11, null, 13, 17)), 30_000));
         tester.assertRoundTrip(singletonList(getStandardListObjectInspector(javaIntObjectInspector)), new Iterable<?>[] {values}, new Iterable<?>[] {
                 values}, singletonList("my_list"), singletonList(new ArrayType(INTEGER)), Optional.of(parquetMrNonNullSpecSchema));
 
-        MessageType sparkSchema = parseMessageType("message hive_schema {" +
-                "  optional group my_list (LIST){" +
-                "    repeated group list {" +
-                "        optional int32 element;" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType sparkSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group my_list (LIST){").append("    repeated group list {").append("        optional int32 element;").append("    }").append("  }").append("} ").toString());
         tester.testRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), values, values, "my_list", new ArrayType(INTEGER), Optional.of(sparkSchema));
 
-        MessageType hiveSchema = parseMessageType("message hive_schema {" +
-                "  optional group my_list (LIST){" +
-                "    repeated group bag {" +
-                "        optional int32 array_element;" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType hiveSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group my_list (LIST){").append("    repeated group bag {").append("        optional int32 array_element;").append("    }").append("  }").append("} ").toString());
         tester.testRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), values, values, "my_list", new ArrayType(INTEGER), Optional.of(hiveSchema));
 
-        MessageType customNamingSchema = parseMessageType("message hive_schema {" +
-                "  optional group my_list (LIST){" +
-                "    repeated group bag {" +
-                "        optional int32 array;" +
-                "    }" +
-                "  }" +
-                "} ");
+        MessageType customNamingSchema = parseMessageType(new StringBuilder().append("message hive_schema {").append("  optional group my_list (LIST){").append("    repeated group bag {").append("        optional int32 array;").append("    }").append("  }").append("} ").toString());
         tester.testRoundTrip(getStandardListObjectInspector(javaIntObjectInspector), values, values, "my_list", new ArrayType(INTEGER), Optional.of(customNamingSchema));
     }
 
@@ -1226,95 +1108,47 @@ public abstract class AbstractTestParquetReader
         tester.testRoundTrip(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector), values, values, mapType(VARCHAR, INTEGER));
 
         // Map<String, Integer> (nullable map, non-null values)
-        MessageType map = parseMessageType("message hive_schema {" +
-                " optional group my_map (MAP) {" +
-                "     repeated group map { " +
-                "        required binary str (UTF8);   " +
-                "        required int32 num;  " +
-                "    }  " +
-                "  }" +
-                "}   ");
+        MessageType map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" optional group my_map (MAP) {").append("     repeated group map { ").append("        required binary str (UTF8);   ").append("        required int32 num;  ").append("    }  ").append("  }").append("}   ")
+				.toString());
         tester.testRoundTrip(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector), values, values, "my_map", mapType(VARCHAR, INTEGER), Optional.of(map));
 
         // Map<String, Integer> (nullable map, non-null values)
-        map = parseMessageType("message hive_schema {" +
-                " optional group my_map (MAP_KEY_VALUE) {" +
-                "     repeated group map { " +
-                "        required binary str (UTF8);   " +
-                "        required int32 num;  " +
-                "    }  " +
-                "  }" +
-                "}   ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" optional group my_map (MAP_KEY_VALUE) {").append("     repeated group map { ").append("        required binary str (UTF8);   ").append("        required int32 num;  ").append("    }  ").append("  }").append("}   ")
+				.toString());
         tester.testRoundTrip(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector), values, values, "my_map", mapType(VARCHAR, INTEGER), Optional.of(map));
 
         // Map<String, Integer> (non-null map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " required group my_map (MAP) { " +
-                "    repeated group map {  " +
-                "        required binary key (UTF8);      " +
-                "       optional int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" required group my_map (MAP) { ").append("    repeated group map {  ").append("        required binary key (UTF8);      ").append("       optional int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.assertRoundTrip(singletonList(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector)), new Iterable<?>[] {nullableValues},
                 new Iterable<?>[] {nullableValues}, singletonList("my_map"), singletonList(mapType(VARCHAR, INTEGER)), Optional.of(map));
 
         // Map<String, Integer> (non-null map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " required group my_map (MAP_KEY_VALUE) { " +
-                "    repeated group map {  " +
-                "        required binary key (UTF8);      " +
-                "       optional int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" required group my_map (MAP_KEY_VALUE) { ").append("    repeated group map {  ").append("        required binary key (UTF8);      ").append("       optional int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.assertRoundTrip(singletonList(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector)), new Iterable<?>[] {nullableValues},
                 new Iterable<?>[] {nullableValues}, singletonList("my_map"), singletonList(mapType(VARCHAR, INTEGER)), Optional.of(map));
 
         // Map<String, Integer> (non-null map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " required group my_map (MAP) { " +
-                "    repeated group map {  " +
-                "        required binary key (UTF8);      " +
-                "       required int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" required group my_map (MAP) { ").append("    repeated group map {  ").append("        required binary key (UTF8);      ").append("       required int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.assertRoundTrip(singletonList(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector)), new Iterable<?>[] {values},
                 new Iterable<?>[] {values}, singletonList("my_map"), singletonList(mapType(VARCHAR, INTEGER)), Optional.of(map));
 
         // Map<String, Integer> (non-null map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " required group my_map (MAP_KEY_VALUE) { " +
-                "    repeated group map {  " +
-                "        required binary key (UTF8);      " +
-                "       required int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" required group my_map (MAP_KEY_VALUE) { ").append("    repeated group map {  ").append("        required binary key (UTF8);      ").append("       required int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.assertRoundTrip(singletonList(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector)), new Iterable<?>[] {values},
                 new Iterable<?>[] {values}, singletonList("my_map"), singletonList(mapType(VARCHAR, INTEGER)), Optional.of(map));
 
         // Map<String, Integer> (nullable map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " optional group my_map (MAP) { " +
-                "    repeated group map {  " +
-                "       required binary key (UTF8);      " +
-                "       optional int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" optional group my_map (MAP) { ").append("    repeated group map {  ").append("       required binary key (UTF8);      ").append("       optional int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.testRoundTrip(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector), nullableValues, nullableValues, "my_map", mapType(VARCHAR, INTEGER), Optional.of(map));
 
         // Map<String, Integer> (nullable map, nullable values)
-        map = parseMessageType("message hive_schema {" +
-                " optional group my_map (MAP_KEY_VALUE) { " +
-                "    repeated group map {  " +
-                "       required binary key (UTF8);      " +
-                "       optional int32 value;   " +
-                "    }   " +
-                "  }" +
-                " }  ");
+        map = parseMessageType(new StringBuilder().append("message hive_schema {").append(" optional group my_map (MAP_KEY_VALUE) { ").append("    repeated group map {  ").append("       required binary key (UTF8);      ").append("       optional int32 value;   ").append("    }   ").append("  }").append(" }  ")
+				.toString());
         tester.testRoundTrip(getStandardMapObjectInspector(javaStringObjectInspector, javaIntObjectInspector), nullableValues, nullableValues, "my_map", mapType(VARCHAR, INTEGER), Optional.of(map));
     }
 

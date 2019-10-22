@@ -946,9 +946,7 @@ public class BytecodeBlock
     @Override
     public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
     {
-        for (BytecodeNode node : nodes) {
-            node.accept(visitor, generationContext);
-        }
+        nodes.forEach(node -> node.accept(visitor, generationContext));
     }
 
     @Override

@@ -33,17 +33,22 @@ public final class Estimate
 
     private final double value;
 
-    public static Estimate unknown()
+    private Estimate(double value)
+    {
+        this.value = value;
+    }
+
+	public static Estimate unknown()
     {
         return UNKNOWN;
     }
 
-    public static Estimate zero()
+	public static Estimate zero()
     {
         return ZERO;
     }
 
-    public static Estimate of(double value)
+	public static Estimate of(double value)
     {
         if (isNaN(value)) {
             throw new IllegalArgumentException("value is NaN");
@@ -54,23 +59,18 @@ public final class Estimate
         return new Estimate(value);
     }
 
-    private Estimate(double value)
-    {
-        this.value = value;
-    }
-
-    public boolean isUnknown()
+	public boolean isUnknown()
     {
         return isNaN(value);
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getValue()
     {
         return value;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -83,13 +83,13 @@ public final class Estimate
         return Double.compare(estimate.value, value) == 0;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(value);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return String.valueOf(value);

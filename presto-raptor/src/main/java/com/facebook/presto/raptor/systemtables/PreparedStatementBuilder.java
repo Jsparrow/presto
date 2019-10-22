@@ -92,12 +92,12 @@ public final class PreparedStatementBuilder
 
         ImmutableList.Builder<String> conjunctsBuilder = ImmutableList.builder();
         Map<Integer, Domain> domainMap = tupleDomain.getDomains().get();
-        for (Map.Entry<Integer, Domain> entry : domainMap.entrySet()) {
+        domainMap.entrySet().forEach(entry -> {
             int index = entry.getKey();
             String columnName = columnNames.get(index);
             Type type = types.get(index);
             conjunctsBuilder.add(toPredicate(index, columnName, type, entry.getValue(), uuidColumnIndexes, bindValues));
-        }
+        });
         List<String> conjuncts = conjunctsBuilder.build();
 
         if (conjuncts.isEmpty()) {
@@ -172,7 +172,7 @@ public final class PreparedStatementBuilder
                             }
                             // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
                             checkState(!rangeConjuncts.isEmpty());
-                            disjuncts.add("(" + Joiner.on(" AND ").join(rangeConjuncts) + ")");
+                            disjuncts.add(new StringBuilder().append("(").append(Joiner.on(" AND ").join(rangeConjuncts)).append(")").toString());
                         }
                     }
 
@@ -182,10 +182,9 @@ public final class PreparedStatementBuilder
                         bindValues.add(ValueBuffer.create(columnIndex, type, getBindValue(columnIndex, uuidColumnIndexes, getOnlyElement(singleValues))));
                     }
                     else if (singleValues.size() > 1) {
-                        disjuncts.add(columnName + " IN (" + Joiner.on(",").join(nCopies(singleValues.size(), "?")) + ")");
-                        for (Object singleValue : singleValues) {
-                            bindValues.add(ValueBuffer.create(columnIndex, type, getBindValue(columnIndex, uuidColumnIndexes, singleValue)));
-                        }
+                        disjuncts.add(new StringBuilder().append(columnName).append(" IN (").append(Joiner.on(",").join(nCopies(singleValues.size(), "?"))).append(")").toString());
+                        singleValues.forEach(singleValue -> bindValues.add(ValueBuffer.create(columnIndex, type,
+								getBindValue(columnIndex, uuidColumnIndexes, singleValue))));
                     }
 
                     // Add nullability disjuncts
@@ -194,17 +193,17 @@ public final class PreparedStatementBuilder
                         disjuncts.add(columnName + " IS NULL");
                     }
 
-                    return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
+                    return new StringBuilder().append("(").append(Joiner.on(" OR ").join(disjuncts)).append(")").toString();
                 },
 
                 discreteValues -> {
                     String values = Joiner.on(",").join(nCopies(discreteValues.getValues().size(), "?"));
-                    String predicate = columnName + (discreteValues.isWhiteList() ? "" : " NOT") + " IN (" + values + ")";
-                    for (Object value : discreteValues.getValues()) {
-                        bindValues.add(ValueBuffer.create(columnIndex, type, getBindValue(columnIndex, uuidColumnIndexes, value)));
-                    }
+                    String predicate = new StringBuilder().append(columnName).append(discreteValues.isWhiteList() ? "" : " NOT").append(" IN (").append(values)
+							.append(")").toString();
+                    discreteValues.getValues().forEach(value -> bindValues.add(
+							ValueBuffer.create(columnIndex, type, getBindValue(columnIndex, uuidColumnIndexes, value))));
                     if (domain.isNullAllowed()) {
-                        predicate = "(" + predicate + " OR " + columnName + " IS NULL)";
+                        predicate = new StringBuilder().append("(").append(predicate).append(" OR ").append(columnName).append(" IS NULL)").toString();
                     }
                     return predicate;
                 },

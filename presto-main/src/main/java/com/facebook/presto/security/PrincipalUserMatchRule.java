@@ -54,11 +54,9 @@ public class PrincipalUserMatchRule
             return Optional.empty();
         }
 
-        if (userRegex.isPresent()) {
-            if (userRegex.get().matcher(user).matches()) {
-                return Optional.of(allow);
-            }
-        }
+        if (userRegex.isPresent() && userRegex.get().matcher(user).matches()) {
+		    return Optional.of(allow);
+		}
 
         if (principalToUserSubstitution.isPresent()) {
             String userExtraction = matcher.replaceAll(principalToUserSubstitution.get());

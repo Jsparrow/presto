@@ -57,9 +57,7 @@ class InvokeDynamicBytecodeExpression
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         BytecodeBlock block = new BytecodeBlock();
-        for (BytecodeExpression parameter : parameters) {
-            block.append(parameter);
-        }
+        parameters.forEach(block::append);
         return block.invokeDynamic(methodName, returnType, parameterTypes, bootstrapMethod, bootstrapArgs);
     }
 

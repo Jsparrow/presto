@@ -44,23 +44,12 @@ public class TestSubfieldTokenizer
                 new Subfield.StringSubscript("ab\"cde"),
                 new Subfield.StringSubscript("a.b[\"hello\uDBFF\"]"));
 
-        for (PathElement element : elements) {
-            assertPath(new Subfield("a", ImmutableList.of(element)));
-        }
+        elements.forEach(element -> assertPath(new Subfield("a", ImmutableList.of(element))));
 
-        for (PathElement element : elements) {
-            for (PathElement secondElement : elements) {
-                assertPath(new Subfield("a", ImmutableList.of(element, secondElement)));
-            }
-        }
+        elements.forEach(element -> elements.forEach(secondElement -> assertPath(new Subfield("a", ImmutableList.of(element, secondElement)))));
 
-        for (PathElement element : elements) {
-            for (PathElement secondElement : elements) {
-                for (PathElement thirdElement : elements) {
-                    assertPath(new Subfield("a", ImmutableList.of(element, secondElement, thirdElement)));
-                }
-            }
-        }
+        elements.forEach(element -> elements.forEach(secondElement -> elements.forEach(
+				thirdElement -> assertPath(new Subfield("a", ImmutableList.of(element, secondElement, thirdElement))))));
     }
 
     private static void assertPath(Subfield path)

@@ -35,44 +35,17 @@ import static java.util.Objects.requireNonNull;
 public class FixedDoubleHistogram
         implements Iterable<FixedDoubleHistogram.Bucket>
 {
-    public static class Bucket
-    {
-        private final double left;
-        private final double right;
-        private final double weight;
-
-        public double getLeft()
-        {
-            return left;
-        }
-
-        public double getRight()
-        {
-            return right;
-        }
-
-        public double getWeight()
-        {
-            return weight;
-        }
-
-        public Bucket(double left, double right, double weight)
-        {
-            this.left = left;
-            this.right = right;
-            this.weight = weight;
-        }
-    }
-
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(FixedDoubleHistogram.class).instanceSize();
 
-    private final double[] weights;
+	private final double[] weights;
 
-    private int bucketCount;
-    private double min;
-    private double max;
+	private int bucketCount;
 
-    public FixedDoubleHistogram(int bucketCount, double min, double max)
+	private double min;
+
+	private double max;
+
+	public FixedDoubleHistogram(int bucketCount, double min, double max)
     {
         validateParameters(bucketCount, min, max);
         this.bucketCount = bucketCount;
@@ -81,7 +54,7 @@ public class FixedDoubleHistogram
         this.weights = new double[bucketCount];
     }
 
-    private FixedDoubleHistogram(int bucketCount, double min, double max, double[] weights)
+	private FixedDoubleHistogram(int bucketCount, double min, double max, double[] weights)
     {
         validateParameters(bucketCount, min, max);
         this.bucketCount = bucketCount;
@@ -90,27 +63,7 @@ public class FixedDoubleHistogram
         this.weights = requireNonNull(weights, "weights is null");
     }
 
-    public int getBucketCount()
-    {
-        return bucketCount;
-    }
-
-    public double getMin()
-    {
-        return min;
-    }
-
-    public double getMax()
-    {
-        return max;
-    }
-
-    public double getWidth()
-    {
-        return (max - min) / bucketCount;
-    }
-
-    private FixedDoubleHistogram(FixedDoubleHistogram other)
+	private FixedDoubleHistogram(FixedDoubleHistogram other)
     {
         bucketCount = other.bucketCount;
         min = other.min;
@@ -119,7 +72,27 @@ public class FixedDoubleHistogram
         System.arraycopy(other.weights, 0, weights, 0, bucketCount);
     }
 
-    public int getRequiredBytesForSerialization()
+	public int getBucketCount()
+    {
+        return bucketCount;
+    }
+
+	public double getMin()
+    {
+        return min;
+    }
+
+	public double getMax()
+    {
+        return max;
+    }
+
+	public double getWidth()
+    {
+        return (max - min) / bucketCount;
+    }
+
+	public int getRequiredBytesForSerialization()
     {
         return SizeOf.SIZE_OF_BYTE + // format
                 SizeOf.SIZE_OF_INT + // num buckets
@@ -128,7 +101,7 @@ public class FixedDoubleHistogram
                 SizeOf.SIZE_OF_DOUBLE * bucketCount; // weights
     }
 
-    public static FixedDoubleHistogram deserialize(SliceInput input)
+	public static FixedDoubleHistogram deserialize(SliceInput input)
     {
         int bucketCount = input.readInt();
         double min = input.readDouble();
@@ -139,7 +112,7 @@ public class FixedDoubleHistogram
         return new FixedDoubleHistogram(bucketCount, min, max, weights);
     }
 
-    public void serialize(SliceOutput out)
+	public void serialize(SliceOutput out)
     {
         out.appendInt(bucketCount)
                 .appendDouble(min)
@@ -147,27 +120,27 @@ public class FixedDoubleHistogram
                 .appendBytes(Slices.wrappedDoubleArray(weights, 0, bucketCount));
     }
 
-    public long estimatedInMemorySize()
+	public long estimatedInMemorySize()
     {
         return INSTANCE_SIZE + SizeOf.SIZE_OF_DOUBLE * bucketCount;
     }
 
-    public void set(double value, double weight)
+	public void set(double value, double weight)
     {
         weights[getIndexForValue(bucketCount, min, max, value)] = weight;
     }
 
-    public void add(double value)
+	public void add(double value)
     {
         add(value, 1.0);
     }
 
-    public void add(double value, double weight)
+	public void add(double value, double weight)
     {
         weights[getIndexForValue(bucketCount, min, max, value)] += weight;
     }
 
-    public void mergeWith(FixedDoubleHistogram other)
+	public void mergeWith(FixedDoubleHistogram other)
     {
         checkArgument(min == other.min, "min %s must be equal to other min %s", min, other.min);
         checkArgument(max == other.max, "max %s must be equal to other max %s", max, other.max);
@@ -179,7 +152,8 @@ public class FixedDoubleHistogram
         }
     }
 
-    public Iterator<Bucket> iterator()
+	@Override
+	public Iterator<Bucket> iterator()
     {
         int bucketCount = getBucketCount();
         double min = getMin();
@@ -218,8 +192,38 @@ public class FixedDoubleHistogram
         };
     }
 
-    public FixedDoubleHistogram clone()
+	@Override
+	public FixedDoubleHistogram clone()
     {
         return new FixedDoubleHistogram(this);
+    }
+
+	public static class Bucket
+    {
+        private final double left;
+        private final double right;
+        private final double weight;
+
+        public Bucket(double left, double right, double weight)
+        {
+            this.left = left;
+            this.right = right;
+            this.weight = weight;
+        }
+
+		public double getLeft()
+        {
+            return left;
+        }
+
+		public double getRight()
+        {
+            return right;
+        }
+
+		public double getWeight()
+        {
+            return weight;
+        }
     }
 }

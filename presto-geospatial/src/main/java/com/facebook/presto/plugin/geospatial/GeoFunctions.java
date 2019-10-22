@@ -1240,9 +1240,7 @@ public final class GeoFunctions
         }
 
         BlockBuilder blockBuilder = IntegerType.INTEGER.createFixedSizeBlockBuilder(partitions.size());
-        for (int id : partitions.keySet()) {
-            blockBuilder.writeInt(id);
-        }
+        partitions.keySet().stream().mapToInt(Integer::valueOf).forEach(blockBuilder::writeInt);
 
         return blockBuilder.build();
     }
@@ -1342,11 +1340,6 @@ public final class GeoFunctions
         return predicate.apply(leftEnvelope, rightEnvelope);
     }
 
-    private interface EnvelopesPredicate
-    {
-        boolean apply(Envelope left, Envelope right);
-    }
-
     @SqlNullable
     @Description("Returns the great-circle distance in meters between two SphericalGeography points.")
     @ScalarFunction("ST_Distance")
@@ -1369,7 +1362,7 @@ public final class GeoFunctions
         return greatCircleDistance(leftPoint.getY(), leftPoint.getX(), rightPoint.getY(), rightPoint.getX()) * 1000;
     }
 
-    private static void validateSphericalType(String function, OGCGeometry geometry, Set<GeometryType> validTypes)
+	private static void validateSphericalType(String function, OGCGeometry geometry, Set<GeometryType> validTypes)
     {
         GeometryType type = GeometryType.getForEsriGeometryType(geometry.geometryType());
         if (!validTypes.contains(type)) {
@@ -1377,7 +1370,7 @@ public final class GeoFunctions
         }
     }
 
-    @SqlNullable
+	@SqlNullable
     @Description("Returns the area of a geometry on the Earth's surface using spherical model")
     @ScalarFunction("ST_Area")
     @SqlType(DOUBLE)
@@ -1410,7 +1403,7 @@ public final class GeoFunctions
         return Math.abs(sphericalExcess * EARTH_RADIUS_M * EARTH_RADIUS_M);
     }
 
-    @SqlNullable
+	@SqlNullable
     @Description("Returns the great-circle length in meters of a linestring or multi-linestring on Earth's surface")
     @ScalarFunction("ST_Length")
     @SqlType(DOUBLE)
@@ -1445,11 +1438,11 @@ public final class GeoFunctions
         return sum * 1000;
     }
 
-    private static double computeSphericalExcess(Polygon polygon, int start, int end)
+	private static double computeSphericalExcess(Polygon polygon, int start, int end)
     {
         // Our calculations rely on not processing the same point twice
         if (polygon.getPoint(end - 1).equals(polygon.getPoint(start))) {
-            end = end - 1;
+            end -= 1;
         }
 
         if (end - start < 3) {
@@ -1469,6 +1462,49 @@ public final class GeoFunctions
         }
 
         return calculator.computeSphericalExcess();
+    }
+
+	private static Iterable<Slice> getGeometrySlicesFromBlock(Block block)
+    {
+        requireNonNull(block, "block is null");
+        return () -> new Iterator<Slice>()
+        {
+            private int iteratorPosition;
+
+            @Override
+            public boolean hasNext()
+            {
+                return iteratorPosition != block.getPositionCount();
+            }
+
+            @Override
+            public Slice next()
+            {
+                if (!hasNext()) {
+                    throw new NoSuchElementException("Slices have been consumed");
+                }
+                return GEOMETRY.getSlice(block, iteratorPosition++);
+            }
+        };
+    }
+
+	private static Iterable<OGCGeometry> flattenCollection(OGCGeometry geometry)
+    {
+        if (geometry == null) {
+            return ImmutableList.of();
+        }
+        if (!(geometry instanceof OGCConcreteGeometryCollection)) {
+            return ImmutableList.of(geometry);
+        }
+        if (((OGCConcreteGeometryCollection) geometry).numGeometries() == 0) {
+            return ImmutableList.of();
+        }
+        return () -> new GeometryCollectionIterator(geometry);
+    }
+
+	private interface EnvelopesPredicate
+    {
+        boolean apply(Envelope left, Envelope right);
     }
 
     private static class SphericalExcessCalculator
@@ -1501,7 +1537,7 @@ public final class GeoFunctions
             firstPoint = true;
         }
 
-        private void add(Point point) throws IllegalStateException
+        private void add(Point point)
         {
             checkState(!done, "Computation of spherical excess is complete");
 
@@ -1570,44 +1606,6 @@ public final class GeoFunctions
 
             return sphericalExcess;
         }
-    }
-
-    private static Iterable<Slice> getGeometrySlicesFromBlock(Block block)
-    {
-        requireNonNull(block, "block is null");
-        return () -> new Iterator<Slice>()
-        {
-            private int iteratorPosition;
-
-            @Override
-            public boolean hasNext()
-            {
-                return iteratorPosition != block.getPositionCount();
-            }
-
-            @Override
-            public Slice next()
-            {
-                if (!hasNext()) {
-                    throw new NoSuchElementException("Slices have been consumed");
-                }
-                return GEOMETRY.getSlice(block, iteratorPosition++);
-            }
-        };
-    }
-
-    private static Iterable<OGCGeometry> flattenCollection(OGCGeometry geometry)
-    {
-        if (geometry == null) {
-            return ImmutableList.of();
-        }
-        if (!(geometry instanceof OGCConcreteGeometryCollection)) {
-            return ImmutableList.of(geometry);
-        }
-        if (((OGCConcreteGeometryCollection) geometry).numGeometries() == 0) {
-            return ImmutableList.of();
-        }
-        return () -> new GeometryCollectionIterator(geometry);
     }
 
     private static class GeometryCollectionIterator

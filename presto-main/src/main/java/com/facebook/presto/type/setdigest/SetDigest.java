@@ -111,12 +111,8 @@ public class SetDigest
             output.appendBytes(serializedHll);
             output.appendInt(maxHashes);
             output.appendInt(minhash.size());
-            for (long key : minhash.keySet()) {
-                output.appendLong(key);
-            }
-            for (short value : minhash.values()) {
-                output.appendShort(value);
-            }
+            minhash.keySet().stream().mapToLong(Long::valueOf).forEach(output::appendLong);
+            minhash.values().forEach(output::appendShort);
             return output.slice();
         }
         catch (IOException e) {

@@ -137,10 +137,7 @@ public abstract class Match<T>
         @Override
         public String toString()
         {
-            return "Match.Present(" +
-                    "value=" + value +
-                    ", captures=" + captures +
-                    ')';
+            return new StringBuilder().append("Match.Present(").append("value=").append(value).append(", captures=").append(captures).append(')').toString();
         }
     }
 
@@ -183,7 +180,8 @@ public abstract class Match<T>
             throw new NoSuchElementException("Captures are undefined for an empty Match");
         }
 
-        public boolean equals(Object o)
+        @Override
+		public boolean equals(Object o)
         {
             return this == o || (o != null && getClass() == o.getClass());
         }

@@ -47,11 +47,15 @@ import static com.facebook.presto.spi.type.VarcharType.createUnboundedVarcharTyp
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QuerySystemTable
         implements SystemTable
 {
-    public static final SchemaTableName QUERY_TABLE_NAME = new SchemaTableName("runtime", "queries");
+    private static final Logger logger = LoggerFactory.getLogger(QuerySystemTable.class);
+
+	public static final SchemaTableName QUERY_TABLE_NAME = new SchemaTableName("runtime", "queries");
 
     public static final ConnectorTableMetadata QUERY_TABLE = tableMetadataBuilder(QUERY_TABLE_NAME)
             .column("query_id", createUnboundedVarcharType())
@@ -101,12 +105,13 @@ public class QuerySystemTable
                         return queryManager.getFullQueryInfo(queryId);
                     }
                     catch (NoSuchElementException e) {
-                        return null;
+                        logger.error(e.getMessage(), e);
+						return null;
                     }
                 })
                 .filter(Objects::nonNull)
                 .collect(toImmutableList());
-        for (QueryInfo queryInfo : queryInfos) {
+        queryInfos.forEach(queryInfo -> {
             QueryStats queryStats = queryInfo.getQueryStats();
             table.addRow(
                     queryInfo.getQueryId().toString(),
@@ -123,7 +128,7 @@ public class QuerySystemTable
                     toTimeStamp(queryStats.getExecutionStartTime()),
                     toTimeStamp(queryStats.getLastHeartbeat()),
                     toTimeStamp(queryStats.getEndTime()));
-        }
+        });
         return table.build().cursor();
     }
 
@@ -132,9 +137,7 @@ public class QuerySystemTable
         requireNonNull(resourceGroupId, "resourceGroupId is null");
         List<String> segments = resourceGroupId.getSegments();
         BlockBuilder blockBuilder = createUnboundedVarcharType().createBlockBuilder(null, segments.size());
-        for (String segment : segments) {
-            createUnboundedVarcharType().writeSlice(blockBuilder, utf8Slice(segment));
-        }
+        segments.forEach(segment -> createUnboundedVarcharType().writeSlice(blockBuilder, utf8Slice(segment)));
         return blockBuilder.build();
     }
 

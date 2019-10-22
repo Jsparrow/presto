@@ -23,7 +23,15 @@ public class ColumnarArray
     private final int[] offsets;
     private final Block elementsBlock;
 
-    public static ColumnarArray toColumnarArray(Block block)
+    private ColumnarArray(Block nullCheckBlock, int offsetsOffset, int[] offsets, Block elementsBlock)
+    {
+        this.nullCheckBlock = nullCheckBlock;
+        this.offsetsOffset = offsetsOffset;
+        this.offsets = offsets;
+        this.elementsBlock = elementsBlock;
+    }
+
+	public static ColumnarArray toColumnarArray(Block block)
     {
         requireNonNull(block, "block is null");
 
@@ -53,7 +61,7 @@ public class ColumnarArray
         return new ColumnarArray(block, arrayBlock.getOffsetBase(), arrayBlock.getOffsets(), elementsBlock);
     }
 
-    private static ColumnarArray toColumnarArray(DictionaryBlock dictionaryBlock)
+	private static ColumnarArray toColumnarArray(DictionaryBlock dictionaryBlock)
     {
         ColumnarArray columnarArray = toColumnarArray(dictionaryBlock.getDictionary());
 
@@ -85,7 +93,7 @@ public class ColumnarArray
                 new DictionaryBlock(dictionaryIds.length, columnarArray.getElementsBlock(), dictionaryIds));
     }
 
-    private static ColumnarArray toColumnarArray(RunLengthEncodedBlock rleBlock)
+	private static ColumnarArray toColumnarArray(RunLengthEncodedBlock rleBlock)
     {
         ColumnarArray columnarArray = toColumnarArray(rleBlock.getValue());
 
@@ -113,45 +121,37 @@ public class ColumnarArray
                 new DictionaryBlock(dictionaryIds.length, columnarArray.getElementsBlock(), dictionaryIds));
     }
 
-    private ColumnarArray(Block nullCheckBlock, int offsetsOffset, int[] offsets, Block elementsBlock)
-    {
-        this.nullCheckBlock = nullCheckBlock;
-        this.offsetsOffset = offsetsOffset;
-        this.offsets = offsets;
-        this.elementsBlock = elementsBlock;
-    }
-
-    public int getPositionCount()
+	public int getPositionCount()
     {
         return nullCheckBlock.getPositionCount();
     }
 
-    public boolean isNull(int position)
+	public boolean isNull(int position)
     {
         return nullCheckBlock.isNull(position);
     }
 
-    public int getLength(int position)
+	public int getLength(int position)
     {
         return (offsets[position + 1 + offsetsOffset] - offsets[position + offsetsOffset]);
     }
 
-    public int getOffset(int position)
+	public int getOffset(int position)
     {
         return (offsets[position + offsetsOffset] - offsets[offsetsOffset]);
     }
 
-    public Block getElementsBlock()
+	public Block getElementsBlock()
     {
         return elementsBlock;
     }
 
-    public Block getNullCheckBlock()
+	public Block getNullCheckBlock()
     {
         return nullCheckBlock;
     }
 
-    public long getRetainedSizeInBytes()
+	public long getRetainedSizeInBytes()
     {
         return nullCheckBlock.getRetainedSizeInBytes() + elementsBlock.getRetainedSizeInBytes() + sizeOf(offsets);
     }

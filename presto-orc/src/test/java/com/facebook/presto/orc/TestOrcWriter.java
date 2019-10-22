@@ -47,10 +47,14 @@ import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static java.lang.Math.toIntExact;
 import static org.testng.Assert.assertFalse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestOrcWriter
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestOrcWriter.class);
+
+	@Test
     public void testWriteOutputStreamsInOrder()
             throws IOException
     {
@@ -161,7 +165,8 @@ public class TestOrcWriter
             writer.write(new Page(blocks));
         }
         catch (IOException e) {
-            writer.close();
+            logger.error(e.getMessage(), e);
+			writer.close();
         }
     }
 

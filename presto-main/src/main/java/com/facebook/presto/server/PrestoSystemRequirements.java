@@ -30,10 +30,13 @@ import java.util.OptionalLong;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.management.ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class PrestoSystemRequirements
 {
-    private static final int MIN_FILE_DESCRIPTORS = 4096;
+    private static final Logger logger = LoggerFactory.getLogger(PrestoSystemRequirements.class);
+	private static final int MIN_FILE_DESCRIPTORS = 4096;
     private static final int RECOMMENDED_FILE_DESCRIPTORS = 8192;
 
     private PrestoSystemRequirements() {}
@@ -146,7 +149,8 @@ final class PrestoSystemRequirements
             return OptionalLong.of(((Number) maxFileDescriptorCount).longValue());
         }
         catch (Exception e) {
-            return OptionalLong.empty();
+            logger.error(e.getMessage(), e);
+			return OptionalLong.empty();
         }
     }
 
@@ -176,12 +180,12 @@ final class PrestoSystemRequirements
 
     private static void failRequirement(String format, Object... args)
     {
-        System.err.println(String.format(format, args));
+        logger.error(String.format(format, args));
         System.exit(100);
     }
 
     private static void warnRequirement(String format, Object... args)
     {
-        System.err.println("WARNING: " + String.format(format, args));
+        logger.error("WARNING: " + String.format(format, args));
     }
 }

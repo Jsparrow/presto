@@ -27,18 +27,18 @@ public class TestArrayFunctions
     @Test
     public void testArrayConstructor()
     {
-        tryEvaluateWithAll("array[" + Joiner.on(", ").join(nCopies(254, "rand()")) + "]", new ArrayType(DOUBLE));
+        tryEvaluateWithAll(new StringBuilder().append("array[").append(Joiner.on(", ").join(nCopies(254, "rand()"))).append("]").toString(), new ArrayType(DOUBLE));
         assertNotSupported(
-                "array[" + Joiner.on(", ").join(nCopies(255, "rand()")) + "]",
+                new StringBuilder().append("array[").append(Joiner.on(", ").join(nCopies(255, "rand()"))).append("]").toString(),
                 "Too many arguments for array constructor");
     }
 
     @Test
     public void testArrayConcat()
     {
-        assertFunction("CONCAT(" + Joiner.on(", ").join(nCopies(253, "array[1]")) + ")", new ArrayType(INTEGER), nCopies(253, 1));
+        assertFunction(new StringBuilder().append("CONCAT(").append(Joiner.on(", ").join(nCopies(253, "array[1]"))).append(")").toString(), new ArrayType(INTEGER), nCopies(253, 1));
         assertNotSupported(
-                "CONCAT(" + Joiner.on(", ").join(nCopies(254, "array[1]")) + ")",
+                new StringBuilder().append("CONCAT(").append(Joiner.on(", ").join(nCopies(254, "array[1]"))).append(")").toString(),
                 "Too many arguments for vararg function");
     }
 }

@@ -63,17 +63,6 @@ import static org.testng.Assert.assertTrue;
 public class TestAnnotationEngineForScalars
         extends TestAnnotationEngine
 {
-    @ScalarFunction("single_implementation_parametric_scalar")
-    @Description("Simple scalar with single implementation based on class")
-    public static class SingleImplementationScalarFunction
-    {
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
-        {
-            return v;
-        }
-    }
-
     @Test
     public void testSingleImplementationScalarParse()
     {
@@ -100,18 +89,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(specialized.getArgumentProperty(0).getNullConvention(), RETURN_NULL_ON_NULL);
     }
 
-    @ScalarFunction(value = "hidden_scalar_function", hidden = true)
-    @Description("Simple scalar with hidden property set")
-    public static class HiddenScalarFunction
-    {
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testHiddenScalarParse()
     {
         List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(HiddenScalarFunction.class);
@@ -122,18 +100,7 @@ public class TestAnnotationEngineForScalars
         assertTrue(scalar.isHidden());
     }
 
-    @ScalarFunction(value = "non_deterministic_scalar_function", deterministic = false)
-    @Description("Simple scalar with deterministic property reset")
-    public static class NonDeterministicScalarFunction
-    {
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testNonDeterministicScalarParse()
     {
         List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(NonDeterministicScalarFunction.class);
@@ -144,21 +111,7 @@ public class TestAnnotationEngineForScalars
         assertFalse(scalar.isHidden());
     }
 
-    @ScalarFunction(value = "scalar_with_nullable", calledOnNullInput = true)
-    @Description("Simple scalar with nullable primitive")
-    public static class WithNullablePrimitiveArgScalarFunction
-    {
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(
-                @SqlType(StandardTypes.DOUBLE) double v,
-                @SqlType(StandardTypes.DOUBLE) double v2,
-                @IsNull boolean v2isNull)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testWithNullablePrimitiveArgScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -183,20 +136,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(specialized.getArgumentProperty(1), valueTypeArgumentProperty(USE_NULL_FLAG));
     }
 
-    @ScalarFunction(value = "scalar_with_nullable_complex", calledOnNullInput = true)
-    @Description("Simple scalar with nullable complex type")
-    public static class WithNullableComplexArgScalarFunction
-    {
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(
-                @SqlType(StandardTypes.DOUBLE) double v,
-                @SqlNullable @SqlType(StandardTypes.DOUBLE) Double v2)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testWithNullableComplexArgScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -221,18 +161,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(specialized.getArgumentProperty(1), valueTypeArgumentProperty(USE_BOXED_TYPE));
     }
 
-    public static class StaticMethodScalarFunction
-    {
-        @ScalarFunction("static_method_scalar")
-        @Description("Simple scalar with single implementation based on method")
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testStaticMethodScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -251,26 +180,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(scalar.getDescription(), "Simple scalar with single implementation based on method");
     }
 
-    public static class MultiScalarFunction
-    {
-        @ScalarFunction("static_method_scalar_1")
-        @Description("Simple scalar with single implementation based on method 1")
-        @SqlType(StandardTypes.DOUBLE)
-        public static double fun1(@SqlType(StandardTypes.DOUBLE) double v)
-        {
-            return v;
-        }
-
-        @ScalarFunction(value = "static_method_scalar_2", hidden = true, deterministic = false)
-        @Description("Simple scalar with single implementation based on method 2")
-        @SqlType(StandardTypes.BIGINT)
-        public static long fun2(@SqlType(StandardTypes.BIGINT) long v)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testMultiScalarParse()
     {
         Signature expectedSignature1 = new Signature(
@@ -304,26 +214,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(scalar2.getDescription(), "Simple scalar with single implementation based on method 2");
     }
 
-    @ScalarFunction("parametric_scalar")
-    @Description("Parametric scalar description")
-    public static class ParametricScalarFunction
-    {
-        @SqlType("T")
-        @TypeParameter("T")
-        public static double fun(@SqlType("T") double v)
-        {
-            return v;
-        }
-
-        @SqlType("T")
-        @TypeParameter("T")
-        public static long fun(@SqlType("T") long v)
-        {
-            return v;
-        }
-    }
-
-    @Test
+	@Test
     public void testParametricScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -346,25 +237,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(scalar.getDescription(), "Parametric scalar description");
     }
 
-    @ScalarFunction("with_exact_scalar")
-    @Description("Parametric scalar with exact and generic implementations")
-    public static class ComplexParametricScalarFunction
-    {
-        @SqlType(StandardTypes.BOOLEAN)
-        @LiteralParameters("x")
-        public static boolean fun1(@SqlType("array(varchar(x))") Block array)
-        {
-            return true;
-        }
-
-        @SqlType(StandardTypes.BOOLEAN)
-        public static boolean fun2(@SqlType("array(varchar(17))") Block array)
-        {
-            return true;
-        }
-    }
-
-    @Test
+	@Test
     public void testComplexParametricScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -397,21 +270,7 @@ public class TestAnnotationEngineForScalars
         assertEquals(scalar.getDescription(), "Parametric scalar with exact and generic implementations");
     }
 
-    @ScalarFunction("parametric_scalar_inject")
-    @Description("Parametric scalar with literal injected")
-    public static class SimpleInjectionScalarFunction
-    {
-        @SqlType(StandardTypes.BIGINT)
-        @LiteralParameters("x")
-        public static long fun(
-                @LiteralParameter("x") Long literalParam,
-                @SqlType("varchar(x)") Slice val)
-        {
-            return literalParam;
-        }
-    }
-
-    @Test
+	@Test
     public void testSimpleInjectionScalarParse()
     {
         Signature expectedSignature = new Signature(
@@ -437,6 +296,227 @@ public class TestAnnotationEngineForScalars
         assertTrue(scalar.isDeterministic());
         assertFalse(scalar.isHidden());
         assertEquals(scalar.getDescription(), "Parametric scalar with literal injected");
+    }
+
+	@Test
+    public void testConstructorInjectionScalarParse()
+    {
+        Signature expectedSignature = new Signature(
+                FullyQualifiedName.of(DEFAULT_NAMESPACE, "parametric_scalar_inject_constructor"),
+                FunctionKind.SCALAR,
+                ImmutableList.of(typeVariable("T")),
+                ImmutableList.of(),
+                BIGINT.getTypeSignature(),
+                ImmutableList.of(parseTypeSignature("array(T)")),
+                false);
+
+        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(ConstructorInjectionScalarFunction.class);
+        assertEquals(functions.size(), 1);
+        ParametricScalar scalar = (ParametricScalar) functions.get(0);
+        assertImplementationCount(scalar, 2, 0, 1);
+        List<ParametricScalarImplementationChoice> parametricScalarImplementationChoices = scalar.getImplementations().getGenericImplementations().get(0).getChoices();
+        assertEquals(parametricScalarImplementationChoices.size(), 1);
+        List<ImplementationDependency> dependencies = parametricScalarImplementationChoices.get(0).getDependencies();
+        assertEquals(dependencies.size(), 0);
+        List<ImplementationDependency> constructorDependencies = parametricScalarImplementationChoices.get(0).getConstructorDependencies();
+        assertEquals(constructorDependencies.size(), 1);
+        assertTrue(constructorDependencies.get(0) instanceof TypeImplementationDependency);
+
+        assertEquals(scalar.getSignature(), expectedSignature);
+        assertTrue(scalar.isDeterministic());
+        assertFalse(scalar.isHidden());
+        assertEquals(scalar.getDescription(), "Parametric scalar with type injected though constructor");
+    }
+
+	@Test
+    public void testFixedTypeParameterParse()
+    {
+        Signature expectedSignature = new Signature(
+                FullyQualifiedName.of(DEFAULT_NAMESPACE, "fixed_type_parameter_scalar_function"),
+                FunctionKind.SCALAR,
+                ImmutableList.of(),
+                ImmutableList.of(),
+                BIGINT.getTypeSignature(),
+                ImmutableList.of(BIGINT.getTypeSignature()),
+                false);
+
+        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(FixedTypeParameterScalarFunction.class);
+        assertEquals(functions.size(), 1);
+        ParametricScalar scalar = (ParametricScalar) functions.get(0);
+        assertImplementationCount(scalar, 1, 0, 0);
+
+        assertEquals(scalar.getSignature(), expectedSignature);
+        assertTrue(scalar.isDeterministic());
+        assertFalse(scalar.isHidden());
+        assertEquals(scalar.getDescription(), "Parametric scalar that uses TypeParameter with fixed type");
+    }
+
+	@Test
+    public void testPartiallyFixedTypeParameterParse()
+    {
+        Signature expectedSignature = new Signature(
+                FullyQualifiedName.of(DEFAULT_NAMESPACE, "partially_fixed_type_parameter_scalar_function"),
+                FunctionKind.SCALAR,
+                ImmutableList.of(typeVariable("T1"), typeVariable("T2")),
+                ImmutableList.of(),
+                BIGINT.getTypeSignature(),
+                ImmutableList.of(BIGINT.getTypeSignature()),
+                false);
+
+        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(PartiallyFixedTypeParameterScalarFunction.class);
+        assertEquals(functions.size(), 1);
+        ParametricScalar scalar = (ParametricScalar) functions.get(0);
+        assertImplementationCount(scalar, 0, 0, 1);
+        List<ParametricScalarImplementationChoice> parametricScalarImplementationChoices = scalar.getImplementations().getGenericImplementations().get(0).getChoices();
+        assertEquals(parametricScalarImplementationChoices.size(), 1);
+        List<ImplementationDependency> dependencies = parametricScalarImplementationChoices.get(0).getDependencies();
+        assertEquals(dependencies.size(), 1);
+
+        assertEquals(scalar.getSignature(), expectedSignature);
+        assertTrue(scalar.isDeterministic());
+        assertFalse(scalar.isHidden());
+        assertEquals(scalar.getDescription(), "Parametric scalar that uses TypeParameter with partially fixed type");
+    }
+
+	@ScalarFunction("single_implementation_parametric_scalar")
+    @Description("Simple scalar with single implementation based on class")
+    public static class SingleImplementationScalarFunction
+    {
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction(value = "hidden_scalar_function", hidden = true)
+    @Description("Simple scalar with hidden property set")
+    public static class HiddenScalarFunction
+    {
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction(value = "non_deterministic_scalar_function", deterministic = false)
+    @Description("Simple scalar with deterministic property reset")
+    public static class NonDeterministicScalarFunction
+    {
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction(value = "scalar_with_nullable", calledOnNullInput = true)
+    @Description("Simple scalar with nullable primitive")
+    public static class WithNullablePrimitiveArgScalarFunction
+    {
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(
+                @SqlType(StandardTypes.DOUBLE) double v,
+                @SqlType(StandardTypes.DOUBLE) double v2,
+                @IsNull boolean v2isNull)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction(value = "scalar_with_nullable_complex", calledOnNullInput = true)
+    @Description("Simple scalar with nullable complex type")
+    public static class WithNullableComplexArgScalarFunction
+    {
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(
+                @SqlType(StandardTypes.DOUBLE) double v,
+                @SqlNullable @SqlType(StandardTypes.DOUBLE) Double v2)
+        {
+            return v;
+        }
+    }
+
+    public static class StaticMethodScalarFunction
+    {
+        @ScalarFunction("static_method_scalar")
+        @Description("Simple scalar with single implementation based on method")
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun(@SqlType(StandardTypes.DOUBLE) double v)
+        {
+            return v;
+        }
+    }
+
+    public static class MultiScalarFunction
+    {
+        @ScalarFunction("static_method_scalar_1")
+        @Description("Simple scalar with single implementation based on method 1")
+        @SqlType(StandardTypes.DOUBLE)
+        public static double fun1(@SqlType(StandardTypes.DOUBLE) double v)
+        {
+            return v;
+        }
+
+        @ScalarFunction(value = "static_method_scalar_2", hidden = true, deterministic = false)
+        @Description("Simple scalar with single implementation based on method 2")
+        @SqlType(StandardTypes.BIGINT)
+        public static long fun2(@SqlType(StandardTypes.BIGINT) long v)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction("parametric_scalar")
+    @Description("Parametric scalar description")
+    public static class ParametricScalarFunction
+    {
+        @SqlType("T")
+        @TypeParameter("T")
+        public static double fun(@SqlType("T") double v)
+        {
+            return v;
+        }
+
+        @SqlType("T")
+        @TypeParameter("T")
+        public static long fun(@SqlType("T") long v)
+        {
+            return v;
+        }
+    }
+
+    @ScalarFunction("with_exact_scalar")
+    @Description("Parametric scalar with exact and generic implementations")
+    public static class ComplexParametricScalarFunction
+    {
+        @SqlType(StandardTypes.BOOLEAN)
+        @LiteralParameters("x")
+        public static boolean fun1(@SqlType("array(varchar(x))") Block array)
+        {
+            return true;
+        }
+
+        @SqlType(StandardTypes.BOOLEAN)
+        public static boolean fun2(@SqlType("array(varchar(17))") Block array)
+        {
+            return true;
+        }
+    }
+
+    @ScalarFunction("parametric_scalar_inject")
+    @Description("Parametric scalar with literal injected")
+    public static class SimpleInjectionScalarFunction
+    {
+        @SqlType(StandardTypes.BIGINT)
+        @LiteralParameters("x")
+        public static long fun(
+                @LiteralParameter("x") Long literalParam,
+                @SqlType("varchar(x)") Slice val)
+        {
+            return literalParam;
+        }
     }
 
     @ScalarFunction("parametric_scalar_inject_constructor")
@@ -471,36 +551,6 @@ public class TestAnnotationEngineForScalars
         }
     }
 
-    @Test
-    public void testConstructorInjectionScalarParse()
-    {
-        Signature expectedSignature = new Signature(
-                FullyQualifiedName.of(DEFAULT_NAMESPACE, "parametric_scalar_inject_constructor"),
-                FunctionKind.SCALAR,
-                ImmutableList.of(typeVariable("T")),
-                ImmutableList.of(),
-                BIGINT.getTypeSignature(),
-                ImmutableList.of(parseTypeSignature("array(T)")),
-                false);
-
-        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(ConstructorInjectionScalarFunction.class);
-        assertEquals(functions.size(), 1);
-        ParametricScalar scalar = (ParametricScalar) functions.get(0);
-        assertImplementationCount(scalar, 2, 0, 1);
-        List<ParametricScalarImplementationChoice> parametricScalarImplementationChoices = scalar.getImplementations().getGenericImplementations().get(0).getChoices();
-        assertEquals(parametricScalarImplementationChoices.size(), 1);
-        List<ImplementationDependency> dependencies = parametricScalarImplementationChoices.get(0).getDependencies();
-        assertEquals(dependencies.size(), 0);
-        List<ImplementationDependency> constructorDependencies = parametricScalarImplementationChoices.get(0).getConstructorDependencies();
-        assertEquals(constructorDependencies.size(), 1);
-        assertTrue(constructorDependencies.get(0) instanceof TypeImplementationDependency);
-
-        assertEquals(scalar.getSignature(), expectedSignature);
-        assertTrue(scalar.isDeterministic());
-        assertFalse(scalar.isHidden());
-        assertEquals(scalar.getDescription(), "Parametric scalar with type injected though constructor");
-    }
-
     @ScalarFunction("fixed_type_parameter_scalar_function")
     @Description("Parametric scalar that uses TypeParameter with fixed type")
     public static final class FixedTypeParameterScalarFunction
@@ -512,29 +562,6 @@ public class TestAnnotationEngineForScalars
         {
             return value;
         }
-    }
-
-    @Test
-    public void testFixedTypeParameterParse()
-    {
-        Signature expectedSignature = new Signature(
-                FullyQualifiedName.of(DEFAULT_NAMESPACE, "fixed_type_parameter_scalar_function"),
-                FunctionKind.SCALAR,
-                ImmutableList.of(),
-                ImmutableList.of(),
-                BIGINT.getTypeSignature(),
-                ImmutableList.of(BIGINT.getTypeSignature()),
-                false);
-
-        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(FixedTypeParameterScalarFunction.class);
-        assertEquals(functions.size(), 1);
-        ParametricScalar scalar = (ParametricScalar) functions.get(0);
-        assertImplementationCount(scalar, 1, 0, 0);
-
-        assertEquals(scalar.getSignature(), expectedSignature);
-        assertTrue(scalar.isDeterministic());
-        assertFalse(scalar.isHidden());
-        assertEquals(scalar.getDescription(), "Parametric scalar that uses TypeParameter with fixed type");
     }
 
     @ScalarFunction("partially_fixed_type_parameter_scalar_function")
@@ -550,32 +577,5 @@ public class TestAnnotationEngineForScalars
         {
             return value;
         }
-    }
-
-    @Test
-    public void testPartiallyFixedTypeParameterParse()
-    {
-        Signature expectedSignature = new Signature(
-                FullyQualifiedName.of(DEFAULT_NAMESPACE, "partially_fixed_type_parameter_scalar_function"),
-                FunctionKind.SCALAR,
-                ImmutableList.of(typeVariable("T1"), typeVariable("T2")),
-                ImmutableList.of(),
-                BIGINT.getTypeSignature(),
-                ImmutableList.of(BIGINT.getTypeSignature()),
-                false);
-
-        List<SqlScalarFunction> functions = ScalarFromAnnotationsParser.parseFunctionDefinition(PartiallyFixedTypeParameterScalarFunction.class);
-        assertEquals(functions.size(), 1);
-        ParametricScalar scalar = (ParametricScalar) functions.get(0);
-        assertImplementationCount(scalar, 0, 0, 1);
-        List<ParametricScalarImplementationChoice> parametricScalarImplementationChoices = scalar.getImplementations().getGenericImplementations().get(0).getChoices();
-        assertEquals(parametricScalarImplementationChoices.size(), 1);
-        List<ImplementationDependency> dependencies = parametricScalarImplementationChoices.get(0).getDependencies();
-        assertEquals(dependencies.size(), 1);
-
-        assertEquals(scalar.getSignature(), expectedSignature);
-        assertTrue(scalar.isDeterministic());
-        assertFalse(scalar.isHidden());
-        assertEquals(scalar.getDescription(), "Parametric scalar that uses TypeParameter with partially fixed type");
     }
 }

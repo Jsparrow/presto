@@ -192,12 +192,13 @@ public class BufferedOutputStreamSliceOutput
             }
         }
 
-        if (length > 0) {
-            // buffer the remaining data
-            ensureWritableBytes(length);
-            slice.setBytes(bufferPosition, source, sourceIndex, length);
-            bufferPosition += length;
-        }
+        if (length <= 0) {
+			return;
+		}
+		// buffer the remaining data
+		ensureWritableBytes(length);
+		slice.setBytes(bufferPosition, source, sourceIndex, length);
+		bufferPosition += length;
     }
 
     @Override
@@ -229,12 +230,13 @@ public class BufferedOutputStreamSliceOutput
             }
         }
 
-        if (length > 0) {
-            // buffer the remaining data
-            ensureWritableBytes(length);
-            slice.setBytes(bufferPosition, source, sourceIndex, length);
-            bufferPosition += length;
-        }
+        if (length <= 0) {
+			return;
+		}
+		// buffer the remaining data
+		ensureWritableBytes(length);
+		slice.setBytes(bufferPosition, source, sourceIndex, length);
+		bufferPosition += length;
     }
 
     @Override

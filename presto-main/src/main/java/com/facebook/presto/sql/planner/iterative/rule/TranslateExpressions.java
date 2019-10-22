@@ -176,11 +176,11 @@ public class TranslateExpressions
 
             private RowExpression removeOriginalExpression(RowExpression rowExpression, Session session, Map<NodeRef<Expression>, Type> types)
             {
-                if (isExpression(rowExpression)) {
-                    Expression expression = castToExpression(rowExpression);
-                    return toRowExpression(expression, session, types);
-                }
-                return rowExpression;
+                if (!isExpression(rowExpression)) {
+					return rowExpression;
+				}
+				Expression expression = castToExpression(rowExpression);
+				return toRowExpression(expression, session, types);
             }
         };
     }

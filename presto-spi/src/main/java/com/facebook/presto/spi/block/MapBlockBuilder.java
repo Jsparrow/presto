@@ -314,22 +314,24 @@ public class MapBlockBuilder
         mapIsNull[positionCount] = isNull;
         positionCount++;
 
-        if (blockBuilderStatus != null) {
-            blockBuilderStatus.addBytes(Integer.BYTES + Byte.BYTES);
-            blockBuilderStatus.addBytes((offsets[positionCount] - offsets[positionCount - 1]) * HASH_MULTIPLIER * Integer.BYTES);
-        }
+        if (blockBuilderStatus == null) {
+			return;
+		}
+		blockBuilderStatus.addBytes(Integer.BYTES + Byte.BYTES);
+		blockBuilderStatus.addBytes((offsets[positionCount] - offsets[positionCount - 1]) * HASH_MULTIPLIER * Integer.BYTES);
     }
 
     private void ensureHashTableSize()
     {
         Optional<int[]> rawHashTables = hashTables.get();
         verify(rawHashTables.isPresent(), "rawHashTables is empty");
-        if (rawHashTables.get().length < offsets[positionCount] * HASH_MULTIPLIER) {
-            int newSize = BlockUtil.calculateNewArraySize(offsets[positionCount] * HASH_MULTIPLIER);
-            int[] newRawHashTables = Arrays.copyOf(rawHashTables.get(), newSize);
-            Arrays.fill(newRawHashTables, rawHashTables.get().length, newSize, -1);
-            hashTables.set(newRawHashTables);
-        }
+        if (!(rawHashTables.get().length < offsets[positionCount] * HASH_MULTIPLIER)) {
+			return;
+		}
+		int newSize = BlockUtil.calculateNewArraySize(offsets[positionCount] * HASH_MULTIPLIER);
+		int[] newRawHashTables = Arrays.copyOf(rawHashTables.get(), newSize);
+		Arrays.fill(newRawHashTables, rawHashTables.get().length, newSize, -1);
+		hashTables.set(newRawHashTables);
     }
 
     @Override
@@ -359,9 +361,7 @@ public class MapBlockBuilder
     @Override
     public String toString()
     {
-        return "MapBlockBuilder{" +
-                "positionCount=" + getPositionCount() +
-                '}';
+        return new StringBuilder().append("MapBlockBuilder{").append("positionCount=").append(getPositionCount()).append('}').toString();
     }
 
     @Override

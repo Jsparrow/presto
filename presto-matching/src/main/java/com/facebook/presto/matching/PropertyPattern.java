@@ -18,28 +18,28 @@ public class PropertyPattern<F, R>
     private final Property<F, ?> property;
     private final Pattern<R> pattern;
 
-    public static <F, T, R> PropertyPattern<F, R> of(Property<F, T> property, Pattern<R> pattern)
-    {
-        return new PropertyPattern<>(property, pattern);
-    }
-
     private PropertyPattern(Property<F, ?> property, Pattern<R> pattern)
     {
         this.property = property;
         this.pattern = pattern;
     }
 
-    public Property<F, ?> getProperty()
+	public static <F, T, R> PropertyPattern<F, R> of(Property<F, T> property, Pattern<R> pattern)
+    {
+        return new PropertyPattern<>(property, pattern);
+    }
+
+	public Property<F, ?> getProperty()
     {
         return property;
     }
 
-    public Pattern<R> getPattern()
+	public Pattern<R> getPattern()
     {
         return pattern;
     }
 
-    //This expresses the fact that PropertyPattern<F, T> is covariant on T.
+	//This expresses the fact that PropertyPattern<F, T> is covariant on T.
     @SuppressWarnings("unchecked cast")
     public static <F, T> PropertyPattern<F, T> upcast(PropertyPattern<F, ? extends T> propertyPattern)
     {

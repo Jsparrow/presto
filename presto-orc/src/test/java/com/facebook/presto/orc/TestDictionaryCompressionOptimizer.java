@@ -426,7 +426,22 @@ public class TestDictionaryCompressionOptimizer
         return toIntExact(new DataSize(size, Unit.MEGABYTE).toBytes());
     }
 
-    private static class DataSimulator
+    private static TestDictionaryColumn directColumn(int bytesPerEntry, double uniquePercentage)
+    {
+        return new TestDictionaryColumn(bytesPerEntry, uniquePercentage, OptionalInt.empty(), 1, 0);
+    }
+
+	private static TestDictionaryColumn dictionaryColumn(int bytesPerEntry, int maxDictionaryEntries)
+    {
+        return dictionaryColumn(bytesPerEntry, maxDictionaryEntries, 0.5);
+    }
+
+	private static TestDictionaryColumn dictionaryColumn(int bytesPerEntry, int maxDictionaryEntries, double uniquePercentage)
+    {
+        return new TestDictionaryColumn(bytesPerEntry, uniquePercentage, OptionalInt.of(maxDictionaryEntries), 1, 0);
+    }
+
+	private static class DataSimulator
     {
         private final int stripeMaxBytes;
         private final int stripeMaxRowCount;
@@ -459,9 +474,7 @@ public class TestDictionaryCompressionOptimizer
             List<Boolean> directColumnFlags = getDirectColumnFlags();
             while (!optimizer.isFull(getBufferedBytes()) && getBufferedBytes() < stripeMaxBytes && getRowCount() < stripeMaxRowCount && directColumnFlags.equals(getDirectColumnFlags())) {
                 rowCount += 1024;
-                for (TestDictionaryColumn dictionaryColumn : dictionaryColumns) {
-                    dictionaryColumn.advanceTo(rowCount);
-                }
+                dictionaryColumns.forEach(dictionaryColumn -> dictionaryColumn.advanceTo(rowCount));
                 optimizer.optimize(toIntExact(getBufferedBytes()), getRowCount());
             }
         }
@@ -487,9 +500,7 @@ public class TestDictionaryCompressionOptimizer
         {
             rowCount = 0;
             optimizer.reset();
-            for (TestDictionaryColumn dictionaryColumn : dictionaryColumns) {
-                dictionaryColumn.reset();
-            }
+            dictionaryColumns.forEach(TestDictionaryCompressionOptimizer.TestDictionaryColumn::reset);
         }
 
         public long getBufferedBytes()
@@ -504,21 +515,6 @@ public class TestDictionaryCompressionOptimizer
         {
             return rowCount;
         }
-    }
-
-    private static TestDictionaryColumn directColumn(int bytesPerEntry, double uniquePercentage)
-    {
-        return new TestDictionaryColumn(bytesPerEntry, uniquePercentage, OptionalInt.empty(), 1, 0);
-    }
-
-    private static TestDictionaryColumn dictionaryColumn(int bytesPerEntry, int maxDictionaryEntries)
-    {
-        return dictionaryColumn(bytesPerEntry, maxDictionaryEntries, 0.5);
-    }
-
-    private static TestDictionaryColumn dictionaryColumn(int bytesPerEntry, int maxDictionaryEntries, double uniquePercentage)
-    {
-        return new TestDictionaryColumn(bytesPerEntry, uniquePercentage, OptionalInt.of(maxDictionaryEntries), 1, 0);
     }
 
     private static class TestDictionaryColumn
@@ -565,7 +561,8 @@ public class TestDictionaryCompressionOptimizer
             this.rowCount = rowCount;
         }
 
-        public long getBufferedBytes()
+        @Override
+		public long getBufferedBytes()
         {
             if (direct) {
                 return (long) (rowCount * valuesPerRow * bytesPerEntry);

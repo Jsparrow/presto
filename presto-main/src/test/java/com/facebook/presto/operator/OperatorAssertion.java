@@ -49,10 +49,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class OperatorAssertion
 {
-    private static final Duration BLOCKED_DEFAULT_TIMEOUT = new Duration(10, MILLISECONDS);
+    private static final Logger logger = LoggerFactory.getLogger(OperatorAssertion.class);
+	private static final Duration BLOCKED_DEFAULT_TIMEOUT = new Duration(10, MILLISECONDS);
     private static final Duration UNBLOCKED_DEFAULT_TIMEOUT = new Duration(1, SECONDS);
 
     private OperatorAssertion()
@@ -121,19 +124,20 @@ public final class OperatorAssertion
     private static boolean handledBlocked(Operator operator)
     {
         ListenableFuture<?> isBlocked = operator.isBlocked();
-        if (!isBlocked.isDone()) {
-            tryGetFutureValue(isBlocked, 1, TimeUnit.MILLISECONDS);
-            return true;
-        }
-        return false;
+        if (isBlocked.isDone()) {
+			return false;
+		}
+		tryGetFutureValue(isBlocked, 1, TimeUnit.MILLISECONDS);
+		return true;
     }
 
     private static void handleMemoryRevoking(Operator operator)
     {
-        if (operator.getOperatorContext().getReservedRevocableBytes() > 0) {
-            getFutureValue(operator.startMemoryRevoke());
-            operator.finishMemoryRevoke();
-        }
+        if (operator.getOperatorContext().getReservedRevocableBytes() <= 0) {
+			return;
+		}
+		getFutureValue(operator.startMemoryRevoke());
+		operator.finishMemoryRevoke();
     }
 
     public static List<Page> toPages(OperatorFactory operatorFactory, DriverContext driverContext, List<Page> input)
@@ -156,15 +160,13 @@ public final class OperatorAssertion
     {
         // materialize pages
         MaterializedResult.Builder resultBuilder = MaterializedResult.resultBuilder(session, types);
-        for (Page outputPage : pages) {
-            resultBuilder.page(outputPage);
-        }
+        pages.forEach(resultBuilder::page);
         return resultBuilder.build();
     }
 
     public static Block toRow(List<Type> parameterTypes, Object... values)
     {
-        checkArgument(parameterTypes.size() == values.length, "parameterTypes.size(" + parameterTypes.size() + ") does not equal to values.length(" + values.length + ")");
+        checkArgument(parameterTypes.size() == values.length, new StringBuilder().append("parameterTypes.size(").append(parameterTypes.size()).append(") does not equal to values.length(").append(values.length).append(")").toString());
 
         RowType rowType = RowType.anonymous(parameterTypes);
         BlockBuilder blockBuilder = new RowBlockBuilder(parameterTypes, null, 1);
@@ -265,7 +267,8 @@ public final class OperatorAssertion
             throw new RuntimeException(e.getCause());
         }
         catch (TimeoutException expected) {
-            return false;
+            logger.error(expected.getMessage(), expected);
+			return false;
         }
     }
 

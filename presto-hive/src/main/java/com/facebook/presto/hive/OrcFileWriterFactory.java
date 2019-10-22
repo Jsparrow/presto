@@ -67,11 +67,14 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_COLUMNS;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_COLUMN_TYPES;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OrcFileWriterFactory
         implements HiveFileWriterFactory
 {
-    private final DateTimeZone hiveStorageTimeZone;
+    private static final Logger logger = LoggerFactory.getLogger(OrcFileWriterFactory.class);
+	private final DateTimeZone hiveStorageTimeZone;
     private final HdfsEnvironment hdfsEnvironment;
     private final TypeManager typeManager;
     private final NodeVersion nodeVersion;
@@ -210,7 +213,7 @@ public class OrcFileWriterFactory
                     stats));
         }
         catch (IOException e) {
-            throw new PrestoException(HIVE_WRITER_OPEN_ERROR, "Error creating " + orcEncoding + " file", e);
+            throw new PrestoException(HIVE_WRITER_OPEN_ERROR, new StringBuilder().append("Error creating ").append(orcEncoding).append(" file").toString(), e);
         }
     }
 
@@ -238,7 +241,8 @@ public class OrcFileWriterFactory
             compression = CompressionKind.valueOf(compressionName.toUpperCase(ENGLISH));
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(HIVE_UNSUPPORTED_FORMAT, "Unknown " + orcEncoding + " compression type " + compressionName);
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_UNSUPPORTED_FORMAT, new StringBuilder().append("Unknown ").append(orcEncoding).append(" compression type ").append(compressionName).toString());
         }
         return compression;
     }

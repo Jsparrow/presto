@@ -22,10 +22,14 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestCassandraType
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestCassandraType.class);
+
+	@Test
     public void testJsonMapEncoding()
     {
         assertTrue(isValidJson(CassandraType.buildArrayValue(Lists.newArrayList("one", "two", "three\""), CassandraType.VARCHAR)));
@@ -52,6 +56,7 @@ public class TestCassandraType
             valid = true;
         }
         catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         return valid;
     }

@@ -68,11 +68,9 @@ import java.util.Optional;
 
 public final class StatementUtils
 {
-    private StatementUtils() {}
-
     private static final Map<Class<? extends Statement>, QueryType> STATEMENT_QUERY_TYPES;
 
-    static {
+	static {
         ImmutableMap.Builder<Class<? extends Statement>, QueryType> builder = ImmutableMap.builder();
         builder.put(Query.class, QueryType.SELECT);
 
@@ -128,17 +126,19 @@ public final class StatementUtils
         STATEMENT_QUERY_TYPES = builder.build();
     }
 
-    public static Map<Class<? extends Statement>, QueryType> getAllQueryTypes()
+	private StatementUtils() {}
+
+	public static Map<Class<? extends Statement>, QueryType> getAllQueryTypes()
     {
         return STATEMENT_QUERY_TYPES;
     }
 
-    public static Optional<QueryType> getQueryType(Class<? extends Statement> statement)
+	public static Optional<QueryType> getQueryType(Class<? extends Statement> statement)
     {
         return Optional.ofNullable(STATEMENT_QUERY_TYPES.get(statement));
     }
 
-    public static boolean isTransactionControlStatement(Statement statement)
+	public static boolean isTransactionControlStatement(Statement statement)
     {
         return statement instanceof StartTransaction || statement instanceof Commit || statement instanceof Rollback;
     }

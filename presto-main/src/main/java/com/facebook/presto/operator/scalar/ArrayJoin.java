@@ -80,56 +80,6 @@ public final class ArrayJoin
 
     private static final MethodHandle STATE_FACTORY = methodHandle(ArrayJoin.class, "createState");
 
-    public static class ArrayJoinWithNullReplacement
-            extends SqlScalarFunction
-    {
-        private static final MethodHandle METHOD_HANDLE = methodHandle(
-                ArrayJoin.class,
-                "arrayJoin",
-                MethodHandle.class,
-                Object.class,
-                ConnectorSession.class,
-                Block.class,
-                Slice.class,
-                Slice.class);
-
-        public ArrayJoinWithNullReplacement()
-        {
-            super(new Signature(
-                    FullyQualifiedName.of(DEFAULT_NAMESPACE, FUNCTION_NAME),
-                    FunctionKind.SCALAR,
-                    ImmutableList.of(typeVariable("T")),
-                    ImmutableList.of(),
-                    parseTypeSignature(StandardTypes.VARCHAR),
-                    ImmutableList.of(parseTypeSignature("array(T)"), parseTypeSignature(StandardTypes.VARCHAR), parseTypeSignature(StandardTypes.VARCHAR)),
-                    false));
-        }
-
-        @Override
-        public boolean isHidden()
-        {
-            return false;
-        }
-
-        @Override
-        public boolean isDeterministic()
-        {
-            return true;
-        }
-
-        @Override
-        public String getDescription()
-        {
-            return DESCRIPTION;
-        }
-
-        @Override
-        public ScalarFunctionImplementation specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager)
-        {
-            return specializeArrayJoin(boundVariables.getTypeVariables(), functionManager, ImmutableList.of(false, false, false), METHOD_HANDLE);
-        }
-    }
-
     public ArrayJoin()
     {
         super(new Signature(
@@ -142,37 +92,37 @@ public final class ArrayJoin
                 false));
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Object createState()
     {
         return new PageBuilder(ImmutableList.of(VARCHAR));
     }
 
-    @Override
+	@Override
     public boolean isHidden()
     {
         return false;
     }
 
-    @Override
+	@Override
     public boolean isDeterministic()
     {
         return true;
     }
 
-    @Override
+	@Override
     public String getDescription()
     {
         return DESCRIPTION;
     }
 
-    @Override
+	@Override
     public ScalarFunctionImplementation specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager)
     {
         return specializeArrayJoin(boundVariables.getTypeVariables(), functionManager, ImmutableList.of(false, false), METHOD_HANDLE);
     }
 
-    private static ScalarFunctionImplementation specializeArrayJoin(Map<String, Type> types, FunctionManager functionManager, List<Boolean> nullableArguments, MethodHandle methodHandle)
+	private static ScalarFunctionImplementation specializeArrayJoin(Map<String, Type> types, FunctionManager functionManager, List<Boolean> nullableArguments, MethodHandle methodHandle)
     {
         Type type = types.get("T");
         List<ArgumentProperty> argumentProperties = nullableArguments.stream()
@@ -238,7 +188,7 @@ public final class ArrayJoin
         }
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Slice arrayJoin(
             MethodHandle castFunction,
             Object state,
@@ -249,7 +199,7 @@ public final class ArrayJoin
         return arrayJoin(castFunction, state, session, arrayBlock, delimiter, null);
     }
 
-    @UsedByGeneratedCode
+	@UsedByGeneratedCode
     public static Slice arrayJoin(
             MethodHandle castFunction,
             Object state,
@@ -295,5 +245,55 @@ public final class ArrayJoin
         blockBuilder.closeEntry();
         pageBuilder.declarePosition();
         return VARCHAR.getSlice(blockBuilder, blockBuilder.getPositionCount() - 1);
+    }
+
+	public static class ArrayJoinWithNullReplacement
+            extends SqlScalarFunction
+    {
+        private static final MethodHandle METHOD_HANDLE = methodHandle(
+                ArrayJoin.class,
+                "arrayJoin",
+                MethodHandle.class,
+                Object.class,
+                ConnectorSession.class,
+                Block.class,
+                Slice.class,
+                Slice.class);
+
+        public ArrayJoinWithNullReplacement()
+        {
+            super(new Signature(
+                    FullyQualifiedName.of(DEFAULT_NAMESPACE, FUNCTION_NAME),
+                    FunctionKind.SCALAR,
+                    ImmutableList.of(typeVariable("T")),
+                    ImmutableList.of(),
+                    parseTypeSignature(StandardTypes.VARCHAR),
+                    ImmutableList.of(parseTypeSignature("array(T)"), parseTypeSignature(StandardTypes.VARCHAR), parseTypeSignature(StandardTypes.VARCHAR)),
+                    false));
+        }
+
+        @Override
+        public boolean isHidden()
+        {
+            return false;
+        }
+
+        @Override
+        public boolean isDeterministic()
+        {
+            return true;
+        }
+
+        @Override
+        public String getDescription()
+        {
+            return DESCRIPTION;
+        }
+
+        @Override
+        public ScalarFunctionImplementation specialize(BoundVariables boundVariables, int arity, TypeManager typeManager, FunctionManager functionManager)
+        {
+            return specializeArrayJoin(boundVariables.getTypeVariables(), functionManager, ImmutableList.of(false, false, false), METHOD_HANDLE);
+        }
     }
 }

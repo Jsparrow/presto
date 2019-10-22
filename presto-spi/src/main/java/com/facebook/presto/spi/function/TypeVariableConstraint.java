@@ -90,7 +90,7 @@ public class TypeVariableConstraint
             value += ":orderable";
         }
         if (variadicBound != null) {
-            value += ":" + variadicBound + "<*>";
+            value += new StringBuilder().append(":").append(variadicBound).append("<*>").toString();
         }
         return value;
     }

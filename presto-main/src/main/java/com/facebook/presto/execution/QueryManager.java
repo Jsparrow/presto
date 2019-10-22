@@ -33,8 +33,7 @@ public interface QueryManager
      *
      * @throws NoSuchElementException if query does not exist
      */
-    void addOutputInfoListener(QueryId queryId, Consumer<QueryOutputInfo> listener)
-            throws NoSuchElementException;
+    void addOutputInfoListener(QueryId queryId, Consumer<QueryOutputInfo> listener);
 
     /**
      * Add a listener that fires each time the query state changes.
@@ -44,8 +43,7 @@ public interface QueryManager
      *
      * @throws NoSuchElementException if query does not exist
      */
-    void addStateChangeListener(QueryId queryId, StateChangeListener<QueryState> listener)
-            throws NoSuchElementException;
+    void addStateChangeListener(QueryId queryId, StateChangeListener<QueryState> listener);
 
     /**
      * Gets a future that completes when the query changes from the specified current state
@@ -57,20 +55,17 @@ public interface QueryManager
     /**
      * @throws NoSuchElementException if query does not exist
      */
-    BasicQueryInfo getQueryInfo(QueryId queryId)
-            throws NoSuchElementException;
+    BasicQueryInfo getQueryInfo(QueryId queryId);
 
     /**
      * @throws NoSuchElementException if query does not exist
      */
-    QueryInfo getFullQueryInfo(QueryId queryId)
-            throws NoSuchElementException;
+    QueryInfo getFullQueryInfo(QueryId queryId);
 
     /**
      * @throws NoSuchElementException if query does not exist
      */
-    QueryState getQueryState(QueryId queryId)
-            throws NoSuchElementException;
+    QueryState getQueryState(QueryId queryId);
 
     /**
      * Updates the client heartbeat time, to prevent the query from be automatically purged.

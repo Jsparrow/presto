@@ -85,7 +85,7 @@ public class PartitionMetadata
                 .filter(format -> tableFormat.equals(StorageFormat.fromHiveStorageFormat(format)))
                 .findFirst();
 
-        if (table.getTableType().equals(EXTERNAL_TABLE)) {
+        if (table.getTableType() == EXTERNAL_TABLE) {
             externalLocation = Optional.of(partition.getStorage().getLocation());
         }
         else {

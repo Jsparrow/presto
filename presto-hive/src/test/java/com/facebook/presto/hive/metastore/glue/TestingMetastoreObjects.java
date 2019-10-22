@@ -35,11 +35,13 @@ import static com.facebook.presto.hive.metastore.PrestoTableType.EXTERNAL_TABLE;
 
 public final class TestingMetastoreObjects
 {
-    private TestingMetastoreObjects() {}
+    private static final Consumer<Storage.Builder> STORAGE_CONSUMER = storage ->
+    storage.setStorageFormat(StorageFormat.create("SerdeLib", "InputFormat", "OutputFormat")).setLocation("/test-tbl")
+			.setBucketProperty(Optional.empty()).setSerdeParameters(ImmutableMap.of());
 
-    // --------------- Glue Objects ---------------
+	private TestingMetastoreObjects() {}
 
-    public static Database getGlueTestDatabase()
+	public static Database getGlueTestDatabase()
     {
         return new Database()
                 .withName("test-db" + generateRandom())
@@ -48,7 +50,7 @@ public final class TestingMetastoreObjects
                 .withParameters(ImmutableMap.of());
     }
 
-    public static Table getGlueTestTable(String dbName)
+	public static Table getGlueTestTable(String dbName)
     {
         return new Table()
                 .withDatabaseName(dbName)
@@ -62,7 +64,7 @@ public final class TestingMetastoreObjects
                 .withViewExpandedText("expandedText");
     }
 
-    public static Column getGlueTestColumn()
+	public static Column getGlueTestColumn()
     {
         return new Column()
                 .withName("test-col" + generateRandom())
@@ -70,7 +72,7 @@ public final class TestingMetastoreObjects
                 .withComment("column comment");
     }
 
-    public static StorageDescriptor getGlueTestStorageDescriptor()
+	public static StorageDescriptor getGlueTestStorageDescriptor()
     {
         return new StorageDescriptor()
                 .withBucketColumns(ImmutableList.of("test-bucket-col"))
@@ -85,7 +87,7 @@ public final class TestingMetastoreObjects
                 .withNumberOfBuckets(1);
     }
 
-    public static Partition getGlueTestPartition(String dbName, String tblName, List<String> values)
+	public static Partition getGlueTestPartition(String dbName, String tblName, List<String> values)
     {
         return new Partition()
                 .withDatabaseName(dbName)
@@ -95,9 +97,7 @@ public final class TestingMetastoreObjects
                 .withStorageDescriptor(getGlueTestStorageDescriptor());
     }
 
-    // --------------- Presto Objects ---------------
-
-    public static com.facebook.presto.hive.metastore.Database getPrestoTestDatabase()
+	public static com.facebook.presto.hive.metastore.Database getPrestoTestDatabase()
     {
         return com.facebook.presto.hive.metastore.Database.builder()
                 .setDatabaseName("test-db" + generateRandom())
@@ -108,7 +108,7 @@ public final class TestingMetastoreObjects
                 .setOwnerType(PrincipalType.ROLE).build();
     }
 
-    public static com.facebook.presto.hive.metastore.Table getPrestoTestTable(String dbName)
+	public static com.facebook.presto.hive.metastore.Table getPrestoTestTable(String dbName)
     {
         return com.facebook.presto.hive.metastore.Table.builder()
                 .setDatabaseName(dbName)
@@ -123,7 +123,7 @@ public final class TestingMetastoreObjects
                 .withStorage(STORAGE_CONSUMER).build();
     }
 
-    public static com.facebook.presto.hive.metastore.Partition getPrestoTestPartition(String dbName, String tblName, List<String> values)
+	public static com.facebook.presto.hive.metastore.Partition getPrestoTestPartition(String dbName, String tblName, List<String> values)
     {
         return com.facebook.presto.hive.metastore.Partition.builder()
                 .setDatabaseName(dbName)
@@ -134,21 +134,21 @@ public final class TestingMetastoreObjects
                 .withStorage(STORAGE_CONSUMER).build();
     }
 
-    public static com.facebook.presto.hive.metastore.Column getPrestoTestColumn()
+	public static com.facebook.presto.hive.metastore.Column getPrestoTestColumn()
     {
         return new com.facebook.presto.hive.metastore.Column("test-col" + generateRandom(), HiveType.HIVE_STRING, Optional.of("column comment"));
     }
 
-    private static final Consumer<Storage.Builder> STORAGE_CONSUMER = storage ->
-    {
-        storage.setStorageFormat(StorageFormat.create("SerdeLib", "InputFormat", "OutputFormat"))
-                .setLocation("/test-tbl")
-                .setBucketProperty(Optional.empty())
-                .setSerdeParameters(ImmutableMap.of());
-    };
-
-    private static String generateRandom()
+	private static String generateRandom()
     {
         return String.format("%04x", ThreadLocalRandom.current().nextInt());
     }
+
+    // --------------- Glue Objects ---------------
+
+    
+
+    // --------------- Presto Objects ---------------
+
+    
 }

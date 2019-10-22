@@ -29,11 +29,7 @@ public class TestRaptorIntegrationSmokeTestBucketed
     @Test
     public void testShardsSystemTableBucketNumber()
     {
-        assertQuery("" +
-                        "SELECT count(DISTINCT bucket_number)\n" +
-                        "FROM system.shards\n" +
-                        "WHERE table_schema = 'tpch'\n" +
-                        "  AND table_name = 'orders'",
+        assertQuery(new StringBuilder().append("").append("SELECT count(DISTINCT bucket_number)\n").append("FROM system.shards\n").append("WHERE table_schema = 'tpch'\n").append("  AND table_name = 'orders'").toString(),
                 "SELECT 25");
     }
 }

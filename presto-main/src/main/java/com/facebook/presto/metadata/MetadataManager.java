@@ -116,11 +116,14 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MetadataManager
         implements Metadata
 {
-    private final FunctionManager functions;
+    private static final Logger logger = LoggerFactory.getLogger(MetadataManager.class);
+	private final FunctionManager functions;
     private final ProcedureRegistry procedures;
     private final TypeManager typeManager;
     private final JsonCodec<ViewDefinition> viewCodec;
@@ -225,7 +228,7 @@ public class MetadataManager
     public final void verifyComparableOrderableContract()
     {
         Multimap<Type, OperatorType> missingOperators = HashMultimap.create();
-        for (Type type : typeManager.getTypes()) {
+        typeManager.getTypes().forEach(type -> {
             if (type.isComparable()) {
                 if (!canResolveOperator(HASH_CODE, fromTypes(type))) {
                     missingOperators.put(type, HASH_CODE);
@@ -238,24 +241,19 @@ public class MetadataManager
                 }
             }
             if (type.isOrderable()) {
-                for (OperatorType operator : ImmutableList.of(LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL)) {
-                    if (!canResolveOperator(operator, fromTypes(type, type))) {
-                        missingOperators.put(type, operator);
-                    }
-                }
+                ImmutableList.of(LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL).stream().filter(operator -> !canResolveOperator(operator, fromTypes(type, type))).forEach(operator -> missingOperators.put(type, operator));
                 if (!canResolveOperator(BETWEEN, fromTypes(type, type, type))) {
                     missingOperators.put(type, BETWEEN);
                 }
             }
-        }
+        });
         // TODO: verify the parametric types too
-        if (!missingOperators.isEmpty()) {
-            List<String> messages = new ArrayList<>();
-            for (Type type : missingOperators.keySet()) {
-                messages.add(format("%s missing for %s", missingOperators.get(type), type));
-            }
-            throw new IllegalStateException(Joiner.on(", ").join(messages));
-        }
+		if (missingOperators.isEmpty()) {
+			return;
+		}
+		List<String> messages = new ArrayList<>();
+		missingOperators.keySet().forEach(type -> messages.add(format("%s missing for %s", missingOperators.get(type), type)));
+		throw new IllegalStateException(Joiner.on(", ").join(messages));
     }
 
     @Override
@@ -264,7 +262,8 @@ public class MetadataManager
         return typeManager.getType(signature);
     }
 
-    public List<SqlFunction> listFunctions()
+    @Override
+	public List<SqlFunction> listFunctions()
     {
         // TODO: transactional when FunctionManager is made transactional
         return functions.listFunctions();
@@ -302,16 +301,12 @@ public class MetadataManager
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, catalogName);
 
         ImmutableSet.Builder<String> schemaNames = ImmutableSet.builder();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
+        catalog.ifPresent(catalogMetadata -> {
             ConnectorSession connectorSession = session.toConnectorSession(catalogMetadata.getConnectorId());
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
-                ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
-                metadata.listSchemaNames(connectorSession).stream()
-                        .map(schema -> schema.toLowerCase(Locale.ENGLISH))
-                        .forEach(schemaNames::add);
-            }
-        }
+            catalogMetadata.listConnectorIds().stream().map(catalogMetadata::getMetadataFor).forEach(metadata -> metadata.listSchemaNames(connectorSession).stream()
+			        .map(schema -> schema.toLowerCase(Locale.ENGLISH))
+			        .forEach(schemaNames::add));
+        });
         return ImmutableList.copyOf(schemaNames.build());
     }
 
@@ -368,16 +363,14 @@ public class MetadataManager
         requireNonNull(tableName, "table is null");
 
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, tableName.getCatalogName());
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
-
-            // we query only main connector for runtime system tables
-            ConnectorId connectorId = catalogMetadata.getConnectorId();
-            ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
-
-            return metadata.getSystemTable(session.toConnectorSession(connectorId), tableName.asSchemaTableName());
-        }
-        return Optional.empty();
+        if (!catalog.isPresent()) {
+			return Optional.empty();
+		}
+		CatalogMetadata catalogMetadata = catalog.get();
+		// we query only main connector for runtime system tables
+		ConnectorId connectorId = catalogMetadata.getConnectorId();
+		ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
+		return metadata.getSystemTable(session.toConnectorSession(connectorId), tableName.asSchemaTableName());
     }
 
     @Override
@@ -499,7 +492,7 @@ public class MetadataManager
     {
         ConnectorId connectorId = handle.getConnectorId();
         ConnectorMetadata metadata = getMetadata(session, connectorId);
-        return handle.getLayout().flatMap(tableLayout -> metadata.getInfo(tableLayout));
+        return handle.getLayout().flatMap(metadata::getInfo);
     }
 
     @Override
@@ -531,9 +524,7 @@ public class MetadataManager
         Map<String, ColumnHandle> handles = metadata.getColumnHandles(session.toConnectorSession(connectorId), tableHandle.getConnectorHandle());
 
         ImmutableMap.Builder<String, ColumnHandle> map = ImmutableMap.builder();
-        for (Entry<String, ColumnHandle> mapEntry : handles.entrySet()) {
-            map.put(mapEntry.getKey().toLowerCase(ENGLISH), mapEntry.getValue());
-        }
+        handles.entrySet().forEach(mapEntry -> map.put(mapEntry.getKey().toLowerCase(ENGLISH), mapEntry.getValue()));
         return map.build();
     }
 
@@ -555,18 +546,13 @@ public class MetadataManager
 
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, prefix.getCatalogName());
         Set<QualifiedObjectName> tables = new LinkedHashSet<>();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
-
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
-                ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
-                ConnectorSession connectorSession = session.toConnectorSession(connectorId);
-                metadata.listTables(connectorSession, prefix.getSchemaName()).stream()
-                        .map(convertFromSchemaTableName(prefix.getCatalogName()))
-                        .filter(prefix::matches)
-                        .forEach(tables::add);
-            }
-        }
+        catalog.ifPresent(catalogMetadata -> catalogMetadata.listConnectorIds().forEach(connectorId -> {
+			ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
+			ConnectorSession connectorSession = session.toConnectorSession(connectorId);
+			metadata.listTables(connectorSession, prefix.getSchemaName()).stream()
+					.map(convertFromSchemaTableName(prefix.getCatalogName())).filter(prefix::matches)
+					.forEach(tables::add);
+		}));
         return ImmutableList.copyOf(tables);
     }
 
@@ -577,38 +563,34 @@ public class MetadataManager
 
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, prefix.getCatalogName());
         Map<QualifiedObjectName, List<ColumnMetadata>> tableColumns = new HashMap<>();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
-
+        catalog.ifPresent(catalogMetadata -> {
             SchemaTablePrefix tablePrefix = prefix.asSchemaTablePrefix();
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
+            catalogMetadata.listConnectorIds().forEach(connectorId -> {
                 ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
 
                 ConnectorSession connectorSession = session.toConnectorSession(connectorId);
-                for (Entry<SchemaTableName, List<ColumnMetadata>> entry : metadata.listTableColumns(connectorSession, tablePrefix).entrySet()) {
+                metadata.listTableColumns(connectorSession, tablePrefix).entrySet().forEach(entry -> {
                     QualifiedObjectName tableName = new QualifiedObjectName(
                             prefix.getCatalogName(),
                             entry.getKey().getSchemaName(),
                             entry.getKey().getTableName());
                     tableColumns.put(tableName, entry.getValue());
-                }
+                });
 
                 // if table and view names overlap, the view wins
-                for (Entry<SchemaTableName, ConnectorViewDefinition> entry : metadata.getViews(connectorSession, tablePrefix).entrySet()) {
+				metadata.getViews(connectorSession, tablePrefix).entrySet().forEach(entry -> {
                     QualifiedObjectName tableName = new QualifiedObjectName(
                             prefix.getCatalogName(),
                             entry.getKey().getSchemaName(),
                             entry.getKey().getTableName());
 
                     ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
-                    for (ViewColumn column : deserializeView(entry.getValue().getViewData()).getColumns()) {
-                        columns.add(new ColumnMetadata(column.getName(), column.getType()));
-                    }
+                    deserializeView(entry.getValue().getViewData()).getColumns().forEach(column -> columns.add(new ColumnMetadata(column.getName(), column.getType())));
 
                     tableColumns.put(tableName, columns.build());
-                }
-            }
-        }
+                });
+            });
+        });
         return ImmutableMap.copyOf(tableColumns);
     }
 
@@ -784,12 +766,12 @@ public class MetadataManager
     @Override
     public void beginQuery(Session session, Set<ConnectorId> connectors)
     {
-        for (ConnectorId connectorId : connectors) {
+        connectors.forEach(connectorId -> {
             ConnectorMetadata metadata = getMetadata(session, connectorId);
             ConnectorSession connectorSession = session.toConnectorSession(connectorId);
             metadata.beginQuery(connectorSession);
             registerCatalogForQueryId(session.getQueryId(), metadata);
-        }
+        });
     }
 
     private void registerCatalogForQueryId(QueryId queryId, ConnectorMetadata metadata)
@@ -807,9 +789,7 @@ public class MetadataManager
                 return;
             }
 
-            for (ConnectorMetadata metadata : catalogs) {
-                metadata.cleanupQuery(session.toConnectorSession());
-            }
+            catalogs.forEach(metadata -> metadata.cleanupQuery(session.toConnectorSession()));
         }
         finally {
             catalogsByQueryId.remove(session.getQueryId().getId());
@@ -923,18 +903,13 @@ public class MetadataManager
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, prefix.getCatalogName());
 
         Set<QualifiedObjectName> views = new LinkedHashSet<>();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
-
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
-                ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
-                ConnectorSession connectorSession = session.toConnectorSession(connectorId);
-                metadata.listViews(connectorSession, prefix.getSchemaName()).stream()
-                        .map(convertFromSchemaTableName(prefix.getCatalogName()))
-                        .filter(prefix::matches)
-                        .forEach(views::add);
-            }
-        }
+        catalog.ifPresent(catalogMetadata -> catalogMetadata.listConnectorIds().forEach(connectorId -> {
+			ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
+			ConnectorSession connectorSession = session.toConnectorSession(connectorId);
+			metadata.listViews(connectorSession, prefix.getSchemaName()).stream()
+					.map(convertFromSchemaTableName(prefix.getCatalogName())).filter(prefix::matches)
+					.forEach(views::add);
+		}));
         return ImmutableList.copyOf(views);
     }
 
@@ -946,22 +921,20 @@ public class MetadataManager
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, prefix.getCatalogName());
 
         Map<QualifiedObjectName, ViewDefinition> views = new LinkedHashMap<>();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
-
+        catalog.ifPresent(catalogMetadata -> {
             SchemaTablePrefix tablePrefix = prefix.asSchemaTablePrefix();
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
+            catalogMetadata.listConnectorIds().forEach(connectorId -> {
                 ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
                 ConnectorSession connectorSession = session.toConnectorSession(connectorId);
-                for (Entry<SchemaTableName, ConnectorViewDefinition> entry : metadata.getViews(connectorSession, tablePrefix).entrySet()) {
+                metadata.getViews(connectorSession, tablePrefix).entrySet().forEach(entry -> {
                     QualifiedObjectName viewName = new QualifiedObjectName(
                             prefix.getCatalogName(),
                             entry.getKey().getSchemaName(),
                             entry.getKey().getTableName());
                     views.put(viewName, deserializeView(entry.getValue().getViewData()));
-                }
-            }
-        }
+                });
+            });
+        });
         return ImmutableMap.copyOf(views);
     }
 
@@ -1144,14 +1117,10 @@ public class MetadataManager
         Optional<CatalogMetadata> catalog = getOptionalCatalogMetadata(session, prefix.getCatalogName());
 
         ImmutableSet.Builder<GrantInfo> grantInfos = ImmutableSet.builder();
-        if (catalog.isPresent()) {
-            CatalogMetadata catalogMetadata = catalog.get();
+        catalog.ifPresent(catalogMetadata -> {
             ConnectorSession connectorSession = session.toConnectorSession(catalogMetadata.getConnectorId());
-            for (ConnectorId connectorId : catalogMetadata.listConnectorIds()) {
-                ConnectorMetadata metadata = catalogMetadata.getMetadataFor(connectorId);
-                grantInfos.addAll(metadata.listTablePrivileges(connectorSession, tablePrefix));
-            }
-        }
+            catalogMetadata.listConnectorIds().stream().map(catalogMetadata::getMetadataFor).forEach(metadata -> grantInfos.addAll(metadata.listTablePrivileges(connectorSession, tablePrefix)));
+        });
         return ImmutableList.copyOf(grantInfos.build());
     }
 
@@ -1227,7 +1196,8 @@ public class MetadataManager
         return columnPropertyManager;
     }
 
-    public AnalyzePropertyManager getAnalyzePropertyManager()
+    @Override
+	public AnalyzePropertyManager getAnalyzePropertyManager()
     {
         return analyzePropertyManager;
     }
@@ -1292,7 +1262,8 @@ public class MetadataManager
             return true;
         }
         catch (OperatorNotFoundException e) {
-            return false;
+            logger.error(e.getMessage(), e);
+			return false;
         }
     }
 

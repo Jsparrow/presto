@@ -63,10 +63,11 @@ public class TestJsonOperators
     @AfterClass(alwaysRun = true)
     public void destroy()
     {
-        if (runner != null) {
-            runner.close();
-            runner = null;
-        }
+        if (runner == null) {
+			return;
+		}
+		runner.close();
+		runner = null;
     }
 
     // todo add cases for decimal
@@ -455,9 +456,8 @@ public class TestJsonOperators
 
     private void assertCastWithJsonParse(String json, String castSqlType, Type expectedType, Object expected)
     {
-        String query = "" +
-                "SELECT CAST(JSON_PARSE(col) AS " + castSqlType + ") " +
-                "FROM (VALUES('" + json + "')) AS t(col)";
+        String query = new StringBuilder().append("").append("SELECT CAST(JSON_PARSE(col) AS ").append(castSqlType).append(") ").append("FROM (VALUES('").append(json).append("')) AS t(col)")
+				.toString();
 
         // building queries with VALUES to avoid constant folding
         MaterializedResult result = runner.execute(query);
@@ -468,9 +468,8 @@ public class TestJsonOperators
 
     private void assertInvalidCastWithJsonParse(String json, String castSqlType, String message)
     {
-        String query = "" +
-                "SELECT CAST(JSON_PARSE(col) AS " + castSqlType + ") " +
-                "FROM (VALUES('" + json + "')) AS t(col)";
+        String query = new StringBuilder().append("").append("SELECT CAST(JSON_PARSE(col) AS ").append(castSqlType).append(") ").append("FROM (VALUES('").append(json).append("')) AS t(col)")
+				.toString();
 
         try {
             runner.execute(query);

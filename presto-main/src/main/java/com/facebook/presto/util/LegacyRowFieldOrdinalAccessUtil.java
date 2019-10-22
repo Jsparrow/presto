@@ -20,10 +20,13 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LegacyRowFieldOrdinalAccessUtil
 {
-    private static final Pattern ORDINAL_ROW_FIELD_NAME = Pattern.compile("(?i)field([0-9]+)");
+    private static final Logger logger = LoggerFactory.getLogger(LegacyRowFieldOrdinalAccessUtil.class);
+	private static final Pattern ORDINAL_ROW_FIELD_NAME = Pattern.compile("(?i)field([0-9]+)");
 
     private LegacyRowFieldOrdinalAccessUtil() {}
 
@@ -38,7 +41,8 @@ public class LegacyRowFieldOrdinalAccessUtil
             rowIndex = Integer.parseInt(matcher.group(1));
         }
         catch (NumberFormatException e) {
-            return OptionalInt.empty();
+            logger.error(e.getMessage(), e);
+			return OptionalInt.empty();
         }
         if (rowIndex >= rowFields.size()) {
             return OptionalInt.empty();

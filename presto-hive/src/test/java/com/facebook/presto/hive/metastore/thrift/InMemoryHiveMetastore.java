@@ -235,12 +235,10 @@ public class InMemoryHiveMetastore
         }
 
         Optional<List<String>> partitionNames = metastore.getPartitionNames(schemaName, tableName);
-        if (partitionNames.isPresent()) {
-            metastore.getPartitionsByNames(schemaName, tableName, partitionNames.get()).stream()
-                    .map(partition -> partition.getSd().getLocation())
-                    .filter(location -> !location.startsWith(table.getSd().getLocation()))
-                    .forEach(locations::add);
-        }
+        partitionNames.ifPresent(value -> metastore.getPartitionsByNames(schemaName, tableName, value).stream()
+		        .map(partition -> partition.getSd().getLocation())
+		        .filter(location -> !location.startsWith(table.getSd().getLocation()))
+		        .forEach(locations::add));
 
         return locations.build();
     }
@@ -275,11 +273,7 @@ public class InMemoryHiveMetastore
     public synchronized Optional<List<String>> getAllTables(String databaseName)
     {
         ImmutableList.Builder<String> tables = ImmutableList.builder();
-        for (SchemaTableName schemaTableName : this.relations.keySet()) {
-            if (schemaTableName.getSchemaName().equals(databaseName)) {
-                tables.add(schemaTableName.getTableName());
-            }
-        }
+        this.relations.keySet().stream().filter(schemaTableName -> schemaTableName.getSchemaName().equals(databaseName)).forEach(schemaTableName -> tables.add(schemaTableName.getTableName()));
         return Optional.of(tables.build());
     }
 
@@ -287,11 +281,7 @@ public class InMemoryHiveMetastore
     public synchronized Optional<List<String>> getAllViews(String databaseName)
     {
         ImmutableList.Builder<String> tables = ImmutableList.builder();
-        for (SchemaTableName schemaTableName : this.views.keySet()) {
-            if (schemaTableName.getSchemaName().equals(databaseName)) {
-                tables.add(schemaTableName.getTableName());
-            }
-        }
+        this.views.keySet().stream().filter(schemaTableName -> schemaTableName.getSchemaName().equals(databaseName)).forEach(schemaTableName -> tables.add(schemaTableName.getTableName()));
         return Optional.of(tables.build());
     }
 
@@ -304,7 +294,7 @@ public class InMemoryHiveMetastore
     @Override
     public synchronized void addPartitions(String databaseName, String tableName, List<PartitionWithStatistics> partitionsWithStatistics)
     {
-        for (PartitionWithStatistics partitionWithStatistics : partitionsWithStatistics) {
+        partitionsWithStatistics.forEach(partitionWithStatistics -> {
             Partition partition = toMetastoreApiPartition(partitionWithStatistics.getPartition());
             if (partition.getParameters() == null) {
                 partition.setParameters(ImmutableMap.of());
@@ -312,7 +302,7 @@ public class InMemoryHiveMetastore
             PartitionName partitionKey = PartitionName.partition(databaseName, tableName, partitionWithStatistics.getPartitionName());
             partitions.put(partitionKey, partition);
             partitionColumnStatistics.put(partitionKey, partitionWithStatistics.getStatistics());
-        }
+        });
     }
 
     @Override
@@ -425,14 +415,14 @@ public class InMemoryHiveMetastore
     public synchronized Map<String, PartitionStatistics> getPartitionStatistics(String databaseName, String tableName, Set<String> partitionNames)
     {
         ImmutableMap.Builder<String, PartitionStatistics> result = ImmutableMap.builder();
-        for (String partitionName : partitionNames) {
+        partitionNames.forEach(partitionName -> {
             PartitionName partitionKey = PartitionName.partition(databaseName, tableName, partitionName);
             PartitionStatistics statistics = partitionColumnStatistics.get(partitionKey);
             if (statistics == null) {
                 statistics = new PartitionStatistics(createEmptyStatistics(), ImmutableMap.of());
             }
             result.put(partitionName, statistics);
-        }
+        });
         return result.build();
     }
 
@@ -523,7 +513,17 @@ public class InMemoryHiveMetastore
         }
     }
 
-    private static class PartitionName
+    private static <K, V> void rewriteKeys(Map<K, V> map, Function<K, K> keyRewriter)
+    {
+        ImmutableSet.copyOf(map.keySet()).forEach(key -> {
+            K newKey = keyRewriter.apply(key);
+            if (!newKey.equals(key)) {
+                map.put(newKey, map.remove(key));
+            }
+        });
+    }
+
+	private static class PartitionName
     {
         private final String schemaName;
         private final String tableName;
@@ -595,7 +595,7 @@ public class InMemoryHiveMetastore
         @Override
         public String toString()
         {
-            return schemaName + "/" + tableName + "/" + partitionName;
+            return new StringBuilder().append(schemaName).append("/").append(tableName).append("/").append(partitionName).toString();
         }
     }
 
@@ -650,16 +650,6 @@ public class InMemoryHiveMetastore
                     .add("table", table)
                     .add("database", database)
                     .toString();
-        }
-    }
-
-    private static <K, V> void rewriteKeys(Map<K, V> map, Function<K, K> keyRewriter)
-    {
-        for (K key : ImmutableSet.copyOf(map.keySet())) {
-            K newKey = keyRewriter.apply(key);
-            if (!newKey.equals(key)) {
-                map.put(newKey, map.remove(key));
-            }
         }
     }
 }

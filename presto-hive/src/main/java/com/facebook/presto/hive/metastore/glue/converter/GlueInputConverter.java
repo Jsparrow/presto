@@ -119,10 +119,10 @@ public final class GlueInputConverter
         sd.setOutputFormat(storage.getStorageFormat().getOutputFormatNullable());
         sd.setParameters(ImmutableMap.of());
 
-        if (storage.getBucketProperty().isPresent()) {
-            sd.setNumberOfBuckets(storage.getBucketProperty().get().getBucketCount());
-            sd.setBucketColumns(storage.getBucketProperty().get().getBucketedBy());
-        }
+        storage.getBucketProperty().ifPresent(value -> {
+            sd.setNumberOfBuckets(value.getBucketCount());
+            sd.setBucketColumns(value.getBucketedBy());
+        });
 
         return sd;
     }

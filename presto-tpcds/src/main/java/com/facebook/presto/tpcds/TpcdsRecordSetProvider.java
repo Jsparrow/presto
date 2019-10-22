@@ -51,10 +51,7 @@ public class TpcdsRecordSetProvider
             boolean noSexism)
     {
         ImmutableList.Builder<Column> builder = ImmutableList.builder();
-        for (ColumnHandle column : columns) {
-            String columnName = ((TpcdsColumnHandle) column).getColumnName();
-            builder.add(table.getColumn(columnName));
-        }
+        columns.stream().map(column -> ((TpcdsColumnHandle) column).getColumnName()).forEach(columnName -> builder.add(table.getColumn(columnName)));
 
         Session session = Session.getDefaultSession()
                 .withScale(scaleFactor)

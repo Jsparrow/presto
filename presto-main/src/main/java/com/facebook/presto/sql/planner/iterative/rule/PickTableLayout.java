@@ -117,156 +117,6 @@ public class PickTableLayout
         return new PickTableLayoutWithoutPredicate(metadata);
     }
 
-    private static final class PickTableLayoutForPredicate
-            implements Rule<FilterNode>
-    {
-        private final Metadata metadata;
-        private final SqlParser parser;
-        private final ExpressionDomainTranslator domainTranslator;
-
-        private PickTableLayoutForPredicate(Metadata metadata, SqlParser parser, ExpressionDomainTranslator domainTranslator)
-        {
-            this.metadata = requireNonNull(metadata, "metadata is null");
-            this.parser = requireNonNull(parser, "parser is null");
-            this.domainTranslator = requireNonNull(domainTranslator, "domainTranslator is null");
-        }
-
-        private static final Capture<TableScanNode> TABLE_SCAN = newCapture();
-
-        private static final Pattern<FilterNode> PATTERN = filter().with(source().matching(
-                tableScan().capturedAs(TABLE_SCAN)));
-
-        @Override
-        public Pattern<FilterNode> getPattern()
-        {
-            return PATTERN;
-        }
-
-        @Override
-        public boolean isEnabled(Session session)
-        {
-            return isNewOptimizerEnabled(session);
-        }
-
-        @Override
-        public Result apply(FilterNode filterNode, Captures captures, Context context)
-        {
-            TableScanNode tableScan = captures.get(TABLE_SCAN);
-
-            PlanNode rewritten = pushPredicateIntoTableScan(
-                    tableScan,
-                    castToExpression(filterNode.getPredicate()),
-                    false,
-                    context.getSession(),
-                    context.getVariableAllocator().getTypes(),
-                    context.getIdAllocator(),
-                    metadata,
-                    parser,
-                    domainTranslator);
-
-            if (arePlansSame(filterNode, tableScan, rewritten)) {
-                return Result.empty();
-            }
-
-            return Result.ofPlanNode(rewritten);
-        }
-
-        private boolean arePlansSame(FilterNode filter, TableScanNode tableScan, PlanNode rewritten)
-        {
-            if (!(rewritten instanceof FilterNode)) {
-                return false;
-            }
-
-            FilterNode rewrittenFilter = (FilterNode) rewritten;
-            if (!Objects.equals(filter.getPredicate(), rewrittenFilter.getPredicate())) {
-                return false;
-            }
-
-            if (!(rewrittenFilter.getSource() instanceof TableScanNode)) {
-                return false;
-            }
-
-            TableScanNode rewrittenTableScan = (TableScanNode) rewrittenFilter.getSource();
-
-            if (!tableScan.getTable().equals(rewrittenTableScan.getTable())) {
-                return false;
-            }
-
-            return Objects.equals(tableScan.getCurrentConstraint(), rewrittenTableScan.getCurrentConstraint())
-                    && Objects.equals(tableScan.getEnforcedConstraint(), rewrittenTableScan.getEnforcedConstraint());
-        }
-    }
-
-    private static final class PickTableLayoutWithoutPredicate
-            implements Rule<TableScanNode>
-    {
-        private final Metadata metadata;
-
-        private PickTableLayoutWithoutPredicate(Metadata metadata)
-        {
-            this.metadata = requireNonNull(metadata, "metadata is null");
-        }
-
-        private static final Pattern<TableScanNode> PATTERN = tableScan();
-
-        @Override
-        public Pattern<TableScanNode> getPattern()
-        {
-            return PATTERN;
-        }
-
-        @Override
-        public boolean isEnabled(Session session)
-        {
-            return isNewOptimizerEnabled(session);
-        }
-
-        @Override
-        public Result apply(TableScanNode tableScanNode, Captures captures, Context context)
-        {
-            TableHandle tableHandle = tableScanNode.getTable();
-            if (tableHandle.getLayout().isPresent()) {
-                return Result.empty();
-            }
-
-            Session session = context.getSession();
-            if (metadata.isPushdownFilterSupported(session, tableHandle)) {
-                PushdownFilterResult pushdownFilterResult = metadata.pushdownFilter(session, tableHandle, TRUE_CONSTANT);
-                if (pushdownFilterResult.getLayout().getPredicate().isNone()) {
-                    return Result.ofPlanNode(new ValuesNode(context.getIdAllocator().getNextId(), tableScanNode.getOutputVariables(), ImmutableList.of()));
-                }
-
-                return Result.ofPlanNode(new TableScanNode(
-                        tableScanNode.getId(),
-                        pushdownFilterResult.getLayout().getNewTableHandle(),
-                        tableScanNode.getOutputVariables(),
-                        tableScanNode.getAssignments(),
-                        pushdownFilterResult.getLayout().getPredicate(),
-                        TupleDomain.all()));
-            }
-
-            TableLayoutResult layout = metadata.getLayout(
-                    session,
-                    tableHandle,
-                    Constraint.alwaysTrue(),
-                    Optional.of(tableScanNode.getOutputVariables().stream()
-                            .map(variable -> tableScanNode.getAssignments().get(variable))
-                            .collect(toImmutableSet())));
-
-            if (layout.getLayout().getPredicate().isNone()) {
-                return Result.ofPlanNode(new ValuesNode(context.getIdAllocator().getNextId(), tableScanNode.getOutputVariables(), ImmutableList.of()));
-            }
-
-            return Result.ofPlanNode(new TableScanNode(
-                    tableScanNode.getId(),
-                    layout.getLayout().getNewTableHandle(),
-                    tableScanNode.getOutputVariables(),
-                    tableScanNode.getAssignments(),
-                    layout.getLayout().getPredicate(),
-                    TupleDomain.all()));
-        }
-    }
-
     public static PlanNode pushPredicateIntoTableScan(
             TableScanNode node,
             Expression predicate,
@@ -396,9 +246,156 @@ public class PickTableLayout
         return tableScan;
     }
 
-    private static String getColumnName(Session session, Metadata metadata, TableHandle tableHandle, ColumnHandle columnHandle)
+	private static String getColumnName(Session session, Metadata metadata, TableHandle tableHandle, ColumnHandle columnHandle)
     {
         return metadata.getColumnMetadata(session, tableHandle, columnHandle).getName();
+    }
+
+	private static final class PickTableLayoutForPredicate
+            implements Rule<FilterNode>
+    {
+        private static final Capture<TableScanNode> TABLE_SCAN = newCapture();
+		private static final Pattern<FilterNode> PATTERN = filter().with(source().matching(
+                tableScan().capturedAs(TABLE_SCAN)));
+		private final Metadata metadata;
+		private final SqlParser parser;
+		private final ExpressionDomainTranslator domainTranslator;
+
+		private PickTableLayoutForPredicate(Metadata metadata, SqlParser parser, ExpressionDomainTranslator domainTranslator)
+        {
+            this.metadata = requireNonNull(metadata, "metadata is null");
+            this.parser = requireNonNull(parser, "parser is null");
+            this.domainTranslator = requireNonNull(domainTranslator, "domainTranslator is null");
+        }
+
+		@Override
+        public Pattern<FilterNode> getPattern()
+        {
+            return PATTERN;
+        }
+
+		@Override
+        public boolean isEnabled(Session session)
+        {
+            return isNewOptimizerEnabled(session);
+        }
+
+		@Override
+        public Result apply(FilterNode filterNode, Captures captures, Context context)
+        {
+            TableScanNode tableScan = captures.get(TABLE_SCAN);
+
+            PlanNode rewritten = pushPredicateIntoTableScan(
+                    tableScan,
+                    castToExpression(filterNode.getPredicate()),
+                    false,
+                    context.getSession(),
+                    context.getVariableAllocator().getTypes(),
+                    context.getIdAllocator(),
+                    metadata,
+                    parser,
+                    domainTranslator);
+
+            if (arePlansSame(filterNode, tableScan, rewritten)) {
+                return Result.empty();
+            }
+
+            return Result.ofPlanNode(rewritten);
+        }
+
+		private boolean arePlansSame(FilterNode filter, TableScanNode tableScan, PlanNode rewritten)
+        {
+            if (!(rewritten instanceof FilterNode)) {
+                return false;
+            }
+
+            FilterNode rewrittenFilter = (FilterNode) rewritten;
+            if (!Objects.equals(filter.getPredicate(), rewrittenFilter.getPredicate())) {
+                return false;
+            }
+
+            if (!(rewrittenFilter.getSource() instanceof TableScanNode)) {
+                return false;
+            }
+
+            TableScanNode rewrittenTableScan = (TableScanNode) rewrittenFilter.getSource();
+
+            if (!tableScan.getTable().equals(rewrittenTableScan.getTable())) {
+                return false;
+            }
+
+            return Objects.equals(tableScan.getCurrentConstraint(), rewrittenTableScan.getCurrentConstraint())
+                    && Objects.equals(tableScan.getEnforcedConstraint(), rewrittenTableScan.getEnforcedConstraint());
+        }
+    }
+
+    private static final class PickTableLayoutWithoutPredicate
+            implements Rule<TableScanNode>
+    {
+        private static final Pattern<TableScanNode> PATTERN = tableScan();
+		private final Metadata metadata;
+
+		private PickTableLayoutWithoutPredicate(Metadata metadata)
+        {
+            this.metadata = requireNonNull(metadata, "metadata is null");
+        }
+
+		@Override
+        public Pattern<TableScanNode> getPattern()
+        {
+            return PATTERN;
+        }
+
+		@Override
+        public boolean isEnabled(Session session)
+        {
+            return isNewOptimizerEnabled(session);
+        }
+
+		@Override
+        public Result apply(TableScanNode tableScanNode, Captures captures, Context context)
+        {
+            TableHandle tableHandle = tableScanNode.getTable();
+            if (tableHandle.getLayout().isPresent()) {
+                return Result.empty();
+            }
+
+            Session session = context.getSession();
+            if (metadata.isPushdownFilterSupported(session, tableHandle)) {
+                PushdownFilterResult pushdownFilterResult = metadata.pushdownFilter(session, tableHandle, TRUE_CONSTANT);
+                if (pushdownFilterResult.getLayout().getPredicate().isNone()) {
+                    return Result.ofPlanNode(new ValuesNode(context.getIdAllocator().getNextId(), tableScanNode.getOutputVariables(), ImmutableList.of()));
+                }
+
+                return Result.ofPlanNode(new TableScanNode(
+                        tableScanNode.getId(),
+                        pushdownFilterResult.getLayout().getNewTableHandle(),
+                        tableScanNode.getOutputVariables(),
+                        tableScanNode.getAssignments(),
+                        pushdownFilterResult.getLayout().getPredicate(),
+                        TupleDomain.all()));
+            }
+
+            TableLayoutResult layout = metadata.getLayout(
+                    session,
+                    tableHandle,
+                    Constraint.alwaysTrue(),
+                    Optional.of(tableScanNode.getOutputVariables().stream()
+                            .map(variable -> tableScanNode.getAssignments().get(variable))
+                            .collect(toImmutableSet())));
+
+            if (layout.getLayout().getPredicate().isNone()) {
+                return Result.ofPlanNode(new ValuesNode(context.getIdAllocator().getNextId(), tableScanNode.getOutputVariables(), ImmutableList.of()));
+            }
+
+            return Result.ofPlanNode(new TableScanNode(
+                    tableScanNode.getId(),
+                    layout.getLayout().getNewTableHandle(),
+                    tableScanNode.getOutputVariables(),
+                    tableScanNode.getAssignments(),
+                    layout.getLayout().getPredicate(),
+                    TupleDomain.all()));
+        }
     }
 
     private static class LayoutConstraintEvaluator

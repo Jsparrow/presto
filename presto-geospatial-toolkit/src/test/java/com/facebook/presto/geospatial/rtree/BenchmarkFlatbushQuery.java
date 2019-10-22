@@ -53,12 +53,20 @@ public class BenchmarkFlatbushQuery
     @OperationsPerInvocation(NUM_PROBE_RECTANGLES)
     public void rtreeQuery(BenchmarkData data, Blackhole blackhole)
     {
-        for (Rectangle query : data.getProbeRectangles()) {
-            data.getRtree().findIntersections(query, blackhole::consume);
-        }
+        data.getProbeRectangles().forEach(query -> data.getRtree().findIntersections(query, blackhole::consume));
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkFlatbushQuery.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         @Param({"8", "16", "32"})
@@ -91,15 +99,5 @@ public class BenchmarkFlatbushQuery
         {
             return new Flatbush<>(rectangles.toArray(new Rectangle[] {}), rtreeDegree);
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkFlatbushQuery.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

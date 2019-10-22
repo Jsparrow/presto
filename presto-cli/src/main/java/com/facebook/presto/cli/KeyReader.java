@@ -20,10 +20,14 @@ import java.io.InputStream;
 
 import static org.fusesource.jansi.internal.CLibrary.STDIN_FILENO;
 import static org.fusesource.jansi.internal.CLibrary.isatty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class KeyReader
 {
-    private KeyReader() {}
+    private static final Logger logger = LoggerFactory.getLogger(KeyReader.class);
+
+	private KeyReader() {}
 
     @SuppressWarnings("resource")
     public static int readKey()
@@ -39,6 +43,7 @@ public final class KeyReader
             }
         }
         catch (IOException e) {
+			logger.error(e.getMessage(), e);
             // ignore errors reading keyboard input
         }
         return -1;
@@ -50,7 +55,8 @@ public final class KeyReader
             return isatty(STDIN_FILENO) == 1;
         }
         catch (Throwable e) {
-            return false;
+            logger.error(e.getMessage(), e);
+			return false;
         }
     }
 }

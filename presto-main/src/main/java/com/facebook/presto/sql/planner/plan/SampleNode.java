@@ -36,12 +36,6 @@ public class SampleNode
     private final double sampleRatio;
     private final Type sampleType;
 
-    public enum Type
-    {
-        BERNOULLI,
-        SYSTEM
-    }
-
     @JsonCreator
     public SampleNode(
             @JsonProperty("id") PlanNodeId id,
@@ -59,45 +53,51 @@ public class SampleNode
         this.sampleRatio = sampleRatio;
     }
 
-    @Override
+	@Override
     public List<PlanNode> getSources()
     {
         return ImmutableList.of(source);
     }
 
-    @JsonProperty
+	@JsonProperty
     public PlanNode getSource()
     {
         return source;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getSampleRatio()
     {
         return sampleRatio;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getSampleType()
     {
         return sampleType;
     }
 
-    @Override
+	@Override
     public List<VariableReferenceExpression> getOutputVariables()
     {
         return source.getOutputVariables();
     }
 
-    @Override
+	@Override
     public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
     {
         return visitor.visitSample(this, context);
     }
 
-    @Override
+	@Override
     public PlanNode replaceChildren(List<PlanNode> newChildren)
     {
         return new SampleNode(getId(), Iterables.getOnlyElement(newChildren), sampleRatio, sampleType);
+    }
+
+	public enum Type
+    {
+        BERNOULLI,
+        SYSTEM
     }
 }

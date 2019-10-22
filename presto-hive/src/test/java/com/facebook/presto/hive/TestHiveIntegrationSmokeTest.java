@@ -144,11 +144,14 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.testng.FileAssert.assertFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHiveIntegrationSmokeTest
         extends AbstractTestIntegrationSmokeTest
 {
-    private final String catalog;
+    private static final Logger logger = LoggerFactory.getLogger(TestHiveIntegrationSmokeTest.class);
+	private final String catalog;
     private final Session bucketedSession;
     private final Session materializeExchangesSession;
     private final TypeTranslator typeTranslator;
@@ -265,20 +268,8 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void createTableWithEveryType()
     {
-        @Language("SQL") String query = "" +
-                "CREATE TABLE test_types_table AS " +
-                "SELECT" +
-                " 'foo' _varchar" +
-                ", cast('bar' as varbinary) _varbinary" +
-                ", cast(1 as bigint) _bigint" +
-                ", 2 _integer" +
-                ", CAST('3.14' AS DOUBLE) _double" +
-                ", true _boolean" +
-                ", DATE '1980-05-07' _date" +
-                ", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp" +
-                ", CAST('3.14' AS DECIMAL(3,2)) _decimal_short" +
-                ", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long" +
-                ", CAST('bar' AS CHAR(10)) _char";
+        @Language("SQL") String query = new StringBuilder().append("").append("CREATE TABLE test_types_table AS ").append("SELECT").append(" 'foo' _varchar").append(", cast('bar' as varbinary) _varbinary").append(", cast(1 as bigint) _bigint").append(", 2 _integer").append(", CAST('3.14' AS DOUBLE) _double")
+				.append(", true _boolean").append(", DATE '1980-05-07' _date").append(", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp").append(", CAST('3.14' AS DECIMAL(3,2)) _decimal_short").append(", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long").append(", CAST('bar' AS CHAR(10)) _char").toString();
 
         assertUpdate(query, 1);
 
@@ -313,37 +304,10 @@ public class TestHiveIntegrationSmokeTest
             return;
         }
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_partitioned_table (" +
-                "  _string VARCHAR" +
-                ",  _varchar VARCHAR(65535)" +
-                ", _char CHAR(10)" +
-                ", _bigint BIGINT" +
-                ", _integer INTEGER" +
-                ", _smallint SMALLINT" +
-                ", _tinyint TINYINT" +
-                ", _real REAL" +
-                ", _double DOUBLE" +
-                ", _boolean BOOLEAN" +
-                ", _decimal_short DECIMAL(3,2)" +
-                ", _decimal_long DECIMAL(30,10)" +
-                ", _partition_string VARCHAR" +
-                ", _partition_varchar VARCHAR(65535)" +
-                ", _partition_char CHAR(10)" +
-                ", _partition_tinyint TINYINT" +
-                ", _partition_smallint SMALLINT" +
-                ", _partition_integer INTEGER" +
-                ", _partition_bigint BIGINT" +
-                ", _partition_boolean BOOLEAN" +
-                ", _partition_decimal_short DECIMAL(3,2)" +
-                ", _partition_decimal_long DECIMAL(30,10)" +
-                ", _partition_date DATE" +
-                ", _partition_timestamp TIMESTAMP" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ '_partition_string', '_partition_varchar', '_partition_char', '_partition_tinyint', '_partition_smallint', '_partition_integer', '_partition_bigint', '_partition_boolean', '_partition_decimal_short', '_partition_decimal_long', '_partition_date', '_partition_timestamp']" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_partitioned_table (").append("  _string VARCHAR").append(",  _varchar VARCHAR(65535)").append(", _char CHAR(10)").append(", _bigint BIGINT").append(", _integer INTEGER").append(", _smallint SMALLINT")
+				.append(", _tinyint TINYINT").append(", _real REAL").append(", _double DOUBLE").append(", _boolean BOOLEAN").append(", _decimal_short DECIMAL(3,2)").append(", _decimal_long DECIMAL(30,10)").append(", _partition_string VARCHAR").append(", _partition_varchar VARCHAR(65535)").append(", _partition_char CHAR(10)")
+				.append(", _partition_tinyint TINYINT").append(", _partition_smallint SMALLINT").append(", _partition_integer INTEGER").append(", _partition_bigint BIGINT").append(", _partition_boolean BOOLEAN").append(", _partition_decimal_short DECIMAL(3,2)").append(", _partition_decimal_long DECIMAL(30,10)").append(", _partition_date DATE").append(", _partition_timestamp TIMESTAMP")
+				.append(") ").append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ '_partition_string', '_partition_varchar', '_partition_char', '_partition_tinyint', '_partition_smallint', '_partition_integer', '_partition_bigint', '_partition_boolean', '_partition_decimal_short', '_partition_decimal_long', '_partition_date', '_partition_timestamp']").append(") ").toString();
 
         if (storageFormat == HiveStorageFormat.AVRO) {
             createTable = createTable.replace(" _smallint SMALLINT,", " _smallint INTEGER,");
@@ -369,10 +333,10 @@ public class TestHiveIntegrationSmokeTest
                 "_partition_date",
                 "_partition_timestamp");
         assertEquals(tableMetadata.getMetadata().getProperties().get(PARTITIONED_BY_PROPERTY), partitionedBy);
-        for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
+        tableMetadata.getColumns().forEach(columnMetadata -> {
             boolean partitionKey = partitionedBy.contains(columnMetadata.getName());
             assertEquals(columnMetadata.getExtraInfo(), columnExtraInfo(partitionKey));
-        }
+        });
 
         assertColumnType(tableMetadata, "_string", createUnboundedVarcharType());
         assertColumnType(tableMetadata, "_varchar", createVarcharType(65535));
@@ -383,32 +347,10 @@ public class TestHiveIntegrationSmokeTest
         MaterializedResult result = computeActual("SELECT * from test_partitioned_table");
         assertEquals(result.getRowCount(), 0);
 
-        @Language("SQL") String select = "" +
-                "SELECT" +
-                " 'foo' _string" +
-                ", 'bar' _varchar" +
-                ", CAST('boo' AS CHAR(10)) _char" +
-                ", CAST(1 AS BIGINT) _bigint" +
-                ", 2 _integer" +
-                ", CAST (3 AS SMALLINT) _smallint" +
-                ", CAST (4 AS TINYINT) _tinyint" +
-                ", CAST('123.45' AS REAL) _real" +
-                ", CAST('3.14' AS DOUBLE) _double" +
-                ", true _boolean" +
-                ", CAST('3.14' AS DECIMAL(3,2)) _decimal_short" +
-                ", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long" +
-                ", 'foo' _partition_string" +
-                ", 'bar' _partition_varchar" +
-                ", CAST('boo' AS CHAR(10)) _partition_char" +
-                ", CAST(1 AS TINYINT) _partition_tinyint" +
-                ", CAST(1 AS SMALLINT) _partition_smallint" +
-                ", 1 _partition_integer" +
-                ", CAST (1 AS BIGINT) _partition_bigint" +
-                ", true _partition_boolean" +
-                ", CAST('3.14' AS DECIMAL(3,2)) _partition_decimal_short" +
-                ", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _partition_decimal_long" +
-                ", CAST('2017-05-01' AS DATE) _partition_date" +
-                ", CAST('2017-05-01 10:12:34' AS TIMESTAMP) _partition_timestamp";
+        @Language("SQL") String select = new StringBuilder().append("").append("SELECT").append(" 'foo' _string").append(", 'bar' _varchar").append(", CAST('boo' AS CHAR(10)) _char").append(", CAST(1 AS BIGINT) _bigint").append(", 2 _integer").append(", CAST (3 AS SMALLINT) _smallint")
+				.append(", CAST (4 AS TINYINT) _tinyint").append(", CAST('123.45' AS REAL) _real").append(", CAST('3.14' AS DOUBLE) _double").append(", true _boolean").append(", CAST('3.14' AS DECIMAL(3,2)) _decimal_short").append(", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long").append(", 'foo' _partition_string").append(", 'bar' _partition_varchar").append(", CAST('boo' AS CHAR(10)) _partition_char")
+				.append(", CAST(1 AS TINYINT) _partition_tinyint").append(", CAST(1 AS SMALLINT) _partition_smallint").append(", 1 _partition_integer").append(", CAST (1 AS BIGINT) _partition_bigint").append(", true _partition_boolean").append(", CAST('3.14' AS DECIMAL(3,2)) _partition_decimal_short").append(", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _partition_decimal_long").append(", CAST('2017-05-01' AS DATE) _partition_date").append(", CAST('2017-05-01 10:12:34' AS TIMESTAMP) _partition_timestamp")
+				.toString();
 
         if (storageFormat == HiveStorageFormat.AVRO) {
             select = select.replace(" CAST (3 AS SMALLINT) _smallint,", " 3 _smallint,");
@@ -418,19 +360,8 @@ public class TestHiveIntegrationSmokeTest
         assertUpdate(session, "INSERT INTO test_partitioned_table " + select, 1);
         assertQuery(session, "SELECT * from test_partitioned_table", select);
         assertQuery(session,
-                "SELECT * from test_partitioned_table WHERE" +
-                        " 'foo' = _partition_string" +
-                        " AND 'bar' = _partition_varchar" +
-                        " AND CAST('boo' AS CHAR(10)) = _partition_char" +
-                        " AND CAST(1 AS TINYINT) = _partition_tinyint" +
-                        " AND CAST(1 AS SMALLINT) = _partition_smallint" +
-                        " AND 1 = _partition_integer" +
-                        " AND CAST(1 AS BIGINT) = _partition_bigint" +
-                        " AND true = _partition_boolean" +
-                        " AND CAST('3.14' AS DECIMAL(3,2)) = _partition_decimal_short" +
-                        " AND CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) = _partition_decimal_long" +
-                        " AND CAST('2017-05-01' AS DATE) = _partition_date" +
-                        " AND CAST('2017-05-01 10:12:34' AS TIMESTAMP) = _partition_timestamp",
+                new StringBuilder().append("SELECT * from test_partitioned_table WHERE").append(" 'foo' = _partition_string").append(" AND 'bar' = _partition_varchar").append(" AND CAST('boo' AS CHAR(10)) = _partition_char").append(" AND CAST(1 AS TINYINT) = _partition_tinyint").append(" AND CAST(1 AS SMALLINT) = _partition_smallint").append(" AND 1 = _partition_integer")
+						.append(" AND CAST(1 AS BIGINT) = _partition_bigint").append(" AND true = _partition_boolean").append(" AND CAST('3.14' AS DECIMAL(3,2)) = _partition_decimal_short").append(" AND CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) = _partition_decimal_long").append(" AND CAST('2017-05-01' AS DATE) = _partition_date").append(" AND CAST('2017-05-01 10:12:34' AS TIMESTAMP) = _partition_timestamp").toString(),
                 select);
 
         assertUpdate(session, "DROP TABLE test_partitioned_table");
@@ -449,11 +380,7 @@ public class TestHiveIntegrationSmokeTest
     private void createTableLike(String likeSuffix, boolean hasPartition)
     {
         // Create a non-partitioned table
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_table_original (" +
-                "  tinyint_col tinyint " +
-                ", smallint_col smallint" +
-                ")";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_table_original (").append("  tinyint_col tinyint ").append(", smallint_col smallint").append(")").toString();
         assertUpdate(createTable);
 
         // Verify the table is correctly created
@@ -462,16 +389,8 @@ public class TestHiveIntegrationSmokeTest
         assertColumnType(tableMetadata, "smallint_col", SMALLINT);
 
         // Create a partitioned table
-        @Language("SQL") String createPartitionedTable = "" +
-                "CREATE TABLE test_partitioned_table_original (" +
-                "  string_col VARCHAR" +
-                ", decimal_long_col DECIMAL(30,10)" +
-                ", partition_bigint BIGINT" +
-                ", partition_decimal_long DECIMAL(30,10)" +
-                ") " +
-                "WITH (" +
-                "partitioned_by = ARRAY['partition_bigint', 'partition_decimal_long']" +
-                ")";
+        @Language("SQL") String createPartitionedTable = new StringBuilder().append("").append("CREATE TABLE test_partitioned_table_original (").append("  string_col VARCHAR").append(", decimal_long_col DECIMAL(30,10)").append(", partition_bigint BIGINT").append(", partition_decimal_long DECIMAL(30,10)").append(") ").append("WITH (")
+				.append("partitioned_by = ARRAY['partition_bigint', 'partition_decimal_long']").append(")").toString();
         assertUpdate(createPartitionedTable);
 
         // Verify the table is correctly created
@@ -487,10 +406,7 @@ public class TestHiveIntegrationSmokeTest
         assertColumnType(tableMetadata, "partition_decimal_long", createDecimalType(30, 10));
 
         // Create a table using only one LIKE
-        @Language("SQL") String createTableSingleLike = "" +
-                "CREATE TABLE test_partitioned_table_single_like (" +
-                "LIKE test_partitioned_table_original " + likeSuffix +
-                ")";
+        @Language("SQL") String createTableSingleLike = new StringBuilder().append("").append("CREATE TABLE test_partitioned_table_single_like (").append("LIKE test_partitioned_table_original ").append(likeSuffix).append(")").toString();
         assertUpdate(createTableSingleLike);
 
         tableMetadata = getTableMetadata(catalog, TPCH_SCHEMA, "test_partitioned_table_single_like");
@@ -503,12 +419,7 @@ public class TestHiveIntegrationSmokeTest
         assertColumnType(tableMetadata, "partition_bigint", BIGINT);
         assertColumnType(tableMetadata, "partition_decimal_long", createDecimalType(30, 10));
 
-        @Language("SQL") String createTableLikeExtra = "" +
-                "CREATE TABLE test_partitioned_table_like_extra (" +
-                "  bigint_col BIGINT" +
-                ", double_col DOUBLE" +
-                ", LIKE test_partitioned_table_single_like " + likeSuffix +
-                ")";
+        @Language("SQL") String createTableLikeExtra = new StringBuilder().append("").append("CREATE TABLE test_partitioned_table_like_extra (").append("  bigint_col BIGINT").append(", double_col DOUBLE").append(", LIKE test_partitioned_table_single_like ").append(likeSuffix).append(")").toString();
         assertUpdate(createTableLikeExtra);
 
         tableMetadata = getTableMetadata(catalog, TPCH_SCHEMA, "test_partitioned_table_like_extra");
@@ -523,11 +434,7 @@ public class TestHiveIntegrationSmokeTest
         assertColumnType(tableMetadata, "partition_bigint", BIGINT);
         assertColumnType(tableMetadata, "partition_decimal_long", createDecimalType(30, 10));
 
-        @Language("SQL") String createTableDoubleLike = "" +
-                "CREATE TABLE test_partitioned_table_double_like (" +
-                "  LIKE test_table_original " +
-                ", LIKE test_partitioned_table_like_extra " + likeSuffix +
-                ")";
+        @Language("SQL") String createTableDoubleLike = new StringBuilder().append("").append("CREATE TABLE test_partitioned_table_double_like (").append("  LIKE test_table_original ").append(", LIKE test_partitioned_table_like_extra ").append(likeSuffix).append(")").toString();
         assertUpdate(createTableDoubleLike);
 
         tableMetadata = getTableMetadata(catalog, TPCH_SCHEMA, "test_partitioned_table_double_like");
@@ -561,18 +468,8 @@ public class TestHiveIntegrationSmokeTest
             return;
         }
 
-        @Language("SQL") String select = "SELECT" +
-                " 'foo' _varchar" +
-                ", CAST('bar' AS CHAR(10)) _char" +
-                ", CAST (1 AS BIGINT) _bigint" +
-                ", 2 _integer" +
-                ", CAST (3 AS SMALLINT) _smallint" +
-                ", CAST (4 AS TINYINT) _tinyint" +
-                ", CAST ('123.45' as REAL) _real" +
-                ", CAST('3.14' AS DOUBLE) _double" +
-                ", true _boolean" +
-                ", CAST('3.14' AS DECIMAL(3,2)) _decimal_short" +
-                ", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long";
+        @Language("SQL") String select = new StringBuilder().append("SELECT").append(" 'foo' _varchar").append(", CAST('bar' AS CHAR(10)) _char").append(", CAST (1 AS BIGINT) _bigint").append(", 2 _integer").append(", CAST (3 AS SMALLINT) _smallint").append(", CAST (4 AS TINYINT) _tinyint").append(", CAST ('123.45' as REAL) _real")
+				.append(", CAST('3.14' AS DOUBLE) _double").append(", true _boolean").append(", CAST('3.14' AS DECIMAL(3,2)) _decimal_short").append(", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long").toString();
 
         if (storageFormat == HiveStorageFormat.AVRO) {
             select = select.replace(" CAST (3 AS SMALLINT) _smallint,", " 3 _smallint,");
@@ -607,15 +504,8 @@ public class TestHiveIntegrationSmokeTest
 
     private void testCreatePartitionedTableAs(Session session, HiveStorageFormat storageFormat)
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_create_partitioned_table_as " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'SHIP_PRIORITY', 'ORDER_STATUS' ]" +
-                ") " +
-                "AS " +
-                "SELECT orderkey AS order_key, shippriority AS ship_priority, orderstatus AS order_status " +
-                "FROM tpch.tiny.orders";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_create_partitioned_table_as ").append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'SHIP_PRIORITY', 'ORDER_STATUS' ]").append(") ")
+				.append("AS ").append("SELECT orderkey AS order_key, shippriority AS ship_priority, orderstatus AS order_status ").append("FROM tpch.tiny.orders").toString();
 
         assertUpdate(session, createTable, "SELECT count(*) from orders");
 
@@ -636,58 +526,37 @@ public class TestHiveIntegrationSmokeTest
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Partition keys must be the last columns in the table and in the same order as the table properties.*")
     public void testCreatePartitionedTableInvalidColumnOrdering()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_invalid_column_ordering\n" +
-                "(grape bigint, apple varchar, orange bigint, pear varchar)\n" +
-                "WITH (partitioned_by = ARRAY['apple'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_invalid_column_ordering\n").append("(grape bigint, apple varchar, orange bigint, pear varchar)\n").append("WITH (partitioned_by = ARRAY['apple'])").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Partition keys must be the last columns in the table and in the same order as the table properties.*")
     public void testCreatePartitionedTableAsInvalidColumnOrdering()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_as_invalid_column_ordering " +
-                "WITH (partitioned_by = ARRAY['SHIP_PRIORITY', 'ORDER_STATUS']) " +
-                "AS " +
-                "SELECT shippriority AS ship_priority, orderkey AS order_key, orderstatus AS order_status " +
-                "FROM tpch.tiny.orders");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_as_invalid_column_ordering ").append("WITH (partitioned_by = ARRAY['SHIP_PRIORITY', 'ORDER_STATUS']) ").append("AS ").append("SELECT shippriority AS ship_priority, orderkey AS order_key, orderstatus AS order_status ").append("FROM tpch.tiny.orders").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Table contains only partition columns")
     public void testCreateTableOnlyPartitionColumns()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_only_partition_columns\n" +
-                "(grape bigint, apple varchar, orange bigint, pear varchar)\n" +
-                "WITH (partitioned_by = ARRAY['grape', 'apple', 'orange', 'pear'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_only_partition_columns\n").append("(grape bigint, apple varchar, orange bigint, pear varchar)\n").append("WITH (partitioned_by = ARRAY['grape', 'apple', 'orange', 'pear'])").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Partition columns .* not present in schema")
     public void testCreateTableNonExistentPartitionColumns()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_nonexistent_partition_columns\n" +
-                "(grape bigint, apple varchar, orange bigint, pear varchar)\n" +
-                "WITH (partitioned_by = ARRAY['dragonfruit'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_nonexistent_partition_columns\n").append("(grape bigint, apple varchar, orange bigint, pear varchar)\n").append("WITH (partitioned_by = ARRAY['dragonfruit'])").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Unsupported type .* for partition: .*")
     public void testCreateTableUnsupportedPartitionType()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_unsupported_partition_type " +
-                "(foo bigint, bar ARRAY(varchar)) " +
-                "WITH (partitioned_by = ARRAY['bar'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_unsupported_partition_type ").append("(foo bigint, bar ARRAY(varchar)) ").append("WITH (partitioned_by = ARRAY['bar'])").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Unsupported type .* for partition: a")
     public void testCreateTableUnsupportedPartitionTypeAs()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_create_table_unsupported_partition_type_as " +
-                "WITH (partitioned_by = ARRAY['a']) " +
-                "AS " +
-                "SELECT 123 x, ARRAY ['foo'] a");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_create_table_unsupported_partition_type_as ").append("WITH (partitioned_by = ARRAY['a']) ").append("AS ").append("SELECT 123 x, ARRAY ['foo'] a").toString());
     }
 
     @Test(expectedExceptions = RuntimeException.class, expectedExceptionsMessageRegExp = "Unsupported Hive type: varchar\\(65536\\)\\. Supported VARCHAR types: VARCHAR\\(<=65535\\), VARCHAR\\.")
@@ -707,22 +576,9 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_create_partitioned_bucketed_table_as_few_rows";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'partition_key' ], " +
-                "bucketed_by = ARRAY[ 'bucket_key' ], " +
-                "bucket_count = 11 " +
-                ") " +
-                "AS " +
-                "SELECT * " +
-                "FROM (" +
-                "VALUES " +
-                "  (VARCHAR 'a', VARCHAR 'b', VARCHAR 'c'), " +
-                "  ('aa', 'bb', 'cc'), " +
-                "  ('aaa', 'bbb', 'ccc')" +
-                ") t(bucket_key, col, partition_key)";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("WITH (").append("format = '").append(storageFormat)
+				.append("', ").append("partitioned_by = ARRAY[ 'partition_key' ], ").append("bucketed_by = ARRAY[ 'bucket_key' ], ").append("bucket_count = 11 ").append(") ").append("AS ").append("SELECT * ").append("FROM (").append("VALUES ")
+				.append("  (VARCHAR 'a', VARCHAR 'b', VARCHAR 'c'), ").append("  ('aa', 'bb', 'cc'), ").append("  ('aaa', 'bbb', 'ccc')").append(") t(bucket_key, col, partition_key)").toString();
 
         assertUpdate(
                 // make sure that we will get one file per bucket regardless of writer count configured
@@ -732,7 +588,7 @@ public class TestHiveIntegrationSmokeTest
 
         verifyPartitionedBucketedTableAsFewRows(storageFormat, tableName);
 
-        assertThatThrownBy(() -> assertUpdate(session, "INSERT INTO " + tableName + " VALUES ('a0', 'b0', 'c')", 1))
+        assertThatThrownBy(() -> assertUpdate(session, new StringBuilder().append("INSERT INTO ").append(tableName).append(" VALUES ('a0', 'b0', 'c')").toString(), 1))
                 .hasMessage(getExpectedErrorMessageForInsertExistingBucketedTable(
                         getInsertExistingPartitionsBehavior(getConnectorSession(session)),
                         "partition_key=c"));
@@ -751,17 +607,8 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_create_partitioned_bucketed_table_as";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'orderstatus' ], " +
-                "bucketed_by = ARRAY[ 'custkey', 'custkey2' ], " +
-                "bucket_count = 11 " +
-                ") " +
-                "AS " +
-                "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                "FROM tpch.tiny.orders";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("WITH (").append("format = '").append(storageFormat)
+				.append("', ").append("partitioned_by = ARRAY[ 'orderstatus' ], ").append("bucketed_by = ARRAY[ 'custkey', 'custkey2' ], ").append("bucket_count = 11 ").append(") ").append("AS ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders").toString();
 
         assertUpdate(
                 // make sure that we will get one file per bucket regardless of writer count configured
@@ -785,22 +632,9 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_create_partitioned_bucketed_table_as_with_union_all";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'orderstatus' ], " +
-                "bucketed_by = ARRAY[ 'custkey', 'custkey2' ], " +
-                "bucket_count = 11 " +
-                ") " +
-                "AS " +
-                "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                "FROM tpch.tiny.orders " +
-                "WHERE length(comment) % 2 = 0 " +
-                "UNION ALL " +
-                "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                "FROM tpch.tiny.orders " +
-                "WHERE length(comment) % 2 = 1";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("WITH (").append("format = '").append(storageFormat)
+				.append("', ").append("partitioned_by = ARRAY[ 'orderstatus' ], ").append("bucketed_by = ARRAY[ 'custkey', 'custkey2' ], ").append("bucket_count = 11 ").append(") ").append("AS ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE length(comment) % 2 = 0 ")
+				.append("UNION ALL ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE length(comment) % 2 = 1").toString();
 
         assertUpdate(
                 // make sure that we will get one file per bucket regardless of writer count configured
@@ -830,11 +664,11 @@ public class TestHiveIntegrationSmokeTest
 
         for (int i = 1; i <= 30; i++) {
             assertQuery(
-                    format("SELECT * from " + tableName + " where custkey = %d and custkey2 = %d", i, i),
+                    format(new StringBuilder().append("SELECT * from ").append(tableName).append(" where custkey = %d and custkey2 = %d").toString(), i, i),
                     format("SELECT custkey, custkey, comment, orderstatus FROM orders where custkey = %d", i));
         }
 
-        assertThatThrownBy(() -> assertUpdate("INSERT INTO " + tableName + " VALUES (1, 1, 'comment', 'O')", 1))
+        assertThatThrownBy(() -> assertUpdate(new StringBuilder().append("INSERT INTO ").append(tableName).append(" VALUES (1, 1, 'comment', 'O')").toString(), 1))
                 .hasMessage(getExpectedErrorMessageForInsertExistingBucketedTable(
                         getInsertExistingPartitionsBehavior(getConnectorSession(getSession())),
                         "orderstatus=O"));
@@ -851,17 +685,9 @@ public class TestHiveIntegrationSmokeTest
         String tableName = "test_create_invalid_bucketed_table";
 
         try {
-            computeActual("" +
-                    "CREATE TABLE " + tableName + " (" +
-                    "  a BIGINT," +
-                    "  b DOUBLE," +
-                    "  p VARCHAR" +
-                    ") WITH (" +
-                    "format = '" + storageFormat + "', " +
-                    "partitioned_by = ARRAY[ 'p' ], " +
-                    "bucketed_by = ARRAY[ 'a', 'c' ], " +
-                    "bucket_count = 11 " +
-                    ")");
+            computeActual(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  a BIGINT,").append("  b DOUBLE,").append("  p VARCHAR")
+					.append(") WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'p' ], ").append("bucketed_by = ARRAY[ 'a', 'c' ], ").append("bucket_count = 11 ").append(")")
+					.toString());
             fail();
         }
         catch (Exception e) {
@@ -869,17 +695,8 @@ public class TestHiveIntegrationSmokeTest
         }
 
         try {
-            computeActual("" +
-                    "CREATE TABLE " + tableName + " " +
-                    "WITH (" +
-                    "format = '" + storageFormat + "', " +
-                    "partitioned_by = ARRAY[ 'orderstatus' ], " +
-                    "bucketed_by = ARRAY[ 'custkey', 'custkey3' ], " +
-                    "bucket_count = 11 " +
-                    ") " +
-                    "AS " +
-                    "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                    "FROM tpch.tiny.orders");
+            computeActual(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("WITH (").append("format = '").append(storageFormat)
+					.append("', ").append("partitioned_by = ARRAY[ 'orderstatus' ], ").append("bucketed_by = ARRAY[ 'custkey', 'custkey3' ], ").append("bucket_count = 11 ").append(") ").append("AS ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders").toString());
             fail();
         }
         catch (Exception e) {
@@ -908,25 +725,14 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_insert_partitioned_bucketed_table_few_rows";
 
-        assertUpdate(session, "" +
-                "CREATE TABLE " + tableName + " (" +
-                "  bucket_key varchar," +
-                "  col varchar," +
-                "  partition_key varchar)" +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'partition_key' ], " +
-                "bucketed_by = ARRAY[ 'bucket_key' ], " +
-                "bucket_count = 11)");
+        assertUpdate(session, new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  bucket_key varchar,").append("  col varchar,").append("  partition_key varchar)").append("WITH (")
+				.append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'partition_key' ], ").append("bucketed_by = ARRAY[ 'bucket_key' ], ").append("bucket_count = 11)").toString());
 
         assertUpdate(
                 // make sure that we will get one file per bucket regardless of writer count configured
                 getParallelWriteSession(),
-                "INSERT INTO " + tableName + " " +
-                        "VALUES " +
-                        "  (VARCHAR 'a', VARCHAR 'b', VARCHAR 'c'), " +
-                        "  ('aa', 'bb', 'cc'), " +
-                        "  ('aaa', 'bbb', 'ccc')",
+                new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("VALUES ").append("  (VARCHAR 'a', VARCHAR 'b', VARCHAR 'c'), ").append("  ('aa', 'bb', 'cc'), ").append("  ('aaa', 'bbb', 'ccc')")
+						.toString(),
                 3);
 
         verifyPartitionedBucketedTableAsFewRows(storageFormat, tableName);
@@ -969,15 +775,8 @@ public class TestHiveIntegrationSmokeTest
                 .setCatalogSessionProperty(catalog, "orc_optimized_writer_enabled", "true")
                 .build();
 
-        assertUpdate(session, "" +
-                "CREATE TABLE " + tableName + " (" +
-                "  col1 bigint," +
-                "  col2 map(bigint, bigint)," +
-                "  partition_key varchar)" +
-                "WITH (" +
-                "  format = 'ORC', " +
-                "  partitioned_by = ARRAY[ 'partition_key' ] " +
-                ")");
+        assertUpdate(session, new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  col1 bigint,").append("  col2 map(bigint, bigint),").append("  partition_key varchar)").append("WITH (")
+				.append("  format = 'ORC', ").append("  partitioned_by = ARRAY[ 'partition_key' ] ").append(")").toString());
 
         assertUpdate(session, format("INSERT INTO %s (col1) VALUES (1), (2), (3)", tableName), 3);
 
@@ -988,14 +787,8 @@ public class TestHiveIntegrationSmokeTest
     public void testCreateEmptyNonBucketedPartition()
     {
         String tableName = "test_insert_empty_partitioned_unbucketed_table";
-        assertUpdate("" +
-                "CREATE TABLE " + tableName + " (" +
-                "  dummy_col bigint," +
-                "  part varchar)" +
-                "WITH (" +
-                "  format = 'ORC', " +
-                "  partitioned_by = ARRAY[ 'part' ] " +
-                ")");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  dummy_col bigint,").append("  part varchar)").append("WITH (").append("  format = 'ORC', ")
+				.append("  partitioned_by = ARRAY[ 'part' ] ").append(")").toString());
         assertQuery(format("SELECT count(*) FROM \"%s$partitions\"", tableName), "SELECT 0");
 
         // create an empty partition
@@ -1008,16 +801,8 @@ public class TestHiveIntegrationSmokeTest
     public void testCreateEmptyUnpartitionedBucketedTable()
     {
         String tableName = "test_create_empty_bucketed_table";
-        assertUpdate("" +
-                "CREATE TABLE " + tableName + " " +
-                "WITH (" +
-                "   bucketed_by = ARRAY[ 'custkey' ], " +
-                "   bucket_count = 11 " +
-                ") " +
-                "AS " +
-                "SELECT custkey, comment " +
-                "FROM customer " +
-                "WHERE custkey < 0", 0);
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("WITH (").append("   bucketed_by = ARRAY[ 'custkey' ], ").append("   bucket_count = 11 ").append(") ")
+				.append("AS ").append("SELECT custkey, comment ").append("FROM customer ").append("WHERE custkey < 0").toString(), 0);
         assertQuery("SELECT count(*) FROM " + tableName, "SELECT 0");
         assertUpdate("DROP TABLE " + tableName);
     }
@@ -1025,9 +810,7 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testCreateEmptyBucketedPartition()
     {
-        for (TestingHiveStorageFormat storageFormat : getAllTestingHiveStorageFormat()) {
-            testCreateEmptyBucketedPartition(storageFormat.getFormat());
-        }
+        getAllTestingHiveStorageFormat().forEach(storageFormat -> testCreateEmptyBucketedPartition(storageFormat.getFormat()));
     }
 
     public void testCreateEmptyBucketedPartition(HiveStorageFormat storageFormat)
@@ -1062,19 +845,10 @@ public class TestHiveIntegrationSmokeTest
         createPartitionedBucketedTable(tableName, storageFormat);
 
         List<String> orderStatusList = ImmutableList.of("F", "O", "P");
-        for (int i = 0; i < orderStatusList.size(); i++) {
-            String orderStatus = orderStatusList.get(i);
-            assertUpdate(
-                    // make sure that we will get one file per bucket regardless of writer count configured
-                    getParallelWriteSession(),
-                    format(
-                            "INSERT INTO " + tableName + " " +
-                                    "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderstatus = '%s'",
-                            orderStatus),
-                    format("SELECT count(*) from orders where orderstatus = '%s'", orderStatus));
-        }
+        // make sure that we will get one file per bucket regardless of writer count configured
+		orderStatusList.forEach(orderStatus -> assertUpdate(getParallelWriteSession(),
+				format(new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderstatus = '%s'").toString(), orderStatus),
+				format("SELECT count(*) from orders where orderstatus = '%s'", orderStatus)));
 
         verifyPartitionedBucketedTable(storageFormat, tableName);
 
@@ -1084,17 +858,8 @@ public class TestHiveIntegrationSmokeTest
 
     private void createPartitionedBucketedTable(String tableName, HiveStorageFormat storageFormat)
     {
-        assertUpdate("" +
-                "CREATE TABLE " + tableName + " (" +
-                "  custkey bigint," +
-                "  custkey2 bigint," +
-                "  comment varchar," +
-                "  orderstatus varchar)" +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'orderstatus' ], " +
-                "bucketed_by = ARRAY[ 'custkey', 'custkey2' ], " +
-                "bucket_count = 11)");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  custkey bigint,").append("  custkey2 bigint,").append("  comment varchar,").append("  orderstatus varchar)")
+				.append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'orderstatus' ], ").append("bucketed_by = ARRAY[ 'custkey', 'custkey2' ], ").append("bucket_count = 11)").toString());
     }
 
     @Test
@@ -1107,36 +872,16 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_insert_partitioned_bucketed_table_with_union_all";
 
-        assertUpdate("" +
-                "CREATE TABLE " + tableName + " (" +
-                "  custkey bigint," +
-                "  custkey2 bigint," +
-                "  comment varchar," +
-                "  orderstatus varchar)" +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'orderstatus' ], " +
-                "bucketed_by = ARRAY[ 'custkey', 'custkey2' ], " +
-                "bucket_count = 11)");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" (").append("  custkey bigint,").append("  custkey2 bigint,").append("  comment varchar,").append("  orderstatus varchar)")
+				.append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'orderstatus' ], ").append("bucketed_by = ARRAY[ 'custkey', 'custkey2' ], ").append("bucket_count = 11)").toString());
 
         List<String> orderStatusList = ImmutableList.of("F", "O", "P");
-        for (int i = 0; i < orderStatusList.size(); i++) {
-            String orderStatus = orderStatusList.get(i);
-            assertUpdate(
-                    // make sure that we will get one file per bucket regardless of writer count configured
-                    getParallelWriteSession(),
-                    format(
-                            "INSERT INTO " + tableName + " " +
-                                    "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderstatus = '%s' and length(comment) %% 2 = 0 " +
-                                    "UNION ALL " +
-                                    "SELECT custkey, custkey AS custkey2, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderstatus = '%s' and length(comment) %% 2 = 1",
-                            orderStatus, orderStatus),
-                    format("SELECT count(*) from orders where orderstatus = '%s'", orderStatus));
-        }
+        // make sure that we will get one file per bucket regardless of writer count configured
+		orderStatusList.forEach(orderStatus -> assertUpdate(getParallelWriteSession(),
+				format(new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderstatus = '%s' and length(comment) %% 2 = 0 ").append("UNION ALL ")
+						.append("SELECT custkey, custkey AS custkey2, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderstatus = '%s' and length(comment) %% 2 = 1").toString(),
+						orderStatus, orderStatus),
+				format("SELECT count(*) from orders where orderstatus = '%s'", orderStatus)));
 
         verifyPartitionedBucketedTable(storageFormat, tableName);
 
@@ -1155,23 +900,9 @@ public class TestHiveIntegrationSmokeTest
         if (!insertOperationsSupported(storageFormat)) {
             return;
         }
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_insert_format_table " +
-                "(" +
-                "  _string VARCHAR," +
-                "  _varchar VARCHAR(65535)," +
-                "  _char CHAR(10)," +
-                "  _bigint BIGINT," +
-                "  _integer INTEGER," +
-                "  _smallint SMALLINT," +
-                "  _tinyint TINYINT," +
-                "  _real REAL," +
-                "  _double DOUBLE," +
-                "  _boolean BOOLEAN," +
-                "  _decimal_short DECIMAL(3,2)," +
-                "  _decimal_long DECIMAL(30,10)" +
-                ") " +
-                "WITH (format = '" + storageFormat + "') ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_insert_format_table ").append("(").append("  _string VARCHAR,").append("  _varchar VARCHAR(65535),").append("  _char CHAR(10),").append("  _bigint BIGINT,").append("  _integer INTEGER,")
+				.append("  _smallint SMALLINT,").append("  _tinyint TINYINT,").append("  _real REAL,").append("  _double DOUBLE,").append("  _boolean BOOLEAN,").append("  _decimal_short DECIMAL(3,2),").append("  _decimal_long DECIMAL(30,10)").append(") ").append("WITH (format = '")
+				.append(storageFormat).append("') ").toString();
 
         if (storageFormat == HiveStorageFormat.AVRO) {
             createTable = createTable.replace(" _smallint SMALLINT,", " _smallint INTEGER,");
@@ -1187,19 +918,8 @@ public class TestHiveIntegrationSmokeTest
         assertColumnType(tableMetadata, "_varchar", createVarcharType(65535));
         assertColumnType(tableMetadata, "_char", createCharType(10));
 
-        @Language("SQL") String select = "SELECT" +
-                " 'foo' _string" +
-                ", 'bar' _varchar" +
-                ", CAST('boo' AS CHAR(10)) _char" +
-                ", 1 _bigint" +
-                ", CAST(42 AS INTEGER) _integer" +
-                ", CAST(43 AS SMALLINT) _smallint" +
-                ", CAST(44 AS TINYINT) _tinyint" +
-                ", CAST('123.45' AS REAL) _real" +
-                ", CAST('3.14' AS DOUBLE) _double" +
-                ", true _boolean" +
-                ", CAST('3.14' AS DECIMAL(3,2)) _decimal_short" +
-                ", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long";
+        @Language("SQL") String select = new StringBuilder().append("SELECT").append(" 'foo' _string").append(", 'bar' _varchar").append(", CAST('boo' AS CHAR(10)) _char").append(", 1 _bigint").append(", CAST(42 AS INTEGER) _integer").append(", CAST(43 AS SMALLINT) _smallint").append(", CAST(44 AS TINYINT) _tinyint")
+				.append(", CAST('123.45' AS REAL) _real").append(", CAST('3.14' AS DOUBLE) _double").append(", true _boolean").append(", CAST('3.14' AS DECIMAL(3,2)) _decimal_short").append(", CAST('12345678901234567890.0123456789' AS DECIMAL(30,10)) _decimal_long").toString();
 
         if (storageFormat == HiveStorageFormat.AVRO) {
             select = select.replace(" CAST (43 AS SMALLINT) _smallint,", " 3 _smallint,");
@@ -1237,17 +957,8 @@ public class TestHiveIntegrationSmokeTest
 
     private void testInsertPartitionedTable(Session session, HiveStorageFormat storageFormat)
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_insert_partitioned_table " +
-                "(" +
-                "  ORDER_KEY BIGINT," +
-                "  SHIP_PRIORITY INTEGER," +
-                "  ORDER_STATUS VARCHAR" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'SHIP_PRIORITY', 'ORDER_STATUS' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_insert_partitioned_table ").append("(").append("  ORDER_KEY BIGINT,").append("  SHIP_PRIORITY INTEGER,").append("  ORDER_STATUS VARCHAR").append(") ").append("WITH (")
+				.append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'SHIP_PRIORITY', 'ORDER_STATUS' ]").append(") ").toString();
 
         assertUpdate(session, createTable);
 
@@ -1265,10 +976,7 @@ public class TestHiveIntegrationSmokeTest
         // Hive will reorder the partition keys, so we must insert into the table assuming the partition keys have been moved to the end
         assertUpdate(
                 session,
-                "" +
-                        "INSERT INTO test_insert_partitioned_table " +
-                        "SELECT orderkey, shippriority, orderstatus " +
-                        "FROM tpch.tiny.orders",
+                new StringBuilder().append("").append("INSERT INTO test_insert_partitioned_table ").append("SELECT orderkey, shippriority, orderstatus ").append("FROM tpch.tiny.orders").toString(),
                 "SELECT count(*) from orders");
 
         // verify the partitions
@@ -1284,16 +992,16 @@ public class TestHiveIntegrationSmokeTest
 
         assertQuery(
                 session,
-                "SELECT * FROM " + partitionsTable + " ORDER BY order_status LIMIT 2",
+                new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" ORDER BY order_status LIMIT 2").toString(),
                 "SELECT DISTINCT shippriority, orderstatus FROM orders ORDER BY orderstatus LIMIT 2");
 
         assertQuery(
                 session,
-                "SELECT * FROM " + partitionsTable + " WHERE order_status = 'O'",
+                new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" WHERE order_status = 'O'").toString(),
                 "SELECT DISTINCT shippriority, orderstatus FROM orders WHERE orderstatus = 'O'");
 
-        assertQueryFails(session, "SELECT * FROM " + partitionsTable + " WHERE no_such_column = 1", "line \\S*: Column 'no_such_column' cannot be resolved");
-        assertQueryFails(session, "SELECT * FROM " + partitionsTable + " WHERE orderkey = 1", "line \\S*: Column 'orderkey' cannot be resolved");
+        assertQueryFails(session, new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" WHERE no_such_column = 1").toString(), "line \\S*: Column 'no_such_column' cannot be resolved");
+        assertQueryFails(session, new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" WHERE orderkey = 1").toString(), "line \\S*: Column 'orderkey' cannot be resolved");
 
         assertUpdate(session, "DROP TABLE test_insert_partitioned_table");
 
@@ -1310,17 +1018,8 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_insert_partitioned_table_existing_partition";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "(" +
-                "  order_key BIGINT," +
-                "  comment VARCHAR," +
-                "  order_status VARCHAR" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'order_status' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("(").append("  order_key BIGINT,").append("  comment VARCHAR,").append("  order_status VARCHAR")
+				.append(") ").append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'order_status' ]").append(") ").toString();
 
         assertUpdate(session, createTable);
 
@@ -1332,10 +1031,8 @@ public class TestHiveIntegrationSmokeTest
             assertUpdate(
                     session,
                     format(
-                            "INSERT INTO " + tableName + " " +
-                                    "SELECT orderkey, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderkey %% 3 = %d",
+                            new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("SELECT orderkey, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderkey %% 3 = %d")
+									.toString(),
                             i),
                     format("SELECT count(*) from orders where orderkey %% 3 = %d", i));
         }
@@ -1368,17 +1065,8 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_insert_partitioned_table_overwrite_existing_partition";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "(" +
-                "  order_key BIGINT," +
-                "  comment VARCHAR," +
-                "  order_status VARCHAR" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'order_status' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("(").append("  order_key BIGINT,").append("  comment VARCHAR,").append("  order_status VARCHAR")
+				.append(") ").append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'order_status' ]").append(") ").toString();
 
         assertUpdate(session, createTable);
 
@@ -1390,10 +1078,8 @@ public class TestHiveIntegrationSmokeTest
             assertUpdate(
                     session,
                     format(
-                            "INSERT INTO " + tableName + " " +
-                                    "SELECT orderkey, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderkey %% 3 = %d",
+                            new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("SELECT orderkey, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderkey %% 3 = %d")
+									.toString(),
                             i),
                     format("SELECT count(*) from orders where orderkey %% 3 = %d", i));
 
@@ -1414,9 +1100,7 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testNullPartitionValues()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_null_partition (test VARCHAR, part VARCHAR)\n" +
-                "WITH (partitioned_by = ARRAY['part'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_null_partition (test VARCHAR, part VARCHAR)\n").append("WITH (partitioned_by = ARRAY['part'])").toString());
 
         assertUpdate("INSERT INTO test_null_partition VALUES ('hello', 'test'), ('world', null)", 2);
 
@@ -1441,18 +1125,10 @@ public class TestHiveIntegrationSmokeTest
     private void testPartitionPerScanLimit(Session session, HiveStorageFormat storageFormat)
     {
         String tableName = "test_partition_per_scan_limit";
-        String partitionsTable = "\"" + tableName + "$partitions\"";
+        String partitionsTable = new StringBuilder().append("\"").append(tableName).append("$partitions\"").toString();
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "(" +
-                "  foo VARCHAR," +
-                "  part BIGINT" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "', " +
-                "partitioned_by = ARRAY[ 'part' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("(").append("  foo VARCHAR,").append("  part BIGINT").append(") ")
+				.append("WITH (").append("format = '").append(storageFormat).append("', ").append("partitioned_by = ARRAY[ 'part' ]").append(") ").toString();
 
         assertUpdate(session, createTable);
 
@@ -1465,10 +1141,8 @@ public class TestHiveIntegrationSmokeTest
             int partStart = i * 100;
             int partEnd = (i + 1) * 100 - 1;
 
-            @Language("SQL") String insertPartitions = "" +
-                    "INSERT INTO " + tableName + " " +
-                    "SELECT 'bar' foo, part " +
-                    "FROM UNNEST(SEQUENCE(" + partStart + ", " + partEnd + ")) AS TMP(part)";
+            @Language("SQL") String insertPartitions = new StringBuilder().append("").append("INSERT INTO ").append(tableName).append(" ").append("SELECT 'bar' foo, part ").append("FROM UNNEST(SEQUENCE(").append(partStart)
+					.append(", ").append(partEnd).append(")) AS TMP(part)").toString();
 
             assertUpdate(session, insertPartitions, 100);
         }
@@ -1476,12 +1150,12 @@ public class TestHiveIntegrationSmokeTest
         // we are not constrained by hive.max-partitions-per-scan when listing partitions
         assertQuery(
                 session,
-                "SELECT * FROM " + partitionsTable + " WHERE part > 490 and part <= 500",
+                new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" WHERE part > 490 and part <= 500").toString(),
                 "VALUES 491, 492, 493, 494, 495, 496, 497, 498, 499, 500");
 
         assertQuery(
                 session,
-                "SELECT * FROM " + partitionsTable + " WHERE part < 0",
+                new StringBuilder().append("SELECT * FROM ").append(partitionsTable).append(" WHERE part < 0").toString(),
                 "SELECT null WHERE false");
 
         assertQuery(
@@ -1494,19 +1168,19 @@ public class TestHiveIntegrationSmokeTest
         // verify can query 1000 partitions
         assertQuery(
                 session,
-                "SELECT count(foo) FROM " + tableName + " WHERE part < 1000",
+                new StringBuilder().append("SELECT count(foo) FROM ").append(tableName).append(" WHERE part < 1000").toString(),
                 "SELECT 1000");
 
         // verify the rest 200 partitions are successfully inserted
         assertQuery(
                 session,
-                "SELECT count(foo) FROM " + tableName + " WHERE part >= 1000 AND part < 1200",
+                new StringBuilder().append("SELECT count(foo) FROM ").append(tableName).append(" WHERE part >= 1000 AND part < 1200").toString(),
                 "SELECT 200");
 
         // verify cannot query more than 1000 partitions
         assertQueryFails(
                 session,
-                "SELECT * from " + tableName + " WHERE part < 1001",
+                new StringBuilder().append("SELECT * from ").append(tableName).append(" WHERE part < 1001").toString(),
                 format("Query over table 'tpch.%s' can potentially read more than 1000 partitions", tableName));
 
         // verify cannot query all partitions
@@ -1525,22 +1199,14 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_show_columns_from_partitions";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "(" +
-                "  foo VARCHAR," +
-                "  part1 BIGINT," +
-                "  part2 VARCHAR" +
-                ") " +
-                "WITH (" +
-                "partitioned_by = ARRAY[ 'part1', 'part2' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("(").append("  foo VARCHAR,").append("  part1 BIGINT,").append("  part2 VARCHAR")
+				.append(") ").append("WITH (").append("partitioned_by = ARRAY[ 'part1', 'part2' ]").append(") ").toString();
 
         assertUpdate(getSession(), createTable);
 
         assertQuery(
                 getSession(),
-                "SHOW COLUMNS FROM \"" + tableName + "$partitions\"",
+                new StringBuilder().append("SHOW COLUMNS FROM \"").append(tableName).append("$partitions\"").toString(),
                 "VALUES ('part1', 'bigint', '', ''), ('part2', 'varchar', '', '')");
 
         assertQueryFails(
@@ -1562,16 +1228,8 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testPartitionsTableInvalidAccess()
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_partitions_invalid " +
-                "(" +
-                "  foo VARCHAR," +
-                "  part1 BIGINT," +
-                "  part2 VARCHAR" +
-                ") " +
-                "WITH (" +
-                "partitioned_by = ARRAY[ 'part1', 'part2' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_partitions_invalid ").append("(").append("  foo VARCHAR,").append("  part1 BIGINT,").append("  part2 VARCHAR").append(") ").append("WITH (")
+				.append("partitioned_by = ARRAY[ 'part1', 'part2' ]").append(") ").toString();
 
         assertUpdate(getSession(), createTable);
 
@@ -1596,16 +1254,8 @@ public class TestHiveIntegrationSmokeTest
     {
         String tableName = "test_insert_unpartitioned_table";
 
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE " + tableName + " " +
-                "(" +
-                "  order_key BIGINT," +
-                "  comment VARCHAR," +
-                "  order_status VARCHAR" +
-                ") " +
-                "WITH (" +
-                "format = '" + storageFormat + "'" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(" ").append("(").append("  order_key BIGINT,").append("  comment VARCHAR,").append("  order_status VARCHAR")
+				.append(") ").append("WITH (").append("format = '").append(storageFormat).append("'").append(") ").toString();
 
         assertUpdate(session, createTable);
 
@@ -1616,10 +1266,8 @@ public class TestHiveIntegrationSmokeTest
             assertUpdate(
                     session,
                     format(
-                            "INSERT INTO " + tableName + " " +
-                                    "SELECT orderkey, comment, orderstatus " +
-                                    "FROM tpch.tiny.orders " +
-                                    "WHERE orderkey %% 3 = %d",
+                            new StringBuilder().append("INSERT INTO ").append(tableName).append(" ").append("SELECT orderkey, comment, orderstatus ").append("FROM tpch.tiny.orders ").append("WHERE orderkey %% 3 = %d")
+									.toString(),
                             i),
                     format("SELECT count(*) from orders where orderkey %% 3 = %d", i));
         }
@@ -1652,23 +1300,12 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testMetadataDelete()
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_metadata_delete " +
-                "(" +
-                "  ORDER_KEY BIGINT," +
-                "  LINE_NUMBER INTEGER," +
-                "  LINE_STATUS VARCHAR" +
-                ") " +
-                "WITH (" +
-                PARTITIONED_BY_PROPERTY + " = ARRAY[ 'LINE_NUMBER', 'LINE_STATUS' ]" +
-                ") ";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_metadata_delete ").append("(").append("  ORDER_KEY BIGINT,").append("  LINE_NUMBER INTEGER,").append("  LINE_STATUS VARCHAR").append(") ").append("WITH (")
+				.append(PARTITIONED_BY_PROPERTY).append(" = ARRAY[ 'LINE_NUMBER', 'LINE_STATUS' ]").append(") ").toString();
 
         assertUpdate(createTable);
 
-        assertUpdate("" +
-                        "INSERT INTO test_metadata_delete " +
-                        "SELECT orderkey, linenumber, linestatus " +
-                        "FROM tpch.tiny.lineitem",
+        assertUpdate(new StringBuilder().append("").append("INSERT INTO test_metadata_delete ").append("SELECT orderkey, linenumber, linestatus ").append("FROM tpch.tiny.lineitem").toString(),
                 "SELECT count(*) from lineitem");
 
         // Delete returns number of rows deleted, or null if obtaining the number is hard or impossible.
@@ -1729,7 +1366,7 @@ public class TestHiveIntegrationSmokeTest
 
     private List<?> getPartitions(String tableName)
     {
-        return (List<?>) getHiveTableProperty(tableName, (HiveTableLayoutHandle table) -> getPartitions(table));
+        return (List<?>) getHiveTableProperty(tableName, this::getPartitions);
     }
 
     private int getBucketCount(String tableName)
@@ -1740,10 +1377,7 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testShowColumnsPartitionKey()
     {
-        assertUpdate("" +
-                "CREATE TABLE test_show_columns_partition_key\n" +
-                "(grape bigint, orange bigint, pear varchar(65535), mango integer, lychee smallint, kiwi tinyint, apple varchar, pineapple varchar(65535))\n" +
-                "WITH (partitioned_by = ARRAY['apple', 'pineapple'])");
+        assertUpdate(new StringBuilder().append("").append("CREATE TABLE test_show_columns_partition_key\n").append("(grape bigint, orange bigint, pear varchar(65535), mango integer, lychee smallint, kiwi tinyint, apple varchar, pineapple varchar(65535))\n").append("WITH (partitioned_by = ARRAY['apple', 'pineapple'])").toString());
 
         MaterializedResult actual = computeActual("SHOW COLUMNS FROM test_show_columns_partition_key");
         Type unboundedVarchar = canonicalizeType(VARCHAR);
@@ -1930,9 +1564,7 @@ public class TestHiveIntegrationSmokeTest
             // create table
             assertUpdate(
                     session,
-                    "CREATE TABLE create_partitioned_sorted_table (orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus)\n" +
-                            "WITH (partitioned_by = ARRAY['orderstatus'], bucketed_by = ARRAY['custkey'], bucket_count = 11, sorted_by = ARRAY['orderkey']) AS\n" +
-                            "SELECT orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus FROM tpch.sf1.orders",
+                    new StringBuilder().append("CREATE TABLE create_partitioned_sorted_table (orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus)\n").append("WITH (partitioned_by = ARRAY['orderstatus'], bucketed_by = ARRAY['custkey'], bucket_count = 11, sorted_by = ARRAY['orderkey']) AS\n").append("SELECT orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus FROM tpch.sf1.orders").toString(),
                     (long) computeActual("SELECT count(*) FROM tpch.sf1.orders").getOnlyValue());
             assertQuery(
                     session,
@@ -1941,9 +1573,7 @@ public class TestHiveIntegrationSmokeTest
 
             assertUpdate(
                     session,
-                    "CREATE TABLE create_unpartitioned_sorted_table (orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus)\n" +
-                            "WITH (bucketed_by = ARRAY['custkey'], bucket_count = 11, sorted_by = ARRAY['orderkey']) AS\n" +
-                            "SELECT orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus FROM tpch.sf1.orders",
+                    new StringBuilder().append("CREATE TABLE create_unpartitioned_sorted_table (orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus)\n").append("WITH (bucketed_by = ARRAY['custkey'], bucket_count = 11, sorted_by = ARRAY['orderkey']) AS\n").append("SELECT orderkey, custkey, totalprice, orderdate, orderpriority, clerk, shippriority, comment, orderstatus FROM tpch.sf1.orders").toString(),
                     (long) computeActual("SELECT count(*) FROM tpch.sf1.orders").getOnlyValue());
             assertQuery(
                     session,
@@ -2012,17 +1642,8 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testShowCreateTable()
     {
-        String createTableSql = format("" +
-                        "CREATE TABLE %s.%s.%s (\n" +
-                        "   c1 bigint,\n" +
-                        "   c2 double,\n" +
-                        "   \"c 3\" varchar,\n" +
-                        "   \"c'4\" array(bigint),\n" +
-                        "   c5 map(bigint, varchar)\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   format = 'RCBINARY'\n" +
-                        ")",
+        String createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.%s (\n").append("   c1 bigint,\n").append("   c2 double,\n").append("   \"c 3\" varchar,\n").append("   \"c'4\" array(bigint),\n").append("   c5 map(bigint, varchar)\n").append(")\n")
+				.append("WITH (\n").append("   format = 'RCBINARY'\n").append(")").toString(),
                 getSession().getCatalog().get(),
                 getSession().getSchema().get(),
                 "test_show_create_table");
@@ -2031,23 +1652,9 @@ public class TestHiveIntegrationSmokeTest
         MaterializedResult actualResult = computeActual("SHOW CREATE TABLE test_show_create_table");
         assertEquals(getOnlyElement(actualResult.getOnlyColumnAsSet()), createTableSql);
 
-        createTableSql = format("" +
-                        "CREATE TABLE %s.%s.%s (\n" +
-                        "   c1 bigint,\n" +
-                        "   \"c 2\" varchar,\n" +
-                        "   \"c'3\" array(bigint),\n" +
-                        "   c4 map(bigint, varchar) COMMENT 'comment test4',\n" +
-                        "   c5 double COMMENT 'comment test5'\n)\n" +
-                        "COMMENT 'test'\n" +
-                        "WITH (\n" +
-                        "   bucket_count = 5,\n" +
-                        "   bucketed_by = ARRAY['c1','c 2'],\n" +
-                        "   format = 'ORC',\n" +
-                        "   orc_bloom_filter_columns = ARRAY['c1','c2'],\n" +
-                        "   orc_bloom_filter_fpp = 7E-1,\n" +
-                        "   partitioned_by = ARRAY['c5'],\n" +
-                        "   sorted_by = ARRAY['c1','c 2 DESC']\n" +
-                        ")",
+        createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.%s (\n").append("   c1 bigint,\n").append("   \"c 2\" varchar,\n").append("   \"c'3\" array(bigint),\n").append("   c4 map(bigint, varchar) COMMENT 'comment test4',\n").append("   c5 double COMMENT 'comment test5'\n)\n").append("COMMENT 'test'\n")
+				.append("WITH (\n").append("   bucket_count = 5,\n").append("   bucketed_by = ARRAY['c1','c 2'],\n").append("   format = 'ORC',\n").append("   orc_bloom_filter_columns = ARRAY['c1','c2'],\n").append("   orc_bloom_filter_fpp = 7E-1,\n").append("   partitioned_by = ARRAY['c5'],\n").append("   sorted_by = ARRAY['c1','c 2 DESC']\n").append(")")
+				.toString(),
                 getSession().getCatalog().get(),
                 getSession().getSchema().get(),
                 "\"test_show_create_table'2\"");
@@ -2064,14 +1671,8 @@ public class TestHiveIntegrationSmokeTest
         File dataFile = new File(tempDir, "test.txt");
         Files.write("hello\nworld\n", dataFile, UTF_8);
 
-        @Language("SQL") String createTableSql = format("" +
-                        "CREATE TABLE %s.%s.test_create_external (\n" +
-                        "   name varchar\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   external_location = '%s',\n" +
-                        "   format = 'TEXTFILE'\n" +
-                        ")",
+        @Language("SQL") String createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.test_create_external (\n").append("   name varchar\n").append(")\n").append("WITH (\n").append("   external_location = '%s',\n").append("   format = 'TEXTFILE'\n").append(")")
+				.toString(),
                 getSession().getCatalog().get(),
                 getSession().getSchema().get(),
                 new Path(tempDir.toURI().toASCIIString()).toString());
@@ -2099,16 +1700,8 @@ public class TestHiveIntegrationSmokeTest
 
     private void testPathHiddenColumn(Session session, HiveStorageFormat storageFormat)
     {
-        @Language("SQL") String createTable = "CREATE TABLE test_path " +
-                "WITH (" +
-                "format = '" + storageFormat + "'," +
-                "partitioned_by = ARRAY['col1']" +
-                ") AS " +
-                "SELECT * FROM (VALUES " +
-                "(0, 0), (3, 0), (6, 0), " +
-                "(1, 1), (4, 1), (7, 1), " +
-                "(2, 2), (5, 2) " +
-                " ) t(col0, col1) ";
+        @Language("SQL") String createTable = new StringBuilder().append("CREATE TABLE test_path ").append("WITH (").append("format = '").append(storageFormat).append("',").append("partitioned_by = ARRAY['col1']").append(") AS ").append("SELECT * FROM (VALUES ")
+				.append("(0, 0), (3, 0), (6, 0), ").append("(1, 1), (4, 1), (7, 1), ").append("(2, 2), (5, 2) ").append(" ) t(col0, col1) ").toString();
         assertUpdate(session, createTable, 8);
         assertTrue(getQueryRunner().tableExists(getSession(), "test_path"));
 
@@ -2156,16 +1749,8 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testBucketHiddenColumn()
     {
-        @Language("SQL") String createTable = "CREATE TABLE test_bucket_hidden_column " +
-                "WITH (" +
-                "bucketed_by = ARRAY['col0']," +
-                "bucket_count = 2" +
-                ") AS " +
-                "SELECT * FROM (VALUES " +
-                "(0, 11), (1, 12), (2, 13), " +
-                "(3, 14), (4, 15), (5, 16), " +
-                "(6, 17), (7, 18), (8, 19)" +
-                " ) t (col0, col1) ";
+        @Language("SQL") String createTable = new StringBuilder().append("CREATE TABLE test_bucket_hidden_column ").append("WITH (").append("bucketed_by = ARRAY['col0'],").append("bucket_count = 2").append(") AS ").append("SELECT * FROM (VALUES ").append("(0, 11), (1, 12), (2, 13), ").append("(3, 14), (4, 15), (5, 16), ")
+				.append("(6, 17), (7, 18), (8, 19)").append(" ) t (col0, col1) ").toString();
         assertUpdate(createTable, 9);
         assertTrue(getQueryRunner().tableExists(getSession(), "test_bucket_hidden_column"));
 
@@ -2254,6 +1839,7 @@ public class TestHiveIntegrationSmokeTest
                     });
         }
         catch (RollbackException e) {
+			logger.error(e.getMessage(), e);
             // ignore
         }
 
@@ -2347,13 +1933,7 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testRenameColumn()
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_rename_column\n" +
-                "WITH (\n" +
-                "  partitioned_by = ARRAY ['orderstatus']\n" +
-                ")\n" +
-                "AS\n" +
-                "SELECT orderkey, orderstatus FROM orders";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_rename_column\n").append("WITH (\n").append("  partitioned_by = ARRAY ['orderstatus']\n").append(")\n").append("AS\n").append("SELECT orderkey, orderstatus FROM orders").toString();
 
         assertUpdate(createTable, "SELECT count(*) FROM orders");
         assertUpdate("ALTER TABLE test_rename_column RENAME COLUMN orderkey TO new_orderkey");
@@ -2367,13 +1947,7 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testDropColumn()
     {
-        @Language("SQL") String createTable = "" +
-                "CREATE TABLE test_drop_column\n" +
-                "WITH (\n" +
-                "  partitioned_by = ARRAY ['orderstatus']\n" +
-                ")\n" +
-                "AS\n" +
-                "SELECT custkey, orderkey, orderstatus FROM orders";
+        @Language("SQL") String createTable = new StringBuilder().append("").append("CREATE TABLE test_drop_column\n").append("WITH (\n").append("  partitioned_by = ARRAY ['orderstatus']\n").append(")\n").append("AS\n").append("SELECT custkey, orderkey, orderstatus FROM orders").toString();
 
         assertUpdate(createTable, "SELECT count(*) FROM orders");
         assertQuery("SELECT orderkey, orderstatus FROM test_drop_column", "SELECT orderkey, orderstatus FROM orders");
@@ -2401,10 +1975,7 @@ public class TestHiveIntegrationSmokeTest
     public void testOrderByChar()
     {
         assertUpdate("CREATE TABLE char_order_by (c_char char(2))");
-        assertUpdate("INSERT INTO char_order_by (c_char) VALUES" +
-                "(CAST('a' as CHAR(2)))," +
-                "(CAST('a\0' as CHAR(2)))," +
-                "(CAST('a  ' as CHAR(2)))", 3);
+        assertUpdate(new StringBuilder().append("INSERT INTO char_order_by (c_char) VALUES").append("(CAST('a' as CHAR(2))),").append("(CAST('a\0' as CHAR(2))),").append("(CAST('a  ' as CHAR(2)))").toString(), 3);
 
         MaterializedResult actual = computeActual(getSession(),
                 "SELECT * FROM char_order_by ORDER BY c_char ASC");
@@ -2430,24 +2001,15 @@ public class TestHiveIntegrationSmokeTest
 
         assertUpdate("CREATE TABLE test_table_with_char (a char(20))");
         try {
-            assertUpdate("INSERT INTO test_table_with_char (a) VALUES" +
-                    "(cast('aaa' as char(20)))," +
-                    "(cast('bbb' as char(20)))," +
-                    "(cast('bbc' as char(20)))," +
-                    "(cast('bbd' as char(20)))", 4);
+            assertUpdate(new StringBuilder().append("INSERT INTO test_table_with_char (a) VALUES").append("(cast('aaa' as char(20))),").append("(cast('bbb' as char(20))),").append("(cast('bbc' as char(20))),").append("(cast('bbd' as char(20)))").toString(), 4);
 
             assertQuery(
                     "SELECT a, a <= 'bbc' FROM test_table_with_char",
-                    "VALUES (cast('aaa' as char(20)), true), " +
-                            "(cast('bbb' as char(20)), true), " +
-                            "(cast('bbc' as char(20)), true), " +
-                            "(cast('bbd' as char(20)), false)");
+                    new StringBuilder().append("VALUES (cast('aaa' as char(20)), true), ").append("(cast('bbb' as char(20)), true), ").append("(cast('bbc' as char(20)), true), ").append("(cast('bbd' as char(20)), false)").toString());
 
             assertQuery(
                     "SELECT a FROM test_table_with_char WHERE a <= 'bbc'",
-                    "VALUES cast('aaa' as char(20)), " +
-                            "cast('bbb' as char(20)), " +
-                            "cast('bbc' as char(20))");
+                    new StringBuilder().append("VALUES cast('aaa' as char(20)), ").append("cast('bbb' as char(20)), ").append("cast('bbc' as char(20))").toString());
         }
         finally {
             assertUpdate("DROP TABLE test_table_with_char");
@@ -2459,14 +2021,10 @@ public class TestHiveIntegrationSmokeTest
     {
         try {
             assertUpdate(
-                    "CREATE TABLE test_mismatch_bucketing_with_predicate_8\n" +
-                            "WITH (bucket_count = 8, bucketed_by = ARRAY['key8']) AS\n" +
-                            "SELECT custkey key8, comment value8 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_mismatch_bucketing_with_predicate_8\n").append("WITH (bucket_count = 8, bucketed_by = ARRAY['key8']) AS\n").append("SELECT custkey key8, comment value8 FROM orders").toString(),
                     15000);
             assertUpdate(
-                    "CREATE TABLE test_mismatch_bucketing_with_predicate_32\n" +
-                            "WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n" +
-                            "SELECT custkey key32, comment value32 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_mismatch_bucketing_with_predicate_32\n").append("WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n").append("SELECT custkey key32, comment value32 FROM orders").toString(),
                     15000);
 
             Session withMismatchOptimization = Session.builder(getSession())
@@ -2478,14 +2036,8 @@ public class TestHiveIntegrationSmokeTest
                     .setCatalogSessionProperty(catalog, "optimize_mismatched_bucket_count", "false")
                     .build();
 
-            @Language("SQL") String query = "SELECT count(*) AS count\n" +
-                    "FROM (\n" +
-                    "  SELECT key32\n" +
-                    "  FROM test_mismatch_bucketing_with_predicate_32\n" +
-                    "  WHERE \"$bucket\" between 16 AND 31\n" +
-                    ") a\n" +
-                    "JOIN test_mismatch_bucketing_with_predicate_8 b\n" +
-                    "ON a.key32 = b.key8";
+            @Language("SQL") String query = new StringBuilder().append("SELECT count(*) AS count\n").append("FROM (\n").append("  SELECT key32\n").append("  FROM test_mismatch_bucketing_with_predicate_32\n").append("  WHERE \"$bucket\" between 16 AND 31\n").append(") a\n").append("JOIN test_mismatch_bucketing_with_predicate_8 b\n").append("ON a.key32 = b.key8")
+					.toString();
 
             assertQuery(withMismatchOptimization, query, "SELECT 130361");
             assertQuery(withoutMismatchOptimization, query, "SELECT 130361");
@@ -2508,15 +2060,11 @@ public class TestHiveIntegrationSmokeTest
         try {
             assertUpdate(
                     session,
-                    "CREATE TABLE test_mismatch_bucketing16\n" +
-                            "WITH (bucket_count = 16, bucketed_by = ARRAY['key16']) AS\n" +
-                            "SELECT orderkey key16, comment value16 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_mismatch_bucketing16\n").append("WITH (bucket_count = 16, bucketed_by = ARRAY['key16']) AS\n").append("SELECT orderkey key16, comment value16 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_mismatch_bucketing32\n" +
-                            "WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n" +
-                            "SELECT orderkey key32, comment value32 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_mismatch_bucketing32\n").append("WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n").append("SELECT orderkey key32, comment value32 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
@@ -2533,30 +2081,10 @@ public class TestHiveIntegrationSmokeTest
                     .setCatalogSessionProperty(catalog, "optimize_mismatched_bucket_count", "false")
                     .build();
 
-            @Language("SQL") String writeToTableWithMoreBuckets = "CREATE TABLE test_mismatch_bucketing_out32\n" +
-                    "WITH (bucket_count = 32, bucketed_by = ARRAY['key16'])\n" +
-                    "AS\n" +
-                    "SELECT key16, value16, key32, value32, keyN, valueN\n" +
-                    "FROM\n" +
-                    "  test_mismatch_bucketing16\n" +
-                    "JOIN\n" +
-                    "  test_mismatch_bucketing32\n" +
-                    "ON key16=key32\n" +
-                    "JOIN\n" +
-                    "  test_mismatch_bucketingN\n" +
-                    "ON key16=keyN";
-            @Language("SQL") String writeToTableWithFewerBuckets = "CREATE TABLE test_mismatch_bucketing_out8\n" +
-                    "WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n" +
-                    "AS\n" +
-                    "SELECT key16, value16, key32, value32, keyN, valueN\n" +
-                    "FROM\n" +
-                    "  test_mismatch_bucketing16\n" +
-                    "JOIN\n" +
-                    "  test_mismatch_bucketing32\n" +
-                    "ON key16=key32\n" +
-                    "JOIN\n" +
-                    "  test_mismatch_bucketingN\n" +
-                    "ON key16=keyN";
+            @Language("SQL") String writeToTableWithMoreBuckets = new StringBuilder().append("CREATE TABLE test_mismatch_bucketing_out32\n").append("WITH (bucket_count = 32, bucketed_by = ARRAY['key16'])\n").append("AS\n").append("SELECT key16, value16, key32, value32, keyN, valueN\n").append("FROM\n").append("  test_mismatch_bucketing16\n").append("JOIN\n").append("  test_mismatch_bucketing32\n")
+					.append("ON key16=key32\n").append("JOIN\n").append("  test_mismatch_bucketingN\n").append("ON key16=keyN").toString();
+            @Language("SQL") String writeToTableWithFewerBuckets = new StringBuilder().append("CREATE TABLE test_mismatch_bucketing_out8\n").append("WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n").append("AS\n").append("SELECT key16, value16, key32, value32, keyN, valueN\n").append("FROM\n").append("  test_mismatch_bucketing16\n").append("JOIN\n").append("  test_mismatch_bucketing32\n")
+					.append("ON key16=key32\n").append("JOIN\n").append("  test_mismatch_bucketingN\n").append("ON key16=keyN").toString();
 
             assertUpdate(withoutMismatchOptimization, writeToTableWithMoreBuckets, 15000, assertRemoteExchangesCount(4));
             assertQuery(withoutMismatchOptimization, "SELECT * FROM test_mismatch_bucketing_out32", "SELECT orderkey, comment, orderkey, comment, orderkey, comment from orders");
@@ -2588,14 +2116,10 @@ public class TestHiveIntegrationSmokeTest
     {
         try {
             assertUpdate(
-                    "CREATE TABLE test_partial_merge_pushdown_16buckets\n" +
-                            "WITH (bucket_count = 16, bucketed_by = ARRAY['key16']) AS\n" +
-                            "SELECT orderkey key16, comment value16 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_partial_merge_pushdown_16buckets\n").append("WITH (bucket_count = 16, bucketed_by = ARRAY['key16']) AS\n").append("SELECT orderkey key16, comment value16 FROM orders").toString(),
                     15000);
             assertUpdate(
-                    "CREATE TABLE test_partial_merge_pushdown_32buckets\n" +
-                            "WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n" +
-                            "SELECT orderkey key32, comment value32 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_partial_merge_pushdown_32buckets\n").append("WITH (bucket_count = 32, bucketed_by = ARRAY['key32']) AS\n").append("SELECT orderkey key32, comment value32 FROM orders").toString(),
                     15000);
             assertUpdate(
                     "CREATE TABLE test_partial_merge_pushdown_nobucket AS\n" +
@@ -2614,30 +2138,10 @@ public class TestHiveIntegrationSmokeTest
             //
             // join and write to bucketed table
             // ================================
-            @Language("SQL") String joinAndWriteToTableWithSameBuckets = "CREATE TABLE test_partial_merge_pushdown_out16\n" +
-                    "WITH (bucket_count = 16, bucketed_by = ARRAY['key16'])\n" +
-                    "AS\n" +
-                    "SELECT key16, value16, key32, value32, key_nobucket, value_nobucket\n" +
-                    "FROM\n" +
-                    "  test_partial_merge_pushdown_16buckets\n" +
-                    "JOIN\n" +
-                    "  test_partial_merge_pushdown_32buckets\n" +
-                    "ON key16=key32\n" +
-                    "JOIN\n" +
-                    "  test_partial_merge_pushdown_nobucket\n" +
-                    "ON key16=key_nobucket";
-            @Language("SQL") String joinAndWriteToTableWithFewerBuckets = "CREATE TABLE test_partial_merge_pushdown_out8\n" +
-                    "WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n" +
-                    "AS\n" +
-                    "SELECT key16, value16, key32, value32, key_nobucket, value_nobucket\n" +
-                    "FROM\n" +
-                    "  test_partial_merge_pushdown_16buckets\n" +
-                    "JOIN\n" +
-                    "  test_partial_merge_pushdown_32buckets\n" +
-                    "ON key16=key32\n" +
-                    "JOIN\n" +
-                    "  test_partial_merge_pushdown_nobucket\n" +
-                    "ON key16=key_nobucket";
+            @Language("SQL") String joinAndWriteToTableWithSameBuckets = new StringBuilder().append("CREATE TABLE test_partial_merge_pushdown_out16\n").append("WITH (bucket_count = 16, bucketed_by = ARRAY['key16'])\n").append("AS\n").append("SELECT key16, value16, key32, value32, key_nobucket, value_nobucket\n").append("FROM\n").append("  test_partial_merge_pushdown_16buckets\n").append("JOIN\n").append("  test_partial_merge_pushdown_32buckets\n")
+					.append("ON key16=key32\n").append("JOIN\n").append("  test_partial_merge_pushdown_nobucket\n").append("ON key16=key_nobucket").toString();
+            @Language("SQL") String joinAndWriteToTableWithFewerBuckets = new StringBuilder().append("CREATE TABLE test_partial_merge_pushdown_out8\n").append("WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n").append("AS\n").append("SELECT key16, value16, key32, value32, key_nobucket, value_nobucket\n").append("FROM\n").append("  test_partial_merge_pushdown_16buckets\n").append("JOIN\n").append("  test_partial_merge_pushdown_32buckets\n")
+					.append("ON key16=key32\n").append("JOIN\n").append("  test_partial_merge_pushdown_nobucket\n").append("ON key16=key_nobucket").toString();
 
             assertUpdate(withoutPartialMergePushdownOptimization, joinAndWriteToTableWithSameBuckets, 15000, assertRemoteExchangesCount(3));
             assertQuery("SELECT * FROM test_partial_merge_pushdown_out16", "SELECT orderkey, comment, orderkey, comment, orderkey, comment from orders");
@@ -2659,12 +2163,7 @@ public class TestHiveIntegrationSmokeTest
             //
             // read and write to bucketed table
             // =====================================
-            @Language("SQL") String readAndWriteToTableWithFewerBuckets = "CREATE TABLE test_partial_merge_pushdown_out8\n" +
-                    "WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n" +
-                    "AS\n" +
-                    "SELECT key16, value16\n" +
-                    "FROM\n" +
-                    "  test_partial_merge_pushdown_16buckets";
+            @Language("SQL") String readAndWriteToTableWithFewerBuckets = new StringBuilder().append("CREATE TABLE test_partial_merge_pushdown_out8\n").append("WITH (bucket_count = 8, bucketed_by = ARRAY['key16'])\n").append("AS\n").append("SELECT key16, value16\n").append("FROM\n").append("  test_partial_merge_pushdown_16buckets").toString();
 
             assertUpdate(withoutPartialMergePushdownOptimization, readAndWriteToTableWithFewerBuckets, 15000, assertRemoteExchangesCount(2));
             assertQuery("SELECT * FROM test_partial_merge_pushdown_out8", "SELECT orderkey, comment from orders");
@@ -2749,14 +2248,8 @@ public class TestHiveIntegrationSmokeTest
 
             assertQuery(
                     materializeExchangesSession,
-                    "SELECT lineitem.orderkey, lineitem.comment, test_orders_part1.totalprice, test_orders_part2.comment ordercomment\n" +
-                            "FROM lineitem JOIN test_orders_part1\n" +
-                            "ON lineitem.orderkey = test_orders_part1.orderkey\n" +
-                            "JOIN test_orders_part2\n" +
-                            "ON lineitem.orderkey = test_orders_part2.orderkey",
-                    "SELECT lineitem.orderkey, lineitem.comment, orders.totalprice, orders.comment ordercomment\n" +
-                            "FROM lineitem JOIN orders\n" +
-                            "ON lineitem.orderkey = orders.orderkey",
+                    new StringBuilder().append("SELECT lineitem.orderkey, lineitem.comment, test_orders_part1.totalprice, test_orders_part2.comment ordercomment\n").append("FROM lineitem JOIN test_orders_part1\n").append("ON lineitem.orderkey = test_orders_part1.orderkey\n").append("JOIN test_orders_part2\n").append("ON lineitem.orderkey = test_orders_part2.orderkey").toString(),
+                    new StringBuilder().append("SELECT lineitem.orderkey, lineitem.comment, orders.totalprice, orders.comment ordercomment\n").append("FROM lineitem JOIN orders\n").append("ON lineitem.orderkey = orders.orderkey").toString(),
                     assertRemoteMaterializedExchangesCount(3));
         }
         finally {
@@ -2765,12 +2258,10 @@ public class TestHiveIntegrationSmokeTest
         }
 
         try {
-            // join a bucketed table with an unbucketed table
+            // bucket count has to be different from materialized bucket number
+			// join a bucketed table with an unbucketed table
             assertUpdate(
-                    // bucket count has to be different from materialized bucket number
-                    "CREATE TABLE test_bucketed_lineitem1\n" +
-                            "WITH (bucket_count = 17, bucketed_by = ARRAY['orderkey']) AS\n" +
-                            "SELECT * FROM lineitem",
+                    new StringBuilder().append("CREATE TABLE test_bucketed_lineitem1\n").append("WITH (bucket_count = 17, bucketed_by = ARRAY['orderkey']) AS\n").append("SELECT * FROM lineitem").toString(),
                     "SELECT count(*) from lineitem");
             // bucketed table as probe side
             assertQuery(
@@ -2785,40 +2276,22 @@ public class TestHiveIntegrationSmokeTest
                     "SELECT * FROM orders JOIN lineitem ON lineitem.orderkey = orders.orderkey",
                     assertRemoteMaterializedExchangesCount(1));
 
-            // join a bucketed table with an unbucketed table; the join has constant pushdown
+            // bucket count has to be different from materialized bucket number
+			// join a bucketed table with an unbucketed table; the join has constant pushdown
             assertUpdate(
-                    // bucket count has to be different from materialized bucket number
-                    "CREATE TABLE test_bucketed_lineitem2\n" +
-                            "WITH (bucket_count = 17, bucketed_by = ARRAY['partkey', 'suppkey']) AS\n" +
-                            "SELECT * FROM lineitem",
+                    new StringBuilder().append("CREATE TABLE test_bucketed_lineitem2\n").append("WITH (bucket_count = 17, bucketed_by = ARRAY['partkey', 'suppkey']) AS\n").append("SELECT * FROM lineitem").toString(),
                     "SELECT count(*) from lineitem");
             // bucketed table as probe side
             assertQuery(
                     materializeExchangesSession,
-                    "SELECT * \n" +
-                            "FROM test_bucketed_lineitem2 JOIN partsupp\n" +
-                            "ON test_bucketed_lineitem2.partkey = partsupp.partkey AND\n" +
-                            "test_bucketed_lineitem2.suppkey = partsupp.suppkey\n" +
-                            "WHERE test_bucketed_lineitem2.suppkey = 42",
-                    "SELECT * \n" +
-                            "FROM lineitem JOIN partsupp\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT * \n").append("FROM test_bucketed_lineitem2 JOIN partsupp\n").append("ON test_bucketed_lineitem2.partkey = partsupp.partkey AND\n").append("test_bucketed_lineitem2.suppkey = partsupp.suppkey\n").append("WHERE test_bucketed_lineitem2.suppkey = 42").toString(),
+                    new StringBuilder().append("SELECT * \n").append("FROM lineitem JOIN partsupp\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
             // unbucketed table as probe side
             assertQuery(
                     materializeExchangesSession,
-                    "SELECT * \n" +
-                            "FROM partsupp JOIN test_bucketed_lineitem2\n" +
-                            "ON test_bucketed_lineitem2.partkey = partsupp.partkey AND\n" +
-                            "test_bucketed_lineitem2.suppkey = partsupp.suppkey\n" +
-                            "WHERE test_bucketed_lineitem2.suppkey = 42",
-                    "SELECT * \n" +
-                            "FROM partsupp JOIN lineitem\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT * \n").append("FROM partsupp JOIN test_bucketed_lineitem2\n").append("ON test_bucketed_lineitem2.partkey = partsupp.partkey AND\n").append("test_bucketed_lineitem2.suppkey = partsupp.suppkey\n").append("WHERE test_bucketed_lineitem2.suppkey = 42").toString(),
+                    new StringBuilder().append("SELECT * \n").append("FROM partsupp JOIN lineitem\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
         }
         finally {
@@ -2852,13 +2325,8 @@ public class TestHiveIntegrationSmokeTest
         // union
         assertQuery(
                 materializeExchangesSession,
-                "SELECT partkey, count(*), sum(cost) " +
-                        "FROM ( " +
-                        "  SELECT partkey, CAST(extendedprice AS BIGINT) cost FROM lineitem " +
-                        "  UNION ALL " +
-                        "  SELECT partkey, CAST(supplycost AS BIGINT) cost FROM partsupp " +
-                        ") " +
-                        "GROUP BY partkey",
+                new StringBuilder().append("SELECT partkey, count(*), sum(cost) ").append("FROM ( ").append("  SELECT partkey, CAST(extendedprice AS BIGINT) cost FROM lineitem ").append("  UNION ALL ").append("  SELECT partkey, CAST(supplycost AS BIGINT) cost FROM partsupp ").append(") ").append("GROUP BY partkey")
+						.toString(),
                 assertRemoteMaterializedExchangesCount(2));
 
         // union over aggregation + broadcast join
@@ -2872,49 +2340,17 @@ public class TestHiveIntegrationSmokeTest
         // compatible union partitioning
         assertQuery(
                 broadcastJoinMaterializeExchangesSession,
-                "WITH union_of_aggregations as ( " +
-                        "    SELECT " +
-                        "        partkey, " +
-                        "        count(*) AS value " +
-                        "    FROM lineitem " +
-                        "    GROUP BY  " +
-                        "        1 " +
-                        "    UNION ALL " +
-                        "    SELECT " +
-                        "        partkey, " +
-                        "        sum(suppkey) AS value " +
-                        "    FROM lineitem " +
-                        "    GROUP BY  " +
-                        "        1        " +
-                        ") " +
-                        "SELECT " +
-                        "    sum(a.value + b.value) " +
-                        "FROM union_of_aggregations a, union_of_aggregations b  " +
-                        "WHERE a.partkey = b.partkey ",
+                new StringBuilder().append("WITH union_of_aggregations as ( ").append("    SELECT ").append("        partkey, ").append("        count(*) AS value ").append("    FROM lineitem ").append("    GROUP BY  ").append("        1 ")
+						.append("    UNION ALL ").append("    SELECT ").append("        partkey, ").append("        sum(suppkey) AS value ").append("    FROM lineitem ").append("    GROUP BY  ").append("        1        ").append(") ")
+						.append("SELECT ").append("    sum(a.value + b.value) ").append("FROM union_of_aggregations a, union_of_aggregations b  ").append("WHERE a.partkey = b.partkey ").toString(),
                 "SELECT 12404708",
                 assertRemoteExchangesCount(6)
                         .andThen(assertRemoteMaterializedExchangesCount(4)));
 
         // incompatible union partitioning, requires an extra remote exchange for build and probe
-        String incompatiblePartitioningQuery = "WITH union_of_aggregations as ( " +
-                "    SELECT " +
-                "        partkey, " +
-                "        count(*) as value " +
-                "    FROM lineitem " +
-                "    GROUP BY  " +
-                "        1 " +
-                "    UNION ALL " +
-                "    SELECT " +
-                "        partkey, " +
-                "        suppkey as value " +
-                "    FROM lineitem " +
-                "    GROUP BY  " +
-                "        1, 2        " +
-                ") " +
-                "SELECT " +
-                "    sum(a.value + b.value) " +
-                "FROM union_of_aggregations a, union_of_aggregations b  " +
-                "WHERE a.partkey = b.partkey ";
+        String incompatiblePartitioningQuery = new StringBuilder().append("WITH union_of_aggregations as ( ").append("    SELECT ").append("        partkey, ").append("        count(*) as value ").append("    FROM lineitem ").append("    GROUP BY  ").append("        1 ").append("    UNION ALL ")
+				.append("    SELECT ").append("        partkey, ").append("        suppkey as value ").append("    FROM lineitem ").append("    GROUP BY  ").append("        1, 2        ").append(") ").append("SELECT ").append("    sum(a.value + b.value) ")
+				.append("FROM union_of_aggregations a, union_of_aggregations b  ").append("WHERE a.partkey = b.partkey ").toString();
 
         // system partitioning handle is always compatible
         assertQuery(
@@ -2961,27 +2397,19 @@ public class TestHiveIntegrationSmokeTest
         try {
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_join1\n" +
-                            "WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n" +
-                            "SELECT orderkey key1, comment value1 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_grouped_join1\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key1']) AS\n").append("SELECT orderkey key1, comment value1 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_join2\n" +
-                            "WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n" +
-                            "SELECT orderkey key2, comment value2 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_grouped_join2\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key2']) AS\n").append("SELECT orderkey key2, comment value2 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_join3\n" +
-                            "WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n" +
-                            "SELECT orderkey key3, comment value3 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_grouped_join3\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key3']) AS\n").append("SELECT orderkey key3, comment value3 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_join4\n" +
-                            "WITH (bucket_count = 13, bucketed_by = ARRAY['key4_bucket']) AS\n" +
-                            "SELECT orderkey key4_bucket, orderkey key4_non_bucket, comment value4 FROM orders",
+                    new StringBuilder().append("CREATE TABLE test_grouped_join4\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['key4_bucket']) AS\n").append("SELECT orderkey key4_bucket, orderkey key4_non_bucket, comment value4 FROM orders").toString(),
                     15000);
             assertUpdate(
                     session,
@@ -2990,15 +2418,11 @@ public class TestHiveIntegrationSmokeTest
                     15000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_joinDual\n" +
-                            "WITH (bucket_count = 13, bucketed_by = ARRAY['keyD']) AS\n" +
-                            "SELECT orderkey keyD, comment valueD FROM orders CROSS JOIN UNNEST(repeat(NULL, 2))",
+                    new StringBuilder().append("CREATE TABLE test_grouped_joinDual\n").append("WITH (bucket_count = 13, bucketed_by = ARRAY['keyD']) AS\n").append("SELECT orderkey keyD, comment valueD FROM orders CROSS JOIN UNNEST(repeat(NULL, 2))").toString(),
                     30000);
             assertUpdate(
                     session,
-                    "CREATE TABLE test_grouped_window\n" +
-                            "WITH (bucket_count = 5, bucketed_by = ARRAY['key']) AS\n" +
-                            "SELECT custkey key, orderkey value FROM orders WHERE custkey <= 5 ORDER BY orderkey LIMIT 10",
+                    new StringBuilder().append("CREATE TABLE test_grouped_window\n").append("WITH (bucket_count = 5, bucketed_by = ARRAY['key']) AS\n").append("SELECT custkey key, orderkey value FROM orders WHERE custkey <= 5 ORDER BY orderkey LIMIT 10").toString(),
                     10);
 
             // NOT grouped execution; default
@@ -3069,30 +2493,14 @@ public class TestHiveIntegrationSmokeTest
             // =========
 
             @Language("SQL") String joinThreeBucketedTable =
-                    "SELECT key1, value1, key2, value2, key3, value3\n" +
-                            "FROM test_grouped_join1\n" +
-                            "JOIN test_grouped_join2\n" +
-                            "ON key1 = key2\n" +
-                            "JOIN test_grouped_join3\n" +
-                            "ON key2 = key3";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_grouped_join1\n").append("JOIN test_grouped_join2\n").append("ON key1 = key2\n").append("JOIN test_grouped_join3\n").append("ON key2 = key3").toString();
             @Language("SQL") String joinThreeMixedTable =
-                    "SELECT key1, value1, key2, value2, keyN, valueN\n" +
-                            "FROM test_grouped_join1\n" +
-                            "JOIN test_grouped_join2\n" +
-                            "ON key1 = key2\n" +
-                            "JOIN test_grouped_joinN\n" +
-                            "ON key2 = keyN";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2, keyN, valueN\n").append("FROM test_grouped_join1\n").append("JOIN test_grouped_join2\n").append("ON key1 = key2\n").append("JOIN test_grouped_joinN\n").append("ON key2 = keyN").toString();
             @Language("SQL") String expectedJoinQuery = "SELECT orderkey, comment, orderkey, comment, orderkey, comment from orders";
             @Language("SQL") String leftJoinBucketedTable =
-                    "SELECT key1, value1, key2, value2\n" +
-                            "FROM test_grouped_join1\n" +
-                            "LEFT JOIN (SELECT * FROM test_grouped_join2 WHERE key2 % 2 = 0)\n" +
-                            "ON key1 = key2";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2\n").append("FROM test_grouped_join1\n").append("LEFT JOIN (SELECT * FROM test_grouped_join2 WHERE key2 % 2 = 0)\n").append("ON key1 = key2").toString();
             @Language("SQL") String rightJoinBucketedTable =
-                    "SELECT key1, value1, key2, value2\n" +
-                            "FROM (SELECT * FROM test_grouped_join2 WHERE key2 % 2 = 0)\n" +
-                            "RIGHT JOIN test_grouped_join1\n" +
-                            "ON key1 = key2";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2\n").append("FROM (SELECT * FROM test_grouped_join2 WHERE key2 % 2 = 0)\n").append("RIGHT JOIN test_grouped_join1\n").append("ON key1 = key2").toString();
             @Language("SQL") String expectedOuterJoinQuery = "SELECT orderkey, comment, CASE mod(orderkey, 2) WHEN 0 THEN orderkey END, CASE mod(orderkey, 2) WHEN 0 THEN comment END from orders";
 
             assertQuery(notColocated, joinThreeBucketedTable, expectedJoinQuery);
@@ -3122,17 +2530,9 @@ public class TestHiveIntegrationSmokeTest
             // ==============================
 
             @Language("SQL") String crossJoin =
-                    "SELECT key1, value1, key2, value2, key3, value3\n" +
-                            "FROM test_grouped_join1\n" +
-                            "JOIN test_grouped_join2\n" +
-                            "ON key1 = key2\n" +
-                            "CROSS JOIN (SELECT * FROM test_grouped_join3 WHERE key3 <= 3)";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM test_grouped_join1\n").append("JOIN test_grouped_join2\n").append("ON key1 = key2\n").append("CROSS JOIN (SELECT * FROM test_grouped_join3 WHERE key3 <= 3)").toString();
             @Language("SQL") String expectedCrossJoinQuery =
-                    "SELECT key1, value1, key1, value1, key3, value3\n" +
-                            "FROM\n" +
-                            "  (SELECT orderkey key1, comment value1 FROM orders)\n" +
-                            "CROSS JOIN\n" +
-                            "  (SELECT orderkey key3, comment value3 FROM orders where orderkey <= 3)";
+                    new StringBuilder().append("SELECT key1, value1, key1, value1, key3, value3\n").append("FROM\n").append("  (SELECT orderkey key1, comment value1 FROM orders)\n").append("CROSS JOIN\n").append("  (SELECT orderkey key3, comment value3 FROM orders where orderkey <= 3)").toString();
             assertQuery(notColocated, crossJoin, expectedCrossJoinQuery);
             assertQuery(colocatedAllGroupsAtOnce, crossJoin, expectedCrossJoinQuery, assertRemoteExchangesCount(2));
             assertQuery(colocatedOneGroupAtATime, crossJoin, expectedCrossJoinQuery, assertRemoteExchangesCount(2));
@@ -3141,18 +2541,8 @@ public class TestHiveIntegrationSmokeTest
             // Bucketed and unbucketed HASH JOIN mixed
             // =======================================
             @Language("SQL") String bucketedAndUnbucketedJoin =
-                    "SELECT key1, value1, keyN, valueN, key2, value2, key3, value3\n" +
-                            "FROM\n" +
-                            "  test_grouped_join1\n" +
-                            "JOIN (\n" +
-                            "  SELECT *\n" +
-                            "  FROM test_grouped_joinN\n" +
-                            "  JOIN test_grouped_join2\n" +
-                            "  ON keyN = key2\n" +
-                            ")\n" +
-                            "ON key1 = keyN\n" +
-                            "JOIN test_grouped_join3\n" +
-                            "ON key1 = key3";
+                    new StringBuilder().append("SELECT key1, value1, keyN, valueN, key2, value2, key3, value3\n").append("FROM\n").append("  test_grouped_join1\n").append("JOIN (\n").append("  SELECT *\n").append("  FROM test_grouped_joinN\n").append("  JOIN test_grouped_join2\n").append("  ON keyN = key2\n")
+					.append(")\n").append("ON key1 = keyN\n").append("JOIN test_grouped_join3\n").append("ON key1 = key3").toString();
             @Language("SQL") String expectedBucketedAndUnbucketedJoinQuery = "SELECT orderkey, comment, orderkey, comment, orderkey, comment, orderkey, comment from orders";
             assertQuery(notColocated, bucketedAndUnbucketedJoin, expectedBucketedAndUnbucketedJoinQuery);
             assertQuery(colocatedAllGroupsAtOnce, bucketedAndUnbucketedJoin, expectedBucketedAndUnbucketedJoinQuery, assertRemoteExchangesCount(2));
@@ -3164,51 +2554,16 @@ public class TestHiveIntegrationSmokeTest
             // ====================
 
             @Language("SQL") String groupBySingleBucketed =
-                    "SELECT\n" +
-                            "  keyD,\n" +
-                            "  count(valueD)\n" +
-                            "FROM\n" +
-                            "  test_grouped_joinDual\n" +
-                            "GROUP BY keyD";
+                    new StringBuilder().append("SELECT\n").append("  keyD,\n").append("  count(valueD)\n").append("FROM\n").append("  test_grouped_joinDual\n").append("GROUP BY keyD").toString();
             @Language("SQL") String expectedSingleGroupByQuery = "SELECT orderkey, 2 from orders";
             @Language("SQL") String groupByOfUnionBucketed =
-                    "SELECT\n" +
-                            "  key\n" +
-                            ", arbitrary(value1)\n" +
-                            ", arbitrary(value2)\n" +
-                            ", arbitrary(value3)\n" +
-                            "FROM (\n" +
-                            "  SELECT key1 key, value1, NULL value2, NULL value3\n" +
-                            "  FROM test_grouped_join1\n" +
-                            "UNION ALL\n" +
-                            "  SELECT key2 key, NULL value1, value2, NULL value3\n" +
-                            "  FROM test_grouped_join2\n" +
-                            "  WHERE key2 % 2 = 0\n" +
-                            "UNION ALL\n" +
-                            "  SELECT key3 key, NULL value1, NULL value2, value3\n" +
-                            "  FROM test_grouped_join3\n" +
-                            "  WHERE key3 % 3 = 0\n" +
-                            ")\n" +
-                            "GROUP BY key";
+                    new StringBuilder().append("SELECT\n").append("  key\n").append(", arbitrary(value1)\n").append(", arbitrary(value2)\n").append(", arbitrary(value3)\n").append("FROM (\n").append("  SELECT key1 key, value1, NULL value2, NULL value3\n").append("  FROM test_grouped_join1\n")
+					.append("UNION ALL\n").append("  SELECT key2 key, NULL value1, value2, NULL value3\n").append("  FROM test_grouped_join2\n").append("  WHERE key2 % 2 = 0\n").append("UNION ALL\n").append("  SELECT key3 key, NULL value1, NULL value2, value3\n").append("  FROM test_grouped_join3\n").append("  WHERE key3 % 3 = 0\n").append(")\n")
+					.append("GROUP BY key").toString();
             @Language("SQL") String groupByOfUnionMixed =
-                    "SELECT\n" +
-                            "  key\n" +
-                            ", arbitrary(value1)\n" +
-                            ", arbitrary(value2)\n" +
-                            ", arbitrary(valueN)\n" +
-                            "FROM (\n" +
-                            "  SELECT key1 key, value1, NULL value2, NULL valueN\n" +
-                            "  FROM test_grouped_join1\n" +
-                            "UNION ALL\n" +
-                            "  SELECT key2 key, NULL value1, value2, NULL valueN\n" +
-                            "  FROM test_grouped_join2\n" +
-                            "  WHERE key2 % 2 = 0\n" +
-                            "UNION ALL\n" +
-                            "  SELECT keyN key, NULL value1, NULL value2, valueN\n" +
-                            "  FROM test_grouped_joinN\n" +
-                            "  WHERE keyN % 3 = 0\n" +
-                            ")\n" +
-                            "GROUP BY key";
+                    new StringBuilder().append("SELECT\n").append("  key\n").append(", arbitrary(value1)\n").append(", arbitrary(value2)\n").append(", arbitrary(valueN)\n").append("FROM (\n").append("  SELECT key1 key, value1, NULL value2, NULL valueN\n").append("  FROM test_grouped_join1\n")
+					.append("UNION ALL\n").append("  SELECT key2 key, NULL value1, value2, NULL valueN\n").append("  FROM test_grouped_join2\n").append("  WHERE key2 % 2 = 0\n").append("UNION ALL\n").append("  SELECT keyN key, NULL value1, NULL value2, valueN\n").append("  FROM test_grouped_joinN\n").append("  WHERE keyN % 3 = 0\n").append(")\n")
+					.append("GROUP BY key").toString();
             @Language("SQL") String expectedGroupByOfUnion = "SELECT orderkey, comment, CASE mod(orderkey, 2) WHEN 0 THEN comment END, CASE mod(orderkey, 3) WHEN 0 THEN comment END from orders";
             // In this case:
             // * left side can take advantage of bucketed execution
@@ -3223,17 +2578,8 @@ public class TestHiveIntegrationSmokeTest
             //     |
             // Scan (bucketed on key)
             @Language("SQL") String groupByOfUnionOfGroupByMixed =
-                    "SELECT\n" +
-                            "  key, sum(cnt) cnt\n" +
-                            "FROM (\n" +
-                            "  SELECT keyD key, count(valueD) cnt\n" +
-                            "  FROM test_grouped_joinDual\n" +
-                            "  GROUP BY keyD\n" +
-                            "UNION ALL\n" +
-                            "  SELECT keyN key, 1 cnt\n" +
-                            "  FROM test_grouped_joinN\n" +
-                            ")\n" +
-                            "group by key";
+                    new StringBuilder().append("SELECT\n").append("  key, sum(cnt) cnt\n").append("FROM (\n").append("  SELECT keyD key, count(valueD) cnt\n").append("  FROM test_grouped_joinDual\n").append("  GROUP BY keyD\n").append("UNION ALL\n").append("  SELECT keyN key, 1 cnt\n")
+					.append("  FROM test_grouped_joinN\n").append(")\n").append("group by key").toString();
             @Language("SQL") String expectedGroupByOfUnionOfGroupBy = "SELECT orderkey, 3 from orders";
 
             // Eligible GROUP BYs run in the same fragment regardless of colocated_join flag
@@ -3252,60 +2598,23 @@ public class TestHiveIntegrationSmokeTest
             // GROUP BY and JOIN mixed
             // ========================
             @Language("SQL") String joinGroupedWithGrouped =
-                    "SELECT key1, count1, count2\n" +
-                            "FROM (\n" +
-                            "  SELECT keyD key1, count(valueD) count1\n" +
-                            "  FROM test_grouped_joinDual\n" +
-                            "  GROUP BY keyD\n" +
-                            ") JOIN (\n" +
-                            "  SELECT keyD key2, count(valueD) count2\n" +
-                            "  FROM test_grouped_joinDual\n" +
-                            "  GROUP BY keyD\n" +
-                            ")\n" +
-                            "ON key1 = key2";
+                    new StringBuilder().append("SELECT key1, count1, count2\n").append("FROM (\n").append("  SELECT keyD key1, count(valueD) count1\n").append("  FROM test_grouped_joinDual\n").append("  GROUP BY keyD\n").append(") JOIN (\n").append("  SELECT keyD key2, count(valueD) count2\n").append("  FROM test_grouped_joinDual\n")
+					.append("  GROUP BY keyD\n").append(")\n").append("ON key1 = key2").toString();
             @Language("SQL") String expectedJoinGroupedWithGrouped = "SELECT orderkey, 2, 2 from orders";
             @Language("SQL") String joinGroupedWithUngrouped =
-                    "SELECT keyD, countD, valueN\n" +
-                            "FROM (\n" +
-                            "  SELECT keyD, count(valueD) countD\n" +
-                            "  FROM test_grouped_joinDual\n" +
-                            "  GROUP BY keyD\n" +
-                            ") JOIN (\n" +
-                            "  SELECT keyN, valueN\n" +
-                            "  FROM test_grouped_joinN\n" +
-                            ")\n" +
-                            "ON keyD = keyN";
+                    new StringBuilder().append("SELECT keyD, countD, valueN\n").append("FROM (\n").append("  SELECT keyD, count(valueD) countD\n").append("  FROM test_grouped_joinDual\n").append("  GROUP BY keyD\n").append(") JOIN (\n").append("  SELECT keyN, valueN\n").append("  FROM test_grouped_joinN\n")
+					.append(")\n").append("ON keyD = keyN").toString();
             @Language("SQL") String expectedJoinGroupedWithUngrouped = "SELECT orderkey, 2, comment from orders";
             @Language("SQL") String joinUngroupedWithGrouped =
-                    "SELECT keyN, valueN, countD\n" +
-                            "FROM (\n" +
-                            "  SELECT keyN, valueN\n" +
-                            "  FROM test_grouped_joinN\n" +
-                            ") JOIN (\n" +
-                            "  SELECT keyD, count(valueD) countD\n" +
-                            "  FROM test_grouped_joinDual\n" +
-                            "  GROUP BY keyD\n" +
-                            ")\n" +
-                            "ON keyN = keyD";
+                    new StringBuilder().append("SELECT keyN, valueN, countD\n").append("FROM (\n").append("  SELECT keyN, valueN\n").append("  FROM test_grouped_joinN\n").append(") JOIN (\n").append("  SELECT keyD, count(valueD) countD\n").append("  FROM test_grouped_joinDual\n").append("  GROUP BY keyD\n")
+					.append(")\n").append("ON keyN = keyD").toString();
             @Language("SQL") String expectedJoinUngroupedWithGrouped = "SELECT orderkey, comment, 2 from orders";
             @Language("SQL") String groupOnJoinResult =
-                    "SELECT keyD, count(valueD), count(valueN)\n" +
-                            "FROM\n" +
-                            "  test_grouped_joinDual\n" +
-                            "JOIN\n" +
-                            "  test_grouped_joinN\n" +
-                            "ON keyD=keyN\n" +
-                            "GROUP BY keyD";
+                    new StringBuilder().append("SELECT keyD, count(valueD), count(valueN)\n").append("FROM\n").append("  test_grouped_joinDual\n").append("JOIN\n").append("  test_grouped_joinN\n").append("ON keyD=keyN\n").append("GROUP BY keyD").toString();
             @Language("SQL") String expectedGroupOnJoinResult = "SELECT orderkey, 2, 2 from orders";
 
             @Language("SQL") String groupOnUngroupedJoinResult =
-                    "SELECT key4_bucket, count(value4), count(valueN)\n" +
-                            "FROM\n" +
-                            "  test_grouped_join4\n" +
-                            "JOIN\n" +
-                            "  test_grouped_joinN\n" +
-                            "ON key4_non_bucket=keyN\n" +
-                            "GROUP BY key4_bucket";
+                    new StringBuilder().append("SELECT key4_bucket, count(value4), count(valueN)\n").append("FROM\n").append("  test_grouped_join4\n").append("JOIN\n").append("  test_grouped_joinN\n").append("ON key4_non_bucket=keyN\n").append("GROUP BY key4_bucket").toString();
             @Language("SQL") String expectedGroupOnUngroupedJoinResult = "SELECT orderkey, count(*), count(*) from orders group by orderkey";
 
             // Eligible GROUP BYs run in the same fragment regardless of colocated_join flag
@@ -3332,50 +2641,18 @@ public class TestHiveIntegrationSmokeTest
 
             // Chain on the probe side to test duplicating OperatorFactory
             @Language("SQL") String chainedOuterJoin =
-                    "SELECT key1, value1, key2, value2, key3, value3\n" +
-                            "FROM\n" +
-                            "  (SELECT * FROM test_grouped_join1 where mod(key1, 2) = 0)\n" +
-                            "RIGHT JOIN\n" +
-                            "  (SELECT * FROM test_grouped_join2 where mod(key2, 3) = 0)\n" +
-                            "ON key1 = key2\n" +
-                            "FULL JOIN\n" +
-                            "  (SELECT * FROM test_grouped_join3 where mod(key3, 5) = 0)\n" +
-                            "ON key2 = key3";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2, key3, value3\n").append("FROM\n").append("  (SELECT * FROM test_grouped_join1 where mod(key1, 2) = 0)\n").append("RIGHT JOIN\n").append("  (SELECT * FROM test_grouped_join2 where mod(key2, 3) = 0)\n").append("ON key1 = key2\n").append("FULL JOIN\n").append("  (SELECT * FROM test_grouped_join3 where mod(key3, 5) = 0)\n")
+					.append("ON key2 = key3").toString();
             // Probe is grouped execution, but build is not
             @Language("SQL") String sharedBuildOuterJoin =
-                    "SELECT key1, value1, keyN, valueN\n" +
-                            "FROM\n" +
-                            "  (SELECT key1, arbitrary(value1) value1 FROM test_grouped_join1 where mod(key1, 2) = 0 group by key1)\n" +
-                            "RIGHT JOIN\n" +
-                            "  (SELECT * FROM test_grouped_joinN where mod(keyN, 3) = 0)\n" +
-                            "ON key1 = keyN";
+                    new StringBuilder().append("SELECT key1, value1, keyN, valueN\n").append("FROM\n").append("  (SELECT key1, arbitrary(value1) value1 FROM test_grouped_join1 where mod(key1, 2) = 0 group by key1)\n").append("RIGHT JOIN\n").append("  (SELECT * FROM test_grouped_joinN where mod(keyN, 3) = 0)\n").append("ON key1 = keyN").toString();
             // The preceding test case, which then feeds into another join
             @Language("SQL") String chainedSharedBuildOuterJoin =
-                    "SELECT key1, value1, keyN, valueN, key3, value3\n" +
-                            "FROM\n" +
-                            "  (SELECT key1, arbitrary(value1) value1 FROM test_grouped_join1 where mod(key1, 2) = 0 group by key1)\n" +
-                            "RIGHT JOIN\n" +
-                            "  (SELECT * FROM test_grouped_joinN where mod(keyN, 3) = 0)\n" +
-                            "ON key1 = keyN\n" +
-                            "FULL JOIN\n" +
-                            "  (SELECT * FROM test_grouped_join3 where mod(key3, 5) = 0)\n" +
-                            "ON keyN = key3";
-            @Language("SQL") String expectedChainedOuterJoinResult = "SELECT\n" +
-                    "  CASE WHEN mod(orderkey, 2 * 3) = 0 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 2 * 3) = 0 THEN comment END,\n" +
-                    "  CASE WHEN mod(orderkey, 3) = 0 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 3) = 0 THEN comment END,\n" +
-                    "  CASE WHEN mod(orderkey, 5) = 0 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 5) = 0 THEN comment END\n" +
-                    "FROM ORDERS\n" +
-                    "WHERE mod(orderkey, 3) = 0 OR mod(orderkey, 5) = 0";
-            @Language("SQL") String expectedSharedBuildOuterJoinResult = "SELECT\n" +
-                    "  CASE WHEN mod(orderkey, 2) = 0 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 2) = 0 THEN comment END,\n" +
-                    "  orderkey,\n" +
-                    "  comment\n" +
-                    "FROM ORDERS\n" +
-                    "WHERE mod(orderkey, 3) = 0";
+                    new StringBuilder().append("SELECT key1, value1, keyN, valueN, key3, value3\n").append("FROM\n").append("  (SELECT key1, arbitrary(value1) value1 FROM test_grouped_join1 where mod(key1, 2) = 0 group by key1)\n").append("RIGHT JOIN\n").append("  (SELECT * FROM test_grouped_joinN where mod(keyN, 3) = 0)\n").append("ON key1 = keyN\n").append("FULL JOIN\n").append("  (SELECT * FROM test_grouped_join3 where mod(key3, 5) = 0)\n")
+					.append("ON keyN = key3").toString();
+            @Language("SQL") String expectedChainedOuterJoinResult = new StringBuilder().append("SELECT\n").append("  CASE WHEN mod(orderkey, 2 * 3) = 0 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 2 * 3) = 0 THEN comment END,\n").append("  CASE WHEN mod(orderkey, 3) = 0 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 3) = 0 THEN comment END,\n").append("  CASE WHEN mod(orderkey, 5) = 0 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 5) = 0 THEN comment END\n").append("FROM ORDERS\n")
+					.append("WHERE mod(orderkey, 3) = 0 OR mod(orderkey, 5) = 0").toString();
+            @Language("SQL") String expectedSharedBuildOuterJoinResult = new StringBuilder().append("SELECT\n").append("  CASE WHEN mod(orderkey, 2) = 0 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 2) = 0 THEN comment END,\n").append("  orderkey,\n").append("  comment\n").append("FROM ORDERS\n").append("WHERE mod(orderkey, 3) = 0").toString();
 
             assertQuery(notColocated, chainedOuterJoin, expectedChainedOuterJoinResult);
             assertQuery(colocatedAllGroupsAtOnce, chainedOuterJoin, expectedChainedOuterJoinResult, assertRemoteExchangesCount(1));
@@ -3394,77 +2671,34 @@ public class TestHiveIntegrationSmokeTest
             assertQuery(
                     colocatedOneGroupAtATime,
                     "SELECT key, count(*) OVER (PARTITION BY key ORDER BY value) FROM test_grouped_window",
-                    "VALUES\n" +
-                            "(1, 1),\n" +
-                            "(2, 1),\n" +
-                            "(2, 2),\n" +
-                            "(4, 1),\n" +
-                            "(4, 2),\n" +
-                            "(4, 3),\n" +
-                            "(4, 4),\n" +
-                            "(4, 5),\n" +
-                            "(5, 1),\n" +
-                            "(5, 2)",
+                    new StringBuilder().append("VALUES\n").append("(1, 1),\n").append("(2, 1),\n").append("(2, 2),\n").append("(4, 1),\n").append("(4, 2),\n").append("(4, 3),\n")
+							.append("(4, 4),\n").append("(4, 5),\n").append("(5, 1),\n").append("(5, 2)").toString(),
                     assertRemoteExchangesCount(1));
 
             assertQuery(
                     colocatedOneGroupAtATime,
                     "SELECT key, row_number() OVER (PARTITION BY key ORDER BY value) FROM test_grouped_window",
-                    "VALUES\n" +
-                            "(1, 1),\n" +
-                            "(2, 1),\n" +
-                            "(2, 2),\n" +
-                            "(4, 1),\n" +
-                            "(4, 2),\n" +
-                            "(4, 3),\n" +
-                            "(4, 4),\n" +
-                            "(4, 5),\n" +
-                            "(5, 1),\n" +
-                            "(5, 2)",
+                    new StringBuilder().append("VALUES\n").append("(1, 1),\n").append("(2, 1),\n").append("(2, 2),\n").append("(4, 1),\n").append("(4, 2),\n").append("(4, 3),\n")
+							.append("(4, 4),\n").append("(4, 5),\n").append("(5, 1),\n").append("(5, 2)").toString(),
                     assertRemoteExchangesCount(1));
 
             assertQuery(
                     colocatedOneGroupAtATime,
                     "SELECT key, n FROM (SELECT key, row_number() OVER (PARTITION BY key ORDER BY value) AS n FROM test_grouped_window) WHERE n <= 2",
-                    "VALUES\n" +
-                            "(1, 1),\n" +
-                            "(2, 1),\n" +
-                            "(2, 2),\n" +
-                            "(4, 1),\n" +
-                            "(4, 2),\n" +
-                            "(5, 1),\n" +
-                            "(5, 2)",
+                    new StringBuilder().append("VALUES\n").append("(1, 1),\n").append("(2, 1),\n").append("(2, 2),\n").append("(4, 1),\n").append("(4, 2),\n").append("(5, 1),\n")
+							.append("(5, 2)").toString(),
                     assertRemoteExchangesCount(1));
 
             //
             // Filter out all or majority of splits
             // ====================================
             @Language("SQL") String noSplits =
-                    "SELECT key1, arbitrary(value1)\n" +
-                            "FROM test_grouped_join1\n" +
-                            "WHERE \"$bucket\" < 0\n" +
-                            "GROUP BY key1";
+                    new StringBuilder().append("SELECT key1, arbitrary(value1)\n").append("FROM test_grouped_join1\n").append("WHERE \"$bucket\" < 0\n").append("GROUP BY key1").toString();
             @Language("SQL") String joinMismatchedBuckets =
-                    "SELECT key1, value1, key2, value2\n" +
-                            "FROM (\n" +
-                            "  SELECT *\n" +
-                            "  FROM test_grouped_join1\n" +
-                            "  WHERE \"$bucket\"=1\n" +
-                            ")\n" +
-                            "FULL OUTER JOIN (\n" +
-                            "  SELECT *\n" +
-                            "  FROM test_grouped_join2\n" +
-                            "  WHERE \"$bucket\"=11\n" +
-                            ")\n" +
-                            "ON key1=key2";
+                    new StringBuilder().append("SELECT key1, value1, key2, value2\n").append("FROM (\n").append("  SELECT *\n").append("  FROM test_grouped_join1\n").append("  WHERE \"$bucket\"=1\n").append(")\n").append("FULL OUTER JOIN (\n").append("  SELECT *\n")
+					.append("  FROM test_grouped_join2\n").append("  WHERE \"$bucket\"=11\n").append(")\n").append("ON key1=key2").toString();
             @Language("SQL") String expectedNoSplits = "SELECT 1, 'a' WHERE FALSE";
-            @Language("SQL") String expectedJoinMismatchedBuckets = "SELECT\n" +
-                    "  CASE WHEN mod(orderkey, 13) = 1 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 13) = 1 THEN comment END,\n" +
-                    "  CASE WHEN mod(orderkey, 13) = 11 THEN orderkey END,\n" +
-                    "  CASE WHEN mod(orderkey, 13) = 11 THEN comment END\n" +
-                    "FROM ORDERS\n" +
-                    "WHERE mod(orderkey, 13) IN (1, 11)";
+            @Language("SQL") String expectedJoinMismatchedBuckets = new StringBuilder().append("SELECT\n").append("  CASE WHEN mod(orderkey, 13) = 1 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 13) = 1 THEN comment END,\n").append("  CASE WHEN mod(orderkey, 13) = 11 THEN orderkey END,\n").append("  CASE WHEN mod(orderkey, 13) = 11 THEN comment END\n").append("FROM ORDERS\n").append("WHERE mod(orderkey, 13) IN (1, 11)").toString();
 
             assertQuery(notColocated, noSplits, expectedNoSplits);
             assertQuery(colocatedAllGroupsAtOnce, noSplits, expectedNoSplits, assertRemoteExchangesCount(1));
@@ -3568,9 +2802,7 @@ public class TestHiveIntegrationSmokeTest
         String testAccountsUnqualifiedName = "test_accounts";
         String testAccountsViewUnqualifiedName = "test_accounts_view";
         String testAccountsViewFullyQualifiedName = format("%s.%s.%s", getSession().getCatalog().get(), getSession().getSchema().get(), testAccountsViewUnqualifiedName);
-        assertUpdate(format("CREATE TABLE %s AS SELECT user_name, account_name" +
-                "  FROM (VALUES ('user1', 'account1'), ('user2', 'account2'))" +
-                "  t (user_name, account_name)", testAccountsUnqualifiedName), 2);
+        assertUpdate(format(new StringBuilder().append("CREATE TABLE %s AS SELECT user_name, account_name").append("  FROM (VALUES ('user1', 'account1'), ('user2', 'account2'))").append("  t (user_name, account_name)").toString(), testAccountsUnqualifiedName), 2);
         assertUpdate(format("CREATE VIEW %s AS SELECT account_name FROM test_accounts WHERE user_name = CURRENT_USER", testAccountsViewUnqualifiedName));
         assertUpdate(format("GRANT SELECT ON %s TO user1", testAccountsViewFullyQualifiedName));
         assertUpdate(format("GRANT SELECT ON %s TO user2", testAccountsViewFullyQualifiedName));
@@ -3597,60 +2829,21 @@ public class TestHiveIntegrationSmokeTest
     public void testCollectColumnStatisticsOnCreateTable()
     {
         String tableName = "test_collect_column_statistics_on_create_table";
-        assertUpdate(format("" +
-                "CREATE TABLE %s " +
-                "WITH ( " +
-                "   partitioned_by = ARRAY['p_varchar'] " +
-                ") " +
-                "AS " +
-                "SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar " +
-                "FROM ( " +
-                "  VALUES " +
-                "    (null, null, null, null, null, null, null, 'p1'), " +
-                "    (null, null, null, null, null, null, null, 'p1'), " +
-                "    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', CAST('abc1' AS VARCHAR), CAST('bcd1' AS VARBINARY), sequence(0, 10), 'p1')," +
-                "    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', CAST('abc2' AS VARCHAR), CAST('bcd2' AS VARBINARY), sequence(10, 20), 'p1')," +
-                "    (null, null, null, null, null, null, null, 'p2'), " +
-                "    (null, null, null, null, null, null, null, 'p2'), " +
-                "    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', CAST('cba1' AS VARCHAR), CAST('dcb1' AS VARBINARY), sequence(20, 25), 'p2'), " +
-                "    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', CAST('cba2' AS VARCHAR), CAST('dcb2' AS VARBINARY), sequence(30, 35), 'p2') " +
-                ") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar)", tableName), 8);
+        assertUpdate(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("WITH ( ").append("   partitioned_by = ARRAY['p_varchar'] ").append(") ").append("AS ").append("SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar ").append("FROM ( ")
+				.append("  VALUES ").append("    (null, null, null, null, null, null, null, 'p1'), ").append("    (null, null, null, null, null, null, null, 'p1'), ").append("    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', CAST('abc1' AS VARCHAR), CAST('bcd1' AS VARBINARY), sequence(0, 10), 'p1'),").append("    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', CAST('abc2' AS VARCHAR), CAST('bcd2' AS VARBINARY), sequence(10, 20), 'p1'),").append("    (null, null, null, null, null, null, null, 'p2'), ").append("    (null, null, null, null, null, null, null, 'p2'), ").append("    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', CAST('cba1' AS VARCHAR), CAST('dcb1' AS VARBINARY), sequence(20, 25), 'p2'), ").append("    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', CAST('cba2' AS VARCHAR), CAST('dcb2' AS VARBINARY), sequence(30, 35), 'p2') ")
+				.append(") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar)").toString(), tableName), 8);
 
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p1')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_bigint', null, 2.0E0, 0.5E0, null, '0', '1'), " +
-                        "('c_double', null, 2.0E0, 0.5E0, null, '1.2', '2.2'), " +
-                        "('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), " +
-                        "('c_array', 176.0E0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 4.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_bigint', null, 2.0E0, 0.5E0, null, '0', '1'), ").append("('c_double', null, 2.0E0, 0.5E0, null, '1.2', '2.2'), ").append("('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), ").append("('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), ")
+						.append("('c_array', 176.0E0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 4.0E0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p2')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_bigint', null, 2.0E0, 0.5E0, null, '1', '2'), " +
-                        "('c_double', null, 2.0E0, 0.5E0, null, '2.3', '3.3'), " +
-                        "('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), " +
-                        "('c_array', 96.0E0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 4.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_bigint', null, 2.0E0, 0.5E0, null, '1', '2'), ").append("('c_double', null, 2.0E0, 0.5E0, null, '2.3', '3.3'), ").append("('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), ").append("('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), ")
+						.append("('c_array', 96.0E0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 4.0E0, null, null)").toString());
 
         // non existing partition
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p3')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 0E0, 0E0, null, null, null), " +
-                        "('c_bigint', null, 0E0, 0E0, null, null, null), " +
-                        "('c_double', null, 0E0, 0E0, null, null, null), " +
-                        "('c_timestamp', null, 0E0, 0E0, null, null, null), " +
-                        "('c_varchar', 0E0, 0E0, 0E0, null, null, null), " +
-                        "('c_varbinary', null, 0E0, 0E0, null, null, null), " +
-                        "('c_array', null, 0E0, 0E0, null, null, null), " +
-                        "('p_varchar', 0E0, 0E0, 0E0, null, null, null), " +
-                        "(null, null, null, null, 0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 0E0, 0E0, null, null, null), ").append("('c_bigint', null, 0E0, 0E0, null, null, null), ").append("('c_double', null, 0E0, 0E0, null, null, null), ").append("('c_timestamp', null, 0E0, 0E0, null, null, null), ").append("('c_varchar', 0E0, 0E0, 0E0, null, null, null), ").append("('c_varbinary', null, 0E0, 0E0, null, null, null), ")
+						.append("('c_array', null, 0E0, 0E0, null, null, null), ").append("('p_varchar', 0E0, 0E0, 0E0, null, null, null), ").append("(null, null, null, null, 0E0, null, null)").toString());
 
         assertUpdate(format("DROP TABLE %s", tableName));
     }
@@ -3659,71 +2852,23 @@ public class TestHiveIntegrationSmokeTest
     public void testCollectColumnStatisticsOnInsert()
     {
         String tableName = "test_collect_column_statistics_on_insert";
-        assertUpdate(format("" +
-                "CREATE TABLE %s ( " +
-                "   c_boolean BOOLEAN, " +
-                "   c_bigint BIGINT, " +
-                "   c_double DOUBLE, " +
-                "   c_timestamp TIMESTAMP, " +
-                "   c_varchar VARCHAR, " +
-                "   c_varbinary VARBINARY, " +
-                "   c_array ARRAY(BIGINT), " +
-                "   p_varchar VARCHAR " +
-                ") " +
-                "WITH ( " +
-                "   partitioned_by = ARRAY['p_varchar'] " +
-                ")", tableName));
+        assertUpdate(format(new StringBuilder().append("").append("CREATE TABLE %s ( ").append("   c_boolean BOOLEAN, ").append("   c_bigint BIGINT, ").append("   c_double DOUBLE, ").append("   c_timestamp TIMESTAMP, ").append("   c_varchar VARCHAR, ").append("   c_varbinary VARBINARY, ")
+				.append("   c_array ARRAY(BIGINT), ").append("   p_varchar VARCHAR ").append(") ").append("WITH ( ").append("   partitioned_by = ARRAY['p_varchar'] ").append(")").toString(), tableName));
 
-        assertUpdate(format("" +
-                "INSERT INTO %s " +
-                "SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar " +
-                "FROM ( " +
-                "  VALUES " +
-                "    (null, null, null, null, null, null, null, 'p1'), " +
-                "    (null, null, null, null, null, null, null, 'p1'), " +
-                "    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', CAST('abc1' AS VARCHAR), CAST('bcd1' AS VARBINARY), sequence(0, 10), 'p1')," +
-                "    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', CAST('abc2' AS VARCHAR), CAST('bcd2' AS VARBINARY), sequence(10, 20), 'p1')," +
-                "    (null, null, null, null, null, null, null, 'p2'), " +
-                "    (null, null, null, null, null, null, null, 'p2'), " +
-                "    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', CAST('cba1' AS VARCHAR), CAST('dcb1' AS VARBINARY), sequence(20, 25), 'p2'), " +
-                "    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', CAST('cba2' AS VARCHAR), CAST('dcb2' AS VARBINARY), sequence(30, 35), 'p2') " +
-                ") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar)", tableName), 8);
+        assertUpdate(format(new StringBuilder().append("").append("INSERT INTO %s ").append("SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar ").append("FROM ( ").append("  VALUES ").append("    (null, null, null, null, null, null, null, 'p1'), ").append("    (null, null, null, null, null, null, null, 'p1'), ").append("    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', CAST('abc1' AS VARCHAR), CAST('bcd1' AS VARBINARY), sequence(0, 10), 'p1'),")
+				.append("    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', CAST('abc2' AS VARCHAR), CAST('bcd2' AS VARBINARY), sequence(10, 20), 'p1'),").append("    (null, null, null, null, null, null, null, 'p2'), ").append("    (null, null, null, null, null, null, null, 'p2'), ").append("    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', CAST('cba1' AS VARCHAR), CAST('dcb1' AS VARBINARY), sequence(20, 25), 'p2'), ").append("    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', CAST('cba2' AS VARCHAR), CAST('dcb2' AS VARBINARY), sequence(30, 35), 'p2') ").append(") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar)").toString(), tableName), 8);
 
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p1')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_bigint', null, 2.0E0, 0.5E0, null, '0', '1'), " +
-                        "('c_double', null, 2.0E0, 0.5E0, null, '1.2', '2.2'), " +
-                        "('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), " +
-                        "('c_array', 176.0E0, null, 0.5E0, null, null, null), " +
-                        "('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 4.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_bigint', null, 2.0E0, 0.5E0, null, '0', '1'), ").append("('c_double', null, 2.0E0, 0.5E0, null, '1.2', '2.2'), ").append("('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), ").append("('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), ")
+						.append("('c_array', 176.0E0, null, 0.5E0, null, null, null), ").append("('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 4.0E0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p2')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_bigint', null, 2.0E0, 0.5E0, null, '1', '2'), " +
-                        "('c_double', null, 2.0E0, 0.5E0, null, '2.3', '3.3'), " +
-                        "('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), " +
-                        "('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), " +
-                        "('c_array', 96.0E0, null, 0.5E0, null, null, null), " +
-                        "('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 4.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_bigint', null, 2.0E0, 0.5E0, null, '1', '2'), ").append("('c_double', null, 2.0E0, 0.5E0, null, '2.3', '3.3'), ").append("('c_timestamp', null, 2.0E0, 0.5E0, null, null, null), ").append("('c_varchar', 8.0E0, 2.0E0, 0.5E0, null, null, null), ").append("('c_varbinary', 8.0E0, null, 0.5E0, null, null, null), ")
+						.append("('c_array', 96.0E0, null, 0.5E0, null, null, null), ").append("('p_varchar', 8.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 4.0E0, null, null)").toString());
 
         // non existing partition
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p3')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 0E0, 0E0, null, null, null), " +
-                        "('c_bigint', null, 0E0, 0E0, null, null, null), " +
-                        "('c_double', null, 0E0, 0E0, null, null, null), " +
-                        "('c_timestamp', null, 0E0, 0E0, null, null, null), " +
-                        "('c_varchar', 0E0, 0E0, 0E0, null, null, null), " +
-                        "('c_varbinary', null, 0E0, 0E0, null, null, null), " +
-                        "('c_array', null, 0E0, 0E0, null, null, null), " +
-                        "('p_varchar', 0E0, 0E0, 0E0, null, null, null), " +
-                        "(null, null, null, null, 0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 0E0, 0E0, null, null, null), ").append("('c_bigint', null, 0E0, 0E0, null, null, null), ").append("('c_double', null, 0E0, 0E0, null, null, null), ").append("('c_timestamp', null, 0E0, 0E0, null, null, null), ").append("('c_varchar', 0E0, 0E0, 0E0, null, null, null), ").append("('c_varbinary', null, 0E0, 0E0, null, null, null), ")
+						.append("('c_array', null, 0E0, 0E0, null, null, null), ").append("('p_varchar', 0E0, 0E0, 0E0, null, null, null), ").append("(null, null, null, null, 0E0, null, null)").toString());
 
         assertUpdate(format("DROP TABLE %s", tableName));
     }
@@ -3796,187 +2941,61 @@ public class TestHiveIntegrationSmokeTest
 
         // No column stats before running analyze
         assertQuery("SHOW STATS FOR " + tableName,
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', 24.0, 3.0, 0.25, null, null, null), " +
-                        "('p_bigint', null, 2.0, 0.25, null, '7', '8'), " +
-                        "(null, null, null, null, 16.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', 24.0, 3.0, 0.25, null, null, null), ").append("('p_bigint', null, 2.0, 0.25, null, '7', '8'), ").append("(null, null, null, null, 16.0, null, null)").toString());
 
         // No column stats after running an empty analyze
         assertUpdate(format("ANALYZE %s WITH (partitions = ARRAY[])", tableName), 0);
         assertQuery("SHOW STATS FOR " + tableName,
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', 24.0, 3.0, 0.25, null, null, null), " +
-                        "('p_bigint', null, 2.0, 0.25, null, '7', '8'), " +
-                        "(null, null, null, null, 16.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', 24.0, 3.0, 0.25, null, null, null), ").append("('p_bigint', null, 2.0, 0.25, null, '7', '8'), ").append("(null, null, null, null, 16.0, null, null)").toString());
 
         // Run analyze on 3 partitions including a null partition and a duplicate partition
         assertUpdate(format("ANALYZE %s WITH (partitions = ARRAY[ARRAY['p1', '7'], ARRAY['p2', '7'], ARRAY['p2', '7'], ARRAY[NULL, NULL]])", tableName), 12);
 
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p1' AND p_bigint = 7)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.5, null, null, null), " +
-                        "('c_bigint', null, 2.0, 0.5, null, '0', '1'), " +
-                        "('c_double', null, 2.0, 0.5, null, '1.2', '2.2'), " +
-                        "('c_timestamp', null, 2.0, 0.5, null, null, null), " +
-                        "('c_varchar', 8.0, 2.0, 0.5, null, null, null), " +
-                        "('c_varbinary', 4.0, null, 0.5, null, null, null), " +
-                        "('c_array', 176.0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '7', '7'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.5, null, null, null), ").append("('c_bigint', null, 2.0, 0.5, null, '0', '1'), ").append("('c_double', null, 2.0, 0.5, null, '1.2', '2.2'), ").append("('c_timestamp', null, 2.0, 0.5, null, null, null), ").append("('c_varchar', 8.0, 2.0, 0.5, null, null, null), ").append("('c_varbinary', 4.0, null, 0.5, null, null, null), ")
+						.append("('c_array', 176.0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '7', '7'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p2' AND p_bigint = 7)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.5, null, null, null), " +
-                        "('c_bigint', null, 2.0, 0.5, null, '1', '2'), " +
-                        "('c_double', null, 2.0, 0.5, null, '2.3', '3.3'), " +
-                        "('c_timestamp', null, 2.0, 0.5, null, null, null), " +
-                        "('c_varchar', 8.0, 2.0, 0.5, null, null, null), " +
-                        "('c_varbinary', 4.0, null, 0.5, null, null, null), " +
-                        "('c_array', 96.0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '7', '7'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.5, null, null, null), ").append("('c_bigint', null, 2.0, 0.5, null, '1', '2'), ").append("('c_double', null, 2.0, 0.5, null, '2.3', '3.3'), ").append("('c_timestamp', null, 2.0, 0.5, null, null, null), ").append("('c_varchar', 8.0, 2.0, 0.5, null, null, null), ").append("('c_varbinary', 4.0, null, 0.5, null, null, null), ")
+						.append("('c_array', 96.0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '7', '7'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar IS NULL AND p_bigint IS NULL)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 1.0, 0.0, null, null, null), " +
-                        "('c_bigint', null, 4.0, 0.0, null, '4', '7'), " +
-                        "('c_double', null, 4.0, 0.0, null, '4.7', '7.7'), " +
-                        "('c_timestamp', null, 4.0, 0.0, null, null, null), " +
-                        "('c_varchar', 16.0, 4.0, 0.0, null, null, null), " +
-                        "('c_varbinary', 8.0, null, 0.0, null, null, null), " +
-                        "('c_array', 192.0, null, 0.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 1.0, 0.0, null, null, null), ").append("('c_bigint', null, 4.0, 0.0, null, '4', '7'), ").append("('c_double', null, 4.0, 0.0, null, '4.7', '7.7'), ").append("('c_timestamp', null, 4.0, 0.0, null, null, null), ").append("('c_varchar', 16.0, 4.0, 0.0, null, null, null), ").append("('c_varbinary', 8.0, null, 0.0, null, null, null), ")
+						.append("('c_array', 192.0, null, 0.0, null, null, null), ").append("('p_varchar', 0.0, 0.0, 1.0, null, null, null), ").append("('p_bigint', null, 0.0, 1.0, null, null, null), ").append("(null, null, null, null, 4.0, null, null)").toString());
 
         // Partition [p3, 8], [e1, 9], [e2, 9] have no column stats
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p3' AND p_bigint = 8)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '8', '8'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '8', '8'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e1' AND p_bigint = 9)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('p_bigint', null, 0.0, 0.0, null, null, null), ").append("(null, null, null, null, 0.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e2' AND p_bigint = 9)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('p_bigint', null, 0.0, 0.0, null, null, null), ").append("(null, null, null, null, 0.0, null, null)").toString());
 
         // Run analyze on the whole table
         assertUpdate("ANALYZE " + tableName, 16);
 
         // All partitions except empty partitions have column stats
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p1' AND p_bigint = 7)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.5, null, null, null), " +
-                        "('c_bigint', null, 2.0, 0.5, null, '0', '1'), " +
-                        "('c_double', null, 2.0, 0.5, null, '1.2', '2.2'), " +
-                        "('c_timestamp', null, 2.0, 0.5, null, null, null), " +
-                        "('c_varchar', 8.0, 2.0, 0.5, null, null, null), " +
-                        "('c_varbinary', 4.0, null, 0.5, null, null, null), " +
-                        "('c_array', 176.0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '7', '7'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.5, null, null, null), ").append("('c_bigint', null, 2.0, 0.5, null, '0', '1'), ").append("('c_double', null, 2.0, 0.5, null, '1.2', '2.2'), ").append("('c_timestamp', null, 2.0, 0.5, null, null, null), ").append("('c_varchar', 8.0, 2.0, 0.5, null, null, null), ").append("('c_varbinary', 4.0, null, 0.5, null, null, null), ")
+						.append("('c_array', 176.0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '7', '7'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p2' AND p_bigint = 7)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.5, null, null, null), " +
-                        "('c_bigint', null, 2.0, 0.5, null, '1', '2'), " +
-                        "('c_double', null, 2.0, 0.5, null, '2.3', '3.3'), " +
-                        "('c_timestamp', null, 2.0, 0.5, null, null, null), " +
-                        "('c_varchar', 8.0, 2.0, 0.5, null, null, null), " +
-                        "('c_varbinary', 4.0, null, 0.5, null, null, null), " +
-                        "('c_array', 96.0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '7', '7'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.5, null, null, null), ").append("('c_bigint', null, 2.0, 0.5, null, '1', '2'), ").append("('c_double', null, 2.0, 0.5, null, '2.3', '3.3'), ").append("('c_timestamp', null, 2.0, 0.5, null, null, null), ").append("('c_varchar', 8.0, 2.0, 0.5, null, null, null), ").append("('c_varbinary', 4.0, null, 0.5, null, null, null), ")
+						.append("('c_array', 96.0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '7', '7'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar IS NULL AND p_bigint IS NULL)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 1.0, 0.0, null, null, null), " +
-                        "('c_bigint', null, 4.0, 0.0, null, '4', '7'), " +
-                        "('c_double', null, 4.0, 0.0, null, '4.7', '7.7'), " +
-                        "('c_timestamp', null, 4.0, 0.0, null, null, null), " +
-                        "('c_varchar', 16.0, 4.0, 0.0, null, null, null), " +
-                        "('c_varbinary', 8.0, null, 0.0, null, null, null), " +
-                        "('c_array', 192.0, null, 0.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 1.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 1.0, null, null, null), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 1.0, 0.0, null, null, null), ").append("('c_bigint', null, 4.0, 0.0, null, '4', '7'), ").append("('c_double', null, 4.0, 0.0, null, '4.7', '7.7'), ").append("('c_timestamp', null, 4.0, 0.0, null, null, null), ").append("('c_varchar', 16.0, 4.0, 0.0, null, null, null), ").append("('c_varbinary', 8.0, null, 0.0, null, null, null), ")
+						.append("('c_array', 192.0, null, 0.0, null, null, null), ").append("('p_varchar', 0.0, 0.0, 1.0, null, null, null), ").append("('p_bigint', null, 0.0, 1.0, null, null, null), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'p3' AND p_bigint = 8)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.5, null, null, null), " +
-                        "('c_bigint', null, 2.0, 0.5, null, '2', '3'), " +
-                        "('c_double', null, 2.0, 0.5, null, '3.4', '4.4'), " +
-                        "('c_timestamp', null, 2.0, 0.5, null, null, null), " +
-                        "('c_varchar', 8.0, 2.0, 0.5, null, null, null), " +
-                        "('c_varbinary', 4.0, null, 0.5, null, null, null), " +
-                        "('c_array', 96.0, null, 0.5, null, null, null), " +
-                        "('p_varchar', 8.0, 1.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 1.0, 0.0, null, '8', '8'), " +
-                        "(null, null, null, null, 4.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.5, null, null, null), ").append("('c_bigint', null, 2.0, 0.5, null, '2', '3'), ").append("('c_double', null, 2.0, 0.5, null, '3.4', '4.4'), ").append("('c_timestamp', null, 2.0, 0.5, null, null, null), ").append("('c_varchar', 8.0, 2.0, 0.5, null, null, null), ").append("('c_varbinary', 4.0, null, 0.5, null, null, null), ")
+						.append("('c_array', 96.0, null, 0.5, null, null, null), ").append("('p_varchar', 8.0, 1.0, 0.0, null, null, null), ").append("('p_bigint', null, 1.0, 0.0, null, '8', '8'), ").append("(null, null, null, null, 4.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e1' AND p_bigint = 9)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 0.0, 0.0, null, null, null), " +
-                        "('c_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "('c_double', null, 0.0, 0.0, null, null, null), " +
-                        "('c_timestamp', null, 0.0, 0.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('c_varbinary', 0.0, null, 0.0, null, null, null), " +
-                        "('c_array', 0.0, null, 0.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 0.0, 0.0, null, null, null), ").append("('c_bigint', null, 0.0, 0.0, null, null, null), ").append("('c_double', null, 0.0, 0.0, null, null, null), ").append("('c_timestamp', null, 0.0, 0.0, null, null, null), ").append("('c_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('c_varbinary', 0.0, null, 0.0, null, null, null), ")
+						.append("('c_array', 0.0, null, 0.0, null, null, null), ").append("('p_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('p_bigint', null, 0.0, 0.0, null, null, null), ").append("(null, null, null, null, 0.0, null, null)").toString());
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar = 'e2' AND p_bigint = 9)", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 0.0, 0.0, null, null, null), " +
-                        "('c_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "('c_double', null, 0.0, 0.0, null, null, null), " +
-                        "('c_timestamp', null, 0.0, 0.0, null, null, null), " +
-                        "('c_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('c_varbinary', 0.0, null, 0.0, null, null, null), " +
-                        "('c_array', 0.0, null, 0.0, null, null, null), " +
-                        "('p_varchar', 0.0, 0.0, 0.0, null, null, null), " +
-                        "('p_bigint', null, 0.0, 0.0, null, null, null), " +
-                        "(null, null, null, null, 0.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 0.0, 0.0, null, null, null), ").append("('c_bigint', null, 0.0, 0.0, null, null, null), ").append("('c_double', null, 0.0, 0.0, null, null, null), ").append("('c_timestamp', null, 0.0, 0.0, null, null, null), ").append("('c_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('c_varbinary', 0.0, null, 0.0, null, null, null), ")
+						.append("('c_array', 0.0, null, 0.0, null, null, null), ").append("('p_varchar', 0.0, 0.0, 0.0, null, null, null), ").append("('p_bigint', null, 0.0, 0.0, null, null, null), ").append("(null, null, null, null, 0.0, null, null)").toString());
 
         // Drop the partitioned test table
         assertUpdate(format("DROP TABLE %s", tableName));
@@ -3990,33 +3009,15 @@ public class TestHiveIntegrationSmokeTest
 
         // No column stats before running analyze
         assertQuery("SHOW STATS FOR " + tableName,
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, null, null, null, null, null), " +
-                        "('c_bigint', null, null, null, null, null, null), " +
-                        "('c_double', null, null, null, null, null, null), " +
-                        "('c_timestamp', null, null, null, null, null, null), " +
-                        "('c_varchar', null, null, null, null, null, null), " +
-                        "('c_varbinary', null, null, null, null, null, null), " +
-                        "('c_array', null, null, null, null, null, null), " +
-                        "('p_varchar', null, null, null, null, null, null), " +
-                        "('p_bigint', null, null, null, null, null, null), " +
-                        "(null, null, null, null, 16.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, null, null, null, null, null), ").append("('c_bigint', null, null, null, null, null, null), ").append("('c_double', null, null, null, null, null, null), ").append("('c_timestamp', null, null, null, null, null, null), ").append("('c_varchar', null, null, null, null, null, null), ").append("('c_varbinary', null, null, null, null, null, null), ")
+						.append("('c_array', null, null, null, null, null, null), ").append("('p_varchar', null, null, null, null, null, null), ").append("('p_bigint', null, null, null, null, null, null), ").append("(null, null, null, null, 16.0, null, null)").toString());
 
         // Run analyze on the whole table
         assertUpdate("ANALYZE " + tableName, 16);
 
         assertQuery("SHOW STATS FOR " + tableName,
-                "SELECT * FROM VALUES " +
-                        "('c_boolean', null, 2.0, 0.375, null, null, null), " +
-                        "('c_bigint', null, 8.0, 0.375, null, '0', '7'), " +
-                        "('c_double', null, 10.0, 0.375, null, '1.2', '7.7'), " +
-                        "('c_timestamp', null, 10.0, 0.375, null, null, null), " +
-                        "('c_varchar', 40.0, 10.0, 0.375, null, null, null), " +
-                        "('c_varbinary', 20.0, null, 0.375, null, null, null), " +
-                        "('c_array', 560.0, null, 0.375, null, null, null), " +
-                        "('p_varchar', 24.0, 3.0, 0.25, null, null, null), " +
-                        "('p_bigint', null, 2.0, 0.25, null, '7', '8'), " +
-                        "(null, null, null, null, 16.0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_boolean', null, 2.0, 0.375, null, null, null), ").append("('c_bigint', null, 8.0, 0.375, null, '0', '7'), ").append("('c_double', null, 10.0, 0.375, null, '1.2', '7.7'), ").append("('c_timestamp', null, 10.0, 0.375, null, null, null), ").append("('c_varchar', 40.0, 10.0, 0.375, null, null, null), ").append("('c_varbinary', 20.0, null, 0.375, null, null, null), ")
+						.append("('c_array', 560.0, null, 0.375, null, null, null), ").append("('p_varchar', 24.0, 3.0, 0.25, null, null, null), ").append("('p_bigint', null, 2.0, 0.25, null, '7', '8'), ").append("(null, null, null, null, 16.0, null, null)").toString());
 
         // Drop the unpartitioned test table
         assertUpdate(format("DROP TABLE %s", tableName));
@@ -4043,83 +3044,39 @@ public class TestHiveIntegrationSmokeTest
 
         assertUpdate(
                 disableColumnStatsSession,
-                "" +
-                        "CREATE TABLE " +
-                        tableName +
-                        (partitioned ? " WITH (partitioned_by = ARRAY['p_varchar', 'p_bigint'])\n" : " ") +
-                        "AS " +
-                        "SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar, p_bigint " +
-                        "FROM ( " +
-                        "  VALUES " +
-                        // p_varchar = 'p1', p_bigint = BIGINT '7'
-                        "    (null, null, null, null, null, null, null, 'p1', BIGINT '7'), " +
-                        "    (null, null, null, null, null, null, null, 'p1', BIGINT '7'), " +
-                        "    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', 'abc1', X'bcd1', sequence(0, 10), 'p1', BIGINT '7'), " +
-                        "    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', 'abc2', X'bcd2', sequence(10, 20), 'p1', BIGINT '7'), " +
-                        // p_varchar = 'p2', p_bigint = BIGINT '7'
-                        "    (null, null, null, null, null, null, null, 'p2', BIGINT '7'), " +
-                        "    (null, null, null, null, null, null, null, 'p2', BIGINT '7'), " +
-                        "    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', 'cba1', X'dcb1', sequence(20, 25), 'p2', BIGINT '7'), " +
-                        "    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', 'cba2', X'dcb2', sequence(30, 35), 'p2', BIGINT '7'), " +
-                        // p_varchar = 'p3', p_bigint = BIGINT '8'
-                        "    (null, null, null, null, null, null, null, 'p3', BIGINT '8'), " +
-                        "    (null, null, null, null, null, null, null, 'p3', BIGINT '8'), " +
-                        "    (true, BIGINT '3', DOUBLE '4.4', TIMESTAMP '2012-10-10 01:00', 'bca1', X'cdb1', sequence(40, 45), 'p3', BIGINT '8'), " +
-                        "    (false, BIGINT '2', DOUBLE '3.4', TIMESTAMP '2012-10-10 00:00', 'bca2', X'cdb2', sequence(50, 55), 'p3', BIGINT '8'), " +
-                        // p_varchar = NULL, p_bigint = NULL
-                        "    (false, BIGINT '7', DOUBLE '7.7', TIMESTAMP '1977-07-07 07:07', 'efa1', X'efa1', sequence(60, 65), NULL, NULL), " +
-                        "    (false, BIGINT '6', DOUBLE '6.7', TIMESTAMP '1977-07-07 07:06', 'efa2', X'efa2', sequence(70, 75), NULL, NULL), " +
-                        "    (false, BIGINT '5', DOUBLE '5.7', TIMESTAMP '1977-07-07 07:05', 'efa3', X'efa3', sequence(80, 85), NULL, NULL), " +
-                        "    (false, BIGINT '4', DOUBLE '4.7', TIMESTAMP '1977-07-07 07:04', 'efa4', X'efa4', sequence(90, 95), NULL, NULL) " +
-                        ") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar, p_bigint)", 16);
+                new StringBuilder().append("").append("CREATE TABLE ").append(tableName).append(partitioned ? " WITH (partitioned_by = ARRAY['p_varchar', 'p_bigint'])\n" : " ").append("AS ")
+						.append("SELECT c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar, p_bigint ").append("FROM ( ").append("  VALUES ").append(// p_varchar = 'p1', p_bigint = BIGINT '7'
+                        "    (null, null, null, null, null, null, null, 'p1', BIGINT '7'), ").append("    (null, null, null, null, null, null, null, 'p1', BIGINT '7'), ").append("    (true, BIGINT '1', DOUBLE '2.2', TIMESTAMP '2012-08-08 01:00', 'abc1', X'bcd1', sequence(0, 10), 'p1', BIGINT '7'), ").append("    (false, BIGINT '0', DOUBLE '1.2', TIMESTAMP '2012-08-08 00:00', 'abc2', X'bcd2', sequence(10, 20), 'p1', BIGINT '7'), ").append(// p_varchar = 'p2', p_bigint = BIGINT '7'
+                        "    (null, null, null, null, null, null, null, 'p2', BIGINT '7'), ")
+						.append("    (null, null, null, null, null, null, null, 'p2', BIGINT '7'), ").append("    (true, BIGINT '2', DOUBLE '3.3', TIMESTAMP '2012-09-09 01:00', 'cba1', X'dcb1', sequence(20, 25), 'p2', BIGINT '7'), ").append("    (false, BIGINT '1', DOUBLE '2.3', TIMESTAMP '2012-09-09 00:00', 'cba2', X'dcb2', sequence(30, 35), 'p2', BIGINT '7'), ").append(// p_varchar = 'p3', p_bigint = BIGINT '8'
+                        "    (null, null, null, null, null, null, null, 'p3', BIGINT '8'), ").append("    (null, null, null, null, null, null, null, 'p3', BIGINT '8'), ").append("    (true, BIGINT '3', DOUBLE '4.4', TIMESTAMP '2012-10-10 01:00', 'bca1', X'cdb1', sequence(40, 45), 'p3', BIGINT '8'), ").append("    (false, BIGINT '2', DOUBLE '3.4', TIMESTAMP '2012-10-10 00:00', 'bca2', X'cdb2', sequence(50, 55), 'p3', BIGINT '8'), ").append(// p_varchar = NULL, p_bigint = NULL
+                        "    (false, BIGINT '7', DOUBLE '7.7', TIMESTAMP '1977-07-07 07:07', 'efa1', X'efa1', sequence(60, 65), NULL, NULL), ")
+						.append("    (false, BIGINT '6', DOUBLE '6.7', TIMESTAMP '1977-07-07 07:06', 'efa2', X'efa2', sequence(70, 75), NULL, NULL), ").append("    (false, BIGINT '5', DOUBLE '5.7', TIMESTAMP '1977-07-07 07:05', 'efa3', X'efa3', sequence(80, 85), NULL, NULL), ").append("    (false, BIGINT '4', DOUBLE '4.7', TIMESTAMP '1977-07-07 07:04', 'efa4', X'efa4', sequence(90, 95), NULL, NULL) ").append(") AS x (c_boolean, c_bigint, c_double, c_timestamp, c_varchar, c_varbinary, c_array, p_varchar, p_bigint)").toString(), 16);
 
-        if (partitioned) {
-            // Create empty partitions
-            assertUpdate(disableColumnStatsSession, format("CALL system.create_empty_partition('%s', '%s', ARRAY['p_varchar', 'p_bigint'], ARRAY['%s', '%s'])", TPCH_SCHEMA, tableName, "e1", "9"));
-            assertUpdate(disableColumnStatsSession, format("CALL system.create_empty_partition('%s', '%s', ARRAY['p_varchar', 'p_bigint'], ARRAY['%s', '%s'])", TPCH_SCHEMA, tableName, "e2", "9"));
-        }
+        if (!partitioned) {
+			return;
+		}
+		// Create empty partitions
+		assertUpdate(disableColumnStatsSession, format("CALL system.create_empty_partition('%s', '%s', ARRAY['p_varchar', 'p_bigint'], ARRAY['%s', '%s'])", TPCH_SCHEMA, tableName, "e1", "9"));
+		assertUpdate(disableColumnStatsSession, format("CALL system.create_empty_partition('%s', '%s', ARRAY['p_varchar', 'p_bigint'], ARRAY['%s', '%s'])", TPCH_SCHEMA, tableName, "e2", "9"));
     }
 
     @Test
     public void testInsertMultipleColumnsFromSameChannel()
     {
         String tableName = "test_insert_multiple_columns_same_channel";
-        assertUpdate(format("" +
-                "CREATE TABLE %s ( " +
-                "   c_bigint_1 BIGINT, " +
-                "   c_bigint_2 BIGINT, " +
-                "   p_varchar_1 VARCHAR, " +
-                "   p_varchar_2 VARCHAR " +
-                ") " +
-                "WITH ( " +
-                "   partitioned_by = ARRAY['p_varchar_1', 'p_varchar_2'] " +
-                ")", tableName));
+        assertUpdate(format(new StringBuilder().append("").append("CREATE TABLE %s ( ").append("   c_bigint_1 BIGINT, ").append("   c_bigint_2 BIGINT, ").append("   p_varchar_1 VARCHAR, ").append("   p_varchar_2 VARCHAR ").append(") ").append("WITH ( ")
+				.append("   partitioned_by = ARRAY['p_varchar_1', 'p_varchar_2'] ").append(")").toString(), tableName));
 
-        assertUpdate(format("" +
-                "INSERT INTO %s " +
-                "SELECT 1 c_bigint_1, 1 c_bigint_2, '2' p_varchar_1, '2' p_varchar_2 ", tableName), 1);
+        assertUpdate(format(new StringBuilder().append("").append("INSERT INTO %s ").append("SELECT 1 c_bigint_1, 1 c_bigint_2, '2' p_varchar_1, '2' p_varchar_2 ").toString(), tableName), 1);
 
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar_1 = '2' AND p_varchar_2 = '2')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_bigint_1', null, 1.0E0, 0.0E0, null, '1', '1'), " +
-                        "('c_bigint_2', null, 1.0E0, 0.0E0, null, '1', '1'), " +
-                        "('p_varchar_1', 1.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "('p_varchar_2', 1.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 1.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_bigint_1', null, 1.0E0, 0.0E0, null, '1', '1'), ").append("('c_bigint_2', null, 1.0E0, 0.0E0, null, '1', '1'), ").append("('p_varchar_1', 1.0E0, 1.0E0, 0.0E0, null, null, null), ").append("('p_varchar_2', 1.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 1.0E0, null, null)").toString());
 
-        assertUpdate(format("" +
-                "INSERT INTO %s (c_bigint_1, c_bigint_2, p_varchar_1, p_varchar_2) " +
-                "SELECT orderkey, orderkey, orderstatus, orderstatus " +
-                "FROM orders " +
-                "WHERE orderstatus='O' AND orderkey = 15008", tableName), 1);
+        assertUpdate(format(new StringBuilder().append("").append("INSERT INTO %s (c_bigint_1, c_bigint_2, p_varchar_1, p_varchar_2) ").append("SELECT orderkey, orderkey, orderstatus, orderstatus ").append("FROM orders ").append("WHERE orderstatus='O' AND orderkey = 15008").toString(), tableName), 1);
 
         assertQuery(format("SHOW STATS FOR (SELECT * FROM %s WHERE p_varchar_1 = 'O' AND p_varchar_2 = 'O')", tableName),
-                "SELECT * FROM VALUES " +
-                        "('c_bigint_1', null, 1.0E0, 0.0E0, null, '15008', '15008'), " +
-                        "('c_bigint_2', null, 1.0E0, 0.0E0, null, '15008', '15008'), " +
-                        "('p_varchar_1', 1.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "('p_varchar_2', 1.0E0, 1.0E0, 0.0E0, null, null, null), " +
-                        "(null, null, null, null, 1.0E0, null, null)");
+                new StringBuilder().append("SELECT * FROM VALUES ").append("('c_bigint_1', null, 1.0E0, 0.0E0, null, '15008', '15008'), ").append("('c_bigint_2', null, 1.0E0, 0.0E0, null, '15008', '15008'), ").append("('p_varchar_1', 1.0E0, 1.0E0, 0.0E0, null, null, null), ").append("('p_varchar_2', 1.0E0, 1.0E0, 0.0E0, null, null, null), ").append("(null, null, null, null, 1.0E0, null, null)").toString());
 
         assertUpdate(format("DROP TABLE %s", tableName));
     }
@@ -4180,14 +3137,8 @@ public class TestHiveIntegrationSmokeTest
 
     private String getAvroCreateTableSql(String tableName, String schemaFile)
     {
-        return format("CREATE TABLE %s.%s.%s (\n" +
-                        "   dummy_col varchar,\n" +
-                        "   another_dummy_col varchar\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   avro_schema_url = '%s',\n" +
-                        "   format = 'AVRO'\n" +
-                        ")",
+        return format(new StringBuilder().append("CREATE TABLE %s.%s.%s (\n").append("   dummy_col varchar,\n").append("   another_dummy_col varchar\n").append(")\n").append("WITH (\n").append("   avro_schema_url = '%s',\n").append("   format = 'AVRO'\n").append(")")
+				.toString(),
                 getSession().getCatalog().get(),
                 getSession().getSchema().get(),
                 tableName,
@@ -4198,13 +3149,7 @@ public class TestHiveIntegrationSmokeTest
             throws Exception
     {
         File schemaFile = File.createTempFile("avro_single_column-", ".avsc");
-        String schema = "{\n" +
-                "  \"namespace\": \"com.facebook.test\",\n" +
-                "  \"name\": \"single_column\",\n" +
-                "  \"type\": \"record\",\n" +
-                "  \"fields\": [\n" +
-                "    { \"name\":\"string_col\", \"type\":\"string\" }\n" +
-                "]}";
+        String schema = new StringBuilder().append("{\n").append("  \"namespace\": \"com.facebook.test\",\n").append("  \"name\": \"single_column\",\n").append("  \"type\": \"record\",\n").append("  \"fields\": [\n").append("    { \"name\":\"string_col\", \"type\":\"string\" }\n").append("]}").toString();
         asCharSink(schemaFile, UTF_8).write(schema);
         return schemaFile;
     }
@@ -4213,14 +3158,8 @@ public class TestHiveIntegrationSmokeTest
     public void testCreateOrcTableWithSchemaUrl()
             throws Exception
     {
-        @Language("SQL") String createTableSql = format("" +
-                        "CREATE TABLE %s.%s.test_orc (\n" +
-                        "   dummy_col varchar\n" +
-                        ")\n" +
-                        "WITH (\n" +
-                        "   avro_schema_url = 'dummy.avsc',\n" +
-                        "   format = 'ORC'\n" +
-                        ")",
+        @Language("SQL") String createTableSql = format(new StringBuilder().append("").append("CREATE TABLE %s.%s.test_orc (\n").append("   dummy_col varchar\n").append(")\n").append("WITH (\n").append("   avro_schema_url = 'dummy.avsc',\n").append("   format = 'ORC'\n").append(")")
+				.toString(),
                 getSession().getCatalog().get(),
                 getSession().getSchema().get());
 
@@ -4231,15 +3170,11 @@ public class TestHiveIntegrationSmokeTest
     public void testCtasFailsWithAvroSchemaUrl()
             throws Exception
     {
-        @Language("SQL") String ctasSqlWithoutData = "CREATE TABLE create_avro\n" +
-                "WITH (avro_schema_url = 'dummy_schema')\n" +
-                "AS SELECT 'dummy_value' as dummy_col WITH NO DATA";
+        @Language("SQL") String ctasSqlWithoutData = new StringBuilder().append("CREATE TABLE create_avro\n").append("WITH (avro_schema_url = 'dummy_schema')\n").append("AS SELECT 'dummy_value' as dummy_col WITH NO DATA").toString();
 
         assertQueryFails(ctasSqlWithoutData, "CREATE TABLE AS not supported when Avro schema url is set");
 
-        @Language("SQL") String ctasSql = "CREATE TABLE create_avro\n" +
-                "WITH (avro_schema_url = 'dummy_schema')\n" +
-                "AS SELECT * FROM (VALUES('a')) t (a)";
+        @Language("SQL") String ctasSql = new StringBuilder().append("CREATE TABLE create_avro\n").append("WITH (avro_schema_url = 'dummy_schema')\n").append("AS SELECT * FROM (VALUES('a')) t (a)").toString();
 
         assertQueryFails(ctasSql, "CREATE TABLE AS not supported when Avro schema url is set");
     }
@@ -4248,9 +3183,7 @@ public class TestHiveIntegrationSmokeTest
     public void testBucketedTablesFailWithAvroSchemaUrl()
             throws Exception
     {
-        @Language("SQL") String createSql = "CREATE TABLE create_avro (dummy VARCHAR)\n" +
-                "WITH (avro_schema_url = 'dummy_schema',\n" +
-                "      bucket_count = 2, bucketed_by=ARRAY['dummy'])";
+        @Language("SQL") String createSql = new StringBuilder().append("CREATE TABLE create_avro (dummy VARCHAR)\n").append("WITH (avro_schema_url = 'dummy_schema',\n").append("      bucket_count = 2, bucketed_by=ARRAY['dummy'])").toString();
 
         assertQueryFails(createSql, "Bucketing/Partitioning columns not supported when Avro schema url is set");
     }
@@ -4259,9 +3192,7 @@ public class TestHiveIntegrationSmokeTest
     public void testPartitionedTablesFailWithAvroSchemaUrl()
             throws Exception
     {
-        @Language("SQL") String createSql = "CREATE TABLE create_avro (dummy VARCHAR)\n" +
-                "WITH (avro_schema_url = 'dummy_schema',\n" +
-                "      partitioned_by=ARRAY['dummy'])";
+        @Language("SQL") String createSql = new StringBuilder().append("CREATE TABLE create_avro (dummy VARCHAR)\n").append("WITH (avro_schema_url = 'dummy_schema',\n").append("      partitioned_by=ARRAY['dummy'])").toString();
 
         assertQueryFails(createSql, "Bucketing/Partitioning columns not supported when Avro schema url is set");
     }
@@ -4269,13 +3200,9 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testPrunePartitionFailure()
     {
-        assertUpdate("CREATE TABLE test_prune_failure\n" +
-                "WITH (partitioned_by = ARRAY['p']) AS\n" +
-                "SELECT 123 x, 'abc' p", 1);
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_prune_failure\n").append("WITH (partitioned_by = ARRAY['p']) AS\n").append("SELECT 123 x, 'abc' p").toString(), 1);
 
-        assertQueryReturnsEmptyResult("" +
-                "SELECT * FROM test_prune_failure\n" +
-                "WHERE x < 0 AND cast(p AS int) > 0");
+        assertQueryReturnsEmptyResult(new StringBuilder().append("").append("SELECT * FROM test_prune_failure\n").append("WHERE x < 0 AND cast(p AS int) > 0").toString());
 
         assertUpdate("DROP TABLE test_prune_failure");
     }
@@ -4317,17 +3244,8 @@ public class TestHiveIntegrationSmokeTest
     @Test
     public void testGroupByWithUnion()
     {
-        assertQuery("SELECT\n" +
-                "      linenumber,\n" +
-                "      'xxx'\n" +
-                "  FROM\n" +
-                "  (\n" +
-                "      (SELECT orderkey, linenumber FROM lineitem)\n" +
-                "      UNION\n" +
-                "      (SELECT orderkey, linenumber FROM lineitem)\n" +
-                "  ) WHERE orderkey = 1 \n" +
-                "  GROUP BY\n" +
-                "      linenumber");
+        assertQuery(new StringBuilder().append("SELECT\n").append("      linenumber,\n").append("      'xxx'\n").append("  FROM\n").append("  (\n").append("      (SELECT orderkey, linenumber FROM lineitem)\n").append("      UNION\n").append("      (SELECT orderkey, linenumber FROM lineitem)\n")
+				.append("  ) WHERE orderkey = 1 \n").append("  GROUP BY\n").append("      linenumber").toString());
     }
 
     @Test
@@ -4416,10 +3334,10 @@ public class TestHiveIntegrationSmokeTest
         Object partitionByProperty = tableMetadata.getMetadata().getProperties().get(PARTITIONED_BY_PROPERTY);
         if (hasPartition) {
             assertEquals(partitionByProperty, partitionKeys);
-            for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
+            tableMetadata.getColumns().forEach(columnMetadata -> {
                 boolean partitionKey = partitionKeys.contains(columnMetadata.getName());
                 assertEquals(columnMetadata.getExtraInfo(), columnExtraInfo(partitionKey));
-            }
+            });
         }
         else {
             assertNull(partitionByProperty);
@@ -4429,11 +3347,6 @@ public class TestHiveIntegrationSmokeTest
     private void rollback()
     {
         throw new RollbackException();
-    }
-
-    private static class RollbackException
-            extends RuntimeException
-    {
     }
 
     private static String getExpectedErrorMessageForInsertExistingBucketedTable(InsertExistingPartitionsBehavior behavior, String partitionName)
@@ -4447,19 +3360,17 @@ public class TestHiveIntegrationSmokeTest
         throw new IllegalArgumentException("Unexpected insertExistingPartitionsBehavior: " + behavior);
     }
 
-    private static ConnectorSession getConnectorSession(Session session)
+	private static ConnectorSession getConnectorSession(Session session)
     {
         return session.toConnectorSession(new ConnectorId(session.getCatalog().get()));
     }
 
-    private void testWithAllStorageFormats(BiConsumer<Session, HiveStorageFormat> test)
+	private void testWithAllStorageFormats(BiConsumer<Session, HiveStorageFormat> test)
     {
-        for (TestingHiveStorageFormat storageFormat : getAllTestingHiveStorageFormat()) {
-            testWithStorageFormat(storageFormat, test);
-        }
+        getAllTestingHiveStorageFormat().forEach(storageFormat -> testWithStorageFormat(storageFormat, test));
     }
 
-    private static void testWithStorageFormat(TestingHiveStorageFormat storageFormat, BiConsumer<Session, HiveStorageFormat> test)
+	private static void testWithStorageFormat(TestingHiveStorageFormat storageFormat, BiConsumer<Session, HiveStorageFormat> test)
     {
         requireNonNull(storageFormat, "storageFormat is null");
         requireNonNull(test, "test is null");
@@ -4472,7 +3383,7 @@ public class TestHiveIntegrationSmokeTest
         }
     }
 
-    private List<TestingHiveStorageFormat> getAllTestingHiveStorageFormat()
+	private List<TestingHiveStorageFormat> getAllTestingHiveStorageFormat()
     {
         Session session = getSession();
         ImmutableList.Builder<TestingHiveStorageFormat> formats = ImmutableList.builder();
@@ -4486,6 +3397,11 @@ public class TestHiveIntegrationSmokeTest
                 Session.builder(session).setCatalogSessionProperty(session.getCatalog().get(), "orc_optimized_writer_enabled", "true").build(),
                 HiveStorageFormat.DWRF));
         return formats.build();
+    }
+
+	private static class RollbackException
+            extends RuntimeException
+    {
     }
 
     private static class TestingHiveStorageFormat

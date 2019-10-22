@@ -105,14 +105,12 @@ public class TestMarker
                 .build();
 
         // Compare every marker with every other marker
-        // Map values of distance 1 indicate expected adjacency
-        for (Map.Entry<Marker, Integer> entry1 : markers.entrySet()) {
-            for (Map.Entry<Marker, Integer> entry2 : markers.entrySet()) {
-                boolean adjacent = entry1.getKey().isAdjacent(entry2.getKey());
-                boolean distanceIsOne = Math.abs(entry1.getValue() - entry2.getValue()) == 1;
-                assertEquals(adjacent, distanceIsOne);
-            }
-        }
+		// Map values of distance 1 indicate expected adjacency
+		markers.entrySet().forEach(entry1 -> markers.entrySet().forEach(entry2 -> {
+			boolean adjacent = entry1.getKey().isAdjacent(entry2.getKey());
+			boolean distanceIsOne = Math.abs(entry1.getValue() - entry2.getValue()) == 1;
+			assertEquals(adjacent, distanceIsOne);
+		}));
 
         assertEquals(Marker.below(BIGINT, 1L).greaterAdjacent(), Marker.exactly(BIGINT, 1L));
         assertEquals(Marker.exactly(BIGINT, 1L).greaterAdjacent(), Marker.above(BIGINT, 1L));

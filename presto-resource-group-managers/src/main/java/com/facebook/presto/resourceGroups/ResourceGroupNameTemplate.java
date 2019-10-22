@@ -73,7 +73,7 @@ public class ResourceGroupNameTemplate
     public String expandTemplate(VariableMap variables)
     {
         StringBuilder builder = new StringBuilder();
-        for (NameFragment fragment : fragments) {
+        fragments.forEach(fragment -> {
             if (fragment.isVariable()) {
                 String value = variables.getValue(fragment.getVariable());
                 checkArgument(value != null, "unresolved variable '%s' in resource group '%s', available: %s", fragment.getVariable(), this, variables);
@@ -82,7 +82,7 @@ public class ResourceGroupNameTemplate
             else {
                 builder.append(fragment.getLiteral());
             }
-        }
+        });
 
         return builder.toString();
     }
@@ -153,7 +153,7 @@ public class ResourceGroupNameTemplate
         public String toString()
         {
             if (variable != null) {
-                return "${" + variable + "}";
+                return new StringBuilder().append("${").append(variable).append("}").toString();
             }
 
             return literal;

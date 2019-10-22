@@ -62,13 +62,12 @@ public class TestUnnesterUtil
     public static Block createArrayBlockOfRowBlocks(Slice[][][] elements, RowType rowType)
     {
         BlockBuilder arrayBlockBuilder = new ArrayBlockBuilder(rowType, null, 100, 100);
-        for (int i = 0; i < elements.length; i++) {
-            if (elements[i] == null) {
+        for (Slice[][] expectedValues : elements) {
+            if (expectedValues == null) {
                 arrayBlockBuilder.appendNull();
             }
             else {
-                Slice[][] expectedValues = elements[i];
-                BlockBuilder elementBlockBuilder = rowType.createBlockBuilder(null, elements[i].length);
+                BlockBuilder elementBlockBuilder = rowType.createBlockBuilder(null, expectedValues.length);
                 for (Slice[] expectedValue : expectedValues) {
                     if (expectedValue == null) {
                         elementBlockBuilder.appendNull();
@@ -94,10 +93,10 @@ public class TestUnnesterUtil
 
     public static boolean nullExists(Slice[][] elements)
     {
-        for (int i = 0; i < elements.length; i++) {
-            if (elements[i] != null) {
-                for (int j = 0; j < elements[i].length; j++) {
-                    if (elements[i][j] == null) {
+        for (Slice[] element : elements) {
+            if (element != null) {
+                for (int j = 0; j < element.length; j++) {
+                    if (element[j] == null) {
                         return true;
                     }
                 }

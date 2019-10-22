@@ -52,23 +52,15 @@ public class HiveColumnHandle
 
     // Ids <= this can be used for distinguishing between different prefilled columns.
     public static final int MAX_PARTITION_KEY_COLUMN_INDEX = -13;
+	private final String name;
+	private final HiveType hiveType;
+	private final TypeSignature typeName;
+	private final int hiveColumnIndex;
+	private final ColumnType columnType;
+	private final Optional<String> comment;
+	private final List<Subfield> requiredSubfields;
 
-    public enum ColumnType
-    {
-        PARTITION_KEY,
-        REGULAR,
-        SYNTHESIZED,
-    }
-
-    private final String name;
-    private final HiveType hiveType;
-    private final TypeSignature typeName;
-    private final int hiveColumnIndex;
-    private final ColumnType columnType;
-    private final Optional<String> comment;
-    private final List<Subfield> requiredSubfields;
-
-    @JsonCreator
+	@JsonCreator
     public HiveColumnHandle(
             @JsonProperty("name") String name,
             @JsonProperty("hiveType") HiveType hiveType,
@@ -88,7 +80,7 @@ public class HiveColumnHandle
         this.requiredSubfields = requireNonNull(requiredSubfields, "requiredSubfields is null");
     }
 
-    public HiveColumnHandle(
+	public HiveColumnHandle(
             String name,
             HiveType hiveType,
             TypeSignature typeSignature,
@@ -99,76 +91,76 @@ public class HiveColumnHandle
         this(name, hiveType, typeSignature, hiveColumnIndex, columnType, comment, ImmutableList.of());
     }
 
-    @JsonProperty
+	@JsonProperty
     public String getName()
     {
         return name;
     }
 
-    @JsonProperty
+	@JsonProperty
     public HiveType getHiveType()
     {
         return hiveType;
     }
 
-    @JsonProperty
+	@JsonProperty
     public int getHiveColumnIndex()
     {
         return hiveColumnIndex;
     }
 
-    public boolean isPartitionKey()
+	public boolean isPartitionKey()
     {
         return columnType == PARTITION_KEY;
     }
 
-    public boolean isHidden()
+	public boolean isHidden()
     {
         return columnType == SYNTHESIZED;
     }
 
-    public ColumnMetadata getColumnMetadata(TypeManager typeManager)
+	public ColumnMetadata getColumnMetadata(TypeManager typeManager)
     {
         return new ColumnMetadata(name, typeManager.getType(typeName), null, isHidden());
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<String> getComment()
     {
         return comment;
     }
 
-    @JsonProperty
+	@JsonProperty
     public TypeSignature getTypeSignature()
     {
         return typeName;
     }
 
-    @JsonProperty
+	@JsonProperty
     public ColumnType getColumnType()
     {
         return columnType;
     }
 
-    @JsonProperty
+	@JsonProperty
     public List<Subfield> getRequiredSubfields()
     {
         return requiredSubfields;
     }
 
-    @Override
+	@Override
     public ColumnHandle withRequiredSubfields(List<Subfield> subfields)
     {
         return new HiveColumnHandle(name, hiveType, typeName, hiveColumnIndex, columnType, comment, subfields);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(name, hiveColumnIndex, hiveType, columnType, comment);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -186,17 +178,19 @@ public class HiveColumnHandle
                 Objects.equals(this.requiredSubfields, other.requiredSubfields);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         if (requiredSubfields.isEmpty()) {
-            return name + ":" + hiveType + ":" + hiveColumnIndex + ":" + columnType;
+            return new StringBuilder().append(name).append(":").append(hiveType).append(":").append(hiveColumnIndex).append(":")
+					.append(columnType).toString();
         }
 
-        return name + ":" + hiveType + ":" + hiveColumnIndex + ":" + columnType + ":" + requiredSubfields;
+        return new StringBuilder().append(name).append(":").append(hiveType).append(":").append(hiveColumnIndex).append(":")
+				.append(columnType).append(":").append(requiredSubfields).toString();
     }
 
-    public static HiveColumnHandle updateRowIdHandle()
+	public static HiveColumnHandle updateRowIdHandle()
     {
         // Hive connector only supports metadata delete. It does not support generic row-by-row deletion.
         // Metadata delete is implemented in Presto by generating a plan for row-by-row delete first,
@@ -207,12 +201,12 @@ public class HiveColumnHandle
         return new HiveColumnHandle(UPDATE_ROW_ID_COLUMN_NAME, HIVE_LONG, BIGINT.getTypeSignature(), -1, SYNTHESIZED, Optional.empty(), ImmutableList.of());
     }
 
-    public static HiveColumnHandle pathColumnHandle()
+	public static HiveColumnHandle pathColumnHandle()
     {
         return new HiveColumnHandle(PATH_COLUMN_NAME, PATH_HIVE_TYPE, PATH_TYPE_SIGNATURE, PATH_COLUMN_INDEX, SYNTHESIZED, Optional.empty(), ImmutableList.of());
     }
 
-    /**
+	/**
      * The column indicating the bucket id.
      * When table bucketing differs from partition bucketing, this column indicates
      * what bucket the row will fall in under the table bucketing scheme.
@@ -222,13 +216,20 @@ public class HiveColumnHandle
         return new HiveColumnHandle(BUCKET_COLUMN_NAME, BUCKET_HIVE_TYPE, BUCKET_TYPE_SIGNATURE, BUCKET_COLUMN_INDEX, SYNTHESIZED, Optional.empty(), ImmutableList.of());
     }
 
-    public static boolean isPathColumnHandle(HiveColumnHandle column)
+	public static boolean isPathColumnHandle(HiveColumnHandle column)
     {
         return column.getHiveColumnIndex() == PATH_COLUMN_INDEX;
     }
 
-    public static boolean isBucketColumnHandle(HiveColumnHandle column)
+	public static boolean isBucketColumnHandle(HiveColumnHandle column)
     {
         return column.getHiveColumnIndex() == BUCKET_COLUMN_INDEX;
+    }
+
+	public enum ColumnType
+    {
+        PARTITION_KEY,
+        REGULAR,
+        SYNTHESIZED,
     }
 }

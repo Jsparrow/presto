@@ -79,18 +79,19 @@ public class TestDataWritableWriter
      */
     public void write(final ParquetHiveRecord record)
     {
-        if (record != null) {
-            recordConsumer.startMessage();
-            try {
-                writeGroupFields(record.getObject(), record.getObjectInspector(), schema);
-            }
-            catch (RuntimeException e) {
-                String errorMessage = "Parquet record is malformed: " + e.getMessage();
-                log.error(errorMessage, e);
-                throw new RuntimeException(errorMessage, e);
-            }
-            recordConsumer.endMessage();
-        }
+        if (record == null) {
+			return;
+		}
+		recordConsumer.startMessage();
+		try {
+		    writeGroupFields(record.getObject(), record.getObjectInspector(), schema);
+		}
+		catch (RuntimeException e) {
+		    String errorMessage = "Parquet record is malformed: " + e.getMessage();
+		    log.error(errorMessage, e);
+		    throw new RuntimeException(errorMessage, e);
+		}
+		recordConsumer.endMessage();
     }
 
     /**
@@ -102,23 +103,23 @@ public class TestDataWritableWriter
      */
     private void writeGroupFields(final Object value, final StructObjectInspector inspector, final GroupType type)
     {
-        if (value != null) {
-            List<? extends StructField> fields = inspector.getAllStructFieldRefs();
-            List<Object> fieldValuesList = inspector.getStructFieldsDataAsList(value);
+        if (value == null) {
+			return;
+		}
+		List<? extends StructField> fields = inspector.getAllStructFieldRefs();
+		List<Object> fieldValuesList = inspector.getStructFieldsDataAsList(value);
+		for (int i = 0; i < type.getFieldCount(); i++) {
+		    Type fieldType = type.getType(i);
+		    String fieldName = fieldType.getName();
+		    Object fieldValue = fieldValuesList.get(i);
 
-            for (int i = 0; i < type.getFieldCount(); i++) {
-                Type fieldType = type.getType(i);
-                String fieldName = fieldType.getName();
-                Object fieldValue = fieldValuesList.get(i);
-
-                if (fieldValue != null) {
-                    ObjectInspector fieldInspector = fields.get(i).getFieldObjectInspector();
-                    recordConsumer.startField(fieldName, i);
-                    writeValue(fieldValue, fieldInspector, fieldType);
-                    recordConsumer.endField(fieldName, i);
-                }
-            }
-        }
+		    if (fieldValue != null) {
+		        ObjectInspector fieldInspector = fields.get(i).getFieldObjectInspector();
+		        recordConsumer.startField(fieldName, i);
+		        writeValue(fieldValue, fieldInspector, fieldType);
+		        recordConsumer.endField(fieldName, i);
+		    }
+		}
     }
 
     /**
@@ -139,7 +140,7 @@ public class TestDataWritableWriter
             GroupType groupType = type.asGroupType();
             OriginalType originalType = type.getOriginalType();
 
-            if (originalType != null && originalType.equals(OriginalType.LIST)) {
+            if (originalType != null && originalType == OriginalType.LIST) {
                 checkInspectorCategory(inspector, ObjectInspector.Category.LIST);
                 if (singleLevelArray) {
                     writeSingleLevelArray(value, (ListObjectInspector) inspector, groupType);
@@ -148,7 +149,7 @@ public class TestDataWritableWriter
                     writeArray(value, (ListObjectInspector) inspector, groupType);
                 }
             }
-            else if (originalType != null && (originalType.equals(OriginalType.MAP) || originalType.equals(OriginalType.MAP_KEY_VALUE))) {
+            else if (originalType != null && (originalType == OriginalType.MAP || originalType == OriginalType.MAP_KEY_VALUE)) {
                 checkInspectorCategory(inspector, ObjectInspector.Category.MAP);
                 writeMap(value, (MapObjectInspector) inspector, groupType);
             }
@@ -168,9 +169,8 @@ public class TestDataWritableWriter
      */
     private void checkInspectorCategory(ObjectInspector inspector, ObjectInspector.Category category)
     {
-        if (!inspector.getCategory().equals(category)) {
-            throw new IllegalArgumentException("Invalid data type: expected " + category
-                    + " type, but found: " + inspector.getCategory());
+        if (inspector.getCategory() != category) {
+            throw new IllegalArgumentException(new StringBuilder().append("Invalid data type: expected ").append(category).append(" type, but found: ").append(inspector.getCategory()).toString());
         }
     }
 
@@ -217,7 +217,7 @@ public class TestDataWritableWriter
             Type elementType = repeatedType.getType(0);
             String elementName = elementType.getName();
 
-            for (Object element : arrayValues) {
+            arrayValues.forEach(element -> {
                 recordConsumer.startGroup();
                 if (element != null) {
                     recordConsumer.startField(elementName, 0);
@@ -225,7 +225,7 @@ public class TestDataWritableWriter
                     recordConsumer.endField(elementName, 0);
                 }
                 recordConsumer.endGroup();
-            }
+            });
 
             recordConsumer.endField(repeatedType.getName(), 0);
         }

@@ -135,7 +135,7 @@ public class TestHiveFileFormats
             throws Exception
     {
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
-                .filter(column -> !column.getName().equals("t_map_null_key_complex_key_value"))
+                .filter(column -> !"t_map_null_key_complex_key_value".equals(column.getName()))
                 .collect(toList());
 
         assertThatFileFormat(TEXTFILE)
@@ -150,22 +150,22 @@ public class TestHiveFileFormats
     {
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
                 // binary is not supported
-                .filter(column -> !column.getName().equals("t_binary"))
+                .filter(column -> !"t_binary".equals(column.getName()))
                 // non-string map keys are not supported
-                .filter(column -> !column.getName().equals("t_map_tinyint"))
-                .filter(column -> !column.getName().equals("t_map_smallint"))
-                .filter(column -> !column.getName().equals("t_map_int"))
-                .filter(column -> !column.getName().equals("t_map_bigint"))
-                .filter(column -> !column.getName().equals("t_map_float"))
-                .filter(column -> !column.getName().equals("t_map_double"))
+                .filter(column -> !"t_map_tinyint".equals(column.getName()))
+                .filter(column -> !"t_map_smallint".equals(column.getName()))
+                .filter(column -> !"t_map_int".equals(column.getName()))
+                .filter(column -> !"t_map_bigint".equals(column.getName()))
+                .filter(column -> !"t_map_float".equals(column.getName()))
+                .filter(column -> !"t_map_double".equals(column.getName()))
                 // null map keys are not supported
-                .filter(column -> !column.getName().equals("t_map_null_key"))
-                .filter(column -> !column.getName().equals("t_map_null_key_complex_key_value"))
-                .filter(column -> !column.getName().equals("t_map_null_key_complex_value"))
+                .filter(column -> !"t_map_null_key".equals(column.getName()))
+                .filter(column -> !"t_map_null_key_complex_key_value".equals(column.getName()))
+                .filter(column -> !"t_map_null_key_complex_value".equals(column.getName()))
                 // decimal(38) is broken or not supported
-                .filter(column -> !column.getName().equals("t_decimal_precision_38"))
-                .filter(column -> !column.getName().equals("t_map_decimal_precision_38"))
-                .filter(column -> !column.getName().equals("t_array_decimal_precision_38"))
+                .filter(column -> !"t_decimal_precision_38".equals(column.getName()))
+                .filter(column -> !"t_map_decimal_precision_38".equals(column.getName()))
+                .filter(column -> !"t_array_decimal_precision_38".equals(column.getName()))
                 .collect(toList());
 
         assertThatFileFormat(JSON)
@@ -178,12 +178,10 @@ public class TestHiveFileFormats
     public void testRCText(int rowCount)
             throws Exception
     {
-        List<TestColumn> testColumns = ImmutableList.copyOf(filter(TEST_COLUMNS, testColumn -> {
-            // TODO: This is a bug in the RC text reader
-            // RC file does not support complex type as key of a map
-            return !testColumn.getName().equals("t_struct_null")
-                    && !testColumn.getName().equals("t_map_null_key_complex_key_value");
-        }));
+        // TODO: This is a bug in the RC text reader
+		// RC file does not support complex type as key of a map
+		List<TestColumn> testColumns = ImmutableList.copyOf(filter(TEST_COLUMNS, testColumn -> !"t_struct_null".equals(testColumn.getName())
+				&& !"t_map_null_key_complex_key_value".equals(testColumn.getName())));
         assertThatFileFormat(RCTEXT)
                 .withColumns(testColumns)
                 .withRowsCount(rowCount)
@@ -229,7 +227,7 @@ public class TestHiveFileFormats
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
                 .filter(testColumn -> {
                     String name = testColumn.getName();
-                    return !name.equals("t_map_null_key_complex_key_value") && !name.equals("t_empty_varchar");
+                    return !"t_map_null_key_complex_key_value".equals(name) && !"t_empty_varchar".equals(name);
                 }).collect(toList());
         assertThatFileFormat(RCBINARY)
                 .withColumns(testColumns)
@@ -243,7 +241,7 @@ public class TestHiveFileFormats
     {
         // RCBinary does not support complex type as key of a map and interprets empty VARCHAR as nulls
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
-                .filter(testColumn -> !testColumn.getName().equals("t_empty_varchar"))
+                .filter(testColumn -> !"t_empty_varchar".equals(testColumn.getName()))
                 .collect(toList());
 
         assertThatFileFormat(RCBINARY)
@@ -258,7 +256,7 @@ public class TestHiveFileFormats
     {
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
                 // RCBinary interprets empty VARCHAR as nulls
-                .filter(testColumn -> !testColumn.getName().equals("t_empty_varchar"))
+                .filter(testColumn -> !"t_empty_varchar".equals(testColumn.getName()))
                 // t_map_null_key_* must be disabled because Presto can not produce maps with null keys so the writer will throw
                 .filter(TestHiveFileFormats::withoutNullMapKeyTests)
                 .collect(toList());
@@ -299,7 +297,7 @@ public class TestHiveFileFormats
 
         // A Presto page can not contain a map with null keys, so a page based writer can not write null keys
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
-                .filter(testColumn -> !testColumn.getName().equals("t_map_null_key") && !testColumn.getName().equals("t_map_null_key_complex_value") && !testColumn.getName().equals("t_map_null_key_complex_key_value"))
+                .filter(testColumn -> !"t_map_null_key".equals(testColumn.getName()) && !"t_map_null_key_complex_value".equals(testColumn.getName()) && !"t_map_null_key_complex_key_value".equals(testColumn.getName()))
                 .collect(toList());
 
         assertThatFileFormat(ORC)
@@ -339,7 +337,7 @@ public class TestHiveFileFormats
     {
         // Avro only supports String for Map keys, and doesn't support smallint or tinyint.
         return TEST_COLUMNS.stream()
-                .filter(column -> !column.getName().startsWith("t_map_") || column.getName().equals("t_map_string"))
+                .filter(column -> !column.getName().startsWith("t_map_") || "t_map_string".equals(column.getName()))
                 .filter(column -> !column.getName().endsWith("_smallint"))
                 .filter(column -> !column.getName().endsWith("_tinyint"))
                 .collect(toList());
@@ -432,7 +430,7 @@ public class TestHiveFileFormats
         // A Presto page can not contain a map with null keys, so a page based writer can not write null keys
         List<TestColumn> testColumns = TEST_COLUMNS.stream()
                 .filter(testColumn -> !hasType(testColumn.getObjectInspector(), PrimitiveCategory.DATE, PrimitiveCategory.VARCHAR, PrimitiveCategory.CHAR, PrimitiveCategory.DECIMAL))
-                .filter(testColumn -> !testColumn.getName().equals("t_map_null_key") && !testColumn.getName().equals("t_map_null_key_complex_value") && !testColumn.getName().equals("t_map_null_key_complex_key_value"))
+                .filter(testColumn -> !"t_map_null_key".equals(testColumn.getName()) && !"t_map_null_key_complex_value".equals(testColumn.getName()) && !"t_map_null_key_complex_key_value".equals(testColumn.getName()))
                 .collect(toList());
 
         assertThatFileFormat(DWRF)
@@ -628,12 +626,7 @@ public class TestHiveFileFormats
                 .withSession(parquetPageSourceSession)
                 .isFailingForPageSource(new ParquetPageSourceFactory(TYPE_MANAGER, HDFS_ENVIRONMENT, STATS), expectedErrorCode, expectedMessageMapLongLong);
 
-        String expectedMessageMapLongMapDouble = "The column column_name is declared as type map<bigint,bigint>, but the Parquet file declares the column as type optional group column_name (MAP) {\n"
-                + "  repeated group map (MAP_KEY_VALUE) {\n"
-                + "    required double key;\n"
-                + "    optional double value;\n"
-                + "  }\n"
-                + "}";
+        String expectedMessageMapLongMapDouble = new StringBuilder().append("The column column_name is declared as type map<bigint,bigint>, but the Parquet file declares the column as type optional group column_name (MAP) {\n").append("  repeated group map (MAP_KEY_VALUE) {\n").append("    required double key;\n").append("    optional double value;\n").append("  }\n").append("}").toString();
 
         assertThatFileFormat(PARQUET)
                 .withWriteColumns(ImmutableList.of(mapDoubleColumn))
@@ -641,11 +634,7 @@ public class TestHiveFileFormats
                 .withSession(parquetPageSourceSession)
                 .isFailingForPageSource(new ParquetPageSourceFactory(TYPE_MANAGER, HDFS_ENVIRONMENT, STATS), expectedErrorCode, expectedMessageMapLongMapDouble);
 
-        String expectedMessageArrayStringArrayBoolean = "The column column_name is declared as type array<string>, but the Parquet file declares the column as type optional group column_name (LIST) {\n"
-                + "  repeated group bag {\n"
-                + "    optional boolean array_element;\n"
-                + "  }\n"
-                + "}";
+        String expectedMessageArrayStringArrayBoolean = new StringBuilder().append("The column column_name is declared as type array<string>, but the Parquet file declares the column as type optional group column_name (LIST) {\n").append("  repeated group bag {\n").append("    optional boolean array_element;\n").append("  }\n").append("}").toString();
 
         assertThatFileFormat(PARQUET)
                 .withWriteColumns(ImmutableList.of(arrayBooleanColumn))
@@ -661,9 +650,7 @@ public class TestHiveFileFormats
                 .withSession(parquetPageSourceSession)
                 .isFailingForPageSource(new ParquetPageSourceFactory(TYPE_MANAGER, HDFS_ENVIRONMENT, STATS), expectedErrorCode, expectedMessageBooleanArrayBoolean);
 
-        String expectedMessageRowLongLong = "The column column_name is declared as type bigint, but the Parquet file declares the column as type optional group column_name {\n"
-                + "  optional int64 s_bigint;\n"
-                + "}";
+        String expectedMessageRowLongLong = new StringBuilder().append("The column column_name is declared as type bigint, but the Parquet file declares the column as type optional group column_name {\n").append("  optional int64 s_bigint;\n").append("}").toString();
 
         assertThatFileFormat(PARQUET)
                 .withWriteColumns(ImmutableList.of(rowLongColumn))
@@ -671,12 +658,7 @@ public class TestHiveFileFormats
                 .withSession(parquetPageSourceSession)
                 .isFailingForPageSource(new ParquetPageSourceFactory(TYPE_MANAGER, HDFS_ENVIRONMENT, STATS), expectedErrorCode, expectedMessageRowLongLong);
 
-        String expectedMessageMapLongRowLong = "The column column_name is declared as type struct<s_bigint:bigint>, but the Parquet file declares the column as type optional group column_name (MAP) {\n"
-                + "  repeated group map (MAP_KEY_VALUE) {\n"
-                + "    required int64 key;\n"
-                + "    optional int64 value;\n"
-                + "  }\n"
-                + "}";
+        String expectedMessageMapLongRowLong = new StringBuilder().append("The column column_name is declared as type struct<s_bigint:bigint>, but the Parquet file declares the column as type optional group column_name (MAP) {\n").append("  repeated group map (MAP_KEY_VALUE) {\n").append("    required int64 key;\n").append("    optional int64 value;\n").append("  }\n").append("}").toString();
 
         assertThatFileFormat(PARQUET)
                 .withWriteColumns(ImmutableList.of(mapLongColumn))
@@ -684,9 +666,7 @@ public class TestHiveFileFormats
                 .withSession(parquetPageSourceSession)
                 .isFailingForPageSource(new ParquetPageSourceFactory(TYPE_MANAGER, HDFS_ENVIRONMENT, STATS), expectedErrorCode, expectedMessageMapLongRowLong);
 
-        String expectedMessageRowLongNest = "The column column_name is declared as type map<string,array<struct<s_int:int>>>, but the Parquet file declares the column as type optional group column_name {\n"
-                + "  optional int64 s_bigint;\n"
-                + "}";
+        String expectedMessageRowLongNest = new StringBuilder().append("The column column_name is declared as type map<string,array<struct<s_int:int>>>, but the Parquet file declares the column as type optional group column_name {\n").append("  optional int64 s_bigint;\n").append("}").toString();
 
         assertThatFileFormat(PARQUET)
                 .withWriteColumns(ImmutableList.of(rowLongColumn))
@@ -714,7 +694,7 @@ public class TestHiveFileFormats
                 .collect(toImmutableList());
 
         Configuration configuration = new Configuration();
-        configuration.set("io.compression.codecs", LzoCodec.class.getName() + "," + LzopCodec.class.getName());
+        configuration.set("io.compression.codecs", new StringBuilder().append(LzoCodec.class.getName()).append(",").append(LzopCodec.class.getName()).toString());
         Optional<ConnectorPageSource> pageSource = HivePageSourceProvider.createHivePageSource(
                 ImmutableSet.of(cursorProvider),
                 ImmutableSet.of(),
@@ -841,9 +821,9 @@ public class TestHiveFileFormats
     private static boolean withoutNullMapKeyTests(TestColumn testColumn)
     {
         String name = testColumn.getName();
-        return !name.equals("t_map_null_key") &&
-                !name.equals("t_map_null_key_complex_key_value") &&
-                !name.equals("t_map_null_key_complex_value");
+        return !"t_map_null_key".equals(name) &&
+                !"t_map_null_key_complex_key_value".equals(name) &&
+                !"t_map_null_key_complex_value".equals(name);
     }
 
     private FileFormatAssertion assertThatFileFormat(HiveStorageFormat hiveStorageFormat)

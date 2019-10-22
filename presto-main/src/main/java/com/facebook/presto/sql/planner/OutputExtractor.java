@@ -76,9 +76,7 @@ public class OutputExtractor
         @Override
         public Void visitPlan(PlanNode node, Void context)
         {
-            for (PlanNode child : node.getSources()) {
-                child.accept(this, context);
-            }
+            node.getSources().forEach(child -> child.accept(this, context));
             return null;
         }
 

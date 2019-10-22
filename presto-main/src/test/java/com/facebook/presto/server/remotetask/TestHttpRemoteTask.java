@@ -348,19 +348,20 @@ public class TestHttpRemoteTask
         private String taskInstanceId = INITIAL_TASK_INSTANCE_ID;
 
         private long statusFetchCounter;
+		Map<PlanNodeId, TaskSource> taskSourceMap = new HashMap<>();
 
-        public TestingTaskResource(AtomicLong lastActivityNanos, FailureScenario failureScenario)
+		public TestingTaskResource(AtomicLong lastActivityNanos, FailureScenario failureScenario)
         {
             this.lastActivityNanos = requireNonNull(lastActivityNanos, "lastActivityNanos is null");
             this.failureScenario = requireNonNull(failureScenario, "failureScenario is null");
         }
 
-        public void setHttpClient(TestingHttpClient newValue)
+		public void setHttpClient(TestingHttpClient newValue)
         {
             httpClient.set(newValue);
         }
 
-        @GET
+		@GET
         @Path("{taskId}")
         @Produces(MediaType.APPLICATION_JSON)
         public synchronized TaskInfo getTaskInfo(
@@ -373,9 +374,7 @@ public class TestHttpRemoteTask
             return buildTaskInfo();
         }
 
-        Map<PlanNodeId, TaskSource> taskSourceMap = new HashMap<>();
-
-        @POST
+		@POST
         @Path("{taskId}")
         @Consumes(MediaType.APPLICATION_JSON)
         @Produces(MediaType.APPLICATION_JSON)
@@ -384,14 +383,13 @@ public class TestHttpRemoteTask
                 TaskUpdateRequest taskUpdateRequest,
                 @Context UriInfo uriInfo)
         {
-            for (TaskSource source : taskUpdateRequest.getSources()) {
-                taskSourceMap.compute(source.getPlanNodeId(), (planNodeId, taskSource) -> taskSource == null ? source : taskSource.update(source));
-            }
+            taskUpdateRequest.getSources().forEach(source -> taskSourceMap.compute(source.getPlanNodeId(),
+					(planNodeId, taskSource) -> taskSource == null ? source : taskSource.update(source)));
             lastActivityNanos.set(System.nanoTime());
             return buildTaskInfo();
         }
 
-        public synchronized TaskSource getTaskSource(PlanNodeId planNodeId)
+		public synchronized TaskSource getTaskSource(PlanNodeId planNodeId)
         {
             TaskSource source = taskSourceMap.get(planNodeId);
             if (source == null) {
@@ -400,7 +398,7 @@ public class TestHttpRemoteTask
             return new TaskSource(source.getPlanNodeId(), source.getSplits(), source.getNoMoreSplitsForLifespan(), source.isNoMoreSplits());
         }
 
-        @GET
+		@GET
         @Path("{taskId}/status")
         @Produces(MediaType.APPLICATION_JSON)
         public synchronized TaskStatus getTaskStatus(
@@ -416,7 +414,7 @@ public class TestHttpRemoteTask
             return buildTaskStatus();
         }
 
-        @DELETE
+		@DELETE
         @Path("{taskId}")
         @Produces(MediaType.APPLICATION_JSON)
         public synchronized TaskInfo deleteTask(
@@ -430,7 +428,7 @@ public class TestHttpRemoteTask
             return buildTaskInfo();
         }
 
-        public void setInitialTaskInfo(TaskInfo initialTaskInfo)
+		public void setInitialTaskInfo(TaskInfo initialTaskInfo)
         {
             this.initialTaskInfo = initialTaskInfo;
             this.initialTaskStatus = initialTaskInfo.getTaskStatus();
@@ -451,7 +449,7 @@ public class TestHttpRemoteTask
             }
         }
 
-        private TaskInfo buildTaskInfo()
+		private TaskInfo buildTaskInfo()
         {
             return new TaskInfo(
                     buildTaskStatus(),
@@ -462,7 +460,7 @@ public class TestHttpRemoteTask
                     initialTaskInfo.isNeedsPlan());
         }
 
-        private TaskStatus buildTaskStatus()
+		private TaskStatus buildTaskStatus()
         {
             statusFetchCounter++;
             // Change the task instance id after 10th fetch to simulate worker restart

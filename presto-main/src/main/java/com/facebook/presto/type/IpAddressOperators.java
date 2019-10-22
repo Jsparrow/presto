@@ -48,10 +48,14 @@ import static com.facebook.presto.type.IpAddressType.IPADDRESS;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.airlift.slice.Slices.wrappedBuffer;
 import static java.lang.System.arraycopy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class IpAddressOperators
 {
-    private IpAddressOperators()
+    private static final Logger logger = LoggerFactory.getLogger(IpAddressOperators.class);
+
+	private IpAddressOperators()
     {
     }
 
@@ -130,7 +134,8 @@ public final class IpAddressOperators
             address = InetAddresses.forString(slice.toStringUtf8()).getAddress();
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, "Cannot cast value to IPADDRESS: " + slice.toStringUtf8());
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, "Cannot cast value to IPADDRESS: " + slice.toStringUtf8());
         }
 
         byte[] bytes;
@@ -189,7 +194,14 @@ public final class IpAddressOperators
         return wrappedBuffer(slice.getBytes());
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.IPADDRESS) Slice value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class IpAddressDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -223,12 +235,5 @@ public final class IpAddressOperators
             }
             return left.compareTo(leftPosition, 0, IPADDRESS.getFixedSize(), right, rightPosition, 0, IPADDRESS.getFixedSize()) != 0;
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.IPADDRESS) Slice value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

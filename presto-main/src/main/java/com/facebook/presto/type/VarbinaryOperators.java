@@ -103,7 +103,21 @@ public final class VarbinaryOperators
         return xxHash64(value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.VARBINARY) Slice value)
+    {
+        return XxHash64.hash(value);
+    }
+
+	@ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.VARBINARY) Slice value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class VarbinaryDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -143,19 +157,5 @@ public final class VarbinaryOperators
             }
             return !left.equals(leftPosition, 0, right, rightPosition, 0, leftLength);
         }
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.VARBINARY) Slice value)
-    {
-        return XxHash64.hash(value);
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.VARBINARY) Slice value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

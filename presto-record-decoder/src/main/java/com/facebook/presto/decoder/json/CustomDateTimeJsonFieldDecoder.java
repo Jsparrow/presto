@@ -36,6 +36,8 @@ import static com.facebook.presto.spi.type.TimestampWithTimeZoneType.TIMESTAMP_W
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Custom date format decoder.
@@ -47,7 +49,9 @@ import static java.util.Objects.requireNonNull;
 public class CustomDateTimeJsonFieldDecoder
         implements JsonFieldDecoder
 {
-    private static final Set<Type> SUPPORTED_TYPES = ImmutableSet.of(DATE, TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE);
+    private static final Logger logger = LoggerFactory.getLogger(CustomDateTimeJsonFieldDecoder.class);
+
+	private static final Set<Type> SUPPORTED_TYPES = ImmutableSet.of(DATE, TIME, TIME_WITH_TIME_ZONE, TIMESTAMP, TIMESTAMP_WITH_TIME_ZONE);
 
     private final DecoderColumnHandle columnHandle;
     private final DateTimeFormatter formatter;
@@ -64,7 +68,8 @@ public class CustomDateTimeJsonFieldDecoder
             formatter = DateTimeFormat.forPattern(columnHandle.getFormatHint()).withLocale(Locale.ENGLISH).withZoneUTC();
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(
                     GENERIC_USER_ERROR,
                     format("invalid joda pattern '%s' passed as format hint for column '%s'", columnHandle.getFormatHint(), columnHandle.getName()));
         }
@@ -79,7 +84,8 @@ public class CustomDateTimeJsonFieldDecoder
     public static class CustomDateTimeJsonValueProvider
             extends AbstractDateTimeJsonValueProvider
     {
-        private final DateTimeFormatter formatter;
+        private final Logger logger1 = LoggerFactory.getLogger(CustomDateTimeJsonValueProvider.class);
+		private final DateTimeFormatter formatter;
 
         public CustomDateTimeJsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle, DateTimeFormatter formatter)
         {
@@ -99,7 +105,8 @@ public class CustomDateTimeJsonFieldDecoder
                 return formatter.parseMillis(value.asText());
             }
             catch (IllegalArgumentException e) {
-                throw new PrestoException(
+                logger1.error(e.getMessage(), e);
+				throw new PrestoException(
                         DECODER_CONVERSION_NOT_SUPPORTED,
                         format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
             }

@@ -29,23 +29,23 @@ import static com.facebook.presto.spi.type.BooleanType.BOOLEAN;
 public class TestHyperLogLogFunctions
         extends AbstractTestFunctions
 {
-    private TestHyperLogLogFunctions() {}
-
     private static final int NUMBER_OF_BUCKETS = 32768;
 
-    @Test
+	private TestHyperLogLogFunctions() {}
+
+	@Test
     public void testCardinalityNullArray()
     {
         assertFunction("cardinality(merge_hll(null))", BIGINT, null);
     }
 
-    @Test
+	@Test
     public void testCardinalityMultipleNullColumns()
     {
         assertFunction("cardinality(merge_hll(ARRAY[null, null, null]))", BIGINT, null);
     }
 
-    @Test
+	@Test
     public void testMergeNoColumns()
     {
         int blockSize = 0;
@@ -53,10 +53,10 @@ public class TestHyperLogLogFunctions
 
         String projection = getMergeProjection(getUniqueElements(blockSize, uniqueElements));
 
-        functionAssertions.assertFunction("(CAST(" + projection + " AS VARBINARY)) IS NULL", BOOLEAN, true);
+        functionAssertions.assertFunction(new StringBuilder().append("(CAST(").append(projection).append(" AS VARBINARY)) IS NULL").toString(), BOOLEAN, true);
     }
 
-    @Test
+	@Test
     public void testCardinalityNoColumns()
     {
         int blockSize = 0;
@@ -67,7 +67,7 @@ public class TestHyperLogLogFunctions
         assertFunction(projection, BIGINT, null);
     }
 
-    @Test
+	@Test
     public void testMergeSingleColumn()
     {
         int blockSize = 1;
@@ -76,10 +76,10 @@ public class TestHyperLogLogFunctions
 
         String projection = getMergeProjection(getUniqueElements(blockSize, uniqueElements));
 
-        functionAssertions.assertFunction("(CAST(" + projection + " AS VARBINARY)) IS NULL", BOOLEAN, false);
+        functionAssertions.assertFunction(new StringBuilder().append("(CAST(").append(projection).append(" AS VARBINARY)) IS NULL").toString(), BOOLEAN, false);
     }
 
-    @Test
+	@Test
     public void testCardinalitySingleColumn()
     {
         int blockSize = 1;
@@ -91,7 +91,7 @@ public class TestHyperLogLogFunctions
         functionAssertions.assertFunctionWithError(projection, BIGINT, uniqueElements, error);
     }
 
-    @Test
+	@Test
     public void testCardinalityTwoColumns()
     {
         int blockSize = 2;
@@ -103,7 +103,7 @@ public class TestHyperLogLogFunctions
         functionAssertions.assertFunctionWithError(projection, BIGINT, uniqueElements, error);
     }
 
-    @Test
+	@Test
     public void testCardinalityThreeColumns()
     {
         int blockSize = 3;
@@ -115,7 +115,7 @@ public class TestHyperLogLogFunctions
         functionAssertions.assertFunctionWithError(projection, BIGINT, uniqueElements, error);
     }
 
-    @Test
+	@Test
     public void testMergeManyColumns()
     {
         int blockSize = 254;
@@ -124,10 +124,10 @@ public class TestHyperLogLogFunctions
 
         String projection = getMergeProjection(getUniqueElements(blockSize, uniqueElements));
 
-        functionAssertions.assertFunction("(CAST(" + projection + " AS VARBINARY)) IS NULL", BOOLEAN, false);
+        functionAssertions.assertFunction(new StringBuilder().append("(CAST(").append(projection).append(" AS VARBINARY)) IS NULL").toString(), BOOLEAN, false);
     }
 
-    @Test
+	@Test
     public void testCardinalityManyColumns()
     {
         // max number of columns to merge is 254
@@ -140,7 +140,7 @@ public class TestHyperLogLogFunctions
         functionAssertions.assertFunctionWithError(projection, BIGINT, uniqueElements, error);
     }
 
-    private List<HyperLogLog> getUniqueElements(int blockSize, long uniqueElements)
+	private List<HyperLogLog> getUniqueElements(int blockSize, long uniqueElements)
     {
         ImmutableList.Builder<HyperLogLog> builder = ImmutableList.builder();
 
@@ -157,7 +157,7 @@ public class TestHyperLogLogFunctions
         return builder.build();
     }
 
-    private String getCardinalityProjection(List<HyperLogLog> list)
+	private String getCardinalityProjection(List<HyperLogLog> list)
     {
         String projection = "cardinality(merge_hll(ARRAY[";
 
@@ -165,16 +165,12 @@ public class TestHyperLogLogFunctions
 
         ImmutableList.Builder<String> casts = ImmutableList.builder();
 
-        for (HyperLogLog current : list) {
-            Slice firstSerial = current.serialize();
-
-            byte[] firstBytes = firstSerial.getBytes();
-
-            String firstEncode = BaseEncoding.base16().lowerCase().encode(firstBytes);
-
-            // create an iterable with all our cast statements
-            casts.add("CAST(X'" + firstEncode + "' AS HyperLogLog)");
-        }
+        list.stream().map(HyperLogLog::serialize).forEach(firstSerial -> {
+			byte[] firstBytes = firstSerial.getBytes();
+			String firstEncode = BaseEncoding.base16().lowerCase().encode(firstBytes);
+			// create an iterable with all our cast statements
+            casts.add(new StringBuilder().append("CAST(X'").append(firstEncode).append("' AS HyperLogLog)").toString());
+		});
 
         projection += Joiner.on(", ").join(casts.build());
         projection += "]))";
@@ -182,7 +178,7 @@ public class TestHyperLogLogFunctions
         return projection;
     }
 
-    private String getMergeProjection(List<HyperLogLog> list)
+	private String getMergeProjection(List<HyperLogLog> list)
     {
         String projection = "merge_hll(ARRAY[";
 
@@ -190,16 +186,12 @@ public class TestHyperLogLogFunctions
 
         ImmutableList.Builder<String> casts = ImmutableList.builder();
 
-        for (HyperLogLog current : list) {
-            Slice firstSerial = current.serialize();
-
-            byte[] firstBytes = firstSerial.getBytes();
-
-            String firstEncode = BaseEncoding.base16().lowerCase().encode(firstBytes);
-
-            // create an iterable with all our cast statements
-            casts.add("CAST(X'" + firstEncode + "' AS HyperLogLog)");
-        }
+        list.stream().map(HyperLogLog::serialize).forEach(firstSerial -> {
+			byte[] firstBytes = firstSerial.getBytes();
+			String firstEncode = BaseEncoding.base16().lowerCase().encode(firstBytes);
+			// create an iterable with all our cast statements
+            casts.add(new StringBuilder().append("CAST(X'").append(firstEncode).append("' AS HyperLogLog)").toString());
+		});
 
         projection += Joiner.on(", ").join(casts.build());
         projection += "])";

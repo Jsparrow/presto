@@ -71,7 +71,7 @@ public class TableStatisticsDataRepository
     {
         schemaName = normalizeSchemaName(schemaName);
         String filename = table.getName();
-        String resourcePath = "/tpcds/statistics/" + schemaName + "/" + filename + ".json";
+        String resourcePath = new StringBuilder().append("/tpcds/statistics/").append(schemaName).append("/").append(filename).append(".json").toString();
         return readStatistics(resourcePath);
     }
 

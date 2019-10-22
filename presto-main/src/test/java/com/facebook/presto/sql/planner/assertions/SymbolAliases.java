@@ -41,34 +41,32 @@ public final class SymbolAliases
         this.map = ImmutableMap.of();
     }
 
-    private SymbolAliases(Map<String, SymbolReference> aliases)
-    {
-        this.map = ImmutableMap.copyOf(aliases);
-    }
-
     public SymbolAliases(SymbolAliases symbolAliases)
     {
         requireNonNull(symbolAliases, "symbolAliases are null");
         this.map = ImmutableMap.copyOf(symbolAliases.map);
     }
 
-    public static Builder builder()
+	private SymbolAliases(Map<String, SymbolReference> aliases)
+    {
+        this.map = ImmutableMap.copyOf(aliases);
+    }
+
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public SymbolAliases withNewAliases(SymbolAliases sourceAliases)
+	public SymbolAliases withNewAliases(SymbolAliases sourceAliases)
     {
         Builder builder = new Builder(this);
 
-        for (Map.Entry<String, SymbolReference> alias : sourceAliases.map.entrySet()) {
-            builder.put(alias.getKey(), alias.getValue());
-        }
+        sourceAliases.map.entrySet().forEach(alias -> builder.put(alias.getKey(), alias.getValue()));
 
         return builder.build();
     }
 
-    public SymbolReference get(String alias)
+	public SymbolReference get(String alias)
     {
         /*
          * It's still kind of an open question if the right combination of anyTree() and
@@ -84,54 +82,50 @@ public final class SymbolAliases
         return getOptional(alias).orElseThrow(() -> new IllegalStateException(format("missing expression for alias %s", alias)));
     }
 
-    public Optional<SymbolReference> getOptional(String alias)
+	public Optional<SymbolReference> getOptional(String alias)
     {
         alias = toKey(alias);
         SymbolReference result = map.get(alias);
         return Optional.ofNullable(result);
     }
 
-    private static String toKey(String alias)
+	private static String toKey(String alias)
     {
         // Required because the SqlParser lower cases SymbolReferences in the expressions we parse with it.
         return alias.toLowerCase(Locale.ENGLISH);
     }
 
-    private Map<String, SymbolReference> getUpdatedAssignments(Assignments assignments)
+	private Map<String, SymbolReference> getUpdatedAssignments(Assignments assignments)
     {
         ImmutableMap.Builder<String, SymbolReference> mapUpdate = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : assignments.getMap().entrySet()) {
-            for (Map.Entry<String, SymbolReference> existingAlias : map.entrySet()) {
-                RowExpression expression = assignment.getValue();
-                if (isExpression(expression) && castToExpression(expression).equals(existingAlias.getValue())) {
-                    // Simple symbol rename
-                    mapUpdate.put(existingAlias.getKey(), asSymbolReference(assignment.getKey()));
-                }
-                else if (!isExpression(expression) &&
-                        (expression instanceof VariableReferenceExpression) &&
-                        ((VariableReferenceExpression) expression).getName().equals(existingAlias.getValue().getName())) {
-                    // Simple symbol rename
-                    mapUpdate.put(existingAlias.getKey(), new SymbolReference(assignment.getKey().getName()));
-                }
-                else if (new SymbolReference(assignment.getKey().getName()).equals(existingAlias.getValue())) {
-                    /*
-                     * Special case for nodes that can alias symbols in the node's assignment map.
-                     * In this case, we've already added the alias in the map, but we won't include it
-                     * as a simple rename as covered above. Add the existing alias to the result if
-                     * the LHS of the assignment matches the symbol reference of the existing alias.
-                     *
-                     * This comes up when we alias expressions in project nodes for use further up the tree.
-                     * At the beginning for the function, map contains { NEW_ALIAS: SymbolReference("expr_2" }
-                     * and the assignments map contains { expr_2 := <some expression> }.
-                     */
-                    mapUpdate.put(existingAlias.getKey(), existingAlias.getValue());
-                }
-            }
-        }
+        // Simple symbol rename
+		// Simple symbol rename
+		/*
+		                     * Special case for nodes that can alias symbols in the node's assignment map.
+		                     * In this case, we've already added the alias in the map, but we won't include it
+		                     * as a simple rename as covered above. Add the existing alias to the result if
+		                     * the LHS of the assignment matches the symbol reference of the existing alias.
+		                     *
+		                     * This comes up when we alias expressions in project nodes for use further up the tree.
+		                     * At the beginning for the function, map contains { NEW_ALIAS: SymbolReference("expr_2" }
+		                     * and the assignments map contains { expr_2 := <some expression> }.
+		                     */
+		assignments.getMap().entrySet().forEach(assignment -> map.entrySet().forEach(existingAlias -> {
+			RowExpression expression = assignment.getValue();
+			if (isExpression(expression) && castToExpression(expression).equals(existingAlias.getValue())) {
+				mapUpdate.put(existingAlias.getKey(), asSymbolReference(assignment.getKey()));
+			} else if (!isExpression(expression) && (expression instanceof VariableReferenceExpression)
+					&& ((VariableReferenceExpression) expression).getName()
+							.equals(existingAlias.getValue().getName())) {
+				mapUpdate.put(existingAlias.getKey(), new SymbolReference(assignment.getKey().getName()));
+			} else if (new SymbolReference(assignment.getKey().getName()).equals(existingAlias.getValue())) {
+				mapUpdate.put(existingAlias.getKey(), existingAlias.getValue());
+			}
+		}));
         return mapUpdate.build();
     }
 
-    /*
+	/*
      * Return a new SymbolAliases that contains a map with the original bindings
      * updated based on assignments given that assignments is a map of
      * newSymbol := oldSymbolReference.
@@ -152,7 +146,7 @@ public final class SymbolAliases
                 .build();
     }
 
-    /*
+	/*
      * Return a new SymbolAliases that contains a map with the original bindings
      * updated based on assignments given that assignments is a map of
      * newSymbol := oldSymbolReference.
@@ -187,7 +181,7 @@ public final class SymbolAliases
         return new SymbolAliases(getUpdatedAssignments(assignments));
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -195,7 +189,7 @@ public final class SymbolAliases
                 .toString();
     }
 
-    public static class Builder
+	public static class Builder
     {
         Map<String, SymbolReference> bindings;
 

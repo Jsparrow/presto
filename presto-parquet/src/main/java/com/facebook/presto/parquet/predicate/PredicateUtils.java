@@ -58,10 +58,14 @@ import static java.lang.Math.toIntExact;
 import static org.apache.parquet.column.Encoding.BIT_PACKED;
 import static org.apache.parquet.column.Encoding.PLAIN_DICTIONARY;
 import static org.apache.parquet.column.Encoding.RLE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class PredicateUtils
 {
-    private PredicateUtils()
+    private static final Logger logger = LoggerFactory.getLogger(PredicateUtils.class);
+
+	private PredicateUtils()
     {
     }
 
@@ -77,12 +81,11 @@ public final class PredicateUtils
     public static Predicate buildPredicate(MessageType requestedSchema, TupleDomain<ColumnDescriptor> parquetTupleDomain, Map<List<String>, RichColumnDescriptor> descriptorsByPath)
     {
         ImmutableList.Builder<RichColumnDescriptor> columnReferences = ImmutableList.builder();
-        for (String[] paths : requestedSchema.getPaths()) {
-            RichColumnDescriptor descriptor = descriptorsByPath.get(Arrays.asList(paths));
-            if (descriptor != null) {
+        requestedSchema.getPaths().stream().map(paths -> descriptorsByPath.get(Arrays.asList(paths))).forEach(descriptor -> {
+			if (descriptor != null) {
                 columnReferences.add(descriptor);
             }
-        }
+		});
         return new TupleDomainParquetPredicate(parquetTupleDomain, columnReferences.build());
     }
 
@@ -101,7 +104,7 @@ public final class PredicateUtils
     private static Map<ColumnDescriptor, Statistics<?>> getStatistics(BlockMetaData blockMetadata, Map<List<String>, RichColumnDescriptor> descriptorsByPath)
     {
         ImmutableMap.Builder<ColumnDescriptor, Statistics<?>> statistics = ImmutableMap.builder();
-        for (ColumnChunkMetaData columnMetaData : blockMetadata.getColumns()) {
+        blockMetadata.getColumns().forEach(columnMetaData -> {
             Statistics<?> columnStatistics = columnMetaData.getStatistics();
             if (columnStatistics != null) {
                 RichColumnDescriptor descriptor = descriptorsByPath.get(Arrays.asList(columnMetaData.getPath().toArray()));
@@ -109,7 +112,7 @@ public final class PredicateUtils
                     statistics.put(descriptor, columnStatistics);
                 }
             }
-        }
+        });
         return statistics.build();
     }
 
@@ -118,16 +121,15 @@ public final class PredicateUtils
         ImmutableMap.Builder<ColumnDescriptor, DictionaryDescriptor> dictionaries = ImmutableMap.builder();
         for (ColumnChunkMetaData columnMetaData : blockMetadata.getColumns()) {
             RichColumnDescriptor descriptor = descriptorsByPath.get(Arrays.asList(columnMetaData.getPath().toArray()));
-            if (descriptor != null) {
-                if (isOnlyDictionaryEncodingPages(columnMetaData) && isColumnPredicate(descriptor, parquetTupleDomain)) {
-                    int totalSize = toIntExact(columnMetaData.getTotalSize());
-                    byte[] buffer = new byte[totalSize];
-                    dataSource.readFully(columnMetaData.getStartingPos(), buffer);
-                    Optional<DictionaryPage> dictionaryPage = readDictionaryPage(buffer, columnMetaData.getCodec());
-                    dictionaries.put(descriptor, new DictionaryDescriptor(descriptor, dictionaryPage));
-                    break;
-                }
-            }
+            boolean condition = descriptor != null && isOnlyDictionaryEncodingPages(columnMetaData) && isColumnPredicate(descriptor, parquetTupleDomain);
+			if (condition) {
+			    int totalSize = toIntExact(columnMetaData.getTotalSize());
+			    byte[] buffer = new byte[totalSize];
+			    dataSource.readFully(columnMetaData.getStartingPos(), buffer);
+			    Optional<DictionaryPage> dictionaryPage = readDictionaryPage(buffer, columnMetaData.getCodec());
+			    dictionaries.put(descriptor, new DictionaryDescriptor(descriptor, dictionaryPage));
+			    break;
+			}
         }
         return dictionaries.build();
     }
@@ -150,7 +152,8 @@ public final class PredicateUtils
             return Optional.of(new DictionaryPage(decompress(codecName, compressedData, pageHeader.getUncompressed_page_size()), dictionarySize, encoding));
         }
         catch (IOException ignored) {
-            return Optional.empty();
+            logger.error(ignored.getMessage(), ignored);
+			return Optional.empty();
         }
     }
 

@@ -242,13 +242,8 @@ public class AccumulatorCompiler
         Variable estimatedSize = method.getScope().declareVariable(long.class, "estimatedSize");
         method.getBody().append(estimatedSize.set(constantLong(0L)));
 
-        for (FieldDefinition stateField : stateFields) {
-            method.getBody()
-                    .append(estimatedSize.set(
-                            BytecodeExpressions.add(
-                                    estimatedSize,
-                                    method.getThis().getField(stateField).invoke("getEstimatedSize", long.class))));
-        }
+        stateFields.forEach(stateField -> method.getBody().append(estimatedSize.set(BytecodeExpressions.add(estimatedSize,
+				method.getThis().getField(stateField).invoke("getEstimatedSize", long.class)))));
         method.getBody().append(estimatedSize.ret());
     }
 
@@ -754,19 +749,13 @@ public class AccumulatorCompiler
     {
         Variable groupIdsBlock = scope.getVariable("groupIdsBlock");
         Variable position = scope.getVariable("position");
-        for (FieldDefinition stateField : stateFields) {
-            BytecodeExpression state = scope.getThis().getField(stateField);
-            block.append(state.invoke("setGroupId", void.class, groupIdsBlock.invoke("getGroupId", long.class, position)));
-        }
+        stateFields.stream().map(stateField -> scope.getThis().getField(stateField)).forEach(state -> block.append(state.invoke("setGroupId", void.class, groupIdsBlock.invoke("getGroupId", long.class, position))));
     }
 
     private static void generateEnsureCapacity(Scope scope, List<FieldDefinition> stateFields, BytecodeBlock block)
     {
         Variable groupIdsBlock = scope.getVariable("groupIdsBlock");
-        for (FieldDefinition stateField : stateFields) {
-            BytecodeExpression state = scope.getThis().getField(stateField);
-            block.append(state.invoke("ensureCapacity", void.class, groupIdsBlock.invoke("getGroupCount", long.class)));
-        }
+        stateFields.stream().map(stateField -> scope.getThis().getField(stateField)).forEach(state -> block.append(state.invoke("ensureCapacity", void.class, groupIdsBlock.invoke("getGroupCount", long.class))));
     }
 
     private static MethodDefinition declareAddIntermediate(ClassDefinition definition, boolean grouped)
@@ -836,13 +825,13 @@ public class AccumulatorCompiler
             Variable rowBuilder = method.getScope().declareVariable(BlockBuilder.class, "rowBuilder");
             body.append(rowBuilder.set(out.invoke("beginBlockEntry", BlockBuilder.class)));
 
-            for (int i = 0; i < stateFieldAndDescriptors.size(); i++) {
-                BytecodeExpression stateSerializer = thisVariable.getField(stateFieldAndDescriptors.get(i).getStateSerializerField());
-                BytecodeExpression state = thisVariable.getField(stateFieldAndDescriptors.get(i).getStateField());
+            stateFieldAndDescriptors.forEach(stateFieldAndDescriptor -> {
+                BytecodeExpression stateSerializer = thisVariable.getField(stateFieldAndDescriptor.getStateSerializerField());
+                BytecodeExpression state = thisVariable.getField(stateFieldAndDescriptor.getStateField());
 
                 body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)))
                         .append(stateSerializer.invoke("serialize", void.class, state.cast(Object.class), rowBuilder));
-            }
+            });
             body.append(out.invoke("closeEntry", BlockBuilder.class).pop())
                     .ret();
         }
@@ -871,11 +860,11 @@ public class AccumulatorCompiler
             Variable rowBuilder = method.getScope().declareVariable(BlockBuilder.class, "rowBuilder");
             body.append(rowBuilder.set(out.invoke("beginBlockEntry", BlockBuilder.class)));
 
-            for (int i = 0; i < stateFieldAndDescriptors.size(); i++) {
-                BytecodeExpression stateSerializer = thisVariable.getField(stateFieldAndDescriptors.get(i).getStateSerializerField());
-                BytecodeExpression state = thisVariable.getField(stateFieldAndDescriptors.get(i).getStateField());
+            stateFieldAndDescriptors.forEach(stateFieldAndDescriptor -> {
+                BytecodeExpression stateSerializer = thisVariable.getField(stateFieldAndDescriptor.getStateSerializerField());
+                BytecodeExpression state = thisVariable.getField(stateFieldAndDescriptor.getStateField());
                 body.append(stateSerializer.invoke("serialize", void.class, state.cast(Object.class), rowBuilder));
-            }
+            });
             body.append(out.invoke("closeEntry", BlockBuilder.class).pop())
                     .ret();
         }
@@ -896,11 +885,10 @@ public class AccumulatorCompiler
 
         List<BytecodeExpression> states = new ArrayList<>();
 
-        for (FieldDefinition stateField : stateFields) {
-            BytecodeExpression state = thisVariable.getField(stateField);
-            body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)));
-            states.add(state);
-        }
+        stateFields.stream().map(thisVariable::getField).forEach(state -> {
+			body.append(state.invoke("setGroupId", void.class, groupId.cast(long.class)));
+			states.add(state);
+		});
 
         body.comment("output(state_0, state_1, ..., out)");
         states.forEach(body::append);
@@ -928,10 +916,7 @@ public class AccumulatorCompiler
 
         List<BytecodeExpression> states = new ArrayList<>();
 
-        for (FieldDefinition stateField : stateFields) {
-            BytecodeExpression state = thisVariable.getField(stateField);
-            states.add(state);
-        }
+        stateFields.stream().map(thisVariable::getField).forEach(states::add);
 
         body.comment("output(state_0, state_1, ..., out)");
         states.forEach(body::append);
@@ -1006,12 +991,12 @@ public class AccumulatorCompiler
             createState = "createSingleState";
         }
 
-        for (StateFieldAndDescriptor stateFieldAndDescriptor : stateFieldAndDescriptors) {
+        stateFieldAndDescriptors.forEach(stateFieldAndDescriptor -> {
             FieldDefinition stateField = stateFieldAndDescriptor.getStateField();
             BytecodeExpression stateFactory = thisVariable.getField(stateFieldAndDescriptor.getStateFactoryField());
 
             body.append(thisVariable.setField(stateField, stateFactory.invoke(createState, Object.class).cast(stateField.getType())));
-        }
+        });
         body.ret();
     }
 

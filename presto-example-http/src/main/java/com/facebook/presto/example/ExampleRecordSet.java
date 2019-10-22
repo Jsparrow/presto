@@ -38,9 +38,7 @@ public class ExampleRecordSet
 
         this.columnHandles = requireNonNull(columnHandles, "column handles is null");
         ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (ExampleColumnHandle column : columnHandles) {
-            types.add(column.getColumnType());
-        }
+        columnHandles.forEach(column -> types.add(column.getColumnType()));
         this.columnTypes = types.build();
 
         try {

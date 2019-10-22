@@ -69,10 +69,7 @@ public class ApproximateRealPercentileArrayAggregations
 
         BlockBuilder blockBuilder = out.beginBlockEntry();
 
-        for (int i = 0; i < percentiles.size(); i++) {
-            Double percentile = percentiles.get(i);
-            REAL.writeLong(blockBuilder, floatToRawIntBits(sortableIntToFloat((int) digest.getQuantile(percentile))));
-        }
+        percentiles.forEach(percentile -> REAL.writeLong(blockBuilder, floatToRawIntBits(sortableIntToFloat((int) digest.getQuantile(percentile)))));
 
         out.closeEntry();
     }

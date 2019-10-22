@@ -123,9 +123,7 @@ public class ColumnJdbcTable
         Builder table = InMemoryRecordSet.builder(METADATA);
         for (String catalog : filter(listCatalogs(session, metadata, accessControl).keySet(), catalogFilter)) {
             QualifiedTablePrefix prefix = FilterUtil.tablePrefix(catalog, schemaFilter, tableFilter);
-            for (Entry<SchemaTableName, List<ColumnMetadata>> entry : listTableColumns(session, metadata, accessControl, prefix).entrySet()) {
-                addColumnRows(table, catalog, entry.getKey(), entry.getValue());
-            }
+            listTableColumns(session, metadata, accessControl, prefix).entrySet().forEach(entry -> addColumnRows(table, catalog, entry.getKey(), entry.getValue()));
         }
         return table.build().cursor();
     }

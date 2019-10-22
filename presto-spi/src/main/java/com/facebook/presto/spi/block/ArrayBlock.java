@@ -39,6 +39,23 @@ public class ArrayBlock
     private final long retainedSizeInBytes;
 
     /**
+     * Use createArrayBlockInternal or fromElementBlock instead of this method.  The caller of this method is assumed to have
+     * validated the arguments with validateConstructorArguments.
+     */
+    private ArrayBlock(int arrayOffset, int positionCount, @Nullable boolean[] valueIsNull, int[] offsets, Block values)
+    {
+        // caller must check arguments with validateConstructorArguments
+        this.arrayOffset = arrayOffset;
+        this.positionCount = positionCount;
+        this.valueIsNull = valueIsNull;
+        this.offsets = offsets;
+        this.values = requireNonNull(values);
+
+        sizeInBytes = -1;
+        retainedSizeInBytes = INSTANCE_SIZE + values.getRetainedSizeInBytes() + sizeOf(offsets) + sizeOf(valueIsNull);
+    }
+
+	/**
      * Create an array block directly from columnar nulls, values, and offsets into the values.
      * A null array must have no entries.
      */
@@ -59,7 +76,7 @@ public class ArrayBlock
         return new ArrayBlock(0, positionCount, valueIsNull.orElse(null), arrayOffset, values);
     }
 
-    /**
+	/**
      * Create an array block directly without per element validations.
      */
     static ArrayBlock createArrayBlockInternal(int arrayOffset, int positionCount, @Nullable boolean[] valueIsNull, int[] offsets, Block values)
@@ -68,7 +85,7 @@ public class ArrayBlock
         return new ArrayBlock(arrayOffset, positionCount, valueIsNull, offsets, values);
     }
 
-    private static void validateConstructorArguments(int arrayOffset, int positionCount, @Nullable boolean[] valueIsNull, int[] offsets, Block values)
+	private static void validateConstructorArguments(int arrayOffset, int positionCount, @Nullable boolean[] valueIsNull, int[] offsets, Block values)
     {
         if (arrayOffset < 0) {
             throw new IllegalArgumentException("arrayOffset is negative");
@@ -90,30 +107,13 @@ public class ArrayBlock
         requireNonNull(values, "values is null");
     }
 
-    /**
-     * Use createArrayBlockInternal or fromElementBlock instead of this method.  The caller of this method is assumed to have
-     * validated the arguments with validateConstructorArguments.
-     */
-    private ArrayBlock(int arrayOffset, int positionCount, @Nullable boolean[] valueIsNull, int[] offsets, Block values)
-    {
-        // caller must check arguments with validateConstructorArguments
-        this.arrayOffset = arrayOffset;
-        this.positionCount = positionCount;
-        this.valueIsNull = valueIsNull;
-        this.offsets = offsets;
-        this.values = requireNonNull(values);
-
-        sizeInBytes = -1;
-        retainedSizeInBytes = INSTANCE_SIZE + values.getRetainedSizeInBytes() + sizeOf(offsets) + sizeOf(valueIsNull);
-    }
-
-    @Override
+	@Override
     public int getPositionCount()
     {
         return positionCount;
     }
 
-    @Override
+	@Override
     public long getSizeInBytes()
     {
         if (sizeInBytes < 0) {
@@ -122,20 +122,20 @@ public class ArrayBlock
         return sizeInBytes;
     }
 
-    private void calculateSize()
+	private void calculateSize()
     {
         int valueStart = offsets[arrayOffset];
         int valueEnd = offsets[arrayOffset + positionCount];
         sizeInBytes = values.getRegionSizeInBytes(valueStart, valueEnd - valueStart) + ((Integer.BYTES + Byte.BYTES) * (long) this.positionCount);
     }
 
-    @Override
+	@Override
     public long getRetainedSizeInBytes()
     {
         return retainedSizeInBytes;
     }
 
-    @Override
+	@Override
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
     {
         consumer.accept(values, values.getRetainedSizeInBytes());
@@ -144,32 +144,32 @@ public class ArrayBlock
         consumer.accept(this, (long) INSTANCE_SIZE);
     }
 
-    @Override
+	@Override
     protected Block getRawElementBlock()
     {
         return values;
     }
 
-    @Override
+	@Override
     protected int[] getOffsets()
     {
         return offsets;
     }
 
-    @Override
+	@Override
     public int getOffsetBase()
     {
         return arrayOffset;
     }
 
-    @Override
+	@Override
     @Nullable
     protected boolean[] getValueIsNull()
     {
         return valueIsNull;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder("ArrayBlock{");
@@ -178,7 +178,7 @@ public class ArrayBlock
         return sb.toString();
     }
 
-    @Override
+	@Override
     public Block getLoadedBlock()
     {
         Block loadedValuesBlock = values.getLoadedBlock();

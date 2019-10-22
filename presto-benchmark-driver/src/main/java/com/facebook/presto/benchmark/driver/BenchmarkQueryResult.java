@@ -23,32 +23,16 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class BenchmarkQueryResult
 {
-    public enum Status
-    {
-        PASS, FAIL
-    }
-
     private static final Stat FAIL_STAT = new Stat(new double[0]);
+	private final Suite suite;
+	private final BenchmarkQuery benchmarkQuery;
+	private final Status status;
+	private final Optional<String> errorMessage;
+	private final Stat wallTimeNanos;
+	private final Stat processCpuTimeNanos;
+	private final Stat queryCpuTimeNanos;
 
-    public static BenchmarkQueryResult passResult(Suite suite, BenchmarkQuery benchmarkQuery, Stat wallTimeNanos, Stat processCpuTimeNanos, Stat queryCpuTimeNanos)
-    {
-        return new BenchmarkQueryResult(suite, benchmarkQuery, Status.PASS, Optional.empty(), wallTimeNanos, processCpuTimeNanos, queryCpuTimeNanos);
-    }
-
-    public static BenchmarkQueryResult failResult(Suite suite, BenchmarkQuery benchmarkQuery, String errorMessage)
-    {
-        return new BenchmarkQueryResult(suite, benchmarkQuery, Status.FAIL, Optional.of(errorMessage), FAIL_STAT, FAIL_STAT, FAIL_STAT);
-    }
-
-    private final Suite suite;
-    private final BenchmarkQuery benchmarkQuery;
-    private final Status status;
-    private final Optional<String> errorMessage;
-    private final Stat wallTimeNanos;
-    private final Stat processCpuTimeNanos;
-    private final Stat queryCpuTimeNanos;
-
-    private BenchmarkQueryResult(
+	private BenchmarkQueryResult(
             Suite suite,
             BenchmarkQuery benchmarkQuery,
             Status status,
@@ -66,42 +50,52 @@ public class BenchmarkQueryResult
         this.queryCpuTimeNanos = requireNonNull(queryCpuTimeNanos, "queryCpuTimeNanos is null");
     }
 
-    public Suite getSuite()
+	public static BenchmarkQueryResult passResult(Suite suite, BenchmarkQuery benchmarkQuery, Stat wallTimeNanos, Stat processCpuTimeNanos, Stat queryCpuTimeNanos)
+    {
+        return new BenchmarkQueryResult(suite, benchmarkQuery, Status.PASS, Optional.empty(), wallTimeNanos, processCpuTimeNanos, queryCpuTimeNanos);
+    }
+
+	public static BenchmarkQueryResult failResult(Suite suite, BenchmarkQuery benchmarkQuery, String errorMessage)
+    {
+        return new BenchmarkQueryResult(suite, benchmarkQuery, Status.FAIL, Optional.of(errorMessage), FAIL_STAT, FAIL_STAT, FAIL_STAT);
+    }
+
+	public Suite getSuite()
     {
         return suite;
     }
 
-    public BenchmarkQuery getBenchmarkQuery()
+	public BenchmarkQuery getBenchmarkQuery()
     {
         return benchmarkQuery;
     }
 
-    public Status getStatus()
+	public Status getStatus()
     {
         return status;
     }
 
-    public Optional<String> getErrorMessage()
+	public Optional<String> getErrorMessage()
     {
         return errorMessage;
     }
 
-    public Stat getWallTimeNanos()
+	public Stat getWallTimeNanos()
     {
         return wallTimeNanos;
     }
 
-    public Stat getProcessCpuTimeNanos()
+	public Stat getProcessCpuTimeNanos()
     {
         return processCpuTimeNanos;
     }
 
-    public Stat getQueryCpuTimeNanos()
+	public Stat getQueryCpuTimeNanos()
     {
         return queryCpuTimeNanos;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -119,5 +113,10 @@ public class BenchmarkQueryResult
                 .add("queryCpuTimeStd", new Duration(queryCpuTimeNanos.getStandardDeviation(), NANOSECONDS).convertToMostSuccinctTimeUnit())
                 .add("error", errorMessage)
                 .toString();
+    }
+
+	public enum Status
+    {
+        PASS, FAIL
     }
 }

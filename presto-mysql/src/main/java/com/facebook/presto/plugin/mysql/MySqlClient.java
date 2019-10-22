@@ -97,7 +97,7 @@ public class MySqlClient
             while (resultSet.next()) {
                 String schemaName = resultSet.getString("TABLE_CAT");
                 // skip internal schemas
-                if (!schemaName.equalsIgnoreCase("information_schema") && !schemaName.equalsIgnoreCase("mysql")) {
+                if (!"information_schema".equalsIgnoreCase(schemaName) && !"mysql".equalsIgnoreCase(schemaName)) {
                     schemaNames.add(schemaName);
                 }
             }
@@ -165,24 +165,23 @@ public class MySqlClient
         if (VARBINARY.equals(type)) {
             return "mediumblob";
         }
-        if (isVarcharType(type)) {
-            VarcharType varcharType = (VarcharType) type;
-            if (varcharType.isUnbounded()) {
-                return "longtext";
-            }
-            if (varcharType.getLengthSafe() <= 255) {
-                return "tinytext";
-            }
-            if (varcharType.getLengthSafe() <= 65535) {
-                return "text";
-            }
-            if (varcharType.getLengthSafe() <= 16777215) {
-                return "mediumtext";
-            }
-            return "longtext";
-        }
-
-        return super.toSqlType(type);
+        if (!isVarcharType(type)) {
+			return super.toSqlType(type);
+		}
+		VarcharType varcharType = (VarcharType) type;
+		if (varcharType.isUnbounded()) {
+		    return "longtext";
+		}
+		if (varcharType.getLengthSafe() <= 255) {
+		    return "tinytext";
+		}
+		if (varcharType.getLengthSafe() <= 65535) {
+		    return "text";
+		}
+		if (varcharType.getLengthSafe() <= 16777215) {
+		    return "mediumtext";
+		}
+		return "longtext";
     }
 
     @Override

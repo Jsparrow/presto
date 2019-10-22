@@ -153,11 +153,7 @@ public class RedisMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, String schemaNameOrNull)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (SchemaTableName tableName : getDefinedTables().keySet()) {
-            if (schemaNameOrNull == null || tableName.getSchemaName().equals(schemaNameOrNull)) {
-                builder.add(tableName);
-            }
-        }
+        getDefinedTables().keySet().stream().filter(tableName -> schemaNameOrNull == null || tableName.getSchemaName().equals(schemaNameOrNull)).forEach(builder::add);
 
         return builder.build();
     }
@@ -220,13 +216,13 @@ public class RedisMetadata
             tableNames = ImmutableList.of(new SchemaTableName(prefix.getSchemaName(), prefix.getTableName()));
         }
 
-        for (SchemaTableName tableName : tableNames) {
+        tableNames.forEach(tableName -> {
             ConnectorTableMetadata tableMetadata = getTableMetadata(tableName);
             // table can disappear during listing operation
             if (tableMetadata != null) {
                 columns.put(tableName, tableMetadata.getColumns());
             }
-        }
+        });
         return columns.build();
     }
 
@@ -265,13 +261,12 @@ public class RedisMetadata
 
     private static void appendFields(ImmutableList.Builder<ColumnMetadata> builder, RedisTableFieldGroup group)
     {
-        if (group != null) {
-            List<RedisTableFieldDescription> fields = group.getFields();
-            if (fields != null) {
-                for (RedisTableFieldDescription fieldDescription : fields) {
-                    builder.add(fieldDescription.getColumnMetadata());
-                }
-            }
-        }
+        if (group == null) {
+			return;
+		}
+		List<RedisTableFieldDescription> fields = group.getFields();
+		if (fields != null) {
+		    fields.forEach(fieldDescription -> builder.add(fieldDescription.getColumnMetadata()));
+		}
     }
 }

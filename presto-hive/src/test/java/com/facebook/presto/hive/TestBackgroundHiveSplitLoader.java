@@ -197,7 +197,7 @@ public class TestBackgroundHiveSplitLoader
         backgroundHiveSplitLoader.start(hiveSplitSource);
 
         assertThrows(RuntimeException.class, () -> drain(hiveSplitSource));
-        assertThrows(RuntimeException.class, () -> hiveSplitSource.isFinished());
+        assertThrows(RuntimeException.class, hiveSplitSource::isFinished);
     }
 
     private static List<String> drain(HiveSplitSource source)
@@ -286,7 +286,6 @@ public class TestBackgroundHiveSplitLoader
     }
 
     private static Iterable<HivePartitionMetadata> createPartitionMetadataWithOfflinePartitions()
-            throws RuntimeException
     {
         return () -> new AbstractIterator<HivePartitionMetadata>()
         {

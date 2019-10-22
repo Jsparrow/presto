@@ -34,12 +34,16 @@ import static java.util.Objects.requireNonNull;
 
 public class ExpressionExtractor
 {
-    public static List<RowExpression> extractExpressions(PlanNode plan)
+    private ExpressionExtractor()
+    {
+    }
+
+	public static List<RowExpression> extractExpressions(PlanNode plan)
     {
         return extractExpressions(plan, noLookup());
     }
 
-    public static List<RowExpression> extractExpressions(PlanNode plan, Lookup lookup)
+	public static List<RowExpression> extractExpressions(PlanNode plan, Lookup lookup)
     {
         requireNonNull(plan, "plan is null");
         requireNonNull(lookup, "lookup is null");
@@ -49,18 +53,14 @@ public class ExpressionExtractor
         return expressionsBuilder.build();
     }
 
-    public static List<RowExpression> extractExpressionsNonRecursive(PlanNode plan)
+	public static List<RowExpression> extractExpressionsNonRecursive(PlanNode plan)
     {
         ImmutableList.Builder<RowExpression> expressionsBuilder = ImmutableList.builder();
         plan.accept(new Visitor(false, noLookup()), expressionsBuilder);
         return expressionsBuilder.build();
     }
 
-    private ExpressionExtractor()
-    {
-    }
-
-    private static class Visitor
+	private static class Visitor
             extends SimplePlanVisitor<ImmutableList.Builder<RowExpression>>
     {
         private final boolean recursive;

@@ -93,10 +93,7 @@ public class TestOrderedAggregation
                 "VALUES (1, ARRAY[4, 2]), (2, ARRAY[9, 5]), (3, ARRAY[8, 3])");
 
         assertions.assertQuery(
-                "SELECT x, sum(cast(x AS double))\n" +
-                        "FROM (VALUES '1.0') t(x)\n" +
-                        "GROUP BY x\n" +
-                        "ORDER BY sum(cast(t.x AS double) ORDER BY t.x)",
+                new StringBuilder().append("SELECT x, sum(cast(x AS double))\n").append("FROM (VALUES '1.0') t(x)\n").append("GROUP BY x\n").append("ORDER BY sum(cast(t.x AS double) ORDER BY t.x)").toString(),
                 "VALUES ('1.0', 1e0)");
 
         assertions.assertQuery(
@@ -128,30 +125,13 @@ public class TestOrderedAggregation
     public void testGroupingSets()
     {
         assertions.assertQuery(
-                "SELECT x, array_agg(y ORDER BY y), array_agg(y ORDER BY y) FILTER (WHERE y > 1), count(*) FROM (" +
-                        "VALUES " +
-                        "   (1, 3), " +
-                        "   (1, 1), " +
-                        "   (2, 3), " +
-                        "   (2, 4)) t(x, y) " +
-                        "GROUP BY GROUPING SETS ((), (x))",
-                "VALUES " +
-                        "   (1, ARRAY[1, 3], ARRAY[3], BIGINT '2'), " +
-                        "   (2, ARRAY[3, 4], ARRAY[3, 4], BIGINT '2'), " +
-                        "   (NULL, ARRAY[1, 3, 3, 4], ARRAY[3, 3, 4], BIGINT '4')");
+                new StringBuilder().append("SELECT x, array_agg(y ORDER BY y), array_agg(y ORDER BY y) FILTER (WHERE y > 1), count(*) FROM (").append("VALUES ").append("   (1, 3), ").append("   (1, 1), ").append("   (2, 3), ").append("   (2, 4)) t(x, y) ").append("GROUP BY GROUPING SETS ((), (x))")
+						.toString(),
+                new StringBuilder().append("VALUES ").append("   (1, ARRAY[1, 3], ARRAY[3], BIGINT '2'), ").append("   (2, ARRAY[3, 4], ARRAY[3, 4], BIGINT '2'), ").append("   (NULL, ARRAY[1, 3, 3, 4], ARRAY[3, 3, 4], BIGINT '4')").toString());
 
         assertions.assertQuery(
-                "SELECT x, array_agg(DISTINCT y ORDER BY y), count(*) FROM (" +
-                        "VALUES " +
-                        "   (1, 3), " +
-                        "   (1, 1), " +
-                        "   (1, 3), " +
-                        "   (2, 3), " +
-                        "   (2, 4)) t(x, y) " +
-                        "GROUP BY GROUPING SETS ((), (x))",
-                "VALUES " +
-                        "   (1, ARRAY[1, 3], BIGINT '3'), " +
-                        "   (2, ARRAY[3, 4], BIGINT '2'), " +
-                        "   (NULL, ARRAY[1, 3, 4], BIGINT '5')");
+                new StringBuilder().append("SELECT x, array_agg(DISTINCT y ORDER BY y), count(*) FROM (").append("VALUES ").append("   (1, 3), ").append("   (1, 1), ").append("   (1, 3), ").append("   (2, 3), ").append("   (2, 4)) t(x, y) ")
+						.append("GROUP BY GROUPING SETS ((), (x))").toString(),
+                new StringBuilder().append("VALUES ").append("   (1, ARRAY[1, 3], BIGINT '3'), ").append("   (2, ARRAY[3, 4], BIGINT '2'), ").append("   (NULL, ARRAY[1, 3, 4], BIGINT '5')").toString());
     }
 }

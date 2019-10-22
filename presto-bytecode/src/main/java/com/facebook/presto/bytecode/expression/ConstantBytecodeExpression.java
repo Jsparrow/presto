@@ -64,7 +64,7 @@ class ConstantBytecodeExpression
         }
         // todo escape string
         if (value instanceof String) {
-            return "\"" + value + "\"";
+            return new StringBuilder().append("\"").append(value).append("\"").toString();
         }
         return String.valueOf(value);
     }

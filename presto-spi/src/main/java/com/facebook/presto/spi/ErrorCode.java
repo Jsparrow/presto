@@ -61,7 +61,7 @@ public final class ErrorCode
     @Override
     public String toString()
     {
-        return name + ":" + code;
+        return new StringBuilder().append(name).append(":").append(code).toString();
     }
 
     @Override

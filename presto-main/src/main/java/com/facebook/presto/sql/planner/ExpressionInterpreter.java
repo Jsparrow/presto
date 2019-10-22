@@ -162,12 +162,28 @@ public class ExpressionInterpreter
     private final IdentityHashMap<LikePredicate, Regex> likePatternCache = new IdentityHashMap<>();
     private final IdentityHashMap<InListExpression, Set<?>> inListCache = new IdentityHashMap<>();
 
-    public static ExpressionInterpreter expressionInterpreter(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes)
+    private ExpressionInterpreter(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes, boolean optimize)
+    {
+        this.expression = requireNonNull(expression, "expression is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.literalEncoder = new LiteralEncoder(metadata.getBlockEncodingSerde());
+        this.session = requireNonNull(session, "session is null");
+        this.connectorSession = session.toConnectorSession();
+        this.expressionTypes = ImmutableMap.copyOf(requireNonNull(expressionTypes, "expressionTypes is null"));
+        verify((expressionTypes.containsKey(NodeRef.of(expression))));
+        this.optimize = optimize;
+        this.functionInvoker = new InterpretedFunctionInvoker(metadata.getFunctionManager());
+        this.legacyRowFieldOrdinalAccess = isLegacyRowFieldOrdinalAccessEnabled(session);
+
+        this.visitor = new Visitor();
+    }
+
+	public static ExpressionInterpreter expressionInterpreter(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes)
     {
         return new ExpressionInterpreter(expression, metadata, session, expressionTypes, false);
     }
 
-    public static ExpressionInterpreter expressionOptimizer(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes)
+	public static ExpressionInterpreter expressionOptimizer(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes)
     {
         requireNonNull(expression, "expression is null");
         requireNonNull(metadata, "metadata is null");
@@ -176,7 +192,7 @@ public class ExpressionInterpreter
         return new ExpressionInterpreter(expression, metadata, session, expressionTypes, true);
     }
 
-    public static Object evaluateConstantExpression(Expression expression, Type expectedType, Metadata metadata, Session session, List<Expression> parameters)
+	public static Object evaluateConstantExpression(Expression expression, Type expectedType, Metadata metadata, Session session, List<Expression> parameters)
     {
         ExpressionAnalyzer analyzer = createConstantAnalyzer(metadata, session, parameters, WarningCollector.NOOP);
         analyzer.analyze(expression, Scope.create());
@@ -195,7 +211,7 @@ public class ExpressionInterpreter
         return evaluateConstantExpression(expression, coercions, analyzer.getTypeOnlyCoercions(), metadata, session, ImmutableSet.of(), parameters);
     }
 
-    private static Object evaluateConstantExpression(
+	private static Object evaluateConstantExpression(
             Expression expression,
             Map<NodeRef<Expression>, Type> coercions,
             Set<NodeRef<Expression>> typeOnlyCoercions,
@@ -233,46 +249,46 @@ public class ExpressionInterpreter
         return result;
     }
 
-    private ExpressionInterpreter(Expression expression, Metadata metadata, Session session, Map<NodeRef<Expression>, Type> expressionTypes, boolean optimize)
-    {
-        this.expression = requireNonNull(expression, "expression is null");
-        this.metadata = requireNonNull(metadata, "metadata is null");
-        this.literalEncoder = new LiteralEncoder(metadata.getBlockEncodingSerde());
-        this.session = requireNonNull(session, "session is null");
-        this.connectorSession = session.toConnectorSession();
-        this.expressionTypes = ImmutableMap.copyOf(requireNonNull(expressionTypes, "expressionTypes is null"));
-        verify((expressionTypes.containsKey(NodeRef.of(expression))));
-        this.optimize = optimize;
-        this.functionInvoker = new InterpretedFunctionInvoker(metadata.getFunctionManager());
-        this.legacyRowFieldOrdinalAccess = isLegacyRowFieldOrdinalAccessEnabled(session);
-
-        this.visitor = new Visitor();
-    }
-
-    public Type getType()
+	public Type getType()
     {
         return expressionTypes.get(NodeRef.of(expression));
     }
 
-    public Object evaluate()
+	public Object evaluate()
     {
         checkState(!optimize, "evaluate() not allowed for optimizer");
         return visitor.process(expression, null);
     }
 
-    public Object evaluate(SymbolResolver inputs)
+	public Object evaluate(SymbolResolver inputs)
     {
         checkState(!optimize, "evaluate(SymbolResolver) not allowed for optimizer");
         return visitor.process(expression, inputs);
     }
 
-    public Object optimize(SymbolResolver inputs)
+	public Object optimize(SymbolResolver inputs)
     {
         checkState(optimize, "evaluate(SymbolResolver) not allowed for interpreter");
         return visitor.process(expression, inputs);
     }
 
-    @SuppressWarnings("FloatingPointEquality")
+	private static Expression createFailureFunction(RuntimeException exception, Type type)
+    {
+        requireNonNull(exception, "Exception is null");
+
+        String failureInfo = JsonCodec.jsonCodec(FailureInfo.class).toJson(Failures.toFailure(exception).toFailureInfo());
+        FunctionCall jsonParse = new FunctionCall(QualifiedName.of("json_parse"), ImmutableList.of(new StringLiteral(failureInfo)));
+        FunctionCall failureFunction = new FunctionCall(QualifiedName.of("fail"), ImmutableList.of(jsonParse));
+
+        return new Cast(failureFunction, type.getTypeSignature().toString());
+    }
+
+	private static boolean isArray(Type type)
+    {
+        return type.getTypeSignature().getBase().equals(StandardTypes.ARRAY);
+    }
+
+	@SuppressWarnings("FloatingPointEquality")
     private class Visitor
             extends AstVisitor<Object, Object>
     {
@@ -885,16 +901,15 @@ public class ExpressionInterpreter
         {
             List<Type> argumentTypes = new ArrayList<>();
             List<Object> argumentValues = new ArrayList<>();
-            for (Expression expression : node.getArguments()) {
+            node.getArguments().forEach(expression -> {
                 Object value = process(expression, context);
                 Type type = type(expression);
                 argumentValues.add(value);
                 argumentTypes.add(type);
-            }
+            });
             FunctionHandle functionHandle = metadata.getFunctionManager().resolveFunction(session, node.getName(), fromTypes(argumentTypes));
             FunctionMetadata functionMetadata = metadata.getFunctionManager().getFunctionMetadata(functionHandle);
-            for (int i = 0; i < argumentValues.size(); i++) {
-                Object value = argumentValues.get(i);
+            for (Object value : argumentValues) {
                 if (value == null && !functionMetadata.isCalledOnNullInput()) {
                     return null;
                 }
@@ -946,18 +961,16 @@ public class ExpressionInterpreter
                     .collect(toImmutableList());
             Object function = process(node.getFunction(), context);
 
-            if (hasUnresolvedValue(values) || hasUnresolvedValue(function)) {
-                ImmutableList.Builder<Expression> builder = ImmutableList.builder();
-                for (int i = 0; i < values.size(); i++) {
-                    builder.add(toExpression(values.get(i), type(node.getValues().get(i))));
-                }
-
-                return new BindExpression(
-                        builder.build(),
-                        toExpression(function, type(node.getFunction())));
-            }
-
-            return MethodHandles.insertArguments((MethodHandle) function, 0, values.toArray());
+            if (!(hasUnresolvedValue(values) || hasUnresolvedValue(function))) {
+				return MethodHandles.insertArguments((MethodHandle) function, 0, values.toArray());
+			}
+			ImmutableList.Builder<Expression> builder = ImmutableList.builder();
+			for (int i = 0; i < values.size(); i++) {
+			    builder.add(toExpression(values.get(i), type(node.getValues().get(i))));
+			}
+			return new BindExpression(
+			        builder.build(),
+			        toExpression(function, type(node.getFunction())));
         }
 
         @Override
@@ -1141,9 +1154,7 @@ public class ExpressionInterpreter
 
             int cardinality = arguments.size();
             List<Object> values = new ArrayList<>(cardinality);
-            for (Expression argument : arguments) {
-                values.add(process(argument, context));
-            }
+            arguments.forEach(argument -> values.add(process(argument, context)));
             if (hasUnresolvedValue(values)) {
                 return new Row(toExpressions(values, parameterTypes));
             }
@@ -1178,18 +1189,17 @@ public class ExpressionInterpreter
             }
 
             // Subscript on Row hasn't got a dedicated operator. It is interpreted by hand.
-            if (base instanceof SingleRowBlock) {
-                SingleRowBlock row = (SingleRowBlock) base;
-                int position = toIntExact((long) index - 1);
-                if (position < 0 || position >= row.getPositionCount()) {
-                    throw new PrestoException(StandardErrorCode.INVALID_FUNCTION_ARGUMENT, "ROW index out of bounds: " + (position + 1));
-                }
-                Type returnType = type(node.getBase()).getTypeParameters().get(position);
-                return TypeUtils.readNativeValue(returnType, row, position);
-            }
-
-            // Subscript on Array or Map is interpreted using operator.
-            return invokeOperator(OperatorType.SUBSCRIPT, types(node.getBase(), node.getIndex()), ImmutableList.of(base, index));
+			if (!(base instanceof SingleRowBlock)) {
+				// Subscript on Array or Map is interpreted using operator.
+				return invokeOperator(OperatorType.SUBSCRIPT, types(node.getBase(), node.getIndex()), ImmutableList.of(base, index));
+			}
+			SingleRowBlock row = (SingleRowBlock) base;
+			int position = toIntExact((long) index - 1);
+			if (position < 0 || position >= row.getPositionCount()) {
+			    throw new PrestoException(StandardErrorCode.INVALID_FUNCTION_ARGUMENT, "ROW index out of bounds: " + (position + 1));
+			}
+			Type returnType = type(node.getBase()).getTypeParameters().get(position);
+			return TypeUtils.readNativeValue(returnType, row, position);
         }
 
         @Override
@@ -1253,21 +1263,5 @@ public class ExpressionInterpreter
         {
             return literalEncoder.toExpressions(values, types);
         }
-    }
-
-    private static Expression createFailureFunction(RuntimeException exception, Type type)
-    {
-        requireNonNull(exception, "Exception is null");
-
-        String failureInfo = JsonCodec.jsonCodec(FailureInfo.class).toJson(Failures.toFailure(exception).toFailureInfo());
-        FunctionCall jsonParse = new FunctionCall(QualifiedName.of("json_parse"), ImmutableList.of(new StringLiteral(failureInfo)));
-        FunctionCall failureFunction = new FunctionCall(QualifiedName.of("fail"), ImmutableList.of(jsonParse));
-
-        return new Cast(failureFunction, type.getTypeSignature().toString());
-    }
-
-    private static boolean isArray(Type type)
-    {
-        return type.getTypeSignature().getBase().equals(StandardTypes.ARRAY);
     }
 }

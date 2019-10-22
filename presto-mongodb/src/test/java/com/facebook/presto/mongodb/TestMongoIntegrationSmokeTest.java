@@ -61,17 +61,8 @@ public class TestMongoIntegrationSmokeTest
     @Test
     public void createTableWithEveryType()
     {
-        String query = "" +
-                "CREATE TABLE test_types_table AS " +
-                "SELECT" +
-                " 'foo' _varchar" +
-                ", cast('bar' as varbinary) _varbinary" +
-                ", cast(1 as bigint) _bigint" +
-                ", 3.14E0 _double" +
-                ", true _boolean" +
-                ", DATE '1980-05-07' _date" +
-                ", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp" +
-                ", ObjectId('ffffffffffffffffffffffff') _objectid";
+        String query = new StringBuilder().append("").append("CREATE TABLE test_types_table AS ").append("SELECT").append(" 'foo' _varchar").append(", cast('bar' as varbinary) _varbinary").append(", cast(1 as bigint) _bigint").append(", 3.14E0 _double").append(", true _boolean")
+				.append(", DATE '1980-05-07' _date").append(", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp").append(", ObjectId('ffffffffffffffffffffffff') _objectid").toString();
 
         assertUpdate(query, 1);
 
@@ -94,31 +85,12 @@ public class TestMongoIntegrationSmokeTest
     public void testInsertWithEveryType()
             throws Exception
     {
-        String createSql = "" +
-                "CREATE TABLE test_insert_types_table " +
-                "(" +
-                "  vc varchar" +
-                ", vb varbinary" +
-                ", bi bigint" +
-                ", d double" +
-                ", b boolean" +
-                ", dt  date" +
-                ", ts  timestamp" +
-                ", objid objectid" +
-                ")";
+        String createSql = new StringBuilder().append("").append("CREATE TABLE test_insert_types_table ").append("(").append("  vc varchar").append(", vb varbinary").append(", bi bigint").append(", d double").append(", b boolean")
+				.append(", dt  date").append(", ts  timestamp").append(", objid objectid").append(")").toString();
         getQueryRunner().execute(getSession(), createSql);
 
-        String insertSql = "" +
-                "INSERT INTO test_insert_types_table " +
-                "SELECT" +
-                " 'foo' _varchar" +
-                ", cast('bar' as varbinary) _varbinary" +
-                ", cast(1 as bigint) _bigint" +
-                ", 3.14E0 _double" +
-                ", true _boolean" +
-                ", DATE '1980-05-07' _date" +
-                ", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp" +
-                ", ObjectId('ffffffffffffffffffffffff') _objectid";
+        String insertSql = new StringBuilder().append("").append("INSERT INTO test_insert_types_table ").append("SELECT").append(" 'foo' _varchar").append(", cast('bar' as varbinary) _varbinary").append(", cast(1 as bigint) _bigint").append(", 3.14E0 _double").append(", true _boolean")
+				.append(", DATE '1980-05-07' _date").append(", TIMESTAMP '1980-05-07 11:22:33.456' _timestamp").append(", ObjectId('ffffffffffffffffffffffff') _objectid").toString();
         getQueryRunner().execute(getSession(), insertSql);
 
         MaterializedResult results = getQueryRunner().execute(getSession(), "SELECT * FROM test_insert_types_table").toTestTypes();

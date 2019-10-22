@@ -227,9 +227,7 @@ public class MaterializedResult
     public Page toPage()
     {
         PageBuilder pageBuilder = new PageBuilder(types);
-        for (MaterializedRow row : rows) {
-            appendToPage(pageBuilder, row);
-        }
+        rows.forEach(row -> appendToPage(pageBuilder, row));
         return pageBuilder.build();
     }
 
@@ -310,9 +308,7 @@ public class MaterializedResult
             List<Object> list = (List<Object>) value;
             Type elementType = ((ArrayType) type).getElementType();
             BlockBuilder arrayBlockBuilder = blockBuilder.beginBlockEntry();
-            for (Object element : list) {
-                writeValue(elementType, arrayBlockBuilder, element);
-            }
+            list.forEach(element -> writeValue(elementType, arrayBlockBuilder, element));
             blockBuilder.closeEntry();
         }
         else if (MAP.equals(type.getTypeSignature().getBase())) {
@@ -320,10 +316,10 @@ public class MaterializedResult
             Type keyType = ((MapType) type).getKeyType();
             Type valueType = ((MapType) type).getValueType();
             BlockBuilder mapBlockBuilder = blockBuilder.beginBlockEntry();
-            for (Entry<Object, Object> entry : map.entrySet()) {
+            map.entrySet().forEach(entry -> {
                 writeValue(keyType, mapBlockBuilder, entry.getKey());
                 writeValue(valueType, mapBlockBuilder, entry.getValue());
-            }
+            });
             blockBuilder.closeEntry();
         }
         else if (type instanceof RowType) {

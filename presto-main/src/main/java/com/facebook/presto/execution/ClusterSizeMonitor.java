@@ -172,10 +172,11 @@ public class ClusterSizeMonitor
         else {
             currentCount = Sets.difference(allNodes.getActiveNodes(), allNodes.getActiveCoordinators()).size();
         }
-        if (currentCount >= executionMinCount) {
-            ImmutableList<SettableFuture<?>> listeners = ImmutableList.copyOf(futures);
-            futures.clear();
-            executor.submit(() -> listeners.forEach(listener -> listener.set(null)));
-        }
+        if (currentCount < executionMinCount) {
+			return;
+		}
+		ImmutableList<SettableFuture<?>> listeners = ImmutableList.copyOf(futures);
+		futures.clear();
+		executor.submit(() -> listeners.forEach(listener -> listener.set(null)));
     }
 }

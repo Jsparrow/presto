@@ -85,9 +85,6 @@ public class DoubleRange
     @Override
     public String toString()
     {
-        return "DoubleRange{" +
-                "min=" + min +
-                ", max=" + max +
-                '}';
+        return new StringBuilder().append("DoubleRange{").append("min=").append(min).append(", max=").append(max).append('}').toString();
     }
 }

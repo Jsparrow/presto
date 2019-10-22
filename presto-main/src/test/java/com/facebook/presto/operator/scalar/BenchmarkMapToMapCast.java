@@ -82,7 +82,23 @@ public class BenchmarkMapToMapCast
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkMapToMapCast().benchmark(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.INDI)
+                .include(new StringBuilder().append(".*").append(BenchmarkMapToMapCast.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -145,21 +161,5 @@ public class BenchmarkMapToMapCast
         {
             return page;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkMapToMapCast().benchmark(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.INDI)
-                .include(".*" + BenchmarkMapToMapCast.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -81,7 +81,16 @@ public class CostCalculatorUsingExchanges
         return node.accept(costEstimator, null);
     }
 
-    private static class CostEstimator
+    private static PlanCostEstimate addParallelSiblingsCost(PlanCostEstimate a, PlanCostEstimate b)
+    {
+        return new PlanCostEstimate(
+                a.getCpuCost() + b.getCpuCost(),
+                a.getMaxMemory() + b.getMaxMemory(),
+                a.getMaxMemoryWhenOutputting() + b.getMaxMemoryWhenOutputting(),
+                a.getNetworkCost() + b.getNetworkCost());
+    }
+
+	private static class CostEstimator
             extends InternalPlanVisitor<PlanCostEstimate, Void>
     {
         private final StatsProvider stats;
@@ -372,14 +381,5 @@ public class CostCalculatorUsingExchanges
             return node.getSources().stream()
                     .map(sourcesCosts::getCost);
         }
-    }
-
-    private static PlanCostEstimate addParallelSiblingsCost(PlanCostEstimate a, PlanCostEstimate b)
-    {
-        return new PlanCostEstimate(
-                a.getCpuCost() + b.getCpuCost(),
-                a.getMaxMemory() + b.getMaxMemory(),
-                a.getMaxMemoryWhenOutputting() + b.getMaxMemoryWhenOutputting(),
-                a.getNetworkCost() + b.getNetworkCost());
     }
 }

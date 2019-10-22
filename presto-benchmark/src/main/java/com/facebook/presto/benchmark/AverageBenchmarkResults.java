@@ -31,13 +31,13 @@ public class AverageBenchmarkResults
     public BenchmarkResultHook addResults(Map<String, Long> results)
     {
         requireNonNull(results, "results is null");
-        for (Entry<String, Long> entry : results.entrySet()) {
+        results.entrySet().forEach(entry -> {
             Long currentSum = resultsSum.get(entry.getKey());
             if (currentSum == null) {
                 currentSum = 0L;
             }
             resultsSum.put(entry.getKey(), currentSum + entry.getValue());
-        }
+        });
         resultsCount++;
 
         return this;

@@ -194,12 +194,12 @@ public class TestDoubleOperators
         assertFunction("cast(17.5E0 as bigint)", BIGINT, 18L);
         assertFunction("cast(-17.5E0 as bigint)", BIGINT, -18L);
 
-        assertFunction("cast(" + Math.nextDown(0x1.0p63) + " as bigint)", BIGINT, (long) Math.nextDown(0x1.0p63));
-        assertInvalidFunction("cast(" + 0x1.0p63 + " as bigint)", INVALID_CAST_ARGUMENT);
-        assertInvalidFunction("cast(" + Math.nextUp(0x1.0p63) + " as bigint)", INVALID_CAST_ARGUMENT);
-        assertInvalidFunction("cast(" + Math.nextDown(-0x1.0p63) + " as bigint)", INVALID_CAST_ARGUMENT);
-        assertFunction("cast(" + -0x1.0p63 + " as bigint)", BIGINT, (long) -0x1.0p63);
-        assertFunction("cast(" + Math.nextUp(-0x1.0p63) + " as bigint)", BIGINT, (long) Math.nextUp(-0x1.0p63));
+        assertFunction(new StringBuilder().append("cast(").append(Math.nextDown(0x1.0p63)).append(" as bigint)").toString(), BIGINT, (long) Math.nextDown(0x1.0p63));
+        assertInvalidFunction(new StringBuilder().append("cast(").append(0x1.0p63).append(" as bigint)").toString(), INVALID_CAST_ARGUMENT);
+        assertInvalidFunction(new StringBuilder().append("cast(").append(Math.nextUp(0x1.0p63)).append(" as bigint)").toString(), INVALID_CAST_ARGUMENT);
+        assertInvalidFunction(new StringBuilder().append("cast(").append(Math.nextDown(-0x1.0p63)).append(" as bigint)").toString(), INVALID_CAST_ARGUMENT);
+        assertFunction(new StringBuilder().append("cast(").append(-0x1.0p63).append(" as bigint)").toString(), BIGINT, (long) -0x1.0p63);
+        assertFunction(new StringBuilder().append("cast(").append(Math.nextUp(-0x1.0p63)).append(" as bigint)").toString(), BIGINT, (long) Math.nextUp(-0x1.0p63));
 
         assertInvalidFunction("cast(9.3E18 as bigint)", INVALID_CAST_ARGUMENT);
         assertInvalidFunction("cast(-9.3E18 as bigint)", INVALID_CAST_ARGUMENT);

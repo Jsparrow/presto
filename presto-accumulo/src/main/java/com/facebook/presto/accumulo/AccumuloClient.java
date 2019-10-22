@@ -79,6 +79,7 @@ import static com.facebook.presto.spi.StandardErrorCode.NOT_FOUND;
 import static com.facebook.presto.spi.StandardErrorCode.NOT_SUPPORTED;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * This class is the main access point for the Presto connector to interact with Accumulo.
@@ -175,16 +176,15 @@ public class AccumuloClient
         // While it is a rare case, this is not supported by the Accumulo connector
         ImmutableSet.Builder<String> columnNameBuilder = ImmutableSet.builder();
         for (ColumnMetadata column : meta.getColumns()) {
-            if (Types.isMapType(column.getType())) {
-                if (Types.isMapType(Types.getKeyType(column.getType()))
-                        || Types.isMapType(Types.getValueType(column.getType()))
-                        || Types.isArrayType(Types.getKeyType(column.getType()))
-                        || Types.isArrayType(Types.getValueType(column.getType()))) {
-                    throw new PrestoException(INVALID_TABLE_PROPERTY, "Key/value types of a MAP column must be plain types");
-                }
+            boolean condition = Types.isMapType(column.getType()) && (Types.isMapType(Types.getKeyType(column.getType()))
+			        || Types.isMapType(Types.getValueType(column.getType()))
+			        || Types.isArrayType(Types.getKeyType(column.getType()))
+			        || Types.isArrayType(Types.getValueType(column.getType())));
+			if (condition) {
+               throw new PrestoException(INVALID_TABLE_PROPERTY, "Key/value types of a MAP column must be plain types");
             }
 
-            columnNameBuilder.add(column.getName().toLowerCase(Locale.ENGLISH));
+            columnNameBuilder.add(StringUtils.lowerCase(column.getName(), Locale.ENGLISH));
         }
 
         // Validate the columns are distinct
@@ -235,7 +235,7 @@ public class AccumuloClient
             // incrementing a counter for each matching column
             int matchingColumns = 0;
             for (ColumnMetadata column : meta.getColumns()) {
-                if (g.getValue().contains(column.getName().toLowerCase(Locale.ENGLISH))) {
+                if (g.getValue().contains(StringUtils.lowerCase(column.getName(), Locale.ENGLISH))) {
                     ++matchingColumns;
 
                     // Break out early if all columns are found
@@ -264,11 +264,10 @@ public class AccumuloClient
             throw new PrestoException(ACCUMULO_TABLE_EXISTS, "Cannot create internal table when an Accumulo table already exists");
         }
 
-        if (AccumuloTableProperties.getIndexColumns(meta.getProperties()).isPresent()) {
-            if (tableManager.exists(indexTable) || tableManager.exists(metricsTable)) {
-                throw new PrestoException(ACCUMULO_TABLE_EXISTS, "Internal table is indexed, but the index table and/or index metrics table(s) already exist");
-            }
-        }
+        boolean condition = AccumuloTableProperties.getIndexColumns(meta.getProperties()).isPresent() && (tableManager.exists(indexTable) || tableManager.exists(metricsTable));
+		if (condition) {
+		    throw new PrestoException(ACCUMULO_TABLE_EXISTS, "Internal table is indexed, but the index table and/or index metrics table(s) already exist");
+		}
     }
 
     /**
@@ -280,7 +279,7 @@ public class AccumuloClient
     private static String getRowIdColumn(ConnectorTableMetadata meta)
     {
         Optional<String> rowIdColumn = AccumuloTableProperties.getRowId(meta.getProperties());
-        return rowIdColumn.orElse(meta.getColumns().get(0).getName()).toLowerCase(Locale.ENGLISH);
+        return StringUtils.lowerCase(rowIdColumn.orElse(meta.getColumns().get(0).getName()), Locale.ENGLISH);
     }
 
     private static List<AccumuloColumnHandle> getColumnHandles(ConnectorTableMetadata meta, String rowIdColumn)
@@ -297,7 +296,7 @@ public class AccumuloClient
             ColumnMetadata cm = meta.getColumns().get(ordinal);
 
             // Special case if this column is the row ID
-            if (cm.getName().equalsIgnoreCase(rowIdColumn)) {
+            if (StringUtils.equalsIgnoreCase(cm.getName(), rowIdColumn)) {
                 cBuilder.add(
                         new AccumuloColumnHandle(
                                 rowIdColumn,
@@ -315,7 +314,7 @@ public class AccumuloClient
 
                 // Get the mapping for this column
                 Pair<String, String> famqual = mapping.get(cm.getName());
-                boolean indexed = indexedColumns.isPresent() && indexedColumns.get().contains(cm.getName().toLowerCase(Locale.ENGLISH));
+                boolean indexed = indexedColumns.isPresent() && indexedColumns.get().contains(StringUtils.lowerCase(cm.getName(), Locale.ENGLISH));
                 String comment = format("Accumulo column %s:%s. Indexed: %b", famqual.getLeft(), famqual.getRight(), indexed);
 
                 // Create a new AccumuloColumnHandle object
@@ -343,22 +342,19 @@ public class AccumuloClient
         }
 
         ImmutableMap.Builder<String, Set<Text>> localityGroupsBuilder = ImmutableMap.builder();
-        for (Map.Entry<String, Set<String>> g : groups.get().entrySet()) {
+        groups.get().entrySet().forEach(g -> {
             ImmutableSet.Builder<Text> familyBuilder = ImmutableSet.builder();
-            // For each configured column for this locality group
-            for (String col : g.getValue()) {
-                // Locate the column family mapping via the Handle
-                // We already validated this earlier, so it'll exist
-                AccumuloColumnHandle handle = table.getColumns()
-                        .stream()
-                        .filter(x -> x.getName().equals(col))
-                        .collect(Collectors.toList())
-                        .get(0);
-                familyBuilder.add(new Text(handle.getFamily().get()));
-            }
+            // Locate the column family mapping via the Handle
+			// We already validated this earlier, so it'll exist
+			// For each configured column for this locality group
+			g.getValue().stream().map(col -> table.getColumns()
+			        .stream()
+			        .filter(x -> x.getName().equals(col))
+			        .collect(Collectors.toList())
+			        .get(0)).forEach(handle -> familyBuilder.add(new Text(handle.getFamily().get())));
 
             localityGroupsBuilder.put(g.getKey(), familyBuilder.build());
-        }
+        });
 
         Map<String, Set<Text>> localityGroups = localityGroupsBuilder.build();
         LOG.debug("Setting locality groups: {}", localityGroups);
@@ -394,9 +390,7 @@ public class AccumuloClient
         tableManager.setLocalityGroups(table.getMetricsTableName(), indexGroups);
 
         // Attach iterators to metrics table
-        for (IteratorSetting setting : Indexer.getMetricIterators(table)) {
-            tableManager.setIterator(table.getMetricsTableName(), setting);
-        }
+		Indexer.getMetricIterators(table).forEach(setting -> tableManager.setIterator(table.getMetricsTableName(), setting));
     }
 
     /**
@@ -409,10 +403,10 @@ public class AccumuloClient
     private static Map<String, Pair<String, String>> autoGenerateMapping(List<ColumnMetadata> columns, Optional<Map<String, Set<String>>> groups)
     {
         Map<String, Pair<String, String>> mapping = new HashMap<>();
-        for (ColumnMetadata column : columns) {
+        columns.forEach(column -> {
             Optional<String> family = getColumnLocalityGroup(column.getName(), groups);
             mapping.put(column.getName(), Pair.of(family.orElse(column.getName()), column.getName()));
-        }
+        });
         return mapping;
     }
 
@@ -427,7 +421,7 @@ public class AccumuloClient
     {
         if (groups.isPresent()) {
             for (Map.Entry<String, Set<String>> group : groups.get().entrySet()) {
-                if (group.getValue().contains(columnName.toLowerCase(Locale.ENGLISH))) {
+                if (group.getValue().contains(StringUtils.lowerCase(columnName, Locale.ENGLISH))) {
                     return Optional.of(group.getKey());
                 }
             }
@@ -445,25 +439,25 @@ public class AccumuloClient
             metaManager.deleteTableMetadata(tableName);
         }
 
-        if (!table.isExternal()) {
-            // delete the table and index tables
-            String fullTableName = table.getFullTableName();
-            if (tableManager.exists(fullTableName)) {
-                tableManager.deleteAccumuloTable(fullTableName);
-            }
+        if (table.isExternal()) {
+			return;
+		}
+		// delete the table and index tables
+		String fullTableName = table.getFullTableName();
+		if (tableManager.exists(fullTableName)) {
+		    tableManager.deleteAccumuloTable(fullTableName);
+		}
+		if (table.isIndexed()) {
+		    String indexTableName = Indexer.getIndexTableName(tableName);
+		    if (tableManager.exists(indexTableName)) {
+		        tableManager.deleteAccumuloTable(indexTableName);
+		    }
 
-            if (table.isIndexed()) {
-                String indexTableName = Indexer.getIndexTableName(tableName);
-                if (tableManager.exists(indexTableName)) {
-                    tableManager.deleteAccumuloTable(indexTableName);
-                }
-
-                String metricsTableName = Indexer.getMetricsTableName(tableName);
-                if (tableManager.exists(metricsTableName)) {
-                    tableManager.deleteAccumuloTable(metricsTableName);
-                }
-            }
-        }
+		    String metricsTableName = Indexer.getMetricsTableName(tableName);
+		    if (tableManager.exists(metricsTableName)) {
+		        tableManager.deleteAccumuloTable(metricsTableName);
+		    }
+		}
     }
 
     public void renameTable(SchemaTableName oldName, SchemaTableName newName)
@@ -569,14 +563,14 @@ public class AccumuloClient
 
     public void renameColumn(AccumuloTable table, String source, String target)
     {
-        if (!table.getColumns().stream().anyMatch(columnHandle -> columnHandle.getName().equalsIgnoreCase(source))) {
+        if (!table.getColumns().stream().anyMatch(columnHandle -> StringUtils.equalsIgnoreCase(columnHandle.getName(), source))) {
             throw new PrestoException(NOT_FOUND, format("Failed to find source column %s to rename to %s", source, target));
         }
 
         // Copy existing column list, replacing the old column name with the new
         ImmutableList.Builder<AccumuloColumnHandle> newColumnList = ImmutableList.builder();
-        for (AccumuloColumnHandle columnHandle : table.getColumns()) {
-            if (columnHandle.getName().equalsIgnoreCase(source)) {
+        table.getColumns().forEach(columnHandle -> {
+            if (StringUtils.equalsIgnoreCase(columnHandle.getName(), source)) {
                 newColumnList.add(new AccumuloColumnHandle(
                         target,
                         columnHandle.getFamily(),
@@ -589,14 +583,14 @@ public class AccumuloClient
             else {
                 newColumnList.add(columnHandle);
             }
-        }
+        });
 
         // Create new table metadata
         AccumuloTable newTable = new AccumuloTable(
                 table.getSchema(),
                 table.getTable(),
                 newColumnList.build(),
-                table.getRowId().equalsIgnoreCase(source) ? target : table.getRowId(),
+                StringUtils.equalsIgnoreCase(table.getRowId(), source) ? target : table.getRowId(),
                 table.isExternal(),
                 table.getSerializerClassName(),
                 table.getScanAuthorizations());
@@ -694,7 +688,7 @@ public class AccumuloClient
 
             LOG.debug("Fetching tablet locations: %s", fetchTabletLocations);
 
-            for (Range range : splitRanges) {
+            splitRanges.forEach(range -> {
                 // If locality is enabled, then fetch tablet location
                 if (fetchTabletLocations) {
                     tabletSplits.add(new TabletSplitMetadata(getTabletLocation(tableName, range.getStartKey()), ImmutableList.of(range)));
@@ -703,7 +697,7 @@ public class AccumuloClient
                     // else, just use the default location
                     tabletSplits.add(new TabletSplitMetadata(Optional.empty(), ImmutableList.of(range)));
                 }
-            }
+            });
 
             // Log some fun stuff and return the tablet splits
             LOG.debug("Number of splits for table %s is %d with %d ranges", tableName, tabletSplits.size(), splitRanges.size());
@@ -894,7 +888,6 @@ public class AccumuloClient
      * @throws TableNotFoundException If the Accumulo table is not found
      */
     public static Collection<Range> getRangesFromDomain(Optional<Domain> domain, AccumuloRowSerializer serializer)
-            throws TableNotFoundException
     {
         // if we have no predicate pushdown, use the full range
         if (!domain.isPresent()) {
@@ -902,15 +895,12 @@ public class AccumuloClient
         }
 
         ImmutableSet.Builder<Range> rangeBuilder = ImmutableSet.builder();
-        for (com.facebook.presto.spi.predicate.Range range : domain.get().getValues().getRanges().getOrderedRanges()) {
-            rangeBuilder.add(getRangeFromPrestoRange(range, serializer));
-        }
+        domain.get().getValues().getRanges().getOrderedRanges().forEach(range -> rangeBuilder.add(getRangeFromPrestoRange(range, serializer)));
 
         return rangeBuilder.build();
     }
 
     private static Range getRangeFromPrestoRange(com.facebook.presto.spi.predicate.Range prestoRange, AccumuloRowSerializer serializer)
-            throws TableNotFoundException
     {
         Range accumuloRange;
         if (prestoRange.isAll()) {

@@ -30,17 +30,17 @@ public class ModelType
 {
     public static final ModelType MODEL = new ModelType();
 
-    private ModelType()
-    {
-        super(new TypeSignature("Model"), Slice.class);
-    }
-
     protected ModelType(TypeSignature signature)
     {
         super(signature, Slice.class);
     }
 
-    @Override
+	private ModelType()
+    {
+        super(new TypeSignature("Model"), Slice.class);
+    }
+
+	@Override
     public void appendTo(Block block, int position, BlockBuilder blockBuilder)
     {
         if (block.isNull(position)) {
@@ -52,25 +52,25 @@ public class ModelType
         }
     }
 
-    @Override
+	@Override
     public Slice getSlice(Block block, int position)
     {
         return block.getSlice(position, 0, block.getSliceLength(position));
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value)
     {
         writeSlice(blockBuilder, value, 0, value.length());
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         blockBuilder.writeBytes(value, offset, length).closeEntry();
     }
 
-    @Override
+	@Override
     public Object getObjectValue(ConnectorSession session, Block block, int position)
     {
         if (block.isNull(position)) {

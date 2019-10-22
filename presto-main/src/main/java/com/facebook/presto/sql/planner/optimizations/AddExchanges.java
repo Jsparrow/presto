@@ -162,7 +162,134 @@ public class AddExchanges
         return result.getNode();
     }
 
-    private class Rewriter
+    private boolean canPushdownPartialMerge(PlanNode node, PartialMergePushdownStrategy strategy)
+    {
+        switch (strategy) {
+            case NONE:
+                return false;
+            case PUSH_THROUGH_LOW_MEMORY_OPERATORS:
+                return canPushdownPartialMergeThroughLowMemoryOperators(node);
+            default:
+                throw new UnsupportedOperationException("Unsupported PartialMergePushdownStrategy: " + strategy);
+        }
+    }
+
+	private boolean canPushdownPartialMergeThroughLowMemoryOperators(PlanNode node)
+    {
+        if (node instanceof TableScanNode) {
+            return true;
+        }
+        if (node instanceof ExchangeNode && ((ExchangeNode) node).getScope() == REMOTE_MATERIALIZED) {
+            return true;
+        }
+
+        // Don't pushdown partial merge through join and aggregations
+        // since execution might requires more distributed memory.
+        if (node instanceof JoinNode ||
+                node instanceof AggregationNode ||
+                node instanceof SemiJoinNode) {
+            return false;
+        }
+
+        return node.getSources().stream()
+                .allMatch(this::canPushdownPartialMergeThroughLowMemoryOperators);
+    }
+
+	public static Map<VariableReferenceExpression, VariableReferenceExpression> computeIdentityTranslations(Assignments assignments, TypeProvider types)
+    {
+        Map<VariableReferenceExpression, VariableReferenceExpression> outputToInput = new HashMap<>();
+        assignments.getMap().entrySet().stream().filter(assignment -> castToExpression(assignment.getValue()) instanceof SymbolReference).forEach(assignment -> outputToInput.put(assignment.getKey(), toVariableReference(castToExpression(assignment.getValue()), types)));
+        return outputToInput;
+    }
+
+	@VisibleForTesting
+    static Comparator<ActualProperties> streamingExecutionPreference(PreferredProperties preferred)
+    {
+        // Calculating the matches can be a bit expensive, so cache the results between comparisons
+        LoadingCache<List<LocalProperty<VariableReferenceExpression>>, List<Optional<LocalProperty<VariableReferenceExpression>>>> matchCache = CacheBuilder.newBuilder()
+                .build(CacheLoader.from(actualProperties -> LocalProperties.match(actualProperties, preferred.getLocalProperties())));
+
+        return (actual1, actual2) -> {
+            List<Optional<LocalProperty<VariableReferenceExpression>>> matchLayout1 = matchCache.getUnchecked(actual1.getLocalProperties());
+            List<Optional<LocalProperty<VariableReferenceExpression>>> matchLayout2 = matchCache.getUnchecked(actual2.getLocalProperties());
+
+            return ComparisonChain.start()
+                    .compareTrueFirst(hasLocalOptimization(preferred.getLocalProperties(), matchLayout1), hasLocalOptimization(preferred.getLocalProperties(), matchLayout2))
+                    .compareTrueFirst(meetsPartitioningRequirements(preferred, actual1), meetsPartitioningRequirements(preferred, actual2))
+                    .compare(matchLayout1, matchLayout2, matchedLayoutPreference())
+                    .result();
+        };
+    }
+
+	private static <T> boolean hasLocalOptimization(List<LocalProperty<T>> desiredLayout, List<Optional<LocalProperty<T>>> matchResult)
+    {
+        checkArgument(desiredLayout.size() == matchResult.size());
+        if (matchResult.isEmpty()) {
+            return false;
+        }
+        // Optimizations can be applied if the first LocalProperty has been modified in the match in any way
+        return !matchResult.get(0).equals(Optional.of(desiredLayout.get(0)));
+    }
+
+	private static boolean meetsPartitioningRequirements(PreferredProperties preferred, ActualProperties actual)
+    {
+        if (!preferred.getGlobalProperties().isPresent()) {
+            return true;
+        }
+        PreferredProperties.Global preferredGlobal = preferred.getGlobalProperties().get();
+        if (!preferredGlobal.isDistributed()) {
+            return actual.isSingleNode();
+        }
+        if (!preferredGlobal.getPartitioningProperties().isPresent()) {
+            return !actual.isSingleNode();
+        }
+        return actual.isStreamPartitionedOn(preferredGlobal.getPartitioningProperties().get().getPartitioningColumns());
+    }
+
+	// Prefer the match result that satisfied the most requirements
+    private static <T> Comparator<List<Optional<LocalProperty<T>>>> matchedLayoutPreference()
+    {
+        return (matchLayout1, matchLayout2) -> {
+            Iterator<Optional<LocalProperty<T>>> match1Iterator = matchLayout1.iterator();
+            Iterator<Optional<LocalProperty<T>>> match2Iterator = matchLayout2.iterator();
+            while (match1Iterator.hasNext() && match2Iterator.hasNext()) {
+                Optional<LocalProperty<T>> match1 = match1Iterator.next();
+                Optional<LocalProperty<T>> match2 = match2Iterator.next();
+                if (match1.isPresent() && match2.isPresent()) {
+                    return Integer.compare(match1.get().getColumns().size(), match2.get().getColumns().size());
+                }
+                else if (match1.isPresent()) {
+                    return 1;
+                }
+                else if (match2.isPresent()) {
+                    return -1;
+                }
+            }
+            checkState(!match1Iterator.hasNext() && !match2Iterator.hasNext()); // Should be the same size
+            return 0;
+        };
+    }
+
+	private static boolean isSameOrSystemCompatiblePartitions(List<PartitioningHandle> partitioningHandles)
+    {
+        for (int i = 0; i < partitioningHandles.size() - 1; i++) {
+            PartitioningHandle first = partitioningHandles.get(i);
+            PartitioningHandle second = partitioningHandles.get(i + 1);
+            if (!first.equals(second) && !isCompatibleSystemPartitioning(first, second)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+	private static List<PartitioningHandle> extractRemoteExchangePartitioningHandles(List<PlanNode> nodes)
+    {
+        ImmutableList.Builder<PartitioningHandle> handles = ImmutableList.builder();
+        nodes.forEach(node -> node.accept(new ExchangePartitioningHandleExtractor(), handles));
+        return handles.build();
+    }
+
+	private class Rewriter
             extends InternalPlanVisitor<PlanWithProperties, PreferredProperties>
     {
         private final PlanNodeIdAllocator idAllocator;
@@ -472,9 +599,7 @@ public class AddExchanges
                 // skip the SortNode if the local properties guarantee ordering on Sort keys
                 // TODO: This should be extracted as a separate optimizer once the planner is able to reason about the ordering of each operator
                 List<LocalProperty<VariableReferenceExpression>> desiredProperties = new ArrayList<>();
-                for (VariableReferenceExpression variable : node.getOrderingScheme().getOrderByVariables()) {
-                    desiredProperties.add(new SortingProperty<>(variable, node.getOrderingScheme().getOrdering(variable)));
-                }
+                node.getOrderingScheme().getOrderByVariables().forEach(variable -> desiredProperties.add(new SortingProperty<>(variable, node.getOrderingScheme().getOrdering(variable))));
 
                 if (LocalProperties.match(child.getProperties().getLocalProperties(), desiredProperties).stream()
                         .noneMatch(Optional::isPresent)) {
@@ -631,7 +756,7 @@ public class AddExchanges
             PlanWithProperties child = planChild(node, PreferredProperties.any());
 
             // if the child is already a gathering exchange, don't add another
-            if ((child.getNode() instanceof ExchangeNode) && ((ExchangeNode) child.getNode()).getType().equals(GATHER)) {
+            if ((child.getNode() instanceof ExchangeNode) && ((ExchangeNode) child.getNode()).getType() == GATHER) {
                 return rebaseAndDeriveProperties(node, child);
             }
 
@@ -650,7 +775,7 @@ public class AddExchanges
             PlanWithProperties child = planChild(node, PreferredProperties.any());
 
             // if the child is already a gathering exchange, don't add another
-            if ((child.getNode() instanceof ExchangeNode) && ((ExchangeNode) child.getNode()).getType().equals(GATHER)) {
+            if ((child.getNode() instanceof ExchangeNode) && ((ExchangeNode) child.getNode()).getType() == GATHER) {
                 return rebaseAndDeriveProperties(node, child);
             }
 
@@ -695,20 +820,16 @@ public class AddExchanges
 
             JoinNode.DistributionType distributionType = node.getDistributionType().orElseThrow(() -> new IllegalArgumentException("distributionType not yet set"));
 
-            if (distributionType == JoinNode.DistributionType.REPLICATED) {
-                PlanWithProperties left = node.getLeft().accept(this, PreferredProperties.any());
-
-                // use partitioned join if probe side is naturally partitioned on join symbols (e.g: because of aggregation)
-                if (!node.getCriteria().isEmpty()
-                        && left.getProperties().isNodePartitionedOn(leftVariables) && !left.getProperties().isSingleNode()) {
-                    return planPartitionedJoin(node, leftVariables, rightVariables, left);
-                }
-
-                return planReplicatedJoin(node, left);
-            }
-            else {
-                return planPartitionedJoin(node, leftVariables, rightVariables);
-            }
+            if (distributionType != JoinNode.DistributionType.REPLICATED) {
+				return planPartitionedJoin(node, leftVariables, rightVariables);
+			}
+			PlanWithProperties left = node.getLeft().accept(this, PreferredProperties.any());
+			// use partitioned join if probe side is naturally partitioned on join symbols (e.g: because of aggregation)
+			if (!node.getCriteria().isEmpty()
+			        && left.getProperties().isNodePartitionedOn(leftVariables) && !left.getProperties().isSingleNode()) {
+			    return planPartitionedJoin(node, leftVariables, rightVariables, left);
+			}
+			return planReplicatedJoin(node, left);
         }
 
         private PlanWithProperties planPartitionedJoin(JoinNode node, List<VariableReferenceExpression> leftVariables, List<VariableReferenceExpression> rightVariables)
@@ -1365,118 +1486,6 @@ public class AddExchanges
         }
     }
 
-    private boolean canPushdownPartialMerge(PlanNode node, PartialMergePushdownStrategy strategy)
-    {
-        switch (strategy) {
-            case NONE:
-                return false;
-            case PUSH_THROUGH_LOW_MEMORY_OPERATORS:
-                return canPushdownPartialMergeThroughLowMemoryOperators(node);
-            default:
-                throw new UnsupportedOperationException("Unsupported PartialMergePushdownStrategy: " + strategy);
-        }
-    }
-
-    private boolean canPushdownPartialMergeThroughLowMemoryOperators(PlanNode node)
-    {
-        if (node instanceof TableScanNode) {
-            return true;
-        }
-        if (node instanceof ExchangeNode && ((ExchangeNode) node).getScope() == REMOTE_MATERIALIZED) {
-            return true;
-        }
-
-        // Don't pushdown partial merge through join and aggregations
-        // since execution might requires more distributed memory.
-        if (node instanceof JoinNode ||
-                node instanceof AggregationNode ||
-                node instanceof SemiJoinNode) {
-            return false;
-        }
-
-        return node.getSources().stream()
-                .allMatch(this::canPushdownPartialMergeThroughLowMemoryOperators);
-    }
-
-    public static Map<VariableReferenceExpression, VariableReferenceExpression> computeIdentityTranslations(Assignments assignments, TypeProvider types)
-    {
-        Map<VariableReferenceExpression, VariableReferenceExpression> outputToInput = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : assignments.getMap().entrySet()) {
-            if (castToExpression(assignment.getValue()) instanceof SymbolReference) {
-                outputToInput.put(assignment.getKey(), toVariableReference(castToExpression(assignment.getValue()), types));
-            }
-        }
-        return outputToInput;
-    }
-
-    @VisibleForTesting
-    static Comparator<ActualProperties> streamingExecutionPreference(PreferredProperties preferred)
-    {
-        // Calculating the matches can be a bit expensive, so cache the results between comparisons
-        LoadingCache<List<LocalProperty<VariableReferenceExpression>>, List<Optional<LocalProperty<VariableReferenceExpression>>>> matchCache = CacheBuilder.newBuilder()
-                .build(CacheLoader.from(actualProperties -> LocalProperties.match(actualProperties, preferred.getLocalProperties())));
-
-        return (actual1, actual2) -> {
-            List<Optional<LocalProperty<VariableReferenceExpression>>> matchLayout1 = matchCache.getUnchecked(actual1.getLocalProperties());
-            List<Optional<LocalProperty<VariableReferenceExpression>>> matchLayout2 = matchCache.getUnchecked(actual2.getLocalProperties());
-
-            return ComparisonChain.start()
-                    .compareTrueFirst(hasLocalOptimization(preferred.getLocalProperties(), matchLayout1), hasLocalOptimization(preferred.getLocalProperties(), matchLayout2))
-                    .compareTrueFirst(meetsPartitioningRequirements(preferred, actual1), meetsPartitioningRequirements(preferred, actual2))
-                    .compare(matchLayout1, matchLayout2, matchedLayoutPreference())
-                    .result();
-        };
-    }
-
-    private static <T> boolean hasLocalOptimization(List<LocalProperty<T>> desiredLayout, List<Optional<LocalProperty<T>>> matchResult)
-    {
-        checkArgument(desiredLayout.size() == matchResult.size());
-        if (matchResult.isEmpty()) {
-            return false;
-        }
-        // Optimizations can be applied if the first LocalProperty has been modified in the match in any way
-        return !matchResult.get(0).equals(Optional.of(desiredLayout.get(0)));
-    }
-
-    private static boolean meetsPartitioningRequirements(PreferredProperties preferred, ActualProperties actual)
-    {
-        if (!preferred.getGlobalProperties().isPresent()) {
-            return true;
-        }
-        PreferredProperties.Global preferredGlobal = preferred.getGlobalProperties().get();
-        if (!preferredGlobal.isDistributed()) {
-            return actual.isSingleNode();
-        }
-        if (!preferredGlobal.getPartitioningProperties().isPresent()) {
-            return !actual.isSingleNode();
-        }
-        return actual.isStreamPartitionedOn(preferredGlobal.getPartitioningProperties().get().getPartitioningColumns());
-    }
-
-    // Prefer the match result that satisfied the most requirements
-    private static <T> Comparator<List<Optional<LocalProperty<T>>>> matchedLayoutPreference()
-    {
-        return (matchLayout1, matchLayout2) -> {
-            Iterator<Optional<LocalProperty<T>>> match1Iterator = matchLayout1.iterator();
-            Iterator<Optional<LocalProperty<T>>> match2Iterator = matchLayout2.iterator();
-            while (match1Iterator.hasNext() && match2Iterator.hasNext()) {
-                Optional<LocalProperty<T>> match1 = match1Iterator.next();
-                Optional<LocalProperty<T>> match2 = match2Iterator.next();
-                if (match1.isPresent() && match2.isPresent()) {
-                    return Integer.compare(match1.get().getColumns().size(), match2.get().getColumns().size());
-                }
-                else if (match1.isPresent()) {
-                    return 1;
-                }
-                else if (match2.isPresent()) {
-                    return -1;
-                }
-            }
-            checkState(!match1Iterator.hasNext() && !match2Iterator.hasNext()); // Should be the same size
-            return 0;
-        };
-    }
-
     @VisibleForTesting
     static class PlanWithProperties
     {
@@ -1505,25 +1514,6 @@ public class AddExchanges
         }
     }
 
-    private static boolean isSameOrSystemCompatiblePartitions(List<PartitioningHandle> partitioningHandles)
-    {
-        for (int i = 0; i < partitioningHandles.size() - 1; i++) {
-            PartitioningHandle first = partitioningHandles.get(i);
-            PartitioningHandle second = partitioningHandles.get(i + 1);
-            if (!first.equals(second) && !isCompatibleSystemPartitioning(first, second)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static List<PartitioningHandle> extractRemoteExchangePartitioningHandles(List<PlanNode> nodes)
-    {
-        ImmutableList.Builder<PartitioningHandle> handles = ImmutableList.builder();
-        nodes.forEach(node -> node.accept(new ExchangePartitioningHandleExtractor(), handles));
-        return handles.build();
-    }
-
     private static class ExchangePartitioningHandleExtractor
             extends InternalPlanVisitor<Void, ImmutableList.Builder<PartitioningHandle>>
     {
@@ -1538,9 +1528,7 @@ public class AddExchanges
         @Override
         public Void visitPlan(PlanNode node, ImmutableList.Builder<PartitioningHandle> handles)
         {
-            for (PlanNode source : node.getSources()) {
-                source.accept(this, handles);
-            }
+            node.getSources().forEach(source -> source.accept(this, handles));
             return null;
         }
     }

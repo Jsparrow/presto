@@ -102,9 +102,7 @@ public class TestGroupedTopNBuilder
                 .row(2L, 0.9)
                 .build();
 
-        for (Page page : input) {
-            page.compact();
-        }
+        input.forEach(Page::compact);
 
         GroupByHash groupByHash = createGroupByHash(ImmutableList.of(types.get(0)), ImmutableList.of(0), NOOP);
         GroupedTopNBuilder groupedTopNBuilder = new GroupedTopNBuilder(
@@ -175,9 +173,7 @@ public class TestGroupedTopNBuilder
                 .row(2L, 0.9)
                 .build();
 
-        for (Page page : input) {
-            page.compact();
-        }
+        input.forEach(Page::compact);
 
         GroupedTopNBuilder groupedTopNBuilder = new GroupedTopNBuilder(
                 types,
@@ -458,11 +454,11 @@ public class TestGroupedTopNBuilder
 
         // build fake pages to get the real retained sizes
         RowPagesBuilder rowPagesBuilder = rowPagesBuilder(types);
-        for (int pagePosition : pagePositions) {
+        pagePositions.stream().mapToInt(Integer::valueOf).forEach(pagePosition -> {
             if (pagePosition > 0) {
                 rowPagesBuilder.addSequencePage(pagePosition, new int[types.size()]);
             }
-        }
+        });
 
         long referencedPagesSizeInBytes = 0;
         for (Page page : rowPagesBuilder.build()) {

@@ -33,6 +33,8 @@ import static com.facebook.presto.raptor.RaptorErrorCode.RAPTOR_ERROR;
 import static com.facebook.presto.spi.type.TypeSignature.parseTypeSignature;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Distribution
 {
@@ -71,10 +73,18 @@ public class Distribution
         return bucketCount;
     }
 
-    public static class Mapper
+    public static String serializeColumnTypes(List<Type> columnTypes)
+    {
+        return LIST_CODEC.toJson(columnTypes.stream()
+                .map(type -> type.getTypeSignature().toString())
+                .collect(toList()));
+    }
+
+	public static class Mapper
             implements ResultSetMapper<Distribution>
     {
-        private final TypeManager typeManager;
+        private final Logger logger = LoggerFactory.getLogger(Mapper.class);
+		private final TypeManager typeManager;
 
         @Inject
         public Mapper(TypeManager typeManager)
@@ -95,7 +105,8 @@ public class Distribution
                     type = typeManager.getType(parseTypeSignature(typeName));
                 }
                 catch (IllegalArgumentException e) {
-                    throw new PrestoException(RAPTOR_ERROR, "Unknown distribution column type: " + typeName);
+                    logger.error(e.getMessage(), e);
+					throw new PrestoException(RAPTOR_ERROR, "Unknown distribution column type: " + typeName);
                 }
                 types.add(type);
             }
@@ -106,12 +117,5 @@ public class Distribution
                     types.build(),
                     rs.getInt("bucket_count"));
         }
-    }
-
-    public static String serializeColumnTypes(List<Type> columnTypes)
-    {
-        return LIST_CODEC.toJson(columnTypes.stream()
-                .map(type -> type.getTypeSignature().toString())
-                .collect(toList()));
     }
 }

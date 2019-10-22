@@ -46,62 +46,14 @@ import static java.util.Objects.requireNonNull;
 
 public class OrcType
 {
-    public enum OrcTypeKind
-    {
-        BOOLEAN,
-
-        BYTE,
-        SHORT,
-        INT,
-        LONG,
-        DECIMAL,
-
-        FLOAT,
-        DOUBLE,
-
-        STRING,
-        VARCHAR,
-        CHAR,
-
-        BINARY,
-
-        DATE,
-        TIMESTAMP,
-
-        LIST,
-        MAP,
-        STRUCT,
-        UNION,
-    }
-
     private final OrcTypeKind orcTypeKind;
-    private final List<Integer> fieldTypeIndexes;
-    private final List<String> fieldNames;
-    private final Optional<Integer> length;
-    private final Optional<Integer> precision;
-    private final Optional<Integer> scale;
+	private final List<Integer> fieldTypeIndexes;
+	private final List<String> fieldNames;
+	private final Optional<Integer> length;
+	private final Optional<Integer> precision;
+	private final Optional<Integer> scale;
 
-    private OrcType(OrcTypeKind orcTypeKind)
-    {
-        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.empty(), Optional.empty(), Optional.empty());
-    }
-
-    private OrcType(OrcTypeKind orcTypeKind, int length)
-    {
-        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.of(length), Optional.empty(), Optional.empty());
-    }
-
-    private OrcType(OrcTypeKind orcTypeKind, int precision, int scale)
-    {
-        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.empty(), Optional.of(precision), Optional.of(scale));
-    }
-
-    private OrcType(OrcTypeKind orcTypeKind, List<Integer> fieldTypeIndexes, List<String> fieldNames)
-    {
-        this(orcTypeKind, fieldTypeIndexes, fieldNames, Optional.empty(), Optional.empty(), Optional.empty());
-    }
-
-    public OrcType(OrcTypeKind orcTypeKind, List<Integer> fieldTypeIndexes, List<String> fieldNames, Optional<Integer> length, Optional<Integer> precision, Optional<Integer> scale)
+	public OrcType(OrcTypeKind orcTypeKind, List<Integer> fieldTypeIndexes, List<String> fieldNames, Optional<Integer> length, Optional<Integer> precision, Optional<Integer> scale)
     {
         this.orcTypeKind = requireNonNull(orcTypeKind, "typeKind is null");
         this.fieldTypeIndexes = ImmutableList.copyOf(requireNonNull(fieldTypeIndexes, "fieldTypeIndexes is null"));
@@ -117,52 +69,72 @@ public class OrcType
         this.scale = requireNonNull(scale, "scale can not be null");
     }
 
-    public OrcTypeKind getOrcTypeKind()
+	private OrcType(OrcTypeKind orcTypeKind)
+    {
+        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+	private OrcType(OrcTypeKind orcTypeKind, int length)
+    {
+        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.of(length), Optional.empty(), Optional.empty());
+    }
+
+	private OrcType(OrcTypeKind orcTypeKind, int precision, int scale)
+    {
+        this(orcTypeKind, ImmutableList.of(), ImmutableList.of(), Optional.empty(), Optional.of(precision), Optional.of(scale));
+    }
+
+	private OrcType(OrcTypeKind orcTypeKind, List<Integer> fieldTypeIndexes, List<String> fieldNames)
+    {
+        this(orcTypeKind, fieldTypeIndexes, fieldNames, Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+	public OrcTypeKind getOrcTypeKind()
     {
         return orcTypeKind;
     }
 
-    public int getFieldCount()
+	public int getFieldCount()
     {
         return fieldTypeIndexes.size();
     }
 
-    public int getFieldTypeIndex(int field)
+	public int getFieldTypeIndex(int field)
     {
         return fieldTypeIndexes.get(field);
     }
 
-    public List<Integer> getFieldTypeIndexes()
+	public List<Integer> getFieldTypeIndexes()
     {
         return fieldTypeIndexes;
     }
 
-    public String getFieldName(int field)
+	public String getFieldName(int field)
     {
         return fieldNames.get(field);
     }
 
-    public List<String> getFieldNames()
+	public List<String> getFieldNames()
     {
         return fieldNames;
     }
 
-    public Optional<Integer> getLength()
+	public Optional<Integer> getLength()
     {
         return length;
     }
 
-    public Optional<Integer> getPrecision()
+	public Optional<Integer> getPrecision()
     {
         return precision;
     }
 
-    public Optional<Integer> getScale()
+	public Optional<Integer> getScale()
     {
         return scale;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -172,7 +144,7 @@ public class OrcType
                 .toString();
     }
 
-    private static List<OrcType> toOrcType(int nextFieldTypeIndex, Type type)
+	private static List<OrcType> toOrcType(int nextFieldTypeIndex, Type type)
     {
         if (BOOLEAN.equals(type)) {
             return ImmutableList.of(new OrcType(OrcTypeKind.BOOLEAN));
@@ -237,7 +209,7 @@ public class OrcType
         throw new PrestoException(NOT_SUPPORTED, format("Unsupported Hive type: %s", type));
     }
 
-    private static List<OrcType> createOrcArrayType(int nextFieldTypeIndex, Type itemType)
+	private static List<OrcType> createOrcArrayType(int nextFieldTypeIndex, Type itemType)
     {
         nextFieldTypeIndex++;
         List<OrcType> itemTypes = toOrcType(nextFieldTypeIndex, itemType);
@@ -248,7 +220,7 @@ public class OrcType
         return orcTypes;
     }
 
-    private static List<OrcType> createOrcMapType(int nextFieldTypeIndex, Type keyType, Type valueType)
+	private static List<OrcType> createOrcMapType(int nextFieldTypeIndex, Type keyType, Type valueType)
     {
         nextFieldTypeIndex++;
         List<OrcType> keyTypes = toOrcType(nextFieldTypeIndex, keyType);
@@ -261,7 +233,7 @@ public class OrcType
         return orcTypes;
     }
 
-    public static List<OrcType> createOrcRowType(int nextFieldTypeIndex, List<String> fieldNames, List<Type> fieldTypes)
+	public static List<OrcType> createOrcRowType(int nextFieldTypeIndex, List<String> fieldNames, List<Type> fieldTypes)
     {
         nextFieldTypeIndex++;
         List<Integer> fieldTypeIndexes = new ArrayList<>();
@@ -281,5 +253,33 @@ public class OrcType
         fieldTypesList.forEach(orcTypes::addAll);
 
         return orcTypes;
+    }
+
+	public enum OrcTypeKind
+    {
+        BOOLEAN,
+
+        BYTE,
+        SHORT,
+        INT,
+        LONG,
+        DECIMAL,
+
+        FLOAT,
+        DOUBLE,
+
+        STRING,
+        VARCHAR,
+        CHAR,
+
+        BINARY,
+
+        DATE,
+        TIMESTAMP,
+
+        LIST,
+        MAP,
+        STRUCT,
+        UNION,
     }
 }

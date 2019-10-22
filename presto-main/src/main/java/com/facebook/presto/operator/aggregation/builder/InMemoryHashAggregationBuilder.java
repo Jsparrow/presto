@@ -166,9 +166,7 @@ public class InMemoryHashAggregationBuilder
             return new TransformWork<>(
                     groupByHash.getGroupIds(page),
                     groupByIdBlock -> {
-                        for (Aggregator aggregator : aggregators) {
-                            aggregator.processPage(groupByIdBlock, page);
-                        }
+                        aggregators.forEach(aggregator -> aggregator.processPage(groupByIdBlock, page));
                         // we do not need any output from TransformWork for this case
                         return null;
                     });
@@ -235,9 +233,7 @@ public class InMemoryHashAggregationBuilder
 
     public void setOutputPartial()
     {
-        for (Aggregator aggregator : aggregators) {
-            aggregator.setOutputPartial();
-        }
+        aggregators.forEach(Aggregator::setOutputPartial);
     }
 
     public int getKeyChannels()
@@ -253,9 +249,7 @@ public class InMemoryHashAggregationBuilder
     @Override
     public WorkProcessor<Page> buildResult()
     {
-        for (Aggregator aggregator : aggregators) {
-            aggregator.prepareFinal();
-        }
+        aggregators.forEach(Aggregator::prepareFinal);
         return buildResult(consecutiveGroupIds());
     }
 
@@ -267,9 +261,7 @@ public class InMemoryHashAggregationBuilder
     public List<Type> buildIntermediateTypes()
     {
         ArrayList<Type> types = new ArrayList<>(groupByHash.getTypes());
-        for (InMemoryHashAggregationBuilder.Aggregator aggregator : aggregators) {
-            types.add(aggregator.getIntermediateType());
-        }
+        aggregators.forEach(aggregator -> types.add(aggregator.getIntermediateType()));
         return types;
     }
 
@@ -310,9 +302,7 @@ public class InMemoryHashAggregationBuilder
     public List<Type> buildTypes()
     {
         ArrayList<Type> types = new ArrayList<>(groupByHash.getTypes());
-        for (Aggregator aggregator : aggregators) {
-            types.add(aggregator.getType());
-        }
+        aggregators.forEach(aggregator -> types.add(aggregator.getType()));
         return types;
     }
 
@@ -384,7 +374,18 @@ public class InMemoryHashAggregationBuilder
         };
     }
 
-    private static class Aggregator
+    public static List<Type> toTypes(List<? extends Type> groupByType, Step step, List<AccumulatorFactory> factories, Optional<Integer> hashChannel)
+    {
+        ImmutableList.Builder<Type> types = ImmutableList.builder();
+        types.addAll(groupByType);
+        if (hashChannel.isPresent()) {
+            types.add(BIGINT);
+        }
+        factories.forEach(factory -> types.add(new Aggregator(factory, step, Optional.empty()).getType()));
+        return types.build();
+    }
+
+	private static class Aggregator
     {
         private final GroupedAccumulator aggregation;
         private AggregationNode.Step step;
@@ -457,18 +458,5 @@ public class InMemoryHashAggregationBuilder
         {
             return aggregation.getIntermediateType();
         }
-    }
-
-    public static List<Type> toTypes(List<? extends Type> groupByType, Step step, List<AccumulatorFactory> factories, Optional<Integer> hashChannel)
-    {
-        ImmutableList.Builder<Type> types = ImmutableList.builder();
-        types.addAll(groupByType);
-        if (hashChannel.isPresent()) {
-            types.add(BIGINT);
-        }
-        for (AccumulatorFactory factory : factories) {
-            types.add(new Aggregator(factory, step, Optional.empty()).getType());
-        }
-        return types.build();
     }
 }

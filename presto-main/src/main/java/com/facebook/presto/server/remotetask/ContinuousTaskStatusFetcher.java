@@ -120,10 +120,11 @@ class ContinuousTaskStatusFetcher
     public synchronized void stop()
     {
         running = false;
-        if (future != null) {
-            future.cancel(true);
-            future = null;
-        }
+        if (future == null) {
+			return;
+		}
+		future.cancel(true);
+		future = null;
     }
 
     private synchronized void scheduleNextRequest()

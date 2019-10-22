@@ -133,7 +133,6 @@ public class MongoSession
     }
 
     public Set<String> getAllTables(String schema)
-            throws SchemaNotFoundException
     {
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
 
@@ -147,7 +146,6 @@ public class MongoSession
     }
 
     public MongoTable getTable(SchemaTableName tableName)
-            throws TableNotFoundException
     {
         try {
             return tableCache.getUnchecked(tableName);
@@ -173,16 +171,12 @@ public class MongoSession
     }
 
     private MongoTable loadTableSchema(SchemaTableName tableName)
-            throws TableNotFoundException
     {
         Document tableMeta = getTableMetadata(tableName);
 
         ImmutableList.Builder<MongoColumnHandle> columnHandles = ImmutableList.builder();
 
-        for (Document columnMetadata : getColumnMetadata(tableMeta)) {
-            MongoColumnHandle columnHandle = buildColumnHandle(columnMetadata);
-            columnHandles.add(columnHandle);
-        }
+        getColumnMetadata(tableMeta).stream().map(this::buildColumnHandle).forEach(columnHandles::add);
 
         MongoTableHandle tableHandle = new MongoTableHandle(tableName);
         return new MongoTable(tableHandle, columnHandles.build(), getIndexes(tableName));
@@ -226,9 +220,7 @@ public class MongoSession
     public MongoCursor<Document> execute(MongoSplit split, List<MongoColumnHandle> columns)
     {
         Document output = new Document();
-        for (MongoColumnHandle column : columns) {
-            output.append(column.getName(), 1);
-        }
+        columns.forEach(column -> output.append(column.getName(), 1));
         MongoCollection<Document> collection = getCollection(split.getSchemaTableName());
         FindIterable<Document> iterable = collection.find(buildQuery(split.getTupleDomain())).projection(output);
 
@@ -243,12 +235,10 @@ public class MongoSession
     static Document buildQuery(TupleDomain<ColumnHandle> tupleDomain)
     {
         Document query = new Document();
-        if (tupleDomain.getDomains().isPresent()) {
-            for (Map.Entry<ColumnHandle, Domain> entry : tupleDomain.getDomains().get().entrySet()) {
-                MongoColumnHandle column = (MongoColumnHandle) entry.getKey();
-                query.putAll(buildPredicate(column, entry.getValue()));
-            }
-        }
+        tupleDomain.getDomains().ifPresent(value -> value.entrySet().forEach(entry -> {
+			MongoColumnHandle column = (MongoColumnHandle) entry.getKey();
+			query.putAll(buildPredicate(column, entry.getValue()));
+		}));
 
         return query;
     }
@@ -363,7 +353,6 @@ public class MongoSession
 
     // Internal Schema management
     private Document getTableMetadata(SchemaTableName schemaTableName)
-            throws TableNotFoundException
     {
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
@@ -403,7 +392,6 @@ public class MongoSession
     }
 
     private Set<String> getTableMetadataNames(String schemaName)
-            throws TableNotFoundException
     {
         MongoDatabase db = client.getDatabase(schemaName);
         MongoCursor<Document> cursor = db.getCollection(schemaCollection)
@@ -418,7 +406,6 @@ public class MongoSession
     }
 
     private void createTableMetadata(SchemaTableName schemaTableName, List<MongoColumnHandle> columns)
-            throws TableNotFoundException
     {
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
@@ -427,7 +414,7 @@ public class MongoSession
         Document metadata = new Document(TABLE_NAME_KEY, tableName);
 
         ArrayList<Document> fields = new ArrayList<>();
-        if (!columns.stream().anyMatch(c -> c.getName().equals("_id"))) {
+        if (!columns.stream().anyMatch(c -> "_id".equals(c.getName()))) {
             fields.add(new MongoColumnHandle("_id", OBJECT_ID, true).getDocument());
         }
 
@@ -472,7 +459,7 @@ public class MongoSession
 
         ImmutableList.Builder<Document> builder = ImmutableList.builder();
 
-        for (String key : doc.keySet()) {
+        doc.keySet().forEach(key -> {
             Object value = doc.get(key);
             Optional<TypeSignature> fieldType = guessFieldType(value);
             if (fieldType.isPresent()) {
@@ -480,14 +467,14 @@ public class MongoSession
                 metadata.append(FIELDS_NAME_KEY, key);
                 metadata.append(FIELDS_TYPE_KEY, fieldType.get().toString());
                 metadata.append(FIELDS_HIDDEN_KEY,
-                        key.equals("_id") && fieldType.get().equals(OBJECT_ID.getTypeSignature()));
+                        "_id".equals(key) && fieldType.get().equals(OBJECT_ID.getTypeSignature()));
 
                 builder.add(metadata);
             }
             else {
                 log.debug("Unable to guess field type from %s : %s", value == null ? "null" : value.getClass().getName(), value);
             }
-        }
+        });
 
         return builder.build();
     }

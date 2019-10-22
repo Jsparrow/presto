@@ -68,10 +68,11 @@ public class ReopeningCluster
     public synchronized void close()
     {
         closed = true;
-        if (delegate != null) {
-            delegate.close();
-            delegate = null;
-        }
+        if (delegate == null) {
+			return;
+		}
+		delegate.close();
+		delegate = null;
     }
 
     @Override

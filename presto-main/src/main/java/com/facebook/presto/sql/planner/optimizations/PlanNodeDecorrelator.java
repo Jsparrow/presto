@@ -79,7 +79,24 @@ public class PlanNodeDecorrelator
                 correlation));
     }
 
-    private class DecorrelatingVisitor
+    private Optional<DecorrelatedNode> decorrelatedNode(
+            List<Expression> correlatedPredicates,
+            PlanNode node,
+            List<VariableReferenceExpression> correlation)
+    {
+        if (containsCorrelation(node, correlation)) {
+            // node is still correlated ; /
+            return Optional.empty();
+        }
+        return Optional.of(new DecorrelatedNode(correlatedPredicates, node));
+    }
+
+	private boolean containsCorrelation(PlanNode node, List<VariableReferenceExpression> correlation)
+    {
+        return Sets.union(VariablesExtractor.extractUnique(node, lookup, variableAllocator.getTypes()), VariablesExtractor.extractOutputVariables(node, lookup)).stream().anyMatch(correlation::contains);
+    }
+
+	private class DecorrelatingVisitor
             extends InternalPlanVisitor<Optional<DecorrelationResult>, Void>
     {
         final List<VariableReferenceExpression> correlation;
@@ -287,7 +304,7 @@ public class PlanNodeDecorrelator
                 ComparisonExpression comparison = (ComparisonExpression) conjunct;
                 if (!(comparison.getLeft() instanceof SymbolReference
                         && comparison.getRight() instanceof SymbolReference
-                        && comparison.getOperator().equals(EQUAL))) {
+                        && comparison.getOperator() == EQUAL)) {
                     continue;
                 }
 
@@ -352,23 +369,6 @@ public class PlanNodeDecorrelator
         {
             return ImmutableSet.copyOf(correlatedVariablesMapping.values());
         }
-    }
-
-    private Optional<DecorrelatedNode> decorrelatedNode(
-            List<Expression> correlatedPredicates,
-            PlanNode node,
-            List<VariableReferenceExpression> correlation)
-    {
-        if (containsCorrelation(node, correlation)) {
-            // node is still correlated ; /
-            return Optional.empty();
-        }
-        return Optional.of(new DecorrelatedNode(correlatedPredicates, node));
-    }
-
-    private boolean containsCorrelation(PlanNode node, List<VariableReferenceExpression> correlation)
-    {
-        return Sets.union(VariablesExtractor.extractUnique(node, lookup, variableAllocator.getTypes()), VariablesExtractor.extractOutputVariables(node, lookup)).stream().anyMatch(correlation::contains);
     }
 
     public static class DecorrelatedNode

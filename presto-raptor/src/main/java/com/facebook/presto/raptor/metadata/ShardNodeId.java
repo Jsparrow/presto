@@ -68,7 +68,7 @@ public class ShardNodeId
     @Override
     public String toString()
     {
-        return shardUuid + ":" + nodeId;
+        return new StringBuilder().append(shardUuid).append(":").append(nodeId).toString();
     }
 
     public static class Mapper

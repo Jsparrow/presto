@@ -46,35 +46,19 @@ import static java.util.Objects.requireNonNull;
 public final class SystemPartitioningHandle
         implements ConnectorPartitioningHandle
 {
-    private enum SystemPartitioning
-    {
-        SINGLE,
-        FIXED,
-        SOURCE,
-        SCALED,
-        COORDINATOR_ONLY,
-        ARBITRARY
-    }
-
     public static final PartitioningHandle SINGLE_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.SINGLE, SystemPartitionFunction.SINGLE);
-    public static final PartitioningHandle COORDINATOR_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.COORDINATOR_ONLY, SystemPartitionFunction.SINGLE);
-    public static final PartitioningHandle FIXED_HASH_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.HASH);
-    public static final PartitioningHandle FIXED_ARBITRARY_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.ROUND_ROBIN);
-    public static final PartitioningHandle FIXED_BROADCAST_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.BROADCAST);
-    public static final PartitioningHandle SCALED_WRITER_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.SCALED, SystemPartitionFunction.ROUND_ROBIN);
-    public static final PartitioningHandle SOURCE_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.SOURCE, SystemPartitionFunction.UNKNOWN);
-    public static final PartitioningHandle ARBITRARY_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.ARBITRARY, SystemPartitionFunction.UNKNOWN);
-    public static final PartitioningHandle FIXED_PASSTHROUGH_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.UNKNOWN);
+	public static final PartitioningHandle COORDINATOR_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.COORDINATOR_ONLY, SystemPartitionFunction.SINGLE);
+	public static final PartitioningHandle FIXED_HASH_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.HASH);
+	public static final PartitioningHandle FIXED_ARBITRARY_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.ROUND_ROBIN);
+	public static final PartitioningHandle FIXED_BROADCAST_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.BROADCAST);
+	public static final PartitioningHandle SCALED_WRITER_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.SCALED, SystemPartitionFunction.ROUND_ROBIN);
+	public static final PartitioningHandle SOURCE_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.SOURCE, SystemPartitionFunction.UNKNOWN);
+	public static final PartitioningHandle ARBITRARY_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.ARBITRARY, SystemPartitionFunction.UNKNOWN);
+	public static final PartitioningHandle FIXED_PASSTHROUGH_DISTRIBUTION = createSystemPartitioning(SystemPartitioning.FIXED, SystemPartitionFunction.UNKNOWN);
+	private final SystemPartitioning partitioning;
+	private final SystemPartitionFunction function;
 
-    private static PartitioningHandle createSystemPartitioning(SystemPartitioning partitioning, SystemPartitionFunction function)
-    {
-        return new PartitioningHandle(Optional.empty(), Optional.empty(), new SystemPartitioningHandle(partitioning, function));
-    }
-
-    private final SystemPartitioning partitioning;
-    private final SystemPartitionFunction function;
-
-    @JsonCreator
+	@JsonCreator
     public SystemPartitioningHandle(
             @JsonProperty("partitioning") SystemPartitioning partitioning,
             @JsonProperty("function") SystemPartitionFunction function)
@@ -83,31 +67,36 @@ public final class SystemPartitioningHandle
         this.function = requireNonNull(function, "function is null");
     }
 
-    @JsonProperty
+	private static PartitioningHandle createSystemPartitioning(SystemPartitioning partitioning, SystemPartitionFunction function)
+    {
+        return new PartitioningHandle(Optional.empty(), Optional.empty(), new SystemPartitioningHandle(partitioning, function));
+    }
+
+	@JsonProperty
     public SystemPartitioning getPartitioning()
     {
         return partitioning;
     }
 
-    @JsonProperty
+	@JsonProperty
     public SystemPartitionFunction getFunction()
     {
         return function;
     }
 
-    @Override
+	@Override
     public boolean isSingleNode()
     {
         return partitioning == SystemPartitioning.COORDINATOR_ONLY || partitioning == SystemPartitioning.SINGLE;
     }
 
-    @Override
+	@Override
     public boolean isCoordinatorOnly()
     {
         return partitioning == SystemPartitioning.COORDINATOR_ONLY;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -121,13 +110,13 @@ public final class SystemPartitioningHandle
                 function == that.function;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(partitioning, function);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         if (partitioning == SystemPartitioning.FIXED) {
@@ -136,7 +125,7 @@ public final class SystemPartitioningHandle
         return partitioning.toString();
     }
 
-    public NodePartitionMap getNodePartitionMap(Session session, NodeScheduler nodeScheduler)
+	public NodePartitionMap getNodePartitionMap(Session session, NodeScheduler nodeScheduler)
     {
         NodeSelector nodeSelector = nodeScheduler.createNodeSelector(null);
         List<InternalNode> nodes;
@@ -160,7 +149,7 @@ public final class SystemPartitioningHandle
         });
     }
 
-    public PartitionFunction getPartitionFunction(List<Type> partitionChannelTypes, boolean isHashPrecomputed, int[] bucketToPartition)
+	public PartitionFunction getPartitionFunction(List<Type> partitionChannelTypes, boolean isHashPrecomputed, int[] bucketToPartition)
     {
         requireNonNull(partitionChannelTypes, "partitionChannelTypes is null");
         requireNonNull(bucketToPartition, "bucketToPartition is null");
@@ -169,7 +158,7 @@ public final class SystemPartitioningHandle
         return new BucketPartitionFunction(bucketFunction, bucketToPartition);
     }
 
-    public static boolean isCompatibleSystemPartitioning(PartitioningHandle first, PartitioningHandle second)
+	public static boolean isCompatibleSystemPartitioning(PartitioningHandle first, PartitioningHandle second)
     {
         ConnectorPartitioningHandle firstConnectorHandle = first.getConnectorHandle();
         ConnectorPartitioningHandle secondConnectorHandle = second.getConnectorHandle();
@@ -181,7 +170,7 @@ public final class SystemPartitioningHandle
         return false;
     }
 
-    public enum SystemPartitionFunction
+	public enum SystemPartitionFunction
     {
         SINGLE {
             @Override
@@ -299,5 +288,15 @@ public final class SystemPartitioningHandle
                         .toString();
             }
         }
+    }
+
+	private enum SystemPartitioning
+    {
+        SINGLE,
+        FIXED,
+        SOURCE,
+        SCALED,
+        COORDINATOR_ONLY,
+        ARBITRARY
     }
 }

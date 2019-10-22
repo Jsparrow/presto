@@ -38,12 +38,11 @@ public class ChecksumResult
     {
         this.rowCount = rowCount;
         this.checksums = unmodifiableMap(requireNonNull(checksums, "checksums is null"));
-        for (Object checksum : checksums.values()) {
-            checkArgument(
-                    checksum == null || checksum instanceof Long || checksum instanceof Double || checksum instanceof SqlVarbinary,
-                    "checksum can only be one of (null, Long, Double, SqlVarbinary), found %s",
-                    checksum == null ? "null" : checksum.getClass().getName());
-        }
+        checksums.values().forEach(checksum -> checkArgument(
+				checksum == null || checksum instanceof Long || checksum instanceof Double
+						|| checksum instanceof SqlVarbinary,
+				"checksum can only be one of (null, Long, Double, SqlVarbinary), found %s",
+				checksum == null ? "null" : checksum.getClass().getName()));
     }
 
     public long getRowCount()

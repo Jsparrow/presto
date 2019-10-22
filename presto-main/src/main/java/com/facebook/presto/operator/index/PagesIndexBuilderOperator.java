@@ -29,7 +29,60 @@ import static java.util.Objects.requireNonNull;
 public class PagesIndexBuilderOperator
         implements Operator
 {
-    public static class PagesIndexBuilderOperatorFactory
+    private final OperatorContext operatorContext;
+	private final IndexSnapshotBuilder indexSnapshotBuilder;
+	private boolean finished;
+
+	public PagesIndexBuilderOperator(OperatorContext operatorContext, IndexSnapshotBuilder indexSnapshotBuilder)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.indexSnapshotBuilder = requireNonNull(indexSnapshotBuilder, "indexSnapshotBuilder is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!isFinished(), "Operator is already finished");
+
+        if (!indexSnapshotBuilder.tryAddPage(page)) {
+            finish();
+            return;
+        }
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class PagesIndexBuilderOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -64,59 +117,5 @@ public class PagesIndexBuilderOperator
         {
             return new PagesIndexBuilderOperatorFactory(operatorId, planNodeId, indexSnapshotBuilder);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final IndexSnapshotBuilder indexSnapshotBuilder;
-
-    private boolean finished;
-
-    public PagesIndexBuilderOperator(OperatorContext operatorContext, IndexSnapshotBuilder indexSnapshotBuilder)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.indexSnapshotBuilder = requireNonNull(indexSnapshotBuilder, "indexSnapshotBuilder is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!isFinished(), "Operator is already finished");
-
-        if (!indexSnapshotBuilder.tryAddPage(page)) {
-            finish();
-            return;
-        }
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 }

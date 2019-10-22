@@ -274,7 +274,7 @@ public class TestingAccessControlManager
     @Override
     public void checkCanSetCatalogSessionProperty(TransactionId transactionId, Identity identity, String catalogName, String propertyName)
     {
-        if (shouldDenyPrivilege(identity.getUser(), catalogName + "." + propertyName, SET_SESSION)) {
+        if (shouldDenyPrivilege(identity.getUser(), new StringBuilder().append(catalogName).append(".").append(propertyName).toString(), SET_SESSION)) {
             denySetCatalogSessionProperty(catalogName, propertyName);
         }
         if (denyPrivileges.isEmpty()) {
@@ -288,11 +288,7 @@ public class TestingAccessControlManager
         if (shouldDenyPrivilege(identity.getUser(), tableName.getObjectName(), SELECT_COLUMN)) {
             denySelectColumns(tableName.toString(), columns);
         }
-        for (String column : columns) {
-            if (shouldDenyPrivilege(identity.getUser(), column, SELECT_COLUMN)) {
-                denySelectColumns(tableName.toString(), columns);
-            }
-        }
+        columns.stream().filter(column -> shouldDenyPrivilege(identity.getUser(), column, SELECT_COLUMN)).forEach(column -> denySelectColumns(tableName.toString(), columns));
         if (denyPrivileges.isEmpty()) {
             super.checkCanSelectFromColumns(transactionId, identity, tableName, columns);
         }
@@ -301,12 +297,7 @@ public class TestingAccessControlManager
     private boolean shouldDenyPrivilege(String userName, String entityName, TestingPrivilegeType type)
     {
         TestingPrivilege testPrivilege = privilege(userName, entityName, type);
-        for (TestingPrivilege denyPrivilege : denyPrivileges) {
-            if (denyPrivilege.matches(testPrivilege)) {
-                return true;
-            }
-        }
-        return false;
+        return denyPrivileges.stream().anyMatch(denyPrivilege -> denyPrivilege.matches(testPrivilege));
     }
 
     public enum TestingPrivilegeType

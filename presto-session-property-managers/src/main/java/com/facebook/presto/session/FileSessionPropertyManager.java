@@ -83,9 +83,7 @@ public class FileSessionPropertyManager
     {
         // later properties override earlier properties
         Map<String, String> combinedProperties = new HashMap<>();
-        for (SessionMatchSpec sessionMatchSpec : sessionMatchSpecs) {
-            combinedProperties.putAll(sessionMatchSpec.match(context));
-        }
+        sessionMatchSpecs.forEach(sessionMatchSpec -> combinedProperties.putAll(sessionMatchSpec.match(context)));
 
         return ImmutableMap.copyOf(combinedProperties);
     }

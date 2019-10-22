@@ -156,9 +156,7 @@ public class SignatureBinder
     public static List<TypeSignature> applyBoundVariables(List<TypeSignature> typeSignatures, BoundVariables boundVariables)
     {
         ImmutableList.Builder<TypeSignature> builder = ImmutableList.builder();
-        for (TypeSignature typeSignature : typeSignatures) {
-            builder.add(applyBoundVariables(typeSignature, boundVariables));
-        }
+        typeSignatures.forEach(typeSignature -> builder.add(applyBoundVariables(typeSignature, boundVariables)));
         return builder.build();
     }
 
@@ -180,9 +178,7 @@ public class SignatureBinder
     public static List<Type> applyBoundVariables(TypeManager typeManager, List<TypeSignature> typeSignatures, BoundVariables boundVariables)
     {
         ImmutableList.Builder<Type> builder = ImmutableList.builder();
-        for (TypeSignature typeSignature : typeSignatures) {
-            builder.add(applyBoundVariables(typeManager, typeSignature, boundVariables));
-        }
+        typeSignatures.forEach(typeSignature -> builder.add(applyBoundVariables(typeManager, typeSignature, boundVariables)));
         return builder.build();
     }
 
@@ -212,9 +208,7 @@ public class SignatureBinder
     private static void checkNoLiteralVariableUsageAcrossTypes(Signature declaredSignature)
     {
         Map<String, TypeSignature> existingUsages = new HashMap<>();
-        for (TypeSignature parameter : declaredSignature.getArgumentTypes()) {
-            checkNoLiteralVariableUsageAcrossTypes(parameter, existingUsages);
-        }
+        declaredSignature.getArgumentTypes().forEach(parameter -> checkNoLiteralVariableUsageAcrossTypes(parameter, existingUsages));
     }
 
     private static void checkNoLiteralVariableUsageAcrossTypes(TypeSignature typeSignature, Map<String, TypeSignature> existingUsages)
@@ -454,7 +448,7 @@ public class SignatureBinder
 
     private void calculateVariableValuesForLongConstraints(BoundVariables.Builder variableBinder)
     {
-        for (LongVariableConstraint longVariableConstraint : declaredSignature.getLongVariableConstraints()) {
+        declaredSignature.getLongVariableConstraints().forEach(longVariableConstraint -> {
             String calculation = longVariableConstraint.getExpression();
             String variableName = longVariableConstraint.getName();
             Long calculatedValue = calculateLiteralValue(calculation, variableBinder.getLongVariables());
@@ -464,7 +458,7 @@ public class SignatureBinder
                         "variable '%s' is already set to %s when trying to set %s", variableName, currentValue, calculatedValue);
             }
             variableBinder.setLongVariable(variableName, calculatedValue);
-        }
+        });
     }
 
     private boolean allTypeVariablesBound(BoundVariables boundVariables)
@@ -538,17 +532,39 @@ public class SignatureBinder
         return typeParameters.subList(0, typeParameters.size() - 1);
     }
 
-    private interface TypeConstraintSolver
+    private boolean appendTypeRelationshipConstraintSolver(
+            ImmutableList.Builder<TypeConstraintSolver> resultBuilder,
+            TypeSignature formalTypeSignature,
+            TypeSignatureProvider actualTypeSignatureProvider,
+            boolean allowCoercion)
     {
-        SolverReturnStatus update(BoundVariables.Builder bindings);
+        if (actualTypeSignatureProvider.hasDependency()) {
+            // Fail if the formal type is not function.
+            // Otherwise do nothing because FunctionConstraintSolver will handle type relationship constraint directly
+            return FunctionType.NAME.equals(formalTypeSignature.getBase());
+        }
+        Set<String> typeVariables = typeVariablesOf(formalTypeSignature);
+        Set<String> longVariables = longVariablesOf(formalTypeSignature);
+        resultBuilder.add(new TypeRelationshipConstraintSolver(
+                formalTypeSignature,
+                typeVariables,
+                longVariables,
+                typeManager.getType(actualTypeSignatureProvider.getTypeSignature()),
+                allowCoercion));
+        return true;
     }
 
-    private enum SolverReturnStatus
+	private enum SolverReturnStatus
     {
         UNCHANGED_SATISFIED,
         UNCHANGED_NOT_SATISFIED,
         CHANGED,
         UNSOLVABLE,
+    }
+
+	private interface TypeConstraintSolver
+    {
+        SolverReturnStatus update(BoundVariables.Builder bindings);
     }
 
     private class SolverReturnStatusMerger
@@ -803,28 +819,6 @@ public class SignatureBinder
                     .map(Type::getTypeSignature)
                     .collect(toImmutableList());
         }
-    }
-
-    private boolean appendTypeRelationshipConstraintSolver(
-            ImmutableList.Builder<TypeConstraintSolver> resultBuilder,
-            TypeSignature formalTypeSignature,
-            TypeSignatureProvider actualTypeSignatureProvider,
-            boolean allowCoercion)
-    {
-        if (actualTypeSignatureProvider.hasDependency()) {
-            // Fail if the formal type is not function.
-            // Otherwise do nothing because FunctionConstraintSolver will handle type relationship constraint directly
-            return FunctionType.NAME.equals(formalTypeSignature.getBase());
-        }
-        Set<String> typeVariables = typeVariablesOf(formalTypeSignature);
-        Set<String> longVariables = longVariablesOf(formalTypeSignature);
-        resultBuilder.add(new TypeRelationshipConstraintSolver(
-                formalTypeSignature,
-                typeVariables,
-                longVariables,
-                typeManager.getType(actualTypeSignatureProvider.getTypeSignature()),
-                allowCoercion));
-        return true;
     }
 
     private class TypeRelationshipConstraintSolver

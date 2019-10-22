@@ -86,17 +86,11 @@ public class TransactionsSystemTable
     public RecordCursor cursor(ConnectorTransactionHandle transactionHandle, ConnectorSession session, TupleDomain<Integer> constraint)
     {
         Builder table = InMemoryRecordSet.builder(transactionsTable);
-        for (TransactionInfo info : transactionManager.getAllTransactionInfos()) {
-            table.addRow(
-                    info.getTransactionId().toString(),
-                    info.getIsolationLevel().toString(),
-                    info.isReadOnly(),
-                    info.isAutoCommitContext(),
-                    info.getCreateTime().getMillis(),
-                    (long) info.getIdleTime().getValue(TimeUnit.SECONDS),
-                    info.getWrittenConnectorId().map(ConnectorId::getCatalogName).orElse(null),
-                    createStringsBlock(info.getConnectorIds()));
-        }
+        transactionManager.getAllTransactionInfos().forEach(info -> table.addRow(info.getTransactionId().toString(), info.getIsolationLevel().toString(), info.isReadOnly(),
+				info.isAutoCommitContext(), info.getCreateTime().getMillis(),
+				(long) info.getIdleTime().getValue(TimeUnit.SECONDS),
+				info.getWrittenConnectorId().map(ConnectorId::getCatalogName).orElse(null),
+				createStringsBlock(info.getConnectorIds())));
         return table.build().cursor();
     }
 
@@ -104,14 +98,14 @@ public class TransactionsSystemTable
     {
         VarcharType varchar = createUnboundedVarcharType();
         BlockBuilder builder = varchar.createBlockBuilder(null, values.size());
-        for (ConnectorId value : values) {
+        values.forEach(value -> {
             if (value == null) {
                 builder.appendNull();
             }
             else {
                 varchar.writeString(builder, value.getCatalogName());
             }
-        }
+        });
         return builder.build();
     }
 }

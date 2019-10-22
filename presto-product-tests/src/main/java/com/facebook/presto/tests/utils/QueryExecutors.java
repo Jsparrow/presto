@@ -19,30 +19,30 @@ import static io.prestodb.tempto.context.ThreadLocalTestContextHolder.testContex
 
 public class QueryExecutors
 {
-    public static QueryExecutor onPresto()
+    private QueryExecutors() {}
+
+	public static QueryExecutor onPresto()
     {
         return testContext().getDependency(QueryExecutor.class, "presto");
     }
 
-    public static QueryExecutor connectToPresto(String prestoConfig)
+	public static QueryExecutor connectToPresto(String prestoConfig)
     {
         return testContext().getDependency(QueryExecutor.class, prestoConfig);
     }
 
-    public static QueryExecutor onHive()
+	public static QueryExecutor onHive()
     {
         return testContext().getDependency(QueryExecutor.class, "hive");
     }
 
-    public static QueryExecutor onSqlServer()
+	public static QueryExecutor onSqlServer()
     {
         return testContext().getDependency(QueryExecutor.class, "sqlserver");
     }
 
-    public static QueryExecutor onMySql()
+	public static QueryExecutor onMySql()
     {
         return testContext().getDependency(QueryExecutor.class, "mysql");
     }
-
-    private QueryExecutors() {}
 }

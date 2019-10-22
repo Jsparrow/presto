@@ -90,7 +90,8 @@ public class MergingHashAggregationBuilder
             boolean reset = true;
             long memorySize;
 
-            public TransformationState<WorkProcessor<Page>> process(Optional<Page> inputPageOptional)
+            @Override
+			public TransformationState<WorkProcessor<Page>> process(Optional<Page> inputPageOptional)
             {
                 if (reset) {
                     rebuildHashAggregationBuilder();

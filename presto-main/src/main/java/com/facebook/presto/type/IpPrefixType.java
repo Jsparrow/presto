@@ -115,7 +115,7 @@ public class IpPrefixType
         try {
             String addrString = InetAddresses.toAddrString(InetAddress.getByAddress(getSlice(block, position).getBytes(0, 2 * Long.BYTES)));
             String prefixString = Integer.toString(getSlice(block, position).getByte(2 * Long.BYTES) & 0xff);
-            return addrString + "/" + prefixString;
+            return new StringBuilder().append(addrString).append("/").append(prefixString).toString();
         }
         catch (UnknownHostException e) {
             throw new IllegalArgumentException(e);
@@ -144,7 +144,7 @@ public class IpPrefixType
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         if (length != getFixedSize()) {
-            throw new IllegalStateException("Expected entry size to be exactly " + getFixedSize() + " but was " + length);
+            throw new IllegalStateException(new StringBuilder().append("Expected entry size to be exactly ").append(getFixedSize()).append(" but was ").append(length).toString());
         }
         blockBuilder.writeBytes(value, 0, length);
         blockBuilder.closeEntry();

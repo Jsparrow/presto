@@ -135,10 +135,11 @@ public class MapColumnWriter
 
         // write keys and value
         Block keysBlock = columnarMap.getKeysBlock();
-        if (keysBlock.getPositionCount() > 0) {
-            keyWriter.writeBlock(keysBlock);
-            valueWriter.writeBlock(columnarMap.getValuesBlock());
-        }
+        if (keysBlock.getPositionCount() <= 0) {
+			return;
+		}
+		keyWriter.writeBlock(keysBlock);
+		valueWriter.writeBlock(columnarMap.getValuesBlock());
     }
 
     @Override

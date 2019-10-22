@@ -89,15 +89,11 @@ public class TableJdbcTable
             QualifiedTablePrefix prefix = tablePrefix(catalog, schemaFilter, tableFilter);
 
             if (FilterUtil.emptyOrEquals(typeFilter, "TABLE")) {
-                for (SchemaTableName name : listTables(session, metadata, accessControl, prefix)) {
-                    table.addRow(tableRow(catalog, name, "TABLE"));
-                }
+                listTables(session, metadata, accessControl, prefix).forEach(name -> table.addRow(tableRow(catalog, name, "TABLE")));
             }
 
             if (FilterUtil.emptyOrEquals(typeFilter, "VIEW")) {
-                for (SchemaTableName name : listViews(session, metadata, accessControl, prefix)) {
-                    table.addRow(tableRow(catalog, name, "VIEW"));
-                }
+                listViews(session, metadata, accessControl, prefix).forEach(name -> table.addRow(tableRow(catalog, name, "VIEW")));
             }
         }
         return table.build().cursor();

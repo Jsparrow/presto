@@ -84,7 +84,31 @@ public class BenchmarkJsonToArrayCast
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    @Test
+    public void verify()
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkJsonToArrayCast().benchmark(data);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkJsonToArrayCast().benchmark(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkJsonToArrayCast.class.getSimpleName()).append(".*").toString())
+                .warmupMode(WarmupMode.BULK_INDI)
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -180,29 +204,5 @@ public class BenchmarkJsonToArrayCast
         {
             return page;
         }
-    }
-
-    @Test
-    public void verify()
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkJsonToArrayCast().benchmark(data);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkJsonToArrayCast().benchmark(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkJsonToArrayCast.class.getSimpleName() + ".*")
-                .warmupMode(WarmupMode.BULK_INDI)
-                .build();
-        new Runner(options).run();
     }
 }

@@ -28,38 +28,26 @@ import static java.sql.JDBCType.VARCHAR;
 
 public class CassandraTpchTableDefinitions
 {
-    private CassandraTpchTableDefinitions() {}
-
     public static final ImmutableList<JDBCType> NATION_TYPES = ImmutableList.of(BIGINT, VARCHAR, BIGINT, VARCHAR);
 
-    // TpchTable.NATION does provide data in order: nationkey, name, regionkey, comment. Unfortunately Cassandra reorders columns,
+	// TpchTable.NATION does provide data in order: nationkey, name, regionkey, comment. Unfortunately Cassandra reorders columns,
     // so schema will be: nationkey, comment, name, regionkey (primary key first - nationkey, then alphabetical order: comment, name, regionkey)
     // reordering is solved by providing mapping list
     public static final CassandraTableDefinition CASSANDRA_NATION = CassandraTableDefinition.cassandraBuilder("nation")
             .withDatabase(CONNECTOR_NAME)
             .withSchema(KEY_SPACE)
-            .setCreateTableDDLTemplate("CREATE TABLE %NAME%(" +
-                    "   n_nationkey     BIGINT," +
-                    "   n_name          VARCHAR," +
-                    "   n_regionkey     BIGINT," +
-                    "   n_comment       VARCHAR," +
-                    "   primary key(n_nationkey))")
+            .setCreateTableDDLTemplate(new StringBuilder().append("CREATE TABLE %NAME%(").append("   n_nationkey     BIGINT,").append("   n_name          VARCHAR,").append("   n_regionkey     BIGINT,").append("   n_comment       VARCHAR,").append("   primary key(n_nationkey))").toString())
             .setDataSource(new CassandraTpchDataSource(TpchTable.NATION, ImmutableList.of(0, 2, 3, 1), NATION_TYPES, 1.0))
             .build();
 
-    public static final ImmutableList<JDBCType> SUPPLIER_TYPES = ImmutableList.of(BIGINT, VARCHAR, VARCHAR, BIGINT, VARCHAR, DOUBLE, VARCHAR);
-    public static final CassandraTableDefinition CASSANDRA_SUPPLIER = CassandraTableDefinition.cassandraBuilder("supplier")
+	public static final ImmutableList<JDBCType> SUPPLIER_TYPES = ImmutableList.of(BIGINT, VARCHAR, VARCHAR, BIGINT, VARCHAR, DOUBLE, VARCHAR);
+
+	public static final CassandraTableDefinition CASSANDRA_SUPPLIER = CassandraTableDefinition.cassandraBuilder("supplier")
             .withDatabase(CONNECTOR_NAME)
             .withSchema(KEY_SPACE)
-            .setCreateTableDDLTemplate("CREATE TABLE %NAME%(" +
-                    "   s_suppkey     BIGINT," +
-                    "   s_name        VARCHAR," +
-                    "   s_address     VARCHAR," +
-                    "   s_nationkey   BIGINT," +
-                    "   s_phone       VARCHAR," +
-                    "   s_acctbal     DOUBLE," +
-                    "   s_comment     VARCHAR," +
-                    "   primary key(s_suppkey))")
+            .setCreateTableDDLTemplate(new StringBuilder().append("CREATE TABLE %NAME%(").append("   s_suppkey     BIGINT,").append("   s_name        VARCHAR,").append("   s_address     VARCHAR,").append("   s_nationkey   BIGINT,").append("   s_phone       VARCHAR,").append("   s_acctbal     DOUBLE,").append("   s_comment     VARCHAR,")
+					.append("   primary key(s_suppkey))").toString())
             .setDataSource(new CassandraTpchDataSource(TpchTable.SUPPLIER, ImmutableList.of(0, 4, 2, 5, 6, 1, 3), SUPPLIER_TYPES, 1.0))
             .build();
+	private CassandraTpchTableDefinitions() {}
 }

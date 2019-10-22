@@ -43,13 +43,7 @@ public class TestTsvPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "first\tlast\tquantity\n" +
-                "hello\tworld\t123\n" +
-                "a\t\t4.5\n" +
-                "some long\\ntext\\tdone\tmore\\ntext\t4567\n" +
-                "bye\tdone\t-15\n" +
-                "oops\\0a\\nb\\rc\\bd\\fe\\tf\\\\g\1done\tescape\t9\n";
+        String expected = new StringBuilder().append("").append("first\tlast\tquantity\n").append("hello\tworld\t123\n").append("a\t\t4.5\n").append("some long\\ntext\\tdone\tmore\\ntext\t4567\n").append("bye\tdone\t-15\n").append("oops\\0a\\nb\\rc\\bd\\fe\\tf\\\\g\1done\tescape\t9\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -81,9 +75,7 @@ public class TestTsvPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "hello\tworld\t123\n" +
-                "a\t\t4.5\n";
+        String expected = new StringBuilder().append("").append("hello\tworld\t123\n").append("a\t\t4.5\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }

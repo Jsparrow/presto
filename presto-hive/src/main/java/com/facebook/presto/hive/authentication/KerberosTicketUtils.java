@@ -67,7 +67,7 @@ final class KerberosTicketUtils
         if (principal == null) {
             return false;
         }
-        if (principal.getName().equals("krbtgt/" + principal.getRealm() + "@" + principal.getRealm())) {
+        if (principal.getName().equals(new StringBuilder().append("krbtgt/").append(principal.getRealm()).append("@").append(principal.getRealm()).toString())) {
             return true;
         }
         return false;

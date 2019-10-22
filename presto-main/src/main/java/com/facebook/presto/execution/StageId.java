@@ -25,52 +25,52 @@ import static java.util.Objects.requireNonNull;
 
 public class StageId
 {
-    @JsonCreator
+    private final QueryId queryId;
+	private final int id;
+
+	public StageId(QueryId queryId, int id)
+    {
+        this.queryId = requireNonNull(queryId, "queryId is null");
+        this.id = id;
+    }
+
+	@JsonCreator
     public static StageId valueOf(String stageId)
     {
         List<String> ids = QueryId.parseDottedId(stageId, 2, "stageId");
         return valueOf(ids);
     }
 
-    public static StageId valueOf(List<String> ids)
+	public static StageId valueOf(List<String> ids)
     {
         checkArgument(ids.size() == 2, "Expected two ids but got: %s", ids);
         return new StageId(new QueryId(ids.get(0)), Integer.parseInt(ids.get(1)));
     }
 
-    private final QueryId queryId;
-    private final int id;
-
-    public StageId(QueryId queryId, int id)
-    {
-        this.queryId = requireNonNull(queryId, "queryId is null");
-        this.id = id;
-    }
-
-    public QueryId getQueryId()
+	public QueryId getQueryId()
     {
         return queryId;
     }
 
-    public int getId()
+	public int getId()
     {
         return id;
     }
 
-    @Override
+	@Override
     @JsonValue
     public String toString()
     {
-        return queryId + "." + id;
+        return new StringBuilder().append(queryId).append(".").append(id).toString();
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(id, queryId);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {

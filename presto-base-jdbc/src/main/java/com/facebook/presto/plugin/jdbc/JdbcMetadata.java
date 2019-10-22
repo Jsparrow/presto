@@ -48,11 +48,14 @@ import java.util.stream.Collectors;
 import static com.facebook.presto.spi.StandardErrorCode.PERMISSION_DENIED;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcMetadata
         implements ConnectorMetadata
 {
-    private final JdbcClient jdbcClient;
+    private static final Logger logger = LoggerFactory.getLogger(JdbcMetadata.class);
+	private final JdbcClient jdbcClient;
     private final boolean allowDropTable;
 
     private final AtomicReference<Runnable> rollbackAction = new AtomicReference<>();
@@ -101,9 +104,7 @@ public class JdbcMetadata
         JdbcTableHandle handle = (JdbcTableHandle) table;
 
         ImmutableList.Builder<ColumnMetadata> columnMetadata = ImmutableList.builder();
-        for (JdbcColumnHandle column : jdbcClient.getColumns(session, handle)) {
-            columnMetadata.add(column.getColumnMetadata());
-        }
+        jdbcClient.getColumns(session, handle).forEach(column -> columnMetadata.add(column.getColumnMetadata()));
         return new ConnectorTableMetadata(handle.getSchemaTableName(), columnMetadata.build());
     }
 
@@ -119,9 +120,7 @@ public class JdbcMetadata
         JdbcTableHandle jdbcTableHandle = (JdbcTableHandle) tableHandle;
 
         ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
-        for (JdbcColumnHandle column : jdbcClient.getColumns(session, jdbcTableHandle)) {
-            columnHandles.put(column.getColumnMetadata().getName(), column);
-        }
+        jdbcClient.getColumns(session, jdbcTableHandle).forEach(column -> columnHandles.put(column.getColumnMetadata().getName(), column));
         return columnHandles.build();
     }
 
@@ -145,6 +144,7 @@ public class JdbcMetadata
                 columns.put(tableName, getTableMetadata(session, tableHandle).getColumns());
             }
             catch (TableNotFoundException e) {
+				logger.error(e.getMessage(), e);
                 // table disappeared during listing operation
             }
         }

@@ -52,10 +52,14 @@ import static java.util.Objects.requireNonNull;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractTestType
 {
-    private final BlockEncodingSerde blockEncodingSerde = new BlockEncodingManager(new TypeRegistry());
+    private static final Logger logger = LoggerFactory.getLogger(AbstractTestType.class);
+
+	private final BlockEncodingSerde blockEncodingSerde = new BlockEncodingManager(new TypeRegistry());
 
     private final Class<?> objectValueType;
     private final Block testBlock;
@@ -113,13 +117,11 @@ public abstract class AbstractTestType
     @Test
     public void testBlock()
     {
-        for (Entry<Integer, Object> entry : expectedStackValues.entrySet()) {
-            assertPositionEquals(testBlock, entry.getKey(), entry.getValue(), expectedObjectValues.get(entry.getKey()));
-        }
-        for (Entry<Integer, Object> entry : expectedStackValues.entrySet()) {
+        expectedStackValues.entrySet().forEach(entry -> assertPositionEquals(testBlock, entry.getKey(), entry.getValue(), expectedObjectValues.get(entry.getKey())));
+        expectedStackValues.entrySet().forEach(entry -> {
             assertPositionEquals(testBlockWithNulls, entry.getKey() * 2, entry.getValue(), expectedObjectValues.get(entry.getKey()));
             assertPositionEquals(testBlockWithNulls, (entry.getKey() * 2) + 1, null, null);
-        }
+        });
     }
 
     protected void assertPositionEquals(Block block, int position, Object expectedStackValue, Object expectedObjectValue)
@@ -156,6 +158,7 @@ public abstract class AbstractTestType
                 fail("Expected UnsupportedOperationException");
             }
             catch (UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
 
@@ -180,6 +183,7 @@ public abstract class AbstractTestType
                 fail("Expected UnsupportedOperationException");
             }
             catch (UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
 
@@ -211,18 +215,21 @@ public abstract class AbstractTestType
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getDouble(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getObject(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == long.class) {
@@ -232,18 +239,21 @@ public abstract class AbstractTestType
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getDouble(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getObject(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == double.class) {
@@ -253,18 +263,21 @@ public abstract class AbstractTestType
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getLong(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getObject(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == Slice.class) {
@@ -274,24 +287,28 @@ public abstract class AbstractTestType
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getLong(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getDouble(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getObject(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else {
@@ -305,24 +322,28 @@ public abstract class AbstractTestType
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getLong(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getDouble(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getSlice(block, position);
                 fail("Expected IllegalStateException or UnsupportedOperationException");
             }
             catch (IllegalStateException | UnsupportedOperationException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
     }
@@ -334,12 +355,14 @@ public abstract class AbstractTestType
             fail("expected RuntimeException");
         }
         catch (RuntimeException expected) {
+			logger.error(expected.getMessage(), expected);
         }
         try {
             type.getObjectValue(SESSION, block, block.getPositionCount());
             fail("expected RuntimeException");
         }
         catch (RuntimeException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         try {
@@ -347,12 +370,14 @@ public abstract class AbstractTestType
             fail("expected RuntimeException");
         }
         catch (RuntimeException expected) {
+			logger.error(expected.getMessage(), expected);
         }
         try {
             type.hash(block, block.getPositionCount());
             fail("expected RuntimeException");
         }
         catch (RuntimeException expected) {
+			logger.error(expected.getMessage(), expected);
         }
 
         if (type.isComparable() && !(type instanceof UnknownType)) {
@@ -362,12 +387,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.equalTo(block, block.getPositionCount(), other, 0);
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
 
@@ -378,12 +405,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 ASC_NULLS_FIRST.compareBlockValue(type, block, block.getPositionCount(), other, 0);
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
 
@@ -393,12 +422,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getBoolean(block, block.getPositionCount());
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == long.class) {
@@ -407,12 +438,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getLong(block, block.getPositionCount());
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == double.class) {
@@ -421,12 +454,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getDouble(block, block.getPositionCount());
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
         else if (type.getJavaType() == Slice.class) {
@@ -435,12 +470,14 @@ public abstract class AbstractTestType
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
             try {
                 type.getSlice(block, block.getPositionCount());
                 fail("expected RuntimeException");
             }
             catch (RuntimeException expected) {
+				logger.error(expected.getMessage(), expected);
             }
         }
     }
@@ -524,7 +561,7 @@ public abstract class AbstractTestType
             Object[] elementNonNullValues = elementTypes.stream().map(AbstractTestType::getNonNullValueForType).toArray(Object[]::new);
             return toRow(elementTypes, elementNonNullValues);
         }
-        throw new IllegalStateException("Unsupported Java type " + type.getJavaType() + " (for type " + type + ")");
+        throw new IllegalStateException(new StringBuilder().append("Unsupported Java type ").append(type.getJavaType()).append(" (for type ").append(type).append(")").toString());
     }
 
     private Block toBlock(Object value)

@@ -35,24 +35,24 @@ import static org.testng.Assert.assertEquals;
 
 public final class BytecodeExpressionAssertions
 {
-    private BytecodeExpressionAssertions()
+    public static final AtomicBoolean DUMP_BYTECODE_TREE = new AtomicBoolean();
+
+	private BytecodeExpressionAssertions()
     {
     }
 
-    public static final AtomicBoolean DUMP_BYTECODE_TREE = new AtomicBoolean();
-
-    static void assertBytecodeExpressionType(BytecodeExpression expression, ParameterizedType type)
+	static void assertBytecodeExpressionType(BytecodeExpression expression, ParameterizedType type)
     {
         assertEquals(expression.getType(), type);
     }
 
-    public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering)
+	public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering)
             throws Exception
     {
         assertBytecodeExpression(expression, expected, expectedRendering, Optional.empty());
     }
 
-    public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering, Optional<ClassLoader> parentClassLoader)
+	public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
         assertEquals(expression.toString(), expectedRendering);
@@ -60,43 +60,43 @@ public final class BytecodeExpressionAssertions
         assertBytecodeNode(expression.ret(), expression.getType(), expected, parentClassLoader);
     }
 
-    public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, ClassLoader parentClassLoader)
+	public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, ClassLoader parentClassLoader)
             throws Exception
     {
         assertBytecodeExpression(expression, expected, Optional.of(parentClassLoader));
     }
 
-    public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, Optional<ClassLoader> parentClassLoader)
+	public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
         assertBytecodeNode(expression.ret(), expression.getType(), expected, parentClassLoader);
     }
 
-    public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected)
+	public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected)
             throws Exception
     {
         assertBytecodeNode(node, returnType, expected, Optional.empty());
     }
 
-    public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
+	public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
         assertEquals(execute(context -> node, returnType, parentClassLoader), expected);
     }
 
-    public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected)
+	public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected)
             throws Exception
     {
         assertBytecodeNode(nodeGenerator, returnType, expected, Optional.empty());
     }
 
-    public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
+	public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
         assertEquals(execute(nodeGenerator, returnType, parentClassLoader), expected);
     }
 
-    public static Object execute(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Optional<ClassLoader> parentClassLoader)
+	public static Object execute(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
         ClassDefinition classDefinition = new ClassDefinition(

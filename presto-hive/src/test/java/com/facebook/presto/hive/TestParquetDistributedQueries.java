@@ -53,11 +53,7 @@ public class TestParquetDistributedQueries
     @Test
     public void testSubfieldPruning()
     {
-        getQueryRunner().execute("CREATE TABLE test_subfield_pruning AS " +
-                "SELECT orderkey, linenumber, shipdate, " +
-                "   CAST(ROW(orderkey, linenumber, ROW(day(shipdate), month(shipdate), year(shipdate))) " +
-                "       AS ROW(orderkey BIGINT, linenumber INTEGER, shipdate ROW(ship_day TINYINT, ship_month TINYINT, ship_year INTEGER))) AS info " +
-                "FROM lineitem");
+        getQueryRunner().execute(new StringBuilder().append("CREATE TABLE test_subfield_pruning AS ").append("SELECT orderkey, linenumber, shipdate, ").append("   CAST(ROW(orderkey, linenumber, ROW(day(shipdate), month(shipdate), year(shipdate))) ").append("       AS ROW(orderkey BIGINT, linenumber INTEGER, shipdate ROW(ship_day TINYINT, ship_month TINYINT, ship_year INTEGER))) AS info ").append("FROM lineitem").toString());
 
         try {
             assertQuery("SELECT info.orderkey, info.shipdate.ship_month FROM test_subfield_pruning", "SELECT orderkey, month(shipdate) FROM lineitem");

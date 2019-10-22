@@ -96,9 +96,8 @@ class PolymorphicScalarFunction
     {
         ImmutableList.Builder<ScalarImplementationChoice> implementationChoices = ImmutableList.builder();
 
-        for (PolymorphicScalarFunctionChoice choice : choices) {
-            implementationChoices.add(getScalarFunctionImplementationChoice(boundVariables, typeManager, functionManager, choice));
-        }
+        choices.forEach(choice -> implementationChoices
+				.add(getScalarFunctionImplementationChoice(boundVariables, typeManager, functionManager, choice)));
 
         return new ScalarFunctionImplementation(implementationChoices.build());
     }
@@ -119,7 +118,8 @@ class PolymorphicScalarFunction
             for (MethodAndNativeContainerTypes candidateMethod : candidateMethodsGroup.getMethods()) {
                 if (matchesParameterAndReturnTypes(candidateMethod, resolvedParameterTypes, resolvedReturnType, choice.getArgumentProperties(), choice.isNullableResult())) {
                     if (matchingMethod.isPresent()) {
-                        throw new IllegalStateException("two matching methods (" + matchingMethod.get().getMethod().getName() + " and " + candidateMethod.getMethod().getName() + ") for parameter types " + resolvedParameterTypes);
+                        throw new IllegalStateException(new StringBuilder().append("two matching methods (").append(matchingMethod.get().getMethod().getName()).append(" and ").append(candidateMethod.getMethod().getName()).append(") for parameter types ")
+								.append(resolvedParameterTypes).toString());
                     }
 
                     matchingMethod = Optional.of(candidateMethod);

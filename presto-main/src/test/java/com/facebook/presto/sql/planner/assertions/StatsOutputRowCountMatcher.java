@@ -43,6 +43,6 @@ public class StatsOutputRowCountMatcher
     @Override
     public String toString()
     {
-        return "expectedOutputRowCount(" + expectedOutputRowCount + ")";
+        return new StringBuilder().append("expectedOutputRowCount(").append(expectedOutputRowCount).append(")").toString();
     }
 }

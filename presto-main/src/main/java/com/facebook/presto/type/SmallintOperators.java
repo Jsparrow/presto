@@ -247,7 +247,28 @@ public final class SmallintOperators
         return SmallintType.hash((short) value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(SATURATED_FLOOR_CAST)
+    @SqlType(StandardTypes.TINYINT)
+    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.SMALLINT) long value)
+    {
+        return SignedBytes.saturatedCast(value);
+    }
+
+	@ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.SMALLINT) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.SMALLINT) long value)
+    {
+        return XxHash64.hash(value);
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class SmallintDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -281,26 +302,5 @@ public final class SmallintOperators
             }
             return notEqual(SMALLINT.getLong(left, leftPosition), SMALLINT.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(SATURATED_FLOOR_CAST)
-    @SqlType(StandardTypes.TINYINT)
-    public static long saturatedFloorCastToTinyint(@SqlType(StandardTypes.SMALLINT) long value)
-    {
-        return SignedBytes.saturatedCast(value);
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.SMALLINT) long value, @IsNull boolean isNull)
-    {
-        return isNull;
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.SMALLINT) long value)
-    {
-        return XxHash64.hash(value);
     }
 }

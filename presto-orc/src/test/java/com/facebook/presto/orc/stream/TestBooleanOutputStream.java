@@ -40,15 +40,15 @@ public class TestBooleanOutputStream
                 ImmutableList.of(1, 4, 8, 1024, 10000),
                 ImmutableList.of(14000, 1, 2));
 
-        for (List<Integer> counts : testGroups) {
+        testGroups.forEach(counts -> {
             OrcOutputBuffer buffer = new OrcOutputBuffer(NONE, 1024);
             BooleanOutputStream output = new BooleanOutputStream(buffer);
 
             // write multiple booleans together
-            for (int count : counts) {
+			counts.stream().mapToInt(Integer::valueOf).forEach(count -> {
                 output.writeBooleans(count, true);
                 output.recordCheckpoint();
-            }
+            });
             output.close();
 
             List<BooleanStreamCheckpoint> batchWriteCheckpoints = output.getCheckpoints();
@@ -59,12 +59,12 @@ public class TestBooleanOutputStream
             // write one boolean a time
             buffer.reset();
             output.reset();
-            for (int count : counts) {
+            counts.stream().mapToInt(Integer::valueOf).forEach(count -> {
                 for (int i = 0; i < count; i++) {
                     output.writeBoolean(true);
                 }
                 output.recordCheckpoint();
-            }
+            });
             output.close();
             List<BooleanStreamCheckpoint> singleWriteCheckpoints = output.getCheckpoints();
             slice = new DynamicSliceOutput(128);
@@ -76,7 +76,7 @@ public class TestBooleanOutputStream
                 assertTrue(checkpointsEqual(batchWriteCheckpoints.get(i), singleWriteCheckpoints.get(i)));
             }
             assertEquals(batchWriteBuffer, singleWriteBuffer);
-        }
+        });
     }
 
     private static boolean checkpointsEqual(BooleanStreamCheckpoint left, BooleanStreamCheckpoint right)

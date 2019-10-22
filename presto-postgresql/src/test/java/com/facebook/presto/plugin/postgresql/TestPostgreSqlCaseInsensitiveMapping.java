@@ -109,10 +109,7 @@ public class TestPostgreSqlCaseInsensitiveMapping
             assertUpdate("INSERT INTO someschema.nonlowercasetable (upper_case_name) VALUES ('upper')", 1);
             assertQuery(
                     "SELECT * FROM someschema.nonlowercasetable",
-                    "VALUES ('a', 'b', 'c')," +
-                            "('lower', NULL, NULL)," +
-                            "(NULL, 'mixed', NULL)," +
-                            "(NULL, NULL, 'upper')");
+                    new StringBuilder().append("VALUES ('a', 'b', 'c'),").append("('lower', NULL, NULL),").append("(NULL, 'mixed', NULL),").append("(NULL, NULL, 'upper')").toString());
         }
     }
 

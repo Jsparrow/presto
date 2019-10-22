@@ -38,11 +38,15 @@ import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.tableS
 import static com.facebook.presto.sql.planner.assertions.PlanMatchPattern.values;
 import static com.facebook.presto.sql.planner.plan.JoinNode.Type.INNER;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestPlanMatchingFramework
         extends BasePlanTest
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestPlanMatchingFramework.class);
+
+	@Test
     public void testOutput()
     {
         assertMinimallyOptimizedPlan("SELECT orderkey FROM lineitem",
@@ -208,6 +212,7 @@ public class TestPlanMatchingFramework
             fail("Plans should not have matched!");
         }
         catch (AssertionError e) {
+			logger.error(e.getMessage(), e);
             //ignored
         }
     }

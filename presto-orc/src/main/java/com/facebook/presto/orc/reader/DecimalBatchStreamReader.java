@@ -172,24 +172,25 @@ public class DecimalBatchStreamReader
     private void seekToOffset()
             throws IOException
     {
-        if (readOffset > 0) {
-            if (presentStream != null) {
-                // skip ahead the present bit reader, but count the set bits
-                // and use this as the skip size for the data reader
-                readOffset = presentStream.countBitsSet(readOffset);
-            }
-            if (readOffset > 0) {
-                if (decimalStream == null) {
-                    throw new OrcCorruptionException(streamDescriptor.getOrcDataSourceId(), "Value is not null but decimal stream is not present");
-                }
-                if (scaleStream == null) {
-                    throw new OrcCorruptionException(streamDescriptor.getOrcDataSourceId(), "Value is not null but scale stream is not present");
-                }
+        if (readOffset <= 0) {
+			return;
+		}
+		if (presentStream != null) {
+		    // skip ahead the present bit reader, but count the set bits
+		    // and use this as the skip size for the data reader
+		    readOffset = presentStream.countBitsSet(readOffset);
+		}
+		if (readOffset > 0) {
+		    if (decimalStream == null) {
+		        throw new OrcCorruptionException(streamDescriptor.getOrcDataSourceId(), "Value is not null but decimal stream is not present");
+		    }
+		    if (scaleStream == null) {
+		        throw new OrcCorruptionException(streamDescriptor.getOrcDataSourceId(), "Value is not null but scale stream is not present");
+		    }
 
-                decimalStream.skip(readOffset);
-                scaleStream.skip(readOffset);
-            }
-        }
+		    decimalStream.skip(readOffset);
+		    scaleStream.skip(readOffset);
+		}
     }
 
     @Override

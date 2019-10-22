@@ -29,14 +29,14 @@ public class TestInvokeBytecodeExpression
             throws Exception
     {
         assertBytecodeExpression(constantString("foo").invoke("length", int.class), "foo".length(), "\"foo\".length()");
-        assertBytecodeExpression(constantString("foo").invoke("concat", String.class, constantString("bar")), "foo".concat("bar"), "\"foo\".concat(\"bar\")");
+        assertBytecodeExpression(constantString("foo").invoke("concat", String.class, constantString("bar")), ("foo" + "bar"), "\"foo\".concat(\"bar\")");
         assertBytecodeExpression(
                 constantString("foo").invoke("concat", String.class, ImmutableList.of(String.class), constantString("bar")),
-                "foo".concat("bar"),
+                ("foo" + "bar"),
                 "\"foo\".concat(\"bar\")");
         assertBytecodeExpression(
                 constantString("foo").invoke("concat", type(String.class), ImmutableList.of(type(String.class)), constantString("bar")),
-                "foo".concat("bar"),
+                ("foo" + "bar"),
                 "\"foo\".concat(\"bar\")");
     }
 

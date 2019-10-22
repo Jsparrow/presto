@@ -63,23 +63,25 @@ public class HostAddress
      */
     private static final int NO_PORT = -1;
 
-    /**
+	private static final Pattern BRACKET_PATTERN = Pattern.compile("^\\[(.*:.*)\\](?::(\\d*))?$");
+
+	/**
      * Hostname, IPv4/IPv6 literal, or unvalidated nonsense.
      */
     private final String host;
 
-    /**
+	/**
      * Validated port number in the range [0..65535], or NO_PORT
      */
     private final int port;
 
-    private HostAddress(String host, int port)
+	private HostAddress(String host, int port)
     {
         this.host = host;
         this.port = port;
     }
 
-    /**
+	/**
      * Returns the portion of this {@code HostAddress} instance that should
      * represent the hostname or IPv4/IPv6 literal.
      * <p>
@@ -91,7 +93,7 @@ public class HostAddress
         return host;
     }
 
-    /**
+	/**
      * Return true if this instance has a defined port.
      */
     public boolean hasPort()
@@ -99,7 +101,7 @@ public class HostAddress
         return port >= 0;
     }
 
-    /**
+	/**
      * Get the current port number, failing if no port is defined.
      *
      * @return a validated port number, in the range [0..65535]
@@ -114,7 +116,7 @@ public class HostAddress
         return port;
     }
 
-    /**
+	/**
      * Returns the current port number, with a default if no port is defined.
      */
     public int getPortOrDefault(int defaultPort)
@@ -122,7 +124,7 @@ public class HostAddress
         return hasPort() ? port : defaultPort;
     }
 
-    /**
+	/**
      * Build a HostAddress instance from separate host and port values.
      * <p>
      * <p>Note: Non-bracketed IPv6 literals are allowed.
@@ -145,9 +147,7 @@ public class HostAddress
         return new HostAddress(parsedHost.host, port);
     }
 
-    private static final Pattern BRACKET_PATTERN = Pattern.compile("^\\[(.*:.*)\\](?::(\\d*))?$");
-
-    /**
+	/**
      * Split a freeform string into a host and port, without strict validation.
      * <p>
      * Note that the host-only formats will leave the port field undefined.  You
@@ -207,7 +207,7 @@ public class HostAddress
         return new HostAddress(host, port);
     }
 
-    public static HostAddress fromUri(URI httpUri)
+	public static HostAddress fromUri(URI httpUri)
     {
         String host = httpUri.getHost();
         int port = httpUri.getPort();
@@ -219,7 +219,7 @@ public class HostAddress
         }
     }
 
-    /**
+	/**
      * Provide a default port if the parsed string contained only a host.
      * <p>
      * You can chain this after {@link #fromString(String)} to include a port in
@@ -241,19 +241,19 @@ public class HostAddress
         return new HostAddress(host, defaultPort);
     }
 
-    public InetAddress toInetAddress()
+	public InetAddress toInetAddress()
             throws UnknownHostException
     {
         return InetAddress.getByName(getHostText());
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(host, port);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -267,7 +267,7 @@ public class HostAddress
                 Objects.equals(this.port, other.port);
     }
 
-    /**
+	/**
      * Rebuild the host:port string, including brackets if necessary.
      */
     @JsonValue
@@ -287,7 +287,7 @@ public class HostAddress
         return builder.toString();
     }
 
-    /**
+	/**
      * Return true for valid port numbers.
      */
     private static boolean isValidPort(int port)

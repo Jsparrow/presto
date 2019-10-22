@@ -95,7 +95,7 @@ public class TestMinimalFunctionality
         for (long i = 0; i < count; i++) {
             Object value = ImmutableMap.of("id", Long.toString(i), "value", UUID.randomUUID().toString());
             try (Jedis jedis = embeddedRedis.getJedisPool().getResource()) {
-                jedis.set(tableName + ":" + i, jsonEncoder.toString(value));
+                jedis.set(new StringBuilder().append(tableName).append(":").append(i).toString(), jsonEncoder.toString(value));
             }
         }
     }

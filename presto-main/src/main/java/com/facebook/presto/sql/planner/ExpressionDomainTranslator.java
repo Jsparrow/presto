@@ -84,6 +84,8 @@ import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 // No need to inherit from DomainTranslator; the class will be deprecated in the long term
 @Deprecated
@@ -104,7 +106,7 @@ public final class ExpressionDomainTranslator
 
         Map<String, Domain> domains = tupleDomain.getDomains().get();
         return domains.entrySet().stream()
-                .sorted(comparing(entry -> entry.getKey()))
+                .sorted(comparing(Map.Entry::getKey))
                 .map(entry -> toPredicate(entry.getValue(), new SymbolReference(entry.getKey())))
                 .collect(collectingAndThen(toImmutableList(), ExpressionUtils::combineConjuncts));
     }
@@ -283,10 +285,17 @@ public final class ExpressionDomainTranslator
         return new Visitor(metadata, session, types).process(predicate, false);
     }
 
-    private static class Visitor
+    private static Type typeOf(Expression expression, Session session, Metadata metadata, TypeProvider types)
+    {
+        Map<NodeRef<Expression>, Type> expressionTypes = ExpressionAnalyzer.getExpressionTypes(session, metadata, new SqlParser(), types, expression, emptyList(), WarningCollector.NOOP);
+        return expressionTypes.get(NodeRef.of(expression));
+    }
+
+	private static class Visitor
             extends AstVisitor<ExtractionResult, Boolean>
     {
-        private final Metadata metadata;
+        private final Logger logger = LoggerFactory.getLogger(Visitor.class);
+		private final Metadata metadata;
         private final LiteralEncoder literalEncoder;
         private final Session session;
         private final TypeProvider types;
@@ -664,7 +673,8 @@ public final class ExpressionDomainTranslator
                 return Optional.of(metadata.getFunctionManager().lookupCast(SATURATED_FLOOR_CAST, fromType.getTypeSignature(), toType.getTypeSignature()));
             }
             catch (OperatorNotFoundException e) {
-                return Optional.empty();
+                logger.error(e.getMessage(), e);
+				return Optional.empty();
             }
         }
 
@@ -688,20 +698,18 @@ public final class ExpressionDomainTranslator
             checkState(!valueList.getValues().isEmpty(), "InListExpression should never be empty");
 
             ImmutableList.Builder<Expression> disjuncts = ImmutableList.builder();
-            for (Expression expression : valueList.getValues()) {
-                disjuncts.add(new ComparisonExpression(EQUAL, node.getValue(), expression));
-            }
+            valueList.getValues().forEach(expression -> disjuncts.add(new ComparisonExpression(EQUAL, node.getValue(), expression)));
             ExtractionResult extractionResult = process(or(disjuncts.build()), complement);
 
             // preserve original IN predicate as remaining predicate
-            if (extractionResult.tupleDomain.isAll()) {
-                Expression originalPredicate = node;
-                if (complement) {
-                    originalPredicate = new NotExpression(originalPredicate);
-                }
-                return new ExtractionResult(extractionResult.tupleDomain, originalPredicate);
-            }
-            return extractionResult;
+			if (!extractionResult.tupleDomain.isAll()) {
+				return extractionResult;
+			}
+			Expression originalPredicate = node;
+			if (complement) {
+			    originalPredicate = new NotExpression(originalPredicate);
+			}
+			return new ExtractionResult(extractionResult.tupleDomain, originalPredicate);
         }
 
         @Override
@@ -754,12 +762,6 @@ public final class ExpressionDomainTranslator
         {
             return new ExtractionResult(TupleDomain.none(), TRUE_LITERAL);
         }
-    }
-
-    private static Type typeOf(Expression expression, Session session, Metadata metadata, TypeProvider types)
-    {
-        Map<NodeRef<Expression>, Type> expressionTypes = ExpressionAnalyzer.getExpressionTypes(session, metadata, new SqlParser(), types, expression, emptyList(), WarningCollector.NOOP);
-        return expressionTypes.get(NodeRef.of(expression));
     }
 
     private static class NormalizedSimpleComparison

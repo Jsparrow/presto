@@ -92,7 +92,23 @@ public class BenchmarkTransformKey
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkTransformKey().benchmark(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.BULK)
+                .include(new StringBuilder().append(".*").append(BenchmarkTransformKey.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -178,21 +194,5 @@ public class BenchmarkTransformKey
         {
             return page;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkTransformKey().benchmark(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.BULK)
-                .include(".*" + BenchmarkTransformKey.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

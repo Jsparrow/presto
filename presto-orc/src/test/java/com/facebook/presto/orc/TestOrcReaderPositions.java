@@ -411,9 +411,7 @@ public class TestOrcReaderPositions
                 .inspector(createSettableStructObjectInspector("test", BIGINT))
                 .compress(SNAPPY);
         Writer writer = OrcFile.createWriter(new Path(file.toURI()), writerOptions);
-        for (Map.Entry<String, String> entry : metadata.entrySet()) {
-            writer.addUserMetadata(entry.getKey(), ByteBuffer.wrap(entry.getValue().getBytes(UTF_8)));
-        }
+        metadata.entrySet().forEach(entry -> writer.addUserMetadata(entry.getKey(), ByteBuffer.wrap(entry.getValue().getBytes(UTF_8))));
         writer.close();
     }
 

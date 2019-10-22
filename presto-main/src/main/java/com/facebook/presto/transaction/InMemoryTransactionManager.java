@@ -497,7 +497,7 @@ public class InMemoryTransactionManager
                 throw new PrestoException(MULTI_CATALOG_WRITE_CONFLICT, "Multi-catalog writes not supported in a single transaction. Already wrote to catalog " + writtenConnectorId.get());
             }
             if (transactionMetadata.isSingleStatementWritesOnly() && !autoCommitContext) {
-                throw new PrestoException(AUTOCOMMIT_WRITE_CONFLICT, "Catalog " + connectorId + " only supports writes using autocommit");
+                throw new PrestoException(AUTOCOMMIT_WRITE_CONFLICT, new StringBuilder().append("Catalog ").append(connectorId).append(" only supports writes using autocommit").toString());
             }
         }
 
@@ -543,15 +543,15 @@ public class InMemoryTransactionManager
 
         public synchronized ListenableFuture<?> asyncAbort()
         {
-            if (!completedSuccessfully.compareAndSet(null, false)) {
-                if (completedSuccessfully.get()) {
-                    // Should not happen normally
-                    return immediateFailedFuture(new IllegalStateException("Current transaction already committed"));
-                }
-                // Already done
-                return immediateFuture(null);
-            }
-            return abortInternal();
+            if (completedSuccessfully.compareAndSet(null, false)) {
+				return abortInternal();
+			}
+			if (completedSuccessfully.get()) {
+			    // Should not happen normally
+			    return immediateFailedFuture(new IllegalStateException("Current transaction already committed"));
+			}
+			// Already done
+			return immediateFuture(null);
         }
 
         private synchronized ListenableFuture<?> abortInternal()

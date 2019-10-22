@@ -79,7 +79,7 @@ public final class CallExpression
     @Override
     public String toString()
     {
-        return displayName + "(" + String.join(", ", arguments.stream().map(RowExpression::toString).collect(Collectors.toList())) + ")";
+        return new StringBuilder().append(displayName).append("(").append(String.join(", ", arguments.stream().map(RowExpression::toString).collect(Collectors.toList()))).append(")").toString();
     }
 
     @Override

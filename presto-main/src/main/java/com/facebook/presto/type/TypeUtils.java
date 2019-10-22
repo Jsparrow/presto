@@ -83,7 +83,7 @@ public final class TypeUtils
                 return (long) methodHandle.invoke(type.getObject(block, position));
             }
             else {
-                throw new UnsupportedOperationException("Unsupported native container type: " + type.getJavaType() + " with type " + type.getTypeSignature());
+                throw new UnsupportedOperationException(new StringBuilder().append("Unsupported native container type: ").append(type.getJavaType()).append(" with type ").append(type.getTypeSignature()).toString());
             }
         }
         catch (Throwable throwable) {

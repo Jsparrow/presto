@@ -348,15 +348,8 @@ public class TestPredicatePushdown
     public void testConjunctsOrder()
     {
         assertPlan(
-                "select partkey " +
-                        "from (" +
-                        "  select" +
-                        "    partkey," +
-                        "    100/(size-1) x" +
-                        "  from part" +
-                        "  where size <> 1" +
-                        ") " +
-                        "where x = 2",
+                new StringBuilder().append("select partkey ").append("from (").append("  select").append("    partkey,").append("    100/(size-1) x").append("  from part").append("  where size <> 1")
+						.append(") ").append("where x = 2").toString(),
                 anyTree(
                         // Order matters: size<>1 should be before 100/(size-1)=2.
                         // In this particular example, reversing the order leads to div-by-zero error.
@@ -375,10 +368,7 @@ public class TestPredicatePushdown
                         "CUST_KEY", "custkey",
                         "ORDER_KEY", "orderkey"));
         assertPlan(
-                "SELECT * FROM (" +
-                        "SELECT custkey, orderkey, rank() OVER (PARTITION BY custkey  ORDER BY orderdate ASC)" +
-                        "FROM orders" +
-                        ") WHERE custkey = 0 AND orderkey > 0",
+                new StringBuilder().append("SELECT * FROM (").append("SELECT custkey, orderkey, rank() OVER (PARTITION BY custkey  ORDER BY orderdate ASC)").append("FROM orders").append(") WHERE custkey = 0 AND orderkey > 0").toString(),
                 anyTree(
                         filter("ORDER_KEY > BIGINT '0'",
                                 anyTree(
@@ -392,10 +382,7 @@ public class TestPredicatePushdown
     public void testPredicateOnNonDeterministicSymbolsPushedDown()
     {
         assertPlan(
-                "SELECT * FROM (" +
-                        "SELECT random_column, orderkey, rank() OVER (PARTITION BY random_column  ORDER BY orderdate ASC)" +
-                        "FROM (select round(custkey*rand()) random_column, * from orders) " +
-                        ") WHERE random_column > 100",
+                new StringBuilder().append("SELECT * FROM (").append("SELECT random_column, orderkey, rank() OVER (PARTITION BY random_column  ORDER BY orderdate ASC)").append("FROM (select round(custkey*rand()) random_column, * from orders) ").append(") WHERE random_column > 100").toString(),
                 anyTree(
                         node(WindowNode.class,
                                 anyTree(
@@ -410,10 +397,7 @@ public class TestPredicatePushdown
     public void testNonDeterministicPredicateNotPushedDown()
     {
         assertPlan(
-                "SELECT * FROM (" +
-                        "SELECT custkey, orderkey, rank() OVER (PARTITION BY custkey  ORDER BY orderdate ASC)" +
-                        "FROM orders" +
-                        ") WHERE custkey > 100*rand()",
+                new StringBuilder().append("SELECT * FROM (").append("SELECT custkey, orderkey, rank() OVER (PARTITION BY custkey  ORDER BY orderdate ASC)").append("FROM orders").append(") WHERE custkey > 100*rand()").toString(),
                 anyTree(
                         filter("CAST(\"CUST_KEY\" AS double) > (1E2 * \"rand\"())",
                                 anyTree(

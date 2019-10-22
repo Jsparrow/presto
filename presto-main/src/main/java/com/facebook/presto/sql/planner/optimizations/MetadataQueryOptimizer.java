@@ -129,10 +129,10 @@ public class MetadataQueryOptimizer
             ImmutableMap.Builder<VariableReferenceExpression, ColumnHandle> columnBuilder = ImmutableMap.builder();
 
             List<VariableReferenceExpression> inputs = tableScan.getOutputVariables();
-            for (VariableReferenceExpression variable : inputs) {
+            inputs.forEach(variable -> {
                 ColumnHandle column = tableScan.getAssignments().get(variable);
                 columnBuilder.put(variable, column);
-            }
+            });
 
             Map<VariableReferenceExpression, ColumnHandle> columns = columnBuilder.build();
 

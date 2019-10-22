@@ -104,7 +104,7 @@ public class TestJsonExtract
     {
         assertTrue(fieldName.indexOf('"') < 0);
         assertEquals(tokenizePath("$." + fieldName), ImmutableList.of(fieldName));
-        assertEquals(tokenizePath("$.foo." + fieldName + ".bar"), ImmutableList.of("foo", fieldName, "bar"));
+        assertEquals(tokenizePath(new StringBuilder().append("$.foo.").append(fieldName).append(".bar").toString()), ImmutableList.of("foo", fieldName, "bar"));
         assertPathTokenQuoting(fieldName);
     }
 
@@ -127,8 +127,8 @@ public class TestJsonExtract
 
     private static void assertPathTokenQuoting(String fieldName, String expectedTokenizedField)
     {
-        assertEquals(tokenizePath("$[\"" + fieldName + "\"]"), ImmutableList.of(expectedTokenizedField));
-        assertEquals(tokenizePath("$.foo[\"" + fieldName + "\"].bar"), ImmutableList.of("foo", expectedTokenizedField, "bar"));
+        assertEquals(tokenizePath(new StringBuilder().append("$[\"").append(fieldName).append("\"]").toString()), ImmutableList.of(expectedTokenizedField));
+        assertEquals(tokenizePath(new StringBuilder().append("$.foo[\"").append(fieldName).append("\"].bar").toString()), ImmutableList.of("foo", expectedTokenizedField, "bar"));
     }
 
     public static void assertInvalidPath(String path)

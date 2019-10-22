@@ -166,14 +166,14 @@ public class UnaliasSymbolReferences
             Map<VariableReferenceExpression, VariableReferenceExpression> newGroupingMappings = new HashMap<>();
             ImmutableList.Builder<List<VariableReferenceExpression>> newGroupingSets = ImmutableList.builder();
 
-            for (List<VariableReferenceExpression> groupingSet : node.getGroupingSets()) {
+            node.getGroupingSets().forEach(groupingSet -> {
                 ImmutableList.Builder<VariableReferenceExpression> newGroupingSet = ImmutableList.builder();
-                for (VariableReferenceExpression output : groupingSet) {
+                groupingSet.forEach(output -> {
                     newGroupingMappings.putIfAbsent(canonicalize(output), canonicalize(node.getGroupingColumns().get(output)));
                     newGroupingSet.add(canonicalize(output));
-                }
+                });
                 newGroupingSets.add(newGroupingSet.build());
-            }
+            });
 
             return new GroupIdNode(node.getId(), source, newGroupingSets.build(), newGroupingMappings, canonicalizeAndDistinct(node.getAggregationArguments()), canonicalize(node.getGroupIdVariable()));
         }
@@ -197,9 +197,7 @@ public class UnaliasSymbolReferences
         {
             PlanNode source = context.rewrite(node.getSource());
             ImmutableMap.Builder<VariableReferenceExpression, List<VariableReferenceExpression>> builder = ImmutableMap.builder();
-            for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : node.getUnnestVariables().entrySet()) {
-                builder.put(canonicalize(entry.getKey()), entry.getValue());
-            }
+            node.getUnnestVariables().entrySet().forEach(entry -> builder.put(canonicalize(entry.getKey()), entry.getValue()));
             return new UnnestNode(node.getId(), source, canonicalizeAndDistinct(node.getReplicateVariables()), builder.build(), node.getOrdinalityVariable());
         }
 
@@ -209,7 +207,7 @@ public class UnaliasSymbolReferences
             PlanNode source = context.rewrite(node.getSource());
 
             ImmutableMap.Builder<VariableReferenceExpression, WindowNode.Function> functions = ImmutableMap.builder();
-            for (Map.Entry<VariableReferenceExpression, WindowNode.Function> entry : node.getWindowFunctions().entrySet()) {
+            node.getWindowFunctions().entrySet().forEach(entry -> {
                 VariableReferenceExpression variable = entry.getKey();
 
                 // Be aware of the CallExpression handling.
@@ -226,7 +224,7 @@ public class UnaliasSymbolReferences
                                         callExpression.getType(),
                                         rewrittenArguments),
                                 canonicalFrame));
-            }
+            });
 
             return new WindowNode(
                     node.getId(),
@@ -525,7 +523,7 @@ public class UnaliasSymbolReferences
             Optional<VariableReferenceExpression> canonicalLeftHashVariable = canonicalize(node.getLeftHashVariable());
             Optional<VariableReferenceExpression> canonicalRightHashVariable = canonicalize(node.getRightHashVariable());
 
-            if (node.getType().equals(INNER)) {
+            if (node.getType() == INNER) {
                 canonicalCriteria.stream()
                         .filter(clause -> clause.getLeft().getType().equals(clause.getRight().getType()))
                         .filter(clause -> node.getOutputVariables().contains(clause.getLeft()))
@@ -608,9 +606,7 @@ public class UnaliasSymbolReferences
         private static ImmutableList.Builder<PlanNode> rewriteSources(SetOperationNode node, RewriteContext<Void> context)
         {
             ImmutableList.Builder<PlanNode> rewrittenSources = ImmutableList.builder();
-            for (PlanNode source : node.getSources()) {
-                rewrittenSources.add(context.rewrite(source));
-            }
+            node.getSources().forEach(source -> rewrittenSources.add(context.rewrite(source)));
             return rewrittenSources;
         }
 
@@ -646,7 +642,7 @@ public class UnaliasSymbolReferences
         {
             Map<RowExpression, VariableReferenceExpression> computedExpressions = new HashMap<>();
             Assignments.Builder assignments = Assignments.builder();
-            for (Map.Entry<VariableReferenceExpression, RowExpression> entry : oldAssignments.getMap().entrySet()) {
+            oldAssignments.getMap().entrySet().forEach(entry -> {
                 RowExpression expression = canonicalize(entry.getValue());
                 if (expression instanceof VariableReferenceExpression) {
                     // Always map a trivial variable projection
@@ -679,7 +675,7 @@ public class UnaliasSymbolReferences
 
                 VariableReferenceExpression canonical = canonicalize(entry.getKey());
                 assignments.put(canonical, expression);
-            }
+            });
             return assignments.build();
         }
 
@@ -751,12 +747,11 @@ public class UnaliasSymbolReferences
         {
             Set<VariableReferenceExpression> added = new HashSet<>();
             ImmutableList.Builder<VariableReferenceExpression> builder = ImmutableList.builder();
-            for (VariableReferenceExpression variable : outputs) {
-                VariableReferenceExpression canonical = canonicalize(variable);
-                if (added.add(canonical)) {
+            outputs.stream().map(this::canonicalize).forEach(canonical -> {
+				if (added.add(canonical)) {
                     builder.add(canonical);
                 }
-            }
+			});
             return builder.build();
         }
 
@@ -772,13 +767,13 @@ public class UnaliasSymbolReferences
             Set<VariableReferenceExpression> added = new HashSet<>();
             ImmutableList.Builder<VariableReferenceExpression> variables = ImmutableList.builder();
             ImmutableMap.Builder<VariableReferenceExpression, SortOrder> orderings = ImmutableMap.builder();
-            for (VariableReferenceExpression variable : orderingScheme.getOrderByVariables()) {
+            orderingScheme.getOrderByVariables().forEach(variable -> {
                 VariableReferenceExpression canonical = canonicalize(variable);
                 if (added.add(canonical)) {
                     variables.add(canonical);
                     orderings.put(canonical, orderingScheme.getOrdering(variable));
                 }
-            }
+            });
 
             ImmutableMap<VariableReferenceExpression, SortOrder> orderingsMap = orderings.build();
             return new OrderingScheme(variables.build().stream().map(variable -> new Ordering(variable, orderingsMap.get(variable))).collect(toImmutableList()));
@@ -794,9 +789,7 @@ public class UnaliasSymbolReferences
         private List<JoinNode.EquiJoinClause> canonicalizeJoinCriteria(List<JoinNode.EquiJoinClause> criteria)
         {
             ImmutableList.Builder<JoinNode.EquiJoinClause> builder = ImmutableList.builder();
-            for (JoinNode.EquiJoinClause clause : criteria) {
-                builder.add(new JoinNode.EquiJoinClause(canonicalize(clause.getLeft()), canonicalize(clause.getRight())));
-            }
+            criteria.forEach(clause -> builder.add(new JoinNode.EquiJoinClause(canonicalize(clause.getLeft()), canonicalize(clause.getRight()))));
 
             return builder.build();
         }
@@ -804,9 +797,8 @@ public class UnaliasSymbolReferences
         private List<IndexJoinNode.EquiJoinClause> canonicalizeIndexJoinCriteria(List<IndexJoinNode.EquiJoinClause> criteria)
         {
             ImmutableList.Builder<IndexJoinNode.EquiJoinClause> builder = ImmutableList.builder();
-            for (IndexJoinNode.EquiJoinClause clause : criteria) {
-                builder.add(new IndexJoinNode.EquiJoinClause(canonicalize(clause.getProbe()), canonicalize(clause.getIndex())));
-            }
+            criteria.forEach(clause -> builder.add(
+					new IndexJoinNode.EquiJoinClause(canonicalize(clause.getProbe()), canonicalize(clause.getIndex()))));
 
             return builder.build();
         }
@@ -815,21 +807,19 @@ public class UnaliasSymbolReferences
         {
             LinkedHashMap<VariableReferenceExpression, List<VariableReferenceExpression>> result = new LinkedHashMap<>();
             Set<VariableReferenceExpression> addVariables = new HashSet<>();
-            for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : setOperationVariableMap.entrySet()) {
+            setOperationVariableMap.entrySet().forEach(entry -> {
                 VariableReferenceExpression canonicalOutputVariable = canonicalize(entry.getKey());
                 if (addVariables.add(canonicalOutputVariable)) {
                     result.put(canonicalOutputVariable, ImmutableList.copyOf(Iterables.transform(entry.getValue(), this::canonicalize)));
                 }
-            }
+            });
             return result;
         }
 
         private List<VariableReferenceExpression> canonicalizeSetOperationOutputVariables(List<VariableReferenceExpression> setOperationOutputVariables)
         {
             ImmutableList.Builder<VariableReferenceExpression> builder = ImmutableList.builder();
-            for (VariableReferenceExpression variable : setOperationOutputVariables) {
-                builder.add(canonicalize(variable));
-            }
+            setOperationOutputVariables.forEach(variable -> builder.add(canonicalize(variable)));
             return builder.build();
         }
     }

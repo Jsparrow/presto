@@ -49,7 +49,7 @@ public class HashRedisRowDecoder
         }
 
         Map<DecoderColumnHandle, FieldValueProvider> decodedRow = new HashMap<>();
-        for (Map.Entry<DecoderColumnHandle, RedisFieldDecoder<String>> entry : fieldDecoders.entrySet()) {
+        fieldDecoders.entrySet().forEach(entry -> {
             DecoderColumnHandle columnHandle = entry.getKey();
 
             String mapping = columnHandle.getMapping();
@@ -59,7 +59,7 @@ public class HashRedisRowDecoder
 
             RedisFieldDecoder<String> decoder = entry.getValue();
             decodedRow.put(columnHandle, decoder.decode(valueField, columnHandle));
-        }
+        });
         return Optional.of(decodedRow);
     }
 }

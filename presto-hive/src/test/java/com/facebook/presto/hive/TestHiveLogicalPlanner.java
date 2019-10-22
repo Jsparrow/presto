@@ -166,16 +166,8 @@ public class TestHiveLogicalPlanner
     @Test
     public void testPushdownFilterOnSubfields()
     {
-        assertUpdate("CREATE TABLE test_pushdown_filter_on_subfields(" +
-                         "id bigint, " +
-                         "a array(bigint), " +
-                         "b map(varchar, bigint), " +
-                         "c row(" +
-                             "a bigint, " +
-                             "b row(x bigint), " +
-                             "c array(bigint), " +
-                             "d map(bigint, bigint), " +
-                             "e map(varchar, bigint)))");
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_pushdown_filter_on_subfields(").append("id bigint, ").append("a array(bigint), ").append("b map(varchar, bigint), ").append("c row(").append("a bigint, ").append("b row(x bigint), ").append("c array(bigint), ")
+				.append("d map(bigint, bigint), ").append("e map(varchar, bigint)))").toString());
 
         assertPushdownFilterOnSubfields("SELECT * FROM test_pushdown_filter_on_subfields WHERE a[1] = 1",
                         ImmutableMap.of(new Subfield("a[1]"), Domain.singleValue(BIGINT, 1L)));
@@ -461,12 +453,7 @@ public class TestHiveLogicalPlanner
     @Test
     public void testPushdownSubfieldsAssorted()
     {
-        assertUpdate("CREATE TABLE test_pushdown_subfields(" +
-                "id bigint, " +
-                "a array(bigint), " +
-                "b map(bigint, bigint), " +
-                "c map(varchar, bigint), " +
-                "d row(d1 bigint, d2 array(bigint), d3 map(bigint, bigint), d4 row(x double, y double)))");
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_pushdown_subfields(").append("id bigint, ").append("a array(bigint), ").append("b map(bigint, bigint), ").append("c map(varchar, bigint), ").append("d row(d1 bigint, d2 array(bigint), d3 map(bigint, bigint), d4 row(x double, y double)))").toString());
 
         assertPushdownSubfields("SELECT id, a[1], mod(a[2], 3), b[10], c['cat'] + c['dog'], d.d1 * d.d2[5] / d.d3[2], d.d4.x FROM test_pushdown_subfields", "test_pushdown_subfields",
                 ImmutableMap.of(

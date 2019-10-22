@@ -39,7 +39,7 @@ public class RedisTableFieldGroup
     {
         this.dataFormat = requireNonNull(dataFormat, "dataFormat is null");
         this.name = name;
-        if (!dataFormat.equals("set") && !dataFormat.equals("zset")) {
+        if (!"set".equals(dataFormat) && !"zset".equals(dataFormat)) {
             this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields is null"));
         }
         else {

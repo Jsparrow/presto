@@ -143,7 +143,7 @@ public class QueryTracker<T extends TrackedQuery>
             }
 
             log.info("Server shutting down. Query %s has been cancelled", trackedQuery.getQueryId());
-            trackedQuery.fail(new PrestoException(SERVER_SHUTTING_DOWN, "Server is shutting down. Query " + trackedQuery.getQueryId() + " has been cancelled"));
+            trackedQuery.fail(new PrestoException(SERVER_SHUTTING_DOWN, new StringBuilder().append("Server is shutting down. Query ").append(trackedQuery.getQueryId()).append(" has been cancelled").toString()));
             queryCancelled = true;
         }
         if (queryCancelled) {
@@ -162,7 +162,6 @@ public class QueryTracker<T extends TrackedQuery>
     }
 
     public T getQuery(QueryId queryId)
-            throws NoSuchElementException
     {
         return tryGetQuery(queryId)
                 .orElseThrow(NoSuchElementException::new);
@@ -243,14 +242,15 @@ public class QueryTracker<T extends TrackedQuery>
 
         runningTaskCount.set(totalRunningTaskCount);
 
-        if (totalRunningTaskCount > maxTotalRunningTaskCount &&
+        if (!(totalRunningTaskCount > maxTotalRunningTaskCount &&
                 highestRunningTaskCount > maxQueryRunningTaskCount &&
-                highestRunningTaskQuery.isPresent()) {
-            highestRunningTaskQuery.get().fail(new PrestoException(QUERY_HAS_TOO_MANY_STAGES, format(
-                    "Query killed because the cluster is overloaded with too many tasks (%s) and this query was running with the highest number of tasks (%s). %s Otherwise, please try again later.",
-                    totalRunningTaskCount, highestRunningTaskCount, TOO_MANY_STAGES_MESSAGE)));
-            queriesKilledDueToTooManyTask.incrementAndGet();
-        }
+                highestRunningTaskQuery.isPresent())) {
+			return;
+		}
+		highestRunningTaskQuery.get().fail(new PrestoException(QUERY_HAS_TOO_MANY_STAGES, format(
+		        "Query killed because the cluster is overloaded with too many tasks (%s) and this query was running with the highest number of tasks (%s). %s Otherwise, please try again later.",
+		        totalRunningTaskCount, highestRunningTaskCount, TOO_MANY_STAGES_MESSAGE)));
+		queriesKilledDueToTooManyTask.incrementAndGet();
     }
 
     /**

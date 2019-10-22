@@ -145,11 +145,14 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class FunctionAssertions
         implements Closeable
 {
-    private static final ExecutorService EXECUTOR = newCachedThreadPool(daemonThreadsNamed("test-%s"));
+    private static final Logger logger = LoggerFactory.getLogger(FunctionAssertions.class);
+	private static final ExecutorService EXECUTOR = newCachedThreadPool(daemonThreadsNamed("test-%s"));
     private static final ScheduledExecutorService SCHEDULED_EXECUTOR = newScheduledThreadPool(2, daemonThreadsNamed("test-scheduledExecutor-%s"));
 
     private static final SqlParser SQL_PARSER = new SqlParser();
@@ -303,6 +306,7 @@ public final class FunctionAssertions
             fail("Expected to fail");
         }
         catch (RuntimeException e) {
+			logger.error(e.getMessage(), e);
             // Expected
         }
     }
@@ -661,7 +665,7 @@ public final class FunctionAssertions
         HashSet<Boolean> resultSet = new HashSet<>(results);
 
         // we should only have a single result
-        assertTrue(resultSet.size() == 1, "Expected only [" + expected + "] result unique result, but got " + resultSet);
+        assertTrue(resultSet.size() == 1, new StringBuilder().append("Expected only [").append(expected).append("] result unique result, but got ").append(resultSet).toString());
 
         assertEquals((boolean) Iterables.getOnlyElement(resultSet), expected);
     }
@@ -906,7 +910,7 @@ public final class FunctionAssertions
             if (e instanceof UncheckedExecutionException) {
                 e = e.getCause();
             }
-            throw new RuntimeException("Error compiling " + filter + ": " + e.getMessage(), e);
+            throw new RuntimeException(new StringBuilder().append("Error compiling ").append(filter).append(": ").append(e.getMessage()).toString(), e);
         }
     }
 
@@ -920,7 +924,7 @@ public final class FunctionAssertions
             if (e instanceof UncheckedExecutionException) {
                 e = e.getCause();
             }
-            throw new RuntimeException("Error compiling " + projection + ": " + e.getMessage(), e);
+            throw new RuntimeException(new StringBuilder().append("Error compiling ").append(projection).append(": ").append(e.getMessage()).toString(), e);
         }
     }
 
@@ -957,7 +961,7 @@ public final class FunctionAssertions
             if (e instanceof UncheckedExecutionException) {
                 e = e.getCause();
             }
-            throw new RuntimeException("Error compiling filter " + filter + ": " + e.getMessage(), e);
+            throw new RuntimeException(new StringBuilder().append("Error compiling filter ").append(filter).append(": ").append(e.getMessage()).toString(), e);
         }
     }
 
@@ -1019,7 +1023,17 @@ public final class FunctionAssertions
         runner.close();
     }
 
-    private static class TestPageSourceProvider
+    private static Split createRecordSetSplit()
+    {
+        return new Split(new ConnectorId("test"), TestingTransactionHandle.create(), new TestSplit(true));
+    }
+
+	private static Split createNormalSplit()
+    {
+        return new Split(new ConnectorId("test"), TestingTransactionHandle.create(), new TestSplit(false));
+    }
+
+	private static class TestPageSourceProvider
             implements PageSourceProvider
     {
         @Override
@@ -1047,16 +1061,6 @@ public final class FunctionAssertions
                 return new FixedPageSource(ImmutableList.of(SOURCE_PAGE));
             }
         }
-    }
-
-    private static Split createRecordSetSplit()
-    {
-        return new Split(new ConnectorId("test"), TestingTransactionHandle.create(), new TestSplit(true));
-    }
-
-    private static Split createNormalSplit()
-    {
-        return new Split(new ConnectorId("test"), TestingTransactionHandle.create(), new TestSplit(false));
     }
 
     private static class TestSplit

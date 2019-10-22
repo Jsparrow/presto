@@ -67,10 +67,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestBroadcastOutputBuffer
 {
-    private static final PagesSerde PAGES_SERDE = testingPagesSerde();
+    private static final Logger logger = LoggerFactory.getLogger(TestBroadcastOutputBuffer.class);
+	private static final PagesSerde PAGES_SERDE = testingPagesSerde();
     private static final String TASK_INSTANCE_ID = "task-instance-id";
 
     private static final ImmutableList<BigintType> TYPES = ImmutableList.of(BIGINT);
@@ -89,10 +92,11 @@ public class TestBroadcastOutputBuffer
     @AfterClass(alwaysRun = true)
     public void tearDown()
     {
-        if (stateNotificationExecutor != null) {
-            stateNotificationExecutor.shutdownNow();
-            stateNotificationExecutor = null;
-        }
+        if (stateNotificationExecutor == null) {
+			return;
+		}
+		stateNotificationExecutor.shutdownNow();
+		stateNotificationExecutor = null;
     }
 
     @Test
@@ -103,12 +107,14 @@ public class TestBroadcastOutputBuffer
             fail("Expected IllegalStateException");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         try {
             createBroadcastBuffer(createInitialEmptyOutputBuffers(BROADCAST), new DataSize(0, BYTE));
             fail("Expected IllegalStateException");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 
@@ -372,6 +378,7 @@ public class TestBroadcastOutputBuffer
             fail("Expected IllegalStateException from addQueue after noMoreQueues has been called");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 
@@ -1050,34 +1057,6 @@ public class TestBroadcastOutputBuffer
         addPage(buffer, page);
     }
 
-    private static class MockMemoryReservationHandler
-            implements MemoryReservationHandler
-    {
-        private ListenableFuture<?> blockedFuture;
-
-        public MockMemoryReservationHandler(ListenableFuture<?> blockedFuture)
-        {
-            this.blockedFuture = requireNonNull(blockedFuture, "blockedFuture is null");
-        }
-
-        @Override
-        public ListenableFuture<?> reserveMemory(String allocationTag, long delta)
-        {
-            return blockedFuture;
-        }
-
-        @Override
-        public boolean tryReserveMemory(String allocationTag, long delta)
-        {
-            return true;
-        }
-
-        public void updateBlockedFuture(ListenableFuture<?> blockedFuture)
-        {
-            this.blockedFuture = requireNonNull(blockedFuture);
-        }
-    }
-
     private BroadcastOutputBuffer createBroadcastBuffer(OutputBuffers outputBuffers, DataSize dataSize, AggregatedMemoryContext memoryContext, Executor notificationExecutor)
     {
         BroadcastOutputBuffer buffer = new BroadcastOutputBuffer(
@@ -1091,7 +1070,7 @@ public class TestBroadcastOutputBuffer
         return buffer;
     }
 
-    @Test
+	@Test
     public void testBufferFinishesWhenClientBuffersDestroyed()
     {
         BroadcastOutputBuffer buffer = createBroadcastBuffer(
@@ -1119,7 +1098,7 @@ public class TestBroadcastOutputBuffer
         assertTrue(buffer.isFinished());
     }
 
-    @Test
+	@Test
     public void testForceFreeMemory()
             throws Throwable
     {
@@ -1140,7 +1119,7 @@ public class TestBroadcastOutputBuffer
         assertEquals(memoryManager.getBufferedBytes(), 0);
     }
 
-    private BroadcastOutputBuffer createBroadcastBuffer(OutputBuffers outputBuffers, DataSize dataSize)
+	private BroadcastOutputBuffer createBroadcastBuffer(OutputBuffers outputBuffers, DataSize dataSize)
     {
         BroadcastOutputBuffer buffer = new BroadcastOutputBuffer(
                 TASK_INSTANCE_ID,
@@ -1153,9 +1132,37 @@ public class TestBroadcastOutputBuffer
         return buffer;
     }
 
-    private static BufferResult bufferResult(long token, Page firstPage, Page... otherPages)
+	private static BufferResult bufferResult(long token, Page firstPage, Page... otherPages)
     {
         List<Page> pages = ImmutableList.<Page>builder().add(firstPage).add(otherPages).build();
         return createBufferResult(TASK_INSTANCE_ID, token, pages);
+    }
+
+	private static class MockMemoryReservationHandler
+            implements MemoryReservationHandler
+    {
+        private ListenableFuture<?> blockedFuture;
+
+        public MockMemoryReservationHandler(ListenableFuture<?> blockedFuture)
+        {
+            this.blockedFuture = requireNonNull(blockedFuture, "blockedFuture is null");
+        }
+
+        @Override
+        public ListenableFuture<?> reserveMemory(String allocationTag, long delta)
+        {
+            return blockedFuture;
+        }
+
+        @Override
+        public boolean tryReserveMemory(String allocationTag, long delta)
+        {
+            return true;
+        }
+
+        public void updateBlockedFuture(ListenableFuture<?> blockedFuture)
+        {
+            this.blockedFuture = requireNonNull(blockedFuture);
+        }
     }
 }

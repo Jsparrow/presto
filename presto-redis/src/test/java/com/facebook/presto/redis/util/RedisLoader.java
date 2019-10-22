@@ -106,40 +106,41 @@ public class RedisLoader
                 types.set(getTypes(statusInfo.getColumns()));
             }
 
-            if (data.getData() != null) {
-                checkState(types.get() != null, "Data without types received!");
-                List<Column> columns = statusInfo.getColumns();
-                for (List<Object> fields : data.getData()) {
-                    String redisKey = tableName + ":" + count.getAndIncrement();
+            if (data.getData() == null) {
+				return;
+			}
+			checkState(types.get() != null, "Data without types received!");
+			List<Column> columns = statusInfo.getColumns();
+			for (List<Object> fields : data.getData()) {
+			    String redisKey = new StringBuilder().append(tableName).append(":").append(count.getAndIncrement()).toString();
 
-                    try (Jedis jedis = jedisPool.getResource()) {
-                        switch (dataFormat) {
-                            case "string":
-                                ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-                                for (int i = 0; i < fields.size(); i++) {
-                                    Type type = types.get().get(i);
-                                    Object value = convertValue(fields.get(i), type);
-                                    if (value != null) {
-                                        builder.put(columns.get(i).getName(), value);
-                                    }
-                                }
-                                jedis.set(redisKey, jsonEncoder.toString(builder.build()));
-                                break;
-                            case "hash":
-                                // add keys to zset
-                                String redisZset = "keyset:" + tableName;
-                                jedis.zadd(redisZset, count.get(), redisKey);
-                                // add values to Hash
-                                for (int i = 0; i < fields.size(); i++) {
-                                    jedis.hset(redisKey, columns.get(i).getName(), fields.get(i).toString());
-                                }
-                                break;
-                            default:
-                                throw new AssertionError("unhandled value type: " + dataFormat);
-                        }
-                    }
-                }
-            }
+			    try (Jedis jedis = jedisPool.getResource()) {
+			        switch (dataFormat) {
+			            case "string":
+			                ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+			                for (int i = 0; i < fields.size(); i++) {
+			                    Type type = types.get().get(i);
+			                    Object value = convertValue(fields.get(i), type);
+			                    if (value != null) {
+			                        builder.put(columns.get(i).getName(), value);
+			                    }
+			                }
+			                jedis.set(redisKey, jsonEncoder.toString(builder.build()));
+			                break;
+			            case "hash":
+			                // add keys to zset
+			                String redisZset = "keyset:" + tableName;
+			                jedis.zadd(redisZset, count.get(), redisKey);
+			                // add values to Hash
+			                for (int i = 0; i < fields.size(); i++) {
+			                    jedis.hset(redisKey, columns.get(i).getName(), fields.get(i).toString());
+			                }
+			                break;
+			            default:
+			                throw new AssertionError("unhandled value type: " + dataFormat);
+			        }
+			    }
+			}
         }
 
         @Override

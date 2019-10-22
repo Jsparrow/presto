@@ -59,7 +59,17 @@ public class BenchmarkSTXMin
         return stXMin(data.complexGeometry);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSTXMin.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice complexGeometry;
@@ -72,15 +82,5 @@ public class BenchmarkSTXMin
             complexGeometry = stGeometryFromText(utf8Slice(loadPolygon("large_polygon.txt")));
             simpleGeometry = stGeometryFromText(utf8Slice("POLYGON ((1 1, 4 1, 1 4))"));
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSTXMin.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

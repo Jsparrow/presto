@@ -26,12 +26,7 @@ public class TestSmileSupport
         try (DistributedQueryRunner queryRunner = TpchQueryRunnerBuilder.builder()
                 .setSingleExtraProperty("experimental.internal-communication.binary-transport-enabled", "true")
                 .build()) {
-            queryRunner.execute("SELECT sum(l.extendedprice * l.discount) AS revenue " +
-                    "FROM lineitem l WHERE" +
-                    " l.shipdate >= DATE '1994-01-01'" +
-                    " AND l.shipdate < DATE '1994-01-01' + INTERVAL '1' YEAR" +
-                    " AND l.discount BETWEEN .06 - 0.01 AND .06 + 0.01" +
-                    " AND l.quantity < 24");
+            queryRunner.execute(new StringBuilder().append("SELECT sum(l.extendedprice * l.discount) AS revenue ").append("FROM lineitem l WHERE").append(" l.shipdate >= DATE '1994-01-01'").append(" AND l.shipdate < DATE '1994-01-01' + INTERVAL '1' YEAR").append(" AND l.discount BETWEEN .06 - 0.01 AND .06 + 0.01").append(" AND l.quantity < 24").toString());
         }
     }
 }

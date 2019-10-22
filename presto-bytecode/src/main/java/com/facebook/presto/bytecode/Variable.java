@@ -98,7 +98,7 @@ public class Variable
         @Override
         protected String formatOneLine()
         {
-            return variable.getName() + " = " + value;
+            return new StringBuilder().append(variable.getName()).append(" = ").append(value).toString();
         }
     }
 }

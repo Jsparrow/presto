@@ -51,15 +51,16 @@ final class EncoderUtil
         }
 
         // write last null bits
-        if ((positionCount & 0b111) > 0) {
-            byte value = 0;
-            int mask = 0b1000_0000;
-            for (int position = positionCount & ~0b111; position < positionCount; position++) {
-                value |= block.isNull(position) ? mask : 0;
-                mask >>>= 1;
-            }
-            sliceOutput.appendByte(value);
-        }
+		if (!((positionCount & 0b111) > 0)) {
+			return;
+		}
+		byte value = 0;
+		int mask = 0b1000_0000;
+		for (int position = positionCount & ~0b111; position < positionCount; position++) {
+		    value |= block.isNull(position) ? mask : 0;
+		    mask >>>= 1;
+		}
+		sliceOutput.appendByte(value);
     }
 
     /**

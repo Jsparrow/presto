@@ -61,10 +61,11 @@ public final class AutoCloseableCloser
                 }
             }
         }
-        if (rootCause != null) {
-            propagateIfPossible(rootCause, Exception.class);
-            // not possible
-            throw new AssertionError(rootCause);
-        }
+        if (rootCause == null) {
+			return;
+		}
+		propagateIfPossible(rootCause, Exception.class);
+		// not possible
+		throw new AssertionError(rootCause);
     }
 }

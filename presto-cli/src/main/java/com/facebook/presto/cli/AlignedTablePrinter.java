@@ -180,7 +180,7 @@ public class AlignedTablePrinter
         checkState(width <= maxWidth, "string width is greater than max width");
         int left = (maxWidth - width) / 2;
         int right = maxWidth - (left + width);
-        return repeat(" ", left + padding) + s + repeat(" ", right + padding);
+        return new StringBuilder().append(repeat(" ", left + padding)).append(s).append(repeat(" ", right + padding)).toString();
     }
 
     private static String align(String s, int maxWidth, int padding, boolean right)
@@ -189,7 +189,7 @@ public class AlignedTablePrinter
         checkState(width <= maxWidth, "string width is greater than max width");
         String large = repeat(" ", (maxWidth - width) + padding);
         String small = repeat(" ", padding);
-        return right ? (large + s + small) : (small + s + large);
+        return right ? (new StringBuilder().append(large).append(s).append(small).toString()) : (new StringBuilder().append(small).append(s).append(large).toString());
     }
 
     static int maxLineLength(String s)

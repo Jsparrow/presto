@@ -294,9 +294,7 @@ public final class PartitionedLookupSourceFactory
             lock.writeLock().unlock();
         }
 
-        for (SettableFuture<LookupSourceProvider> lookupSourceFuture : lookupSourceFutures) {
-            lookupSourceFuture.set(new SpillAwareLookupSourceProvider());
-        }
+        lookupSourceFutures.forEach(lookupSourceFuture -> lookupSourceFuture.set(new SpillAwareLookupSourceProvider()));
     }
 
     @Override

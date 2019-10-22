@@ -48,10 +48,7 @@ public abstract class RowComparisonOperator
     protected List<MethodHandle> getMethodHandles(RowType type, FunctionManager functionManager, OperatorType operatorType)
     {
         ImmutableList.Builder<MethodHandle> argumentMethods = ImmutableList.builder();
-        for (Type parameterType : type.getTypeParameters()) {
-            FunctionHandle operatorHandle = functionManager.resolveOperator(operatorType, fromTypes(parameterType, parameterType));
-            argumentMethods.add(functionManager.getScalarFunctionImplementation(operatorHandle).getMethodHandle());
-        }
+        type.getTypeParameters().stream().map(parameterType -> functionManager.resolveOperator(operatorType, fromTypes(parameterType, parameterType))).forEach(operatorHandle -> argumentMethods.add(functionManager.getScalarFunctionImplementation(operatorHandle).getMethodHandle()));
         return argumentMethods.build();
     }
 

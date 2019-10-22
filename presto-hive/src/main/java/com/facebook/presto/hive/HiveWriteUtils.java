@@ -166,10 +166,13 @@ import static org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory.getCharType
 import static org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory.getVarcharTypeInfo;
 import static org.apache.hadoop.mapred.FileOutputFormat.getOutputCompressorClass;
 import static org.joda.time.DateTimeZone.UTC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class HiveWriteUtils
 {
-    @SuppressWarnings("OctalInteger")
+    private static final Logger logger = LoggerFactory.getLogger(HiveWriteUtils.class);
+	@SuppressWarnings("OctalInteger")
     private static final FsPermission ALL_PERMISSIONS = new FsPermission((short) 0777);
 
     private HiveWriteUtils()
@@ -245,7 +248,8 @@ public final class HiveWriteUtils
             return result;
         }
         catch (ClassNotFoundException e) {
-            throw new PrestoException(HIVE_SERDE_NOT_FOUND, "Serializer does not exist: " + serializerName);
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_SERDE_NOT_FOUND, "Serializer does not exist: " + serializerName);
         }
         catch (SerDeException | ReflectiveOperationException e) {
             throw new PrestoException(HIVE_WRITER_DATA_ERROR, e);
@@ -431,8 +435,8 @@ public final class HiveWriteUtils
     {
         PrestoTableType tableType = table.getTableType();
         if (!writesToNonManagedTablesEnabled
-                && !tableType.equals(MANAGED_TABLE)
-                && !tableType.equals(TEMPORARY_TABLE)) {
+                && tableType != MANAGED_TABLE
+                && tableType != TEMPORARY_TABLE) {
             throw new PrestoException(NOT_SUPPORTED, "Cannot write to non-managed Hive table");
         }
 
@@ -461,9 +465,9 @@ public final class HiveWriteUtils
             Map<String, String> parameters,
             Storage storage)
     {
-        String tablePartitionDescription = "Table '" + tableName + "'";
+        String tablePartitionDescription = new StringBuilder().append("Table '").append(tableName).append("'").toString();
         if (partitionName.isPresent()) {
-            tablePartitionDescription += " partition '" + partitionName.get() + "'";
+            tablePartitionDescription += new StringBuilder().append(" partition '").append(partitionName.get()).append("'").toString();
         }
 
         // verify online
@@ -790,7 +794,19 @@ public final class HiveWriteUtils
         throw new IllegalArgumentException("unsupported type: " + type);
     }
 
-    public abstract static class FieldSetter
+    private static HiveDecimal getHiveDecimal(DecimalType decimalType, Block block, int position)
+    {
+        BigInteger unscaledValue;
+        if (decimalType.isShort()) {
+            unscaledValue = BigInteger.valueOf(decimalType.getLong(block, position));
+        }
+        else {
+            unscaledValue = Decimals.decodeUnscaledValue(decimalType.getSlice(block, position));
+        }
+        return HiveDecimal.create(unscaledValue, decimalType.getScale());
+    }
+
+	public abstract static class FieldSetter
     {
         protected final SettableStructObjectInspector rowInspector;
         protected final Object row;
@@ -1046,18 +1062,6 @@ public final class HiveWriteUtils
             value.set(getHiveDecimal(decimalType, block, position));
             rowInspector.setStructFieldData(row, field, value);
         }
-    }
-
-    private static HiveDecimal getHiveDecimal(DecimalType decimalType, Block block, int position)
-    {
-        BigInteger unscaledValue;
-        if (decimalType.isShort()) {
-            unscaledValue = BigInteger.valueOf(decimalType.getLong(block, position));
-        }
-        else {
-            unscaledValue = Decimals.decodeUnscaledValue(decimalType.getSlice(block, position));
-        }
-        return HiveDecimal.create(unscaledValue, decimalType.getScale());
     }
 
     private static class ArrayFieldSetter

@@ -38,6 +38,7 @@ import java.util.Optional;
 
 import static com.facebook.presto.sql.relational.OriginalExpressionUtils.isExpression;
 import static com.google.common.base.Preconditions.checkArgument;
+import java.util.List;
 
 public class VerifyNoOriginalExpression
         implements PlanSanityChecker.Checker
@@ -93,7 +94,7 @@ public class VerifyNoOriginalExpression
         {
             visitPlan(node, context);
 
-            node.getRows().forEach(rows -> rows.forEach(Visitor::checkNotOriginalExpression));
+            node.getRows().stream().flatMap(List::stream).forEach(Visitor::checkNotOriginalExpression);
             return null;
         }
 

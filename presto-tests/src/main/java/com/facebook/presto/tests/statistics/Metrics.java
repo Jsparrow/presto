@@ -24,8 +24,6 @@ import static java.lang.Double.isNaN;
 
 public final class Metrics
 {
-    private Metrics() {}
-
     public static final Metric OUTPUT_ROW_COUNT = new Metric()
     {
         @Override
@@ -53,7 +51,9 @@ public final class Metrics
         }
     };
 
-    public static Metric nullsFraction(String columnName)
+	private Metrics() {}
+
+	public static Metric nullsFraction(String columnName)
     {
         return new Metric()
         {
@@ -72,18 +72,18 @@ public final class Metrics
             @Override
             public String getComputingAggregationSql()
             {
-                return "(count(*) filter(where " + columnName + " is null)) / cast(count(*) as double)";
+                return new StringBuilder().append("(count(*) filter(where ").append(columnName).append(" is null)) / cast(count(*) as double)").toString();
             }
 
             @Override
             public String toString()
             {
-                return "nullsFraction(\"" + columnName + "\")";
+                return new StringBuilder().append("nullsFraction(\"").append(columnName).append("\")").toString();
             }
         };
     }
 
-    public static Metric distinctValuesCount(String columnName)
+	public static Metric distinctValuesCount(String columnName)
     {
         return new Metric()
         {
@@ -102,18 +102,18 @@ public final class Metrics
             @Override
             public String getComputingAggregationSql()
             {
-                return "count(distinct " + columnName + ")";
+                return new StringBuilder().append("count(distinct ").append(columnName).append(")").toString();
             }
 
             @Override
             public String toString()
             {
-                return "distinctValuesCount(\"" + columnName + "\")";
+                return new StringBuilder().append("distinctValuesCount(\"").append(columnName).append("\")").toString();
             }
         };
     }
 
-    public static Metric lowValue(String columnName)
+	public static Metric lowValue(String columnName)
     {
         return new Metric()
         {
@@ -140,18 +140,18 @@ public final class Metrics
             @Override
             public String getComputingAggregationSql()
             {
-                return "try_cast(min(" + columnName + ") as double)";
+                return new StringBuilder().append("try_cast(min(").append(columnName).append(") as double)").toString();
             }
 
             @Override
             public String toString()
             {
-                return "lowValue(\"" + columnName + "\")";
+                return new StringBuilder().append("lowValue(\"").append(columnName).append("\")").toString();
             }
         };
     }
 
-    public static Metric highValue(String columnName)
+	public static Metric highValue(String columnName)
     {
         return new Metric()
         {
@@ -178,23 +178,23 @@ public final class Metrics
             @Override
             public String getComputingAggregationSql()
             {
-                return "max(try_cast(" + columnName + " as double))";
+                return new StringBuilder().append("max(try_cast(").append(columnName).append(" as double))").toString();
             }
 
             @Override
             public String toString()
             {
-                return "highValue(\"" + columnName + "\")";
+                return new StringBuilder().append("highValue(\"").append(columnName).append("\")").toString();
             }
         };
     }
 
-    private static VariableStatsEstimate getVariableStatistics(PlanNodeStatsEstimate planNodeStatsEstimate, String columnName, StatsContext statsContext)
+	private static VariableStatsEstimate getVariableStatistics(PlanNodeStatsEstimate planNodeStatsEstimate, String columnName, StatsContext statsContext)
     {
         return planNodeStatsEstimate.getVariableStatistics(statsContext.getVariableForColumn(columnName));
     }
 
-    private static OptionalDouble asOptional(double value)
+	private static OptionalDouble asOptional(double value)
     {
         return isNaN(value) ? OptionalDouble.empty() : OptionalDouble.of(value);
     }

@@ -348,7 +348,7 @@ public final class StreamPropertyDerivations
         private static Map<VariableReferenceExpression, VariableReferenceExpression> computeIdentityTranslations(Map<VariableReferenceExpression, RowExpression> assignments, TypeProvider types)
         {
             Map<VariableReferenceExpression, VariableReferenceExpression> inputToOutput = new HashMap<>();
-            for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : assignments.entrySet()) {
+            assignments.entrySet().forEach(assignment -> {
                 RowExpression expression = assignment.getValue();
                 if (isExpression(expression)) {
                     if (castToExpression(expression) instanceof SymbolReference) {
@@ -360,7 +360,7 @@ public final class StreamPropertyDerivations
                         inputToOutput.put((VariableReferenceExpression) expression, assignment.getKey());
                     }
                 }
-            }
+            });
             return inputToOutput;
         }
 
@@ -368,19 +368,13 @@ public final class StreamPropertyDerivations
         public StreamProperties visitGroupId(GroupIdNode node, List<StreamProperties> inputProperties)
         {
             Map<VariableReferenceExpression, VariableReferenceExpression> inputToOutputMappings = new HashMap<>();
-            for (Map.Entry<VariableReferenceExpression, VariableReferenceExpression> setMapping : node.getGroupingColumns().entrySet()) {
-                if (node.getCommonGroupingColumns().contains(setMapping.getKey())) {
-                    // TODO: Add support for translating a property on a single column to multiple columns
-                    // when GroupIdNode is copying a single input grouping column into multiple output grouping columns (i.e. aliases), this is basically picking one arbitrarily
-                    inputToOutputMappings.putIfAbsent(setMapping.getValue(), setMapping.getKey());
-                }
-            }
+            // TODO: Add support for translating a property on a single column to multiple columns
+			// when GroupIdNode is copying a single input grouping column into multiple output grouping columns (i.e. aliases), this is basically picking one arbitrarily
+			node.getGroupingColumns().entrySet().stream().filter(setMapping -> node.getCommonGroupingColumns().contains(setMapping.getKey())).forEach(setMapping -> inputToOutputMappings.putIfAbsent(setMapping.getValue(), setMapping.getKey()));
 
             // TODO: Add support for translating a property on a single column to multiple columns
-            // this is deliberately placed after the grouping columns, because preserving properties has a bigger perf impact
-            for (VariableReferenceExpression argument : node.getAggregationArguments()) {
-                inputToOutputMappings.putIfAbsent(argument, argument);
-            }
+			// this is deliberately placed after the grouping columns, because preserving properties has a bigger perf impact
+			node.getAggregationArguments().forEach(argument -> inputToOutputMappings.putIfAbsent(argument, argument));
 
             return Iterables.getOnlyElement(inputProperties).translate(column -> Optional.ofNullable(inputToOutputMappings.get(column)));
         }
@@ -531,7 +525,7 @@ public final class StreamPropertyDerivations
         public StreamProperties visitTopN(TopNNode node, List<StreamProperties> inputProperties)
         {
             // Partial TopN doesn't guarantee that stream is ordered
-            if (node.getStep().equals(TopNNode.Step.PARTIAL)) {
+            if (node.getStep() == TopNNode.Step.PARTIAL) {
                 return Iterables.getOnlyElement(inputProperties);
             }
             return StreamProperties.ordered();
@@ -595,30 +589,22 @@ public final class StreamPropertyDerivations
     @Immutable
     public static final class StreamProperties
     {
-        public enum StreamDistribution
-        {
-            SINGLE, MULTIPLE, FIXED
-        }
-
         private final StreamDistribution distribution;
 
-        private final Optional<List<VariableReferenceExpression>> partitioningColumns; // if missing => partitioned with some unknown scheme
+		private final Optional<List<VariableReferenceExpression>> partitioningColumns; // if missing => partitioned with some unknown scheme
 
-        private final boolean ordered;
+		private final boolean ordered;
 
-        // We are only interested in the local properties, but PropertyDerivations requires input
+		// We are only interested in the local properties, but PropertyDerivations requires input
         // ActualProperties, so we hold on to the whole object
         private final ActualProperties otherActualProperties;
 
-        // NOTE: Partitioning on zero columns (or effectively zero columns if the columns are constant) indicates that all
-        // the rows will be partitioned into a single stream.
-
-        private StreamProperties(StreamDistribution distribution, Optional<? extends Iterable<VariableReferenceExpression>> partitioningColumns, boolean ordered)
+		private StreamProperties(StreamDistribution distribution, Optional<? extends Iterable<VariableReferenceExpression>> partitioningColumns, boolean ordered)
         {
             this(distribution, partitioningColumns, ordered, null);
         }
 
-        private StreamProperties(
+		private StreamProperties(
                 StreamDistribution distribution,
                 Optional<? extends Iterable<VariableReferenceExpression>> partitioningColumns,
                 boolean ordered,
@@ -640,61 +626,61 @@ public final class StreamPropertyDerivations
             this.otherActualProperties = otherActualProperties;
         }
 
-        public List<LocalProperty<VariableReferenceExpression>> getLocalProperties()
+		public List<LocalProperty<VariableReferenceExpression>> getLocalProperties()
         {
             checkState(otherActualProperties != null, "otherActualProperties not set");
             return otherActualProperties.getLocalProperties();
         }
 
-        private static StreamProperties singleStream()
+		private static StreamProperties singleStream()
         {
             return new StreamProperties(SINGLE, Optional.of(ImmutableSet.of()), false);
         }
 
-        private static StreamProperties fixedStreams()
+		private static StreamProperties fixedStreams()
         {
             return new StreamProperties(FIXED, Optional.empty(), false);
         }
 
-        private static StreamProperties ordered()
+		private static StreamProperties ordered()
         {
             return new StreamProperties(SINGLE, Optional.of(ImmutableSet.of()), true);
         }
 
-        private StreamProperties unordered(boolean unordered)
+		private StreamProperties unordered(boolean unordered)
         {
-            if (unordered) {
-                ActualProperties updatedProperies = null;
-                if (otherActualProperties != null) {
-                    updatedProperies = ActualProperties.builderFrom(otherActualProperties)
-                            .unordered(true)
-                            .build();
-                }
-                return new StreamProperties(
-                        distribution,
-                        partitioningColumns,
-                        false,
-                        updatedProperies);
-            }
-            return this;
+            if (!unordered) {
+				return this;
+			}
+			ActualProperties updatedProperies = null;
+			if (otherActualProperties != null) {
+			    updatedProperies = ActualProperties.builderFrom(otherActualProperties)
+			            .unordered(true)
+			            .build();
+			}
+			return new StreamProperties(
+			        distribution,
+			        partitioningColumns,
+			        false,
+			        updatedProperies);
         }
 
-        public boolean isSingleStream()
+		public boolean isSingleStream()
         {
             return distribution == SINGLE;
         }
 
-        public StreamDistribution getDistribution()
+		public StreamDistribution getDistribution()
         {
             return distribution;
         }
 
-        public boolean isExactlyPartitionedOn(Iterable<VariableReferenceExpression> columns)
+		public boolean isExactlyPartitionedOn(Iterable<VariableReferenceExpression> columns)
         {
             return partitioningColumns.isPresent() && columns.equals(ImmutableList.copyOf(partitioningColumns.get()));
         }
 
-        public boolean isPartitionedOn(Iterable<VariableReferenceExpression> columns)
+		public boolean isPartitionedOn(Iterable<VariableReferenceExpression> columns)
         {
             if (!partitioningColumns.isPresent()) {
                 return false;
@@ -705,12 +691,12 @@ public final class StreamPropertyDerivations
             return ImmutableSet.copyOf(columns).containsAll(partitioningColumns.get());
         }
 
-        public boolean isOrdered()
+		public boolean isOrdered()
         {
             return ordered;
         }
 
-        private StreamProperties withUnspecifiedPartitioning()
+		private StreamProperties withUnspecifiedPartitioning()
         {
             // a single stream has no symbols
             if (isSingleStream()) {
@@ -721,12 +707,12 @@ public final class StreamPropertyDerivations
             return new StreamProperties(distribution, Optional.empty(), ordered);
         }
 
-        private StreamProperties withOtherActualProperties(ActualProperties actualProperties)
+		private StreamProperties withOtherActualProperties(ActualProperties actualProperties)
         {
             return new StreamProperties(distribution, partitioningColumns, ordered, actualProperties);
         }
 
-        public StreamProperties translate(Function<VariableReferenceExpression, Optional<VariableReferenceExpression>> translator)
+		public StreamProperties translate(Function<VariableReferenceExpression, Optional<VariableReferenceExpression>> translator)
         {
             return new StreamProperties(
                     distribution,
@@ -744,18 +730,18 @@ public final class StreamPropertyDerivations
                     ordered, otherActualProperties.translateVariable(translator));
         }
 
-        public Optional<List<VariableReferenceExpression>> getPartitioningColumns()
+		public Optional<List<VariableReferenceExpression>> getPartitioningColumns()
         {
             return partitioningColumns;
         }
 
-        @Override
+		@Override
         public int hashCode()
         {
             return Objects.hash(distribution, partitioningColumns);
         }
 
-        @Override
+		@Override
         public boolean equals(Object obj)
         {
             if (this == obj) {
@@ -769,7 +755,7 @@ public final class StreamPropertyDerivations
                     Objects.equals(this.partitioningColumns, other.partitioningColumns);
         }
 
-        @Override
+		@Override
         public String toString()
         {
             return toStringHelper(this)
@@ -777,5 +763,15 @@ public final class StreamPropertyDerivations
                     .add("partitioningColumns", partitioningColumns)
                     .toString();
         }
+
+		public enum StreamDistribution
+        {
+            SINGLE, MULTIPLE, FIXED
+        }
+
+        // NOTE: Partitioning on zero columns (or effectively zero columns if the columns are constant) indicates that all
+        // the rows will be partitioned into a single stream.
+
+        
     }
 }

@@ -40,7 +40,7 @@ public final class BitwiseFunctions
         }
         long lowBitsMask = (1L << (bits - 1)) - 1; // set the least (bits - 1) bits
         if (num > lowBitsMask || num < ~lowBitsMask) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "Number must be representable with the bits specified. " + num + " can not be represented with " + bits + " bits");
+            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("Number must be representable with the bits specified. ").append(num).append(" can not be represented with ").append(bits).append(" bits").toString());
         }
         long mask = (1L << bits) - 1;
         return Long.bitCount(num & mask);

@@ -195,29 +195,16 @@ public class TestFilterStatsCalculator
         assertExpression("-x > -3e0")
                 .outputRowsCount(lessThan3Rows);
 
-        for (String minusThree : ImmutableList.of("DECIMAL '-3'", "-3e0", "(4e0-7e0)", "CAST(-3 AS DECIMAL(7,3))"/*, "CAST('1' AS BIGINT) - 4"*/)) {
-            for (String xEquals : ImmutableList.of("x = %s", "%s = x", "COALESCE(x * CAST(NULL AS BIGINT), x) = %s", "%s = CAST(x AS DOUBLE)")) {
-                assertExpression(format(xEquals, minusThree))
-                        .outputRowsCount(18.75)
-                        .variableStats(new VariableReferenceExpression("x", DOUBLE), variableAssert ->
-                                variableAssert.averageRowSize(4.0)
-                                        .lowValue(-3)
-                                        .highValue(-3)
-                                        .distinctValuesCount(1)
-                                        .nullsFraction(0.0));
-            }
+        /*, "CAST('1' AS BIGINT) - 4"*/
+		ImmutableList.of("DECIMAL '-3'", "-3e0", "(4e0-7e0)", "CAST(-3 AS DECIMAL(7,3))"/*, "CAST('1' AS BIGINT) - 4"*/).forEach(minusThree -> {
+            ImmutableList.of("x = %s", "%s = x", "COALESCE(x * CAST(NULL AS BIGINT), x) = %s", "%s = CAST(x AS DOUBLE)").forEach(xEquals -> assertExpression(format(xEquals, minusThree)).outputRowsCount(18.75)
+					.variableStats(new VariableReferenceExpression("x", DOUBLE), variableAssert -> variableAssert
+							.averageRowSize(4.0).lowValue(-3).highValue(-3).distinctValuesCount(1).nullsFraction(0.0)));
 
-            for (String xLessThan : ImmutableList.of("x < %s", "%s > x", "%s > CAST(x AS DOUBLE)")) {
-                assertExpression(format(xLessThan, minusThree))
-                        .outputRowsCount(262.5)
-                        .variableStats(new VariableReferenceExpression("x", DOUBLE), variableAssert ->
-                                variableAssert.averageRowSize(4.0)
-                                        .lowValue(-10)
-                                        .highValue(-3)
-                                        .distinctValuesCount(14)
-                                        .nullsFraction(0.0));
-            }
-        }
+            ImmutableList.of("x < %s", "%s > x", "%s > CAST(x AS DOUBLE)").forEach(xLessThan -> assertExpression(format(xLessThan, minusThree)).outputRowsCount(262.5)
+					.variableStats(new VariableReferenceExpression("x", DOUBLE), variableAssert -> variableAssert
+							.averageRowSize(4.0).lowValue(-10).highValue(-3).distinctValuesCount(14).nullsFraction(0.0)));
+        });
     }
 
     @Test

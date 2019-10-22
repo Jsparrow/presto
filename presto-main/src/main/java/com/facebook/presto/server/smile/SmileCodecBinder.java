@@ -31,31 +31,31 @@ public class SmileCodecBinder
 {
     private final Binder binder;
 
-    public static SmileCodecBinder smileCodecBinder(Binder binder)
-    {
-        return new SmileCodecBinder(binder);
-    }
-
     private SmileCodecBinder(Binder binder)
     {
         this.binder = requireNonNull(binder, "binder is null").skipSources(getClass());
     }
 
-    public void bindSmileCodec(Class<?> type)
+	public static SmileCodecBinder smileCodecBinder(Binder binder)
+    {
+        return new SmileCodecBinder(binder);
+    }
+
+	public void bindSmileCodec(Class<?> type)
     {
         requireNonNull(type, "type is null");
 
         binder.bind(getSmileCodecKey(type)).toProvider(new SmileCodecProvider(type)).in(Scopes.SINGLETON);
     }
 
-    public void bindSmileCodec(TypeLiteral<?> type)
+	public void bindSmileCodec(TypeLiteral<?> type)
     {
         requireNonNull(type, "type is null");
 
         binder.bind(getSmileCodecKey(type.getType())).toProvider(new SmileCodecProvider(type.getType())).in(Scopes.SINGLETON);
     }
 
-    public void bindListSmileCodec(Class<?> type)
+	public void bindListSmileCodec(Class<?> type)
     {
         requireNonNull(type, "type is null");
 
@@ -63,7 +63,7 @@ public class SmileCodecBinder
         binder.bind(getSmileCodecKey(listType)).toProvider(new SmileCodecProvider(listType)).in(Scopes.SINGLETON);
     }
 
-    public void bindListSmileCodec(SmileCodec<?> type)
+	public void bindListSmileCodec(SmileCodec<?> type)
     {
         requireNonNull(type, "type is null");
 
@@ -71,7 +71,7 @@ public class SmileCodecBinder
         binder.bind(getSmileCodecKey(listType)).toProvider(new SmileCodecProvider(listType)).in(Scopes.SINGLETON);
     }
 
-    public void bindMapSmileCodec(Class<?> keyType, Class<?> valueType)
+	public void bindMapSmileCodec(Class<?> keyType, Class<?> valueType)
     {
         requireNonNull(keyType, "keyType is null");
         requireNonNull(valueType, "valueType is null");
@@ -80,7 +80,7 @@ public class SmileCodecBinder
         binder.bind(getSmileCodecKey(mapType)).toProvider(new SmileCodecProvider(mapType)).in(Scopes.SINGLETON);
     }
 
-    public void bindMapSmileCodec(Class<?> keyType, SmileCodec<?> valueType)
+	public void bindMapSmileCodec(Class<?> keyType, SmileCodec<?> valueType)
     {
         requireNonNull(keyType, "keyType is null");
         requireNonNull(valueType, "valueType is null");
@@ -89,7 +89,7 @@ public class SmileCodecBinder
         binder.bind(getSmileCodecKey(mapType)).toProvider(new SmileCodecProvider(mapType)).in(Scopes.SINGLETON);
     }
 
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
     private Key<SmileCodec<?>> getSmileCodecKey(Type type)
     {
         return (Key<SmileCodec<?>>) Key.get(new ParameterizedTypeImpl(null, SmileCodec.class, type));

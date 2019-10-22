@@ -71,9 +71,7 @@ public class SchemaJdbcTable
 
         Builder table = InMemoryRecordSet.builder(METADATA);
         for (String catalog : filter(listCatalogs(session, metadata, accessControl).keySet(), catalogFilter)) {
-            for (String schema : listSchemas(session, metadata, accessControl, catalog)) {
-                table.addRow(schema, catalog);
-            }
+            listSchemas(session, metadata, accessControl, catalog).forEach(schema -> table.addRow(schema, catalog));
         }
         return table.build().cursor();
     }

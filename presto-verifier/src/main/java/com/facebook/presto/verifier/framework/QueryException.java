@@ -30,7 +30,79 @@ import static java.util.Objects.requireNonNull;
 public class QueryException
         extends RuntimeException
 {
-    public enum Type
+    private final Type type;
+	private final Optional<ErrorCodeSupplier> prestoErrorCode;
+	private final boolean retryable;
+	private final Optional<QueryStats> queryStats;
+	private final QueryStage queryStage;
+
+	private QueryException(
+            Throwable cause,
+            Type type,
+            Optional<ErrorCodeSupplier> prestoErrorCode,
+            boolean retryable,
+            Optional<QueryStats> queryStats,
+            QueryStage queryStage)
+    {
+        super(cause);
+        this.type = requireNonNull(type, "type is null");
+        this.prestoErrorCode = requireNonNull(prestoErrorCode, "errorCode is null");
+        this.retryable = retryable;
+        this.queryStats = requireNonNull(queryStats, "queryStats is null");
+        this.queryStage = requireNonNull(queryStage, "queryStage is null");
+    }
+
+	public static QueryException forClusterConnection(Throwable cause, QueryStage queryStage)
+    {
+        return new QueryException(cause, CLUSTER_CONNECTION, Optional.empty(), true, Optional.empty(), queryStage);
+    }
+
+	public static QueryException forPresto(Throwable cause, Optional<ErrorCodeSupplier> prestoErrorCode, boolean retryable, Optional<QueryStats> queryStats, QueryStage queryStage)
+    {
+        return new QueryException(cause, PRESTO, prestoErrorCode, retryable, queryStats, queryStage);
+    }
+
+	public Type getType()
+    {
+        return type;
+    }
+
+	public Optional<ErrorCodeSupplier> getPrestoErrorCode()
+    {
+        return prestoErrorCode;
+    }
+
+	public boolean isRetryable()
+    {
+        return retryable;
+    }
+
+	public Optional<QueryStats> getQueryStats()
+    {
+        return queryStats;
+    }
+
+	public QueryStage getQueryStage()
+    {
+        return queryStage;
+    }
+
+	public String getErrorCode()
+    {
+        return format("%s(%s)", type.name(), type.descriptionGenerator.apply(this));
+    }
+
+	public QueryFailure toQueryFailure()
+    {
+        return new QueryFailure(
+                queryStage,
+                getErrorCode(),
+                retryable,
+                queryStats.map(QueryStats::getQueryId),
+                getStackTraceAsString(this));
+    }
+
+	public enum Type
     {
         CLUSTER_CONNECTION(qe -> {
             requireNonNull(qe, "queryException is null");
@@ -48,77 +120,5 @@ public class QueryException
         {
             this.descriptionGenerator = requireNonNull(descriptionGenerator, "descriptionGenerator is null");
         }
-    }
-
-    private final Type type;
-    private final Optional<ErrorCodeSupplier> prestoErrorCode;
-    private final boolean retryable;
-    private final Optional<QueryStats> queryStats;
-    private final QueryStage queryStage;
-
-    private QueryException(
-            Throwable cause,
-            Type type,
-            Optional<ErrorCodeSupplier> prestoErrorCode,
-            boolean retryable,
-            Optional<QueryStats> queryStats,
-            QueryStage queryStage)
-    {
-        super(cause);
-        this.type = requireNonNull(type, "type is null");
-        this.prestoErrorCode = requireNonNull(prestoErrorCode, "errorCode is null");
-        this.retryable = retryable;
-        this.queryStats = requireNonNull(queryStats, "queryStats is null");
-        this.queryStage = requireNonNull(queryStage, "queryStage is null");
-    }
-
-    public static QueryException forClusterConnection(Throwable cause, QueryStage queryStage)
-    {
-        return new QueryException(cause, CLUSTER_CONNECTION, Optional.empty(), true, Optional.empty(), queryStage);
-    }
-
-    public static QueryException forPresto(Throwable cause, Optional<ErrorCodeSupplier> prestoErrorCode, boolean retryable, Optional<QueryStats> queryStats, QueryStage queryStage)
-    {
-        return new QueryException(cause, PRESTO, prestoErrorCode, retryable, queryStats, queryStage);
-    }
-
-    public Type getType()
-    {
-        return type;
-    }
-
-    public Optional<ErrorCodeSupplier> getPrestoErrorCode()
-    {
-        return prestoErrorCode;
-    }
-
-    public boolean isRetryable()
-    {
-        return retryable;
-    }
-
-    public Optional<QueryStats> getQueryStats()
-    {
-        return queryStats;
-    }
-
-    public QueryStage getQueryStage()
-    {
-        return queryStage;
-    }
-
-    public String getErrorCode()
-    {
-        return format("%s(%s)", type.name(), type.descriptionGenerator.apply(this));
-    }
-
-    public QueryFailure toQueryFailure()
-    {
-        return new QueryFailure(
-                queryStage,
-                getErrorCode(),
-                retryable,
-                queryStats.map(QueryStats::getQueryId),
-                getStackTraceAsString(this));
     }
 }

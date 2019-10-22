@@ -131,9 +131,7 @@ public class ElasticsearchClient
         // Therefore, we first clear the clients map, then close each client.
         try (Closer closer = Closer.create()) {
             closer.register(clients::clear);
-            for (Entry<String, TransportClient> entry : clients.entrySet()) {
-                closer.register(entry.getValue());
-            }
+            clients.entrySet().forEach(entry -> closer.register(entry.getValue()));
             closer.register(executor::shutdown);
         }
         catch (IOException e) {
@@ -249,14 +247,14 @@ public class ElasticsearchClient
     private List<ColumnMetadata> buildMetadata(List<ElasticsearchColumn> columns)
     {
         List<ColumnMetadata> result = new ArrayList<>();
-        for (ElasticsearchColumn column : columns) {
+        columns.forEach(column -> {
             Map<String, Object> properties = new HashMap<>();
             properties.put("jsonPath", column.getJsonPath());
             properties.put("jsonType", column.getJsonType());
             properties.put("isList", column.isList());
             properties.put("ordinalPosition", column.getOrdinalPosition());
             result.add(new ColumnMetadata(column.getName(), column.getType(), "", "", false, properties));
-        }
+        });
         return result;
     }
 
@@ -336,7 +334,7 @@ public class ElasticsearchClient
                     childKey = key;
                 }
                 else {
-                    childKey = parent.get().concat(".").concat(key);
+                    childKey = new StringBuilder().append(parent.get()).append(".").append(key).toString();
                 }
             }
             else {
@@ -349,7 +347,7 @@ public class ElasticsearchClient
             }
 
             if (!value.isArray()) {
-                metadata.add(childKey.concat(":").concat(value.textValue()));
+                metadata.add((new StringBuilder().append(childKey).append(":").append(value.textValue()).toString()));
             }
         }
         return metadata.build();
@@ -447,29 +445,12 @@ public class ElasticsearchClient
         }
     }
 
-    private static class FieldNestingComparator
-            implements Comparator<String>
-    {
-        FieldNestingComparator() {}
-
-        @Override
-        public int compare(String left, String right)
-        {
-            // comparator based on levels of nesting
-            int leftLength = left.split("\\.").length;
-            int rightLength = right.split("\\.").length;
-            if (leftLength == rightLength) {
-                return left.compareTo(right);
-            }
-            return rightLength - leftLength;
-        }
-    }
     static TransportClient createTransportClient(ElasticsearchConnectorConfig config, TransportAddress address)
     {
         return createTransportClient(config, address, Optional.empty());
     }
 
-    static TransportClient createTransportClient(ElasticsearchConnectorConfig config, TransportAddress address, Optional<String> clusterName)
+	static TransportClient createTransportClient(ElasticsearchConnectorConfig config, TransportAddress address, Optional<String> clusterName)
     {
         Settings settings;
         Builder builder;
@@ -509,5 +490,23 @@ public class ElasticsearchClient
                 break;
         }
         return client;
+    }
+
+	private static class FieldNestingComparator
+            implements Comparator<String>
+    {
+        FieldNestingComparator() {}
+
+        @Override
+        public int compare(String left, String right)
+        {
+            // comparator based on levels of nesting
+            int leftLength = left.split("\\.").length;
+            int rightLength = right.split("\\.").length;
+            if (leftLength == rightLength) {
+                return left.compareTo(right);
+            }
+            return rightLength - leftLength;
+        }
     }
 }

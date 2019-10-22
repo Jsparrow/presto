@@ -81,7 +81,6 @@ final class ExplainRewrite
 
         @Override
         protected Node visitExplain(Explain node, Void context)
-                throws SemanticException
         {
             if (node.isAnalyze()) {
                 Statement statement = (Statement) process(node.getStatement(), context);
@@ -114,7 +113,6 @@ final class ExplainRewrite
         }
 
         private Node getQueryPlan(Explain node, ExplainType.Type planType, ExplainFormat.Type planFormat)
-                throws IllegalArgumentException
         {
             PreparedQuery preparedQuery = queryPreparer.prepareQuery(session, node.getStatement(), warningCollector);
 

@@ -24,64 +24,64 @@ public class TypeSignatureParameter
     private final ParameterKind kind;
     private final Object value;
 
-    public static TypeSignatureParameter of(TypeSignature typeSignature)
-    {
-        return new TypeSignatureParameter(ParameterKind.TYPE, typeSignature);
-    }
-
-    public static TypeSignatureParameter of(long longLiteral)
-    {
-        return new TypeSignatureParameter(ParameterKind.LONG, longLiteral);
-    }
-
-    public static TypeSignatureParameter of(NamedTypeSignature namedTypeSignature)
-    {
-        return new TypeSignatureParameter(ParameterKind.NAMED_TYPE, namedTypeSignature);
-    }
-
-    public static TypeSignatureParameter of(String variable)
-    {
-        return new TypeSignatureParameter(ParameterKind.VARIABLE, variable);
-    }
-
     private TypeSignatureParameter(ParameterKind kind, Object value)
     {
         this.kind = requireNonNull(kind, "kind is null");
         this.value = requireNonNull(value, "value is null");
     }
 
-    @Override
+	public static TypeSignatureParameter of(TypeSignature typeSignature)
+    {
+        return new TypeSignatureParameter(ParameterKind.TYPE, typeSignature);
+    }
+
+	public static TypeSignatureParameter of(long longLiteral)
+    {
+        return new TypeSignatureParameter(ParameterKind.LONG, longLiteral);
+    }
+
+	public static TypeSignatureParameter of(NamedTypeSignature namedTypeSignature)
+    {
+        return new TypeSignatureParameter(ParameterKind.NAMED_TYPE, namedTypeSignature);
+    }
+
+	public static TypeSignatureParameter of(String variable)
+    {
+        return new TypeSignatureParameter(ParameterKind.VARIABLE, variable);
+    }
+
+	@Override
     public String toString()
     {
         return value.toString();
     }
 
-    public ParameterKind getKind()
+	public ParameterKind getKind()
     {
         return kind;
     }
 
-    public boolean isTypeSignature()
+	public boolean isTypeSignature()
     {
         return kind == ParameterKind.TYPE;
     }
 
-    public boolean isLongLiteral()
+	public boolean isLongLiteral()
     {
         return kind == ParameterKind.LONG;
     }
 
-    public boolean isNamedTypeSignature()
+	public boolean isNamedTypeSignature()
     {
         return kind == ParameterKind.NAMED_TYPE;
     }
 
-    public boolean isVariable()
+	public boolean isVariable()
     {
         return kind == ParameterKind.VARIABLE;
     }
 
-    private <A> A getValue(ParameterKind expectedParameterKind, Class<A> target)
+	private <A> A getValue(ParameterKind expectedParameterKind, Class<A> target)
     {
         if (kind != expectedParameterKind) {
             throw new IllegalArgumentException(format("ParameterKind is [%s] but expected [%s]", kind, expectedParameterKind));
@@ -89,27 +89,27 @@ public class TypeSignatureParameter
         return target.cast(value);
     }
 
-    public TypeSignature getTypeSignature()
+	public TypeSignature getTypeSignature()
     {
         return getValue(ParameterKind.TYPE, TypeSignature.class);
     }
 
-    public Long getLongLiteral()
+	public Long getLongLiteral()
     {
         return getValue(ParameterKind.LONG, Long.class);
     }
 
-    public NamedTypeSignature getNamedTypeSignature()
+	public NamedTypeSignature getNamedTypeSignature()
     {
         return getValue(ParameterKind.NAMED_TYPE, NamedTypeSignature.class);
     }
 
-    public String getVariable()
+	public String getVariable()
     {
         return getValue(ParameterKind.VARIABLE, String.class);
     }
 
-    public Optional<TypeSignature> getTypeSignatureOrNamedTypeSignature()
+	public Optional<TypeSignature> getTypeSignatureOrNamedTypeSignature()
     {
         switch (kind) {
             case TYPE:
@@ -121,7 +121,7 @@ public class TypeSignatureParameter
         }
     }
 
-    public boolean isCalculated()
+	public boolean isCalculated()
     {
         switch (kind) {
             case TYPE:
@@ -137,7 +137,7 @@ public class TypeSignatureParameter
         }
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -153,7 +153,7 @@ public class TypeSignatureParameter
                 Objects.equals(this.value, other.value);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(kind, value);

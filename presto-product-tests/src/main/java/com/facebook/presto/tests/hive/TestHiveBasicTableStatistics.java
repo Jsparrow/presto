@@ -79,13 +79,7 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_unpartitioned_insert_presto";
 
         onPresto().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s (" +
-                "   n_nationkey bigint, " +
-                "   n_regionkey bigint, " +
-                "   n_name varchar(25), " +
-                "   n_comment varchar(152)" +
-                ")", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s (").append("   n_nationkey bigint, ").append("   n_regionkey bigint, ").append("   n_name varchar(25), ").append("   n_comment varchar(152)").append(")").toString(), tableName));
 
         try {
             BasicStatistics statisticsEmpty = getBasicStatisticsForTable(onHive(), tableName);
@@ -115,17 +109,10 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_partitioned_ctas_presto";
 
         onPresto().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s " +
-                "WITH (" +
-                "   partitioned_by = ARRAY['n_regionkey'] " +
-                ") " +
-                "AS " +
-                "SELECT n_nationkey, n_name, n_comment, n_regionkey " +
-                "FROM nation " +
-                // turns out there are exactly 5 countries in each region
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("WITH (").append("   partitioned_by = ARRAY['n_regionkey'] ").append(") ").append("AS ").append("SELECT n_nationkey, n_name, n_comment, n_regionkey ").append("FROM nation ")
+				.append(// turns out there are exactly 5 countries in each region
                 // let's change records count for one of the regions to verify statistics are different
-                "WHERE n_nationkey <> 23", tableName));
+                "WHERE n_nationkey <> 23").toString(), tableName));
 
         try {
             BasicStatistics tableStatistics = getBasicStatisticsForTable(onHive(), tableName);
@@ -150,17 +137,8 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_analyze_partitioned";
 
         onPresto().executeQuery("DROP TABLE IF EXISTS " + tableName);
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s " +
-                "WITH ( " +
-                "   partitioned_by = ARRAY['n_regionkey'], " +
-                "   bucketed_by = ARRAY['n_nationkey'], " +
-                "   bucket_count = 10 " +
-                ") " +
-                "AS " +
-                "SELECT n_nationkey, n_name, n_comment, n_regionkey " +
-                "FROM nation " +
-                "WHERE n_regionkey = 1", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("WITH ( ").append("   partitioned_by = ARRAY['n_regionkey'], ").append("   bucketed_by = ARRAY['n_nationkey'], ").append("   bucket_count = 10 ").append(") ").append("AS ")
+				.append("SELECT n_nationkey, n_name, n_comment, n_regionkey ").append("FROM nation ").append("WHERE n_regionkey = 1").toString(), tableName));
 
         try {
             BasicStatistics tableStatistics = getBasicStatisticsForTable(onHive(), tableName);
@@ -191,12 +169,7 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_analyze_unpartitioned";
 
         onPresto().executeQuery("DROP TABLE IF EXISTS " + tableName);
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s " +
-                "AS " +
-                "SELECT n_nationkey, n_name, n_comment, n_regionkey " +
-                "FROM nation " +
-                "WHERE n_regionkey = 1", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("AS ").append("SELECT n_nationkey, n_name, n_comment, n_regionkey ").append("FROM nation ").append("WHERE n_regionkey = 1").toString(), tableName));
 
         try {
             BasicStatistics tableStatisticsBefore = getBasicStatisticsForTable(onHive(), tableName);
@@ -224,16 +197,8 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_partitioned_insert_presto";
 
         onPresto().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s (" +
-                "   n_nationkey bigint, " +
-                "   n_name varchar(25), " +
-                "   n_comment varchar(152), " +
-                "   n_regionkey bigint " +
-                ")" +
-                "WITH (" +
-                "   partitioned_by = ARRAY['n_regionkey'] " +
-                ") ", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s (").append("   n_nationkey bigint, ").append("   n_name varchar(25), ").append("   n_comment varchar(152), ").append("   n_regionkey bigint ").append(")").append("WITH (")
+				.append("   partitioned_by = ARRAY['n_regionkey'] ").append(") ").toString(), tableName));
 
         try {
             BasicStatistics tableStatisticsAfterCreate = getBasicStatisticsForTable(onHive(), tableName);
@@ -262,15 +227,8 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_bucketed_insert_presto";
 
         onPresto().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s " +
-                "WITH ( " +
-                "   bucketed_by = ARRAY['n_nationkey'], " +
-                "   bucket_count = 50 " +
-                ") " +
-                "AS " +
-                "SELECT n_nationkey, n_name, n_comment, n_regionkey " +
-                "FROM nation", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("WITH ( ").append("   bucketed_by = ARRAY['n_nationkey'], ").append("   bucket_count = 50 ").append(") ").append("AS ").append("SELECT n_nationkey, n_name, n_comment, n_regionkey ")
+				.append("FROM nation").toString(), tableName));
 
         try {
             BasicStatistics statisticsAfterCreate = getBasicStatisticsForTable(onHive(), tableName);
@@ -297,17 +255,8 @@ public class TestHiveBasicTableStatistics
         String tableName = "test_basic_statistics_bucketed_partitioned_insert_presto";
 
         onPresto().executeQuery(format("DROP TABLE IF EXISTS %s", tableName));
-        onPresto().executeQuery(format("" +
-                "CREATE TABLE %s " +
-                "WITH ( " +
-                "   partitioned_by = ARRAY['n_regionkey'], " +
-                "   bucketed_by = ARRAY['n_nationkey'], " +
-                "   bucket_count = 10 " +
-                ") " +
-                "AS " +
-                "SELECT n_nationkey, n_name, n_comment, n_regionkey " +
-                "FROM nation " +
-                "WHERE n_regionkey = 1", tableName));
+        onPresto().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE %s ").append("WITH ( ").append("   partitioned_by = ARRAY['n_regionkey'], ").append("   bucketed_by = ARRAY['n_nationkey'], ").append("   bucket_count = 10 ").append(") ").append("AS ")
+				.append("SELECT n_nationkey, n_name, n_comment, n_regionkey ").append("FROM nation ").append("WHERE n_regionkey = 1").toString(), tableName));
 
         try {
             BasicStatistics tableStatistics = getBasicStatisticsForTable(onHive(), tableName);
@@ -318,11 +267,7 @@ public class TestHiveBasicTableStatistics
             assertThat(firstPartitionStatistics.getNumRows().getAsLong()).isEqualTo(5);
             assertThat(firstPartitionStatistics.getNumFiles().getAsLong()).isEqualTo(10);
 
-            onPresto().executeQuery(format("" +
-                    "INSERT INTO %s (n_nationkey, n_regionkey, n_name, n_comment) " +
-                    "SELECT n_nationkey, n_regionkey, n_name, n_comment " +
-                    "FROM nation " +
-                    "WHERE n_regionkey = 2", tableName));
+            onPresto().executeQuery(format(new StringBuilder().append("").append("INSERT INTO %s (n_nationkey, n_regionkey, n_name, n_comment) ").append("SELECT n_nationkey, n_regionkey, n_name, n_comment ").append("FROM nation ").append("WHERE n_regionkey = 2").toString(), tableName));
 
             BasicStatistics secondPartitionStatistics = getBasicStatisticsForPartition(onHive(), tableName, "n_regionkey=2");
             assertThat(secondPartitionStatistics.getNumRows().getAsLong()).isEqualTo(5);
@@ -343,9 +288,7 @@ public class TestHiveBasicTableStatistics
 
     private static void insertNationData(QueryExecutor executor, String tableName)
     {
-        executor.executeQuery(format("" +
-                "INSERT INTO %s (n_nationkey, n_regionkey, n_name, n_comment) " +
-                "SELECT n_nationkey, n_regionkey, n_name, n_comment FROM nation", tableName));
+        executor.executeQuery(format(new StringBuilder().append("").append("INSERT INTO %s (n_nationkey, n_regionkey, n_name, n_comment) ").append("SELECT n_nationkey, n_regionkey, n_name, n_comment FROM nation").toString(), tableName));
     }
 
     private static void assertThatStatisticsAreNonZero(BasicStatistics statistics)

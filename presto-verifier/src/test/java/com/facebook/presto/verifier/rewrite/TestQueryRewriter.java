@@ -82,28 +82,12 @@ public class TestQueryRewriter
     {
         assertShadowed(
                 getQueryRewriter(DEFAULT_PREFIX),
-                "SELECT " +
-                        "1 x, " +
-                        "2 y, " +
-                        "3 \"X?p$7\", " +
-                        "4 \"x\", " +
-                        "5 x_p_7, " +
-                        "6 a, " +
-                        "* " +
-                        "FROM test_table",
+                new StringBuilder().append("SELECT ").append("1 x, ").append("2 y, ").append("3 \"X?p$7\", ").append("4 \"x\", ").append("5 x_p_7, ").append("6 a, ")
+						.append("* ").append("FROM test_table").toString(),
                 "local.tmp",
                 ImmutableList.of(),
-                "CREATE TABLE %s " +
-                        "(\"x\", \"y\", \"x_p_7\", \"x__1\", \"x_p_7__1\", \"a\", \"a__1\", \"b\") WITH (test_property = 21) AS " +
-                        "SELECT " +
-                        "1 x, " +
-                        "2 y, " +
-                        "3 \"X?p$7\", " +
-                        "4 \"x\", " +
-                        "5 x_p_7, " +
-                        "6 a, " +
-                        "* " +
-                        "FROM test_table",
+                new StringBuilder().append("CREATE TABLE %s ").append("(\"x\", \"y\", \"x_p_7\", \"x__1\", \"x_p_7__1\", \"a\", \"a__1\", \"b\") WITH (test_property = 21) AS ").append("SELECT ").append("1 x, ").append("2 y, ").append("3 \"X?p$7\", ").append("4 \"x\", ")
+						.append("5 x_p_7, ").append("6 a, ").append("* ").append("FROM test_table").toString(),
                 ImmutableList.of("DROP TABLE IF EXISTS %s"));
 
         assertShadowed(
@@ -111,9 +95,7 @@ public class TestQueryRewriter
                 "SELECT * FROM test_table a CROSS JOIN test_table b",
                 "local.tmp",
                 ImmutableList.of(),
-                "CREATE TABLE %s " +
-                        "(\"a\", \"b\", \"a__1\", \"b__1\") WITH (test_property = 21) AS " +
-                        "SELECT * FROM test_table a CROSS JOIN test_table b",
+                new StringBuilder().append("CREATE TABLE %s ").append("(\"a\", \"b\", \"a__1\", \"b__1\") WITH (test_property = 21) AS ").append("SELECT * FROM test_table a CROSS JOIN test_table b").toString(),
                 ImmutableList.of("DROP TABLE IF EXISTS %s"));
     }
 

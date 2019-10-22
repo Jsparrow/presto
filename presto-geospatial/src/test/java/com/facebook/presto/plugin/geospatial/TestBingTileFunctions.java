@@ -423,7 +423,7 @@ public class TestBingTileFunctions
             String wkt = parts[0];
             int zoomLevel = Integer.parseInt(parts[1]);
             long tileCount = Long.parseLong(parts[2]);
-            assertFunction("cardinality(geometry_to_bing_tiles(ST_GeometryFromText('" + wkt + "'), " + zoomLevel + "))", BIGINT, tileCount);
+            assertFunction(new StringBuilder().append("cardinality(geometry_to_bing_tiles(ST_GeometryFromText('").append(wkt).append("'), ").append(zoomLevel).append("))").toString(), BIGINT, tileCount);
         }
     }
 
@@ -477,8 +477,8 @@ public class TestBingTileFunctions
         // Input polygon too complex
         String filePath = this.getClass().getClassLoader().getResource("too_large_polygon.txt").getPath();
         String largeWkt = Files.lines(Paths.get(filePath)).findFirst().get();
-        assertInvalidFunction("geometry_to_bing_tiles(ST_GeometryFromText('" + largeWkt + "'), 16)", "The zoom level is too high or the geometry is too complex to compute a set of covering Bing tiles. Please use a lower zoom level or convert the geometry to its bounding box using the ST_Envelope function.");
-        assertFunction("cardinality(geometry_to_bing_tiles(ST_Envelope(ST_GeometryFromText('" + largeWkt + "')), 16))", BIGINT, 19939L);
+        assertInvalidFunction(new StringBuilder().append("geometry_to_bing_tiles(ST_GeometryFromText('").append(largeWkt).append("'), 16)").toString(), "The zoom level is too high or the geometry is too complex to compute a set of covering Bing tiles. Please use a lower zoom level or convert the geometry to its bounding box using the ST_Envelope function.");
+        assertFunction(new StringBuilder().append("cardinality(geometry_to_bing_tiles(ST_Envelope(ST_GeometryFromText('").append(largeWkt).append("')), 16))").toString(), BIGINT, 19939L);
 
         // Zoom level is too high
         assertInvalidFunction("geometry_to_bing_tiles(ST_GeometryFromText('POLYGON ((0 0, 0 20, 20 20, 0 0))'), 20)", "The zoom level is too high to compute a set of covering Bing tiles.");

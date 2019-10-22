@@ -65,6 +65,8 @@ import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.lang.System.arraycopy;
 import static java.util.Collections.shuffle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Maintains a t-digest by collecting new points in a buffer that is then sorted occasionally and merged
@@ -89,7 +91,8 @@ import static java.util.Collections.shuffle;
 @NotThreadSafe
 public class TDigest
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(TDigest.class).instanceSize();
+    private static final Logger logger = LoggerFactory.getLogger(TDigest.class);
+	private static final int INSTANCE_SIZE = ClassLayout.parseClass(TDigest.class).instanceSize();
     private static final double MAX_COMPRESSION_FACTOR = 1_000;
     private static final double sizeFudge = 30;
 
@@ -181,7 +184,8 @@ public class TDigest
             return r;
         }
         catch (IndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("Incorrect slice serialization format");
+            logger.error(e.getMessage(), e);
+			throw new IllegalArgumentException("Incorrect slice serialization format");
         }
     }
 
@@ -216,14 +220,10 @@ public class TDigest
         checkArgument(this.publicCompression == other.getCompressionFactor(), "TDigests must have the same compression, found (%s, %s)", this.publicCompression,
                 other.getCompressionFactor());
         List<Centroid> tmp = new ArrayList<>();
-        for (Centroid centroid : other.centroids()) {
-            tmp.add(centroid);
-        }
+        other.centroids().forEach(tmp::add);
 
         shuffle(tmp, gen);
-        for (Centroid centroid : tmp) {
-            add(centroid.getMean(), centroid.getWeight());
-        }
+        tmp.forEach(centroid -> add(centroid.getMean(), centroid.getWeight()));
     }
 
     private void mergeNewValues()
@@ -237,13 +237,14 @@ public class TDigest
             return;
         }
 
-        if (force || unmergedWeight > 0) {
-            // note that we run the merge in reverse every other merge to avoid left-to-right bias in merging
-            merge(tempMean, tempWeight, tempUsed, order, unmergedWeight, mergeCount % 2 == 1, compression);
-            mergeCount++;
-            tempUsed = 0;
-            unmergedWeight = 0;
-        }
+        if (!(force || unmergedWeight > 0)) {
+			return;
+		}
+		// note that we run the merge in reverse every other merge to avoid left-to-right bias in merging
+		merge(tempMean, tempWeight, tempUsed, order, unmergedWeight, mergeCount % 2 == 1, compression);
+		mergeCount++;
+		tempUsed = 0;
+		unmergedWeight = 0;
     }
 
     private void merge(double[] incomingMean,
@@ -315,10 +316,11 @@ public class TDigest
             reverse(weight, 0, activeCentroids);
         }
 
-        if (totalWeight > 0) {
-            min = Math.min(min, mean[0]);
-            max = max(max, mean[activeCentroids - 1]);
-        }
+        if (totalWeight <= 0) {
+			return;
+		}
+		min = Math.min(min, mean[0]);
+		max = max(max, mean[activeCentroids - 1]);
     }
 
     /**
@@ -645,7 +647,8 @@ public class TDigest
         return max;
     }
 
-    public String toString()
+    @Override
+	public String toString()
     {
         return format("TDigest\nCompression:%s\nCentroid Count:%s\nSize:%s\nMin:%s Median:%s Max:%s",
                 publicCompression, activeCentroids, totalWeight, min, getQuantile(0.5), max);

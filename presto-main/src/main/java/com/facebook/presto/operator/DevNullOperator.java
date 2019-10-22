@@ -21,7 +21,50 @@ import static java.util.Objects.requireNonNull;
 public class DevNullOperator
         implements Operator
 {
-    public static class DevNullOperatorFactory
+    private final OperatorContext context;
+	private boolean finished;
+
+	public DevNullOperator(OperatorContext context)
+    {
+        this.context = requireNonNull(context, "context is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return context;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished;
+    }
+
+	public static class DevNullOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -49,48 +92,5 @@ public class DevNullOperator
         {
             return new DevNullOperatorFactory(operatorId, planNodeId);
         }
-    }
-
-    private final OperatorContext context;
-    private boolean finished;
-
-    public DevNullOperator(OperatorContext context)
-    {
-        this.context = requireNonNull(context, "context is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return context;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished;
     }
 }

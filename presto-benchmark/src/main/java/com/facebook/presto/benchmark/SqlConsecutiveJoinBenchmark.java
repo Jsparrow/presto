@@ -27,19 +27,8 @@ public class SqlConsecutiveJoinBenchmark
                 "sql_consecutive_join",
                 4,
                 5,
-                "SELECT * FROM " +
-                        "( " +
-                        "  SELECT orders.orderkey as key, * FROM " +
-                        "  customer JOIN orders " +
-                        "  ON customer.custkey = orders.custkey " +
-                        ") t1 " +
-                        "JOIN " +
-                        "( " +
-                        "  SELECT lineitem.orderkey as key, * FROM " +
-                        "  part JOIN lineitem " +
-                        "  ON part.partkey = lineitem.partkey " +
-                        ") t2 " +
-                        "ON t1.key = t2.key");
+                new StringBuilder().append("SELECT * FROM ").append("( ").append("  SELECT orders.orderkey as key, * FROM ").append("  customer JOIN orders ").append("  ON customer.custkey = orders.custkey ").append(") t1 ").append("JOIN ")
+						.append("( ").append("  SELECT lineitem.orderkey as key, * FROM ").append("  part JOIN lineitem ").append("  ON part.partkey = lineitem.partkey ").append(") t2 ").append("ON t1.key = t2.key").toString());
     }
 
     public static void main(String[] args)

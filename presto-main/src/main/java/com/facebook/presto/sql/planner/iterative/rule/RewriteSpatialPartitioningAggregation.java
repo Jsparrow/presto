@@ -97,7 +97,7 @@ public class RewriteSpatialPartitioningAggregation
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> aggregations = ImmutableMap.builder();
         VariableReferenceExpression partitionCountVariable = context.getVariableAllocator().newVariable("partition_count", INTEGER);
         ImmutableMap.Builder<VariableReferenceExpression, RowExpression> envelopeAssignments = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, Aggregation> entry : node.getAggregations().entrySet()) {
+        node.getAggregations().entrySet().forEach(entry -> {
             Aggregation aggregation = entry.getValue();
             FullyQualifiedName name = metadata.getFunctionManager().getFunctionMetadata(aggregation.getFunctionHandle()).getName();
             Type geometryType = metadata.getType(GEOMETRY_TYPE_SIGNATURE);
@@ -127,7 +127,7 @@ public class RewriteSpatialPartitioningAggregation
             else {
                 aggregations.put(entry);
             }
-        }
+        });
 
         return Result.ofPlanNode(
                 new AggregationNode(

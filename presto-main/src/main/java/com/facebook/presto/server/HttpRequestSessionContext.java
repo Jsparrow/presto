@@ -99,7 +99,6 @@ public final class HttpRequestSessionContext
     private final String clientInfo;
 
     public HttpRequestSessionContext(HttpServletRequest servletRequest)
-            throws WebApplicationException
     {
         catalog = trimEmptyToNull(servletRequest.getHeader(PRESTO_CATALOG));
         schema = trimEmptyToNull(servletRequest.getHeader(PRESTO_SCHEMA));
@@ -180,11 +179,10 @@ public final class HttpRequestSessionContext
     private static Map<String, SelectedRole> parseRoleHeaders(HttpServletRequest servletRequest)
     {
         ImmutableMap.Builder<String, SelectedRole> roles = ImmutableMap.builder();
-        for (String header : splitSessionHeader(servletRequest.getHeaders(PRESTO_ROLE))) {
-            List<String> nameValue = Splitter.on('=').limit(2).trimResults().splitToList(header);
-            assertRequest(nameValue.size() == 2, "Invalid %s header", PRESTO_ROLE);
-            roles.put(nameValue.get(0), SelectedRole.valueOf(urlDecode(nameValue.get(1))));
-        }
+        splitSessionHeader(servletRequest.getHeaders(PRESTO_ROLE)).stream().map(header -> Splitter.on('=').limit(2).trimResults().splitToList(header)).forEach(nameValue -> {
+			assertRequest(nameValue.size() == 2, "Invalid %s header", PRESTO_ROLE);
+			roles.put(nameValue.get(0), SelectedRole.valueOf(urlDecode(nameValue.get(1))));
+		});
         return roles.build();
     }
 
@@ -196,11 +194,10 @@ public final class HttpRequestSessionContext
     private static Map<String, String> parseProperty(HttpServletRequest servletRequest, String headerName)
     {
         Map<String, String> properties = new HashMap<>();
-        for (String header : splitSessionHeader(servletRequest.getHeaders(headerName))) {
-            List<String> nameValue = Splitter.on('=').trimResults().splitToList(header);
-            assertRequest(nameValue.size() == 2, "Invalid %s header", headerName);
-            properties.put(nameValue.get(0), nameValue.get(1));
-        }
+        splitSessionHeader(servletRequest.getHeaders(headerName)).stream().map(header -> Splitter.on('=').trimResults().splitToList(header)).forEach(nameValue -> {
+			assertRequest(nameValue.size() == 2, "Invalid %s header", headerName);
+			properties.put(nameValue.get(0), nameValue.get(1));
+		});
         return properties;
     }
 
@@ -245,7 +242,7 @@ public final class HttpRequestSessionContext
     private static Optional<TransactionId> parseTransactionId(String transactionId)
     {
         transactionId = trimEmptyToNull(transactionId);
-        if (transactionId == null || transactionId.equalsIgnoreCase("none")) {
+        if (transactionId == null || "none".equalsIgnoreCase(transactionId)) {
             return Optional.empty();
         }
         try {

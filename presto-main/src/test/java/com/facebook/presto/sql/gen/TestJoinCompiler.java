@@ -77,9 +77,7 @@ public class TestJoinCompiler
         List<List<Block>> channels = ImmutableList.of(channel);
         if (hashEnabled) {
             ImmutableList.Builder<Block> hashChannelBuilder = ImmutableList.builder();
-            for (Block block : channel) {
-                hashChannelBuilder.add(TypeUtils.getHashBlock(joinTypes, block));
-            }
+            channel.forEach(block -> hashChannelBuilder.add(TypeUtils.getHashBlock(joinTypes, block)));
             hashChannel = OptionalInt.of(1);
             channels = ImmutableList.of(channel, hashChannelBuilder.build());
         }

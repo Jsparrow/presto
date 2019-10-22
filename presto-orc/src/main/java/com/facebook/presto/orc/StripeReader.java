@@ -198,12 +198,12 @@ public class StripeReader
 
         // stripe only has one row group and no dictionary
         ImmutableMap.Builder<StreamId, DiskRange> diskRangesBuilder = ImmutableMap.builder();
-        for (Entry<StreamId, DiskRange> entry : getDiskRanges(stripeFooter.getStreams()).entrySet()) {
+        getDiskRanges(stripeFooter.getStreams()).entrySet().forEach(entry -> {
             StreamId streamId = entry.getKey();
             if (streams.keySet().contains(streamId)) {
                 diskRangesBuilder.put(entry);
             }
-        }
+        });
         ImmutableMap<StreamId, DiskRange> diskRanges = diskRangesBuilder.build();
 
         // read the file regions
@@ -254,10 +254,10 @@ public class StripeReader
 
         // transform ranges to have an absolute offset in file
         ImmutableMap.Builder<StreamId, DiskRange> diskRangesBuilder = ImmutableMap.builder();
-        for (Entry<StreamId, DiskRange> entry : diskRanges.entrySet()) {
+        diskRanges.entrySet().forEach(entry -> {
             DiskRange diskRange = entry.getValue();
             diskRangesBuilder.put(entry.getKey(), new DiskRange(stripeOffset + diskRange.getOffset(), diskRange.getLength()));
-        }
+        });
         diskRanges = diskRangesBuilder.build();
 
         // read ranges
@@ -265,10 +265,10 @@ public class StripeReader
 
         // transform streams to OrcInputStream
         ImmutableMap.Builder<StreamId, OrcInputStream> streamsBuilder = ImmutableMap.builder();
-        for (Entry<StreamId, OrcDataSourceInput> entry : streamsData.entrySet()) {
+        streamsData.entrySet().forEach(entry -> {
             OrcDataSourceInput sourceInput = entry.getValue();
             streamsBuilder.put(entry.getKey(), new OrcInputStream(orcDataSource.getId(), sourceInput.getInput(), decompressor, systemMemoryUsage, sourceInput.getRetainedSizeInBytes()));
-        }
+        });
         return streamsBuilder.build();
     }
 
@@ -333,7 +333,6 @@ public class StripeReader
             Map<StreamId, List<RowGroupIndex>> columnIndexes,
             Set<Integer> selectedRowGroups,
             List<ColumnEncoding> encodings)
-            throws InvalidCheckpointException
     {
         ImmutableList.Builder<RowGroup> rowGroupBuilder = ImmutableList.builder();
 
@@ -460,10 +459,8 @@ public class StripeReader
         checkArgument(rowGroup >= 0, "rowGroup is negative");
 
         Map<Integer, List<ColumnStatistics>> groupedColumnStatistics = new HashMap<>();
-        for (Entry<StreamId, List<RowGroupIndex>> entry : columnIndexes.entrySet()) {
-            groupedColumnStatistics.computeIfAbsent(entry.getKey().getColumn(), key -> new ArrayList<>())
-                    .add(entry.getValue().get(rowGroup).getColumnStatistics());
-        }
+        columnIndexes.entrySet().forEach(entry -> groupedColumnStatistics.computeIfAbsent(entry.getKey().getColumn(), key -> new ArrayList<>())
+				.add(entry.getValue().get(rowGroup).getColumnStatistics()));
 
         ImmutableMap.Builder<Integer, ColumnStatistics> statistics = ImmutableMap.builder();
         for (int ordinal = 0; ordinal < rootStructType.getFieldCount(); ordinal++) {
@@ -507,9 +504,7 @@ public class StripeReader
         Set<Integer> includes = new LinkedHashSet<>();
 
         OrcType root = types.get(0);
-        for (int includedColumn : includedColumns) {
-            includeOrcColumnsRecursive(types, includes, root.getFieldTypeIndex(includedColumn));
-        }
+        includedColumns.stream().mapToInt(Integer::valueOf).forEach(includedColumn -> includeOrcColumnsRecursive(types, includes, root.getFieldTypeIndex(includedColumn)));
 
         return includes;
     }

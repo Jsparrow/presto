@@ -337,21 +337,21 @@ public class ReorderJoins
 
         private JoinEnumerationResult getJoinSource(LinkedHashSet<PlanNode> nodes, List<VariableReferenceExpression> outputVariables)
         {
-            if (nodes.size() == 1) {
-                PlanNode planNode = getOnlyElement(nodes);
-                ImmutableList.Builder<Expression> predicates = ImmutableList.builder();
-                predicates.addAll(allFilterInference.generateEqualitiesPartitionedBy(outputVariables::contains, context.getVariableAllocator().getTypes()).getScopeEqualities());
-                stream(nonInferrableConjuncts(allFilter))
-                        .map(conjunct -> allFilterInference.rewriteExpression(conjunct, outputVariables::contains, context.getVariableAllocator().getTypes()))
-                        .filter(Objects::nonNull)
-                        .forEach(predicates::add);
-                Expression filter = combineConjuncts(predicates.build());
-                if (!TRUE_LITERAL.equals(filter)) {
-                    planNode = new FilterNode(idAllocator.getNextId(), planNode, castToRowExpression(filter));
-                }
-                return createJoinEnumerationResult(planNode);
-            }
-            return chooseJoinOrder(nodes, outputVariables);
+            if (nodes.size() != 1) {
+				return chooseJoinOrder(nodes, outputVariables);
+			}
+			PlanNode planNode = getOnlyElement(nodes);
+			ImmutableList.Builder<Expression> predicates = ImmutableList.builder();
+			predicates.addAll(allFilterInference.generateEqualitiesPartitionedBy(outputVariables::contains, context.getVariableAllocator().getTypes()).getScopeEqualities());
+			stream(nonInferrableConjuncts(allFilter))
+			        .map(conjunct -> allFilterInference.rewriteExpression(conjunct, outputVariables::contains, context.getVariableAllocator().getTypes()))
+			        .filter(Objects::nonNull)
+			        .forEach(predicates::add);
+			Expression filter = combineConjuncts(predicates.build());
+			if (!TRUE_LITERAL.equals(filter)) {
+			    planNode = new FilterNode(idAllocator.getNextId(), planNode, castToRowExpression(filter));
+			}
+			return createJoinEnumerationResult(planNode);
         }
 
         private static boolean isJoinEqualityCondition(Expression expression)

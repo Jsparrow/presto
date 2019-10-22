@@ -584,36 +584,34 @@ class AstBuilder
             orderBy = Optional.of(new OrderBy(getLocation(context.ORDER()), visit(context.sortItem(), SortItem.class)));
         }
 
-        if (term instanceof QuerySpecification) {
-            // When we have a simple query specification
-            // followed by order by limit, fold the order by and limit
-            // clauses into the query specification (analyzer/planner
-            // expects this structure to resolve references with respect
-            // to columns defined in the query specification)
-            QuerySpecification query = (QuerySpecification) term;
-
-            return new Query(
-                    getLocation(context),
-                    Optional.empty(),
-                    new QuerySpecification(
-                            getLocation(context),
-                            query.getSelect(),
-                            query.getFrom(),
-                            query.getWhere(),
-                            query.getGroupBy(),
-                            query.getHaving(),
-                            orderBy,
-                            getTextIfPresent(context.limit)),
-                    Optional.empty(),
-                    Optional.empty());
-        }
-
-        return new Query(
-                getLocation(context),
-                Optional.empty(),
-                term,
-                orderBy,
-                getTextIfPresent(context.limit));
+        if (!(term instanceof QuerySpecification)) {
+			return new Query(
+			        getLocation(context),
+			        Optional.empty(),
+			        term,
+			        orderBy,
+			        getTextIfPresent(context.limit));
+		}
+		// When we have a simple query specification
+		// followed by order by limit, fold the order by and limit
+		// clauses into the query specification (analyzer/planner
+		// expects this structure to resolve references with respect
+		// to columns defined in the query specification)
+		QuerySpecification query = (QuerySpecification) term;
+		return new Query(
+		        getLocation(context),
+		        Optional.empty(),
+		        new QuerySpecification(
+		                getLocation(context),
+		                query.getSelect(),
+		                query.getFrom(),
+		                query.getWhere(),
+		                query.getGroupBy(),
+		                query.getHaving(),
+		                orderBy,
+		                getTextIfPresent(context.limit)),
+		        Optional.empty(),
+		        Optional.empty());
     }
 
     @Override
@@ -1445,7 +1443,7 @@ class AstBuilder
 
         boolean distinct = isDistinct(context.setQuantifier());
 
-        if (name.toString().equalsIgnoreCase("if")) {
+        if ("if".equalsIgnoreCase(name.toString())) {
             check(context.expression().size() == 2 || context.expression().size() == 3, "Invalid number of arguments for 'if' function", context);
             check(!window.isPresent(), "OVER clause not valid for 'if' function", context);
             check(!distinct, "DISTINCT not valid for 'if' function", context);
@@ -1463,7 +1461,7 @@ class AstBuilder
                     elseExpression);
         }
 
-        if (name.toString().equalsIgnoreCase("nullif")) {
+        if ("nullif".equalsIgnoreCase(name.toString())) {
             check(context.expression().size() == 2, "Invalid number of arguments for 'nullif' function", context);
             check(!window.isPresent(), "OVER clause not valid for 'nullif' function", context);
             check(!distinct, "DISTINCT not valid for 'nullif' function", context);
@@ -1475,7 +1473,7 @@ class AstBuilder
                     (Expression) visit(context.expression(1)));
         }
 
-        if (name.toString().equalsIgnoreCase("coalesce")) {
+        if ("coalesce".equalsIgnoreCase(name.toString())) {
             check(context.expression().size() >= 2, "The 'coalesce' function must have at least two arguments", context);
             check(!window.isPresent(), "OVER clause not valid for 'coalesce' function", context);
             check(!distinct, "DISTINCT not valid for 'coalesce' function", context);
@@ -1484,7 +1482,7 @@ class AstBuilder
             return new CoalesceExpression(getLocation(context), visit(context.expression(), Expression.class));
         }
 
-        if (name.toString().equalsIgnoreCase("try")) {
+        if ("try".equalsIgnoreCase(name.toString())) {
             check(context.expression().size() == 1, "The 'try' function must have exactly one argument", context);
             check(!window.isPresent(), "OVER clause not valid for 'try' function", context);
             check(!distinct, "DISTINCT not valid for 'try' function", context);
@@ -1493,32 +1491,29 @@ class AstBuilder
             return new TryExpression(getLocation(context), (Expression) visit(getOnlyElement(context.expression())));
         }
 
-        if (name.toString().equalsIgnoreCase("$internal$bind")) {
-            check(context.expression().size() >= 1, "The '$internal$bind' function must have at least one arguments", context);
-            check(!window.isPresent(), "OVER clause not valid for '$internal$bind' function", context);
-            check(!distinct, "DISTINCT not valid for '$internal$bind' function", context);
-            check(!filter.isPresent(), "FILTER not valid for '$internal$bind' function", context);
-
-            int numValues = context.expression().size() - 1;
-            List<Expression> arguments = context.expression().stream()
-                    .map(this::visit)
-                    .map(Expression.class::cast)
-                    .collect(toImmutableList());
-
-            return new BindExpression(
-                    getLocation(context),
-                    arguments.subList(0, numValues),
-                    arguments.get(numValues));
-        }
-
-        return new FunctionCall(
-                getLocation(context),
-                getQualifiedName(context.qualifiedName()),
-                window,
-                filter,
-                orderBy,
-                distinct,
-                visit(context.expression(), Expression.class));
+        if (!"$internal$bind".equalsIgnoreCase(name.toString())) {
+			return new FunctionCall(
+			        getLocation(context),
+			        getQualifiedName(context.qualifiedName()),
+			        window,
+			        filter,
+			        orderBy,
+			        distinct,
+			        visit(context.expression(), Expression.class));
+		}
+		check(context.expression().size() >= 1, "The '$internal$bind' function must have at least one arguments", context);
+		check(!window.isPresent(), "OVER clause not valid for '$internal$bind' function", context);
+		check(!distinct, "DISTINCT not valid for '$internal$bind' function", context);
+		check(!filter.isPresent(), "FILTER not valid for '$internal$bind' function", context);
+		int numValues = context.expression().size() - 1;
+		List<Expression> arguments = context.expression().stream()
+		        .map(this::visit)
+		        .map(Expression.class::cast)
+		        .collect(toImmutableList());
+		return new BindExpression(
+		        getLocation(context),
+		        arguments.subList(0, numValues),
+		        arguments.get(numValues));
     }
 
     @Override
@@ -1693,16 +1688,16 @@ class AstBuilder
         }
 
         String type = context.identifier().getText();
-        if (type.equalsIgnoreCase("time")) {
+        if ("time".equalsIgnoreCase(type)) {
             return new TimeLiteral(getLocation(context), value);
         }
-        if (type.equalsIgnoreCase("timestamp")) {
+        if ("timestamp".equalsIgnoreCase(type)) {
             return new TimestampLiteral(getLocation(context), value);
         }
-        if (type.equalsIgnoreCase("decimal")) {
+        if ("decimal".equalsIgnoreCase(type)) {
             return new DecimalLiteral(getLocation(context), value);
         }
-        if (type.equalsIgnoreCase("char")) {
+        if ("char".equalsIgnoreCase(type)) {
             return new CharLiteral(getLocation(context), value);
         }
 
@@ -1801,13 +1796,6 @@ class AstBuilder
         throw new UnsupportedOperationException("not yet implemented");
     }
 
-    private enum UnicodeDecodeState
-    {
-        EMPTY,
-        ESCAPED,
-        UNICODE_SEQUENCE
-    }
-
     private static String decodeUnicodeLiteral(SqlBaseParser.UnicodeStringLiteralContext context)
     {
         char escape;
@@ -1888,14 +1876,14 @@ class AstBuilder
         return unicodeStringBuilder.toString();
     }
 
-    private <T> Optional<T> visitIfPresent(ParserRuleContext context, Class<T> clazz)
+	private <T> Optional<T> visitIfPresent(ParserRuleContext context, Class<T> clazz)
     {
         return Optional.ofNullable(context)
                 .map(this::visit)
                 .map(clazz::cast);
     }
 
-    private <T> List<T> visit(List<? extends ParserRuleContext> contexts, Class<T> clazz)
+	private <T> List<T> visit(List<? extends ParserRuleContext> contexts, Class<T> clazz)
     {
         return contexts.stream()
                 .map(this::visit)
@@ -1903,13 +1891,13 @@ class AstBuilder
                 .collect(toList());
     }
 
-    private static String unquote(String value)
+	private static String unquote(String value)
     {
         return value.substring(1, value.length() - 1)
                 .replace("''", "'");
     }
 
-    private static LikeClause.PropertiesOption getPropertiesOption(Token token)
+	private static LikeClause.PropertiesOption getPropertiesOption(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.INCLUDING:
@@ -1920,7 +1908,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported LIKE option type: " + token.getText());
     }
 
-    private QualifiedName getQualifiedName(SqlBaseParser.QualifiedNameContext context)
+	private QualifiedName getQualifiedName(SqlBaseParser.QualifiedNameContext context)
     {
         List<String> parts = visit(context.identifier(), Identifier.class).stream()
                 .map(Identifier::getValue) // TODO: preserve quotedness
@@ -1929,41 +1917,41 @@ class AstBuilder
         return QualifiedName.of(parts);
     }
 
-    private static boolean isDistinct(SqlBaseParser.SetQuantifierContext setQuantifier)
+	private static boolean isDistinct(SqlBaseParser.SetQuantifierContext setQuantifier)
     {
         return setQuantifier != null && setQuantifier.DISTINCT() != null;
     }
 
-    private static boolean isHexDigit(char c)
+	private static boolean isHexDigit(char c)
     {
         return ((c >= '0') && (c <= '9')) ||
                 ((c >= 'A') && (c <= 'F')) ||
                 ((c >= 'a') && (c <= 'f'));
     }
 
-    private static boolean isValidUnicodeEscape(char c)
+	private static boolean isValidUnicodeEscape(char c)
     {
         return c < 0x7F && c > 0x20 && !isHexDigit(c) && c != '"' && c != '+' && c != '\'';
     }
 
-    private static Optional<String> getTextIfPresent(ParserRuleContext context)
+	private static Optional<String> getTextIfPresent(ParserRuleContext context)
     {
         return Optional.ofNullable(context)
                 .map(ParseTree::getText);
     }
 
-    private static Optional<String> getTextIfPresent(Token token)
+	private static Optional<String> getTextIfPresent(Token token)
     {
         return Optional.ofNullable(token)
                 .map(Token::getText);
     }
 
-    private Optional<Identifier> getIdentifierIfPresent(ParserRuleContext context)
+	private Optional<Identifier> getIdentifierIfPresent(ParserRuleContext context)
     {
         return Optional.ofNullable(context).map(c -> (Identifier) visit(c));
     }
 
-    private static ArithmeticBinaryExpression.Operator getArithmeticBinaryOperator(Token operator)
+	private static ArithmeticBinaryExpression.Operator getArithmeticBinaryOperator(Token operator)
     {
         switch (operator.getType()) {
             case SqlBaseLexer.PLUS:
@@ -1981,7 +1969,7 @@ class AstBuilder
         throw new UnsupportedOperationException("Unsupported operator: " + operator.getText());
     }
 
-    private static ComparisonExpression.Operator getComparisonOperator(Token symbol)
+	private static ComparisonExpression.Operator getComparisonOperator(Token symbol)
     {
         switch (symbol.getType()) {
             case SqlBaseLexer.EQ:
@@ -2001,7 +1989,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported operator: " + symbol.getText());
     }
 
-    private static CurrentTime.Function getDateTimeFunctionType(Token token)
+	private static CurrentTime.Function getDateTimeFunctionType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.CURRENT_DATE:
@@ -2019,7 +2007,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported special function: " + token.getText());
     }
 
-    private static IntervalLiteral.IntervalField getIntervalFieldType(Token token)
+	private static IntervalLiteral.IntervalField getIntervalFieldType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.YEAR:
@@ -2039,7 +2027,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported interval field: " + token.getText());
     }
 
-    private static IntervalLiteral.Sign getIntervalSign(Token token)
+	private static IntervalLiteral.Sign getIntervalSign(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.MINUS:
@@ -2051,7 +2039,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported sign: " + token.getText());
     }
 
-    private static WindowFrame.Type getFrameType(Token type)
+	private static WindowFrame.Type getFrameType(Token type)
     {
         switch (type.getType()) {
             case SqlBaseLexer.RANGE:
@@ -2063,7 +2051,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported frame type: " + type.getText());
     }
 
-    private static FrameBound.Type getBoundedFrameBoundType(Token token)
+	private static FrameBound.Type getBoundedFrameBoundType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.PRECEDING:
@@ -2075,7 +2063,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported bound type: " + token.getText());
     }
 
-    private static FrameBound.Type getUnboundedFrameBoundType(Token token)
+	private static FrameBound.Type getUnboundedFrameBoundType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.PRECEDING:
@@ -2087,7 +2075,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported bound type: " + token.getText());
     }
 
-    private static SampledRelation.Type getSamplingMethod(Token token)
+	private static SampledRelation.Type getSamplingMethod(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.BERNOULLI:
@@ -2099,7 +2087,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported sampling method: " + token.getText());
     }
 
-    private static LogicalBinaryExpression.Operator getLogicalBinaryOperator(Token token)
+	private static LogicalBinaryExpression.Operator getLogicalBinaryOperator(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.AND:
@@ -2111,7 +2099,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported operator: " + token.getText());
     }
 
-    private static SortItem.NullOrdering getNullOrderingType(Token token)
+	private static SortItem.NullOrdering getNullOrderingType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.FIRST:
@@ -2123,7 +2111,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported ordering: " + token.getText());
     }
 
-    private static SortItem.Ordering getOrderingType(Token token)
+	private static SortItem.Ordering getOrderingType(Token token)
     {
         switch (token.getType()) {
             case SqlBaseLexer.ASC:
@@ -2135,7 +2123,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported ordering: " + token.getText());
     }
 
-    private static QuantifiedComparisonExpression.Quantifier getComparisonQuantifier(Token symbol)
+	private static QuantifiedComparisonExpression.Quantifier getComparisonQuantifier(Token symbol)
     {
         switch (symbol.getType()) {
             case SqlBaseLexer.ALL:
@@ -2149,7 +2137,7 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported quantifier: " + symbol.getText());
     }
 
-    private String getType(SqlBaseParser.TypeContext type)
+	private String getType(SqlBaseParser.TypeContext type)
     {
         if (type.baseType() != null) {
             String signature = type.baseType().getText();
@@ -2163,17 +2151,17 @@ class AstBuilder
                         .stream()
                         .map(this::typeParameterToString)
                         .collect(Collectors.joining(","));
-                signature += "(" + typeParameterSignature + ")";
+                signature += new StringBuilder().append("(").append(typeParameterSignature).append(")").toString();
             }
             return signature;
         }
 
         if (type.ARRAY() != null) {
-            return "ARRAY(" + getType(type.type(0)) + ")";
+            return new StringBuilder().append("ARRAY(").append(getType(type.type(0))).append(")").toString();
         }
 
         if (type.MAP() != null) {
-            return "MAP(" + getType(type.type(0)) + "," + getType(type.type(1)) + ")";
+            return new StringBuilder().append("MAP(").append(getType(type.type(0))).append(",").append(getType(type.type(1))).append(")").toString();
         }
 
         if (type.ROW() != null) {
@@ -2191,19 +2179,18 @@ class AstBuilder
         }
 
         if (type.INTERVAL() != null) {
-            return "INTERVAL " + getIntervalFieldType((Token) type.from.getChild(0).getPayload()) +
-                    " TO " + getIntervalFieldType((Token) type.to.getChild(0).getPayload());
+            return new StringBuilder().append("INTERVAL ").append(getIntervalFieldType((Token) type.from.getChild(0).getPayload())).append(" TO ").append(getIntervalFieldType((Token) type.to.getChild(0).getPayload())).toString();
         }
 
         throw new IllegalArgumentException("Unsupported type specification: " + type.getText());
     }
 
-    private SqlParameterDeclaration getParameterDeclarations(SqlBaseParser.SqlParameterDeclarationContext context)
+	private SqlParameterDeclaration getParameterDeclarations(SqlBaseParser.SqlParameterDeclarationContext context)
     {
         return new SqlParameterDeclaration((Identifier) visit(context.identifier()), getType(context.type()));
     }
 
-    private RoutineCharacteristics getRoutineCharacteristics(SqlBaseParser.RoutineCharacteristicsContext context)
+	private RoutineCharacteristics getRoutineCharacteristics(SqlBaseParser.RoutineCharacteristicsContext context)
     {
         Language language = null;
         Determinism determinism = null;
@@ -2240,7 +2227,7 @@ class AstBuilder
                 Optional.ofNullable(nullCallClause));
     }
 
-    private String typeParameterToString(SqlBaseParser.TypeParameterContext typeParameter)
+	private String typeParameterToString(SqlBaseParser.TypeParameterContext typeParameter)
     {
         if (typeParameter.INTEGER_VALUE() != null) {
             return typeParameter.INTEGER_VALUE().toString();
@@ -2251,22 +2238,22 @@ class AstBuilder
         throw new IllegalArgumentException("Unsupported typeParameter: " + typeParameter.getText());
     }
 
-    private List<Identifier> getIdentifiers(List<SqlBaseParser.IdentifierContext> identifiers)
+	private List<Identifier> getIdentifiers(List<SqlBaseParser.IdentifierContext> identifiers)
     {
         return identifiers.stream().map(context -> (Identifier) visit(context)).collect(toList());
     }
 
-    private List<PrincipalSpecification> getPrincipalSpecifications(List<SqlBaseParser.PrincipalContext> principals)
+	private List<PrincipalSpecification> getPrincipalSpecifications(List<SqlBaseParser.PrincipalContext> principals)
     {
         return principals.stream().map(this::getPrincipalSpecification).collect(toList());
     }
 
-    private Optional<GrantorSpecification> getGrantorSpecificationIfPresent(SqlBaseParser.GrantorContext context)
+	private Optional<GrantorSpecification> getGrantorSpecificationIfPresent(SqlBaseParser.GrantorContext context)
     {
         return Optional.ofNullable(context).map(this::getGrantorSpecification);
     }
 
-    private GrantorSpecification getGrantorSpecification(SqlBaseParser.GrantorContext context)
+	private GrantorSpecification getGrantorSpecification(SqlBaseParser.GrantorContext context)
     {
         if (context instanceof SqlBaseParser.SpecifiedPrincipalContext) {
             return new GrantorSpecification(GrantorSpecification.Type.PRINCIPAL, Optional.of(getPrincipalSpecification(((SqlBaseParser.SpecifiedPrincipalContext) context).principal())));
@@ -2282,7 +2269,7 @@ class AstBuilder
         }
     }
 
-    private PrincipalSpecification getPrincipalSpecification(SqlBaseParser.PrincipalContext context)
+	private PrincipalSpecification getPrincipalSpecification(SqlBaseParser.PrincipalContext context)
     {
         if (context instanceof SqlBaseParser.UnspecifiedPrincipalContext) {
             return new PrincipalSpecification(PrincipalSpecification.Type.UNSPECIFIED, (Identifier) visit(((SqlBaseParser.UnspecifiedPrincipalContext) context).identifier()));
@@ -2298,33 +2285,40 @@ class AstBuilder
         }
     }
 
-    private static void check(boolean condition, String message, ParserRuleContext context)
+	private static void check(boolean condition, String message, ParserRuleContext context)
     {
         if (!condition) {
             throw parseError(message, context);
         }
     }
 
-    public static NodeLocation getLocation(TerminalNode terminalNode)
+	public static NodeLocation getLocation(TerminalNode terminalNode)
     {
         requireNonNull(terminalNode, "terminalNode is null");
         return getLocation(terminalNode.getSymbol());
     }
 
-    public static NodeLocation getLocation(ParserRuleContext parserRuleContext)
+	public static NodeLocation getLocation(ParserRuleContext parserRuleContext)
     {
         requireNonNull(parserRuleContext, "parserRuleContext is null");
         return getLocation(parserRuleContext.getStart());
     }
 
-    public static NodeLocation getLocation(Token token)
+	public static NodeLocation getLocation(Token token)
     {
         requireNonNull(token, "token is null");
         return new NodeLocation(token.getLine(), token.getCharPositionInLine());
     }
 
-    private static ParsingException parseError(String message, ParserRuleContext context)
+	private static ParsingException parseError(String message, ParserRuleContext context)
     {
         return new ParsingException(message, null, context.getStart().getLine(), context.getStart().getCharPositionInLine());
+    }
+
+	private enum UnicodeDecodeState
+    {
+        EMPTY,
+        ESCAPED,
+        UNICODE_SEQUENCE
     }
 }

@@ -190,7 +190,7 @@ public class PrestoS3FileSystem
         super.initialize(uri, conf);
         setConf(conf);
 
-        this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+        this.uri = URI.create(new StringBuilder().append(uri.getScheme()).append("://").append(uri.getAuthority()).toString());
         this.workingDirectory = new Path(PATH_SEPARATOR).makeQualified(this.uri, new Path(PATH_SEPARATOR));
 
         HiveS3Config defaults = new HiveS3Config();
@@ -444,7 +444,7 @@ public class PrestoS3FileSystem
         }
 
         if (!recursive) {
-            throw new IOException("Directory " + path + " is not empty");
+            throw new IOException(new StringBuilder().append("Directory ").append(path).append(" is not empty").toString());
         }
 
         for (FileStatus file : listStatus(path)) {
@@ -549,21 +549,6 @@ public class PrestoS3FileSystem
         return Glacier.toString().equals(object.getStorageClass());
     }
 
-    /**
-     * This exception is for stopping retries for S3 calls that shouldn't be retried.
-     * For example, "Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403 ..."
-     */
-    @VisibleForTesting
-    static class UnrecoverableS3OperationException
-            extends IOException
-    {
-        public UnrecoverableS3OperationException(Path path, Throwable cause)
-        {
-            // append the path info to the message
-            super(format("%s (Path: %s)", cause, path), cause);
-        }
-    }
-
     @VisibleForTesting
     ObjectMetadata getS3ObjectMetadata(Path path)
             throws IOException
@@ -577,7 +562,7 @@ public class PrestoS3FileSystem
         return s3ObjectMetadata;
     }
 
-    private ObjectMetadata getS3ObjectMetadata(Path path, String bucketName, String key)
+	private ObjectMetadata getS3ObjectMetadata(Path path, String bucketName, String key)
             throws IOException
     {
         try {
@@ -617,12 +602,12 @@ public class PrestoS3FileSystem
         }
     }
 
-    private Path qualifiedPath(Path path)
+	private Path qualifiedPath(Path path)
     {
         return path.makeQualified(this.uri, getWorkingDirectory());
     }
 
-    private LocatedFileStatus createLocatedFileStatus(FileStatus status)
+	private LocatedFileStatus createLocatedFileStatus(FileStatus status)
     {
         try {
             BlockLocation[] fakeLocation = getFileBlockLocations(status, 0, status.getLen());
@@ -633,18 +618,18 @@ public class PrestoS3FileSystem
         }
     }
 
-    private static long lastModifiedTime(ObjectMetadata metadata)
+	private static long lastModifiedTime(ObjectMetadata metadata)
     {
         Date date = metadata.getLastModified();
         return (date != null) ? date.getTime() : 0;
     }
 
-    private static boolean keysEqual(Path p1, Path p2)
+	private static boolean keysEqual(Path p1, Path p2)
     {
         return keyFromPath(p1).equals(keyFromPath(p2));
     }
 
-    public static String keyFromPath(Path path)
+	public static String keyFromPath(Path path)
     {
         checkArgument(path.isAbsolute(), "Path is not absolute: %s", path);
         String key = nullToEmpty(path.toUri().getPath());
@@ -657,7 +642,7 @@ public class PrestoS3FileSystem
         return key;
     }
 
-    private AmazonS3 createAmazonS3Client(Configuration hadoopConfig, ClientConfiguration clientConfig)
+	private AmazonS3 createAmazonS3Client(Configuration hadoopConfig, ClientConfiguration clientConfig)
     {
         Optional<EncryptionMaterialsProvider> encryptionMaterialsProvider = createEncryptionMaterialsProvider(hadoopConfig);
         AmazonS3Builder<? extends AmazonS3Builder, ? extends AmazonS3> clientBuilder;
@@ -710,7 +695,7 @@ public class PrestoS3FileSystem
         return clientBuilder.build();
     }
 
-    private static Optional<EncryptionMaterialsProvider> createEncryptionMaterialsProvider(Configuration hadoopConfig)
+	private static Optional<EncryptionMaterialsProvider> createEncryptionMaterialsProvider(Configuration hadoopConfig)
     {
         String kmsKeyId = hadoopConfig.get(S3_KMS_KEY_ID);
         if (kmsKeyId != null) {
@@ -738,7 +723,7 @@ public class PrestoS3FileSystem
         }
     }
 
-    private AWSCredentialsProvider createAwsCredentialsProvider(URI uri, Configuration conf)
+	private AWSCredentialsProvider createAwsCredentialsProvider(URI uri, Configuration conf)
     {
         Optional<AWSCredentials> credentials = getAwsCredentials(uri, conf);
         if (credentials.isPresent()) {
@@ -757,7 +742,7 @@ public class PrestoS3FileSystem
         throw new RuntimeException("S3 credentials not configured");
     }
 
-    private static AWSCredentialsProvider getCustomAWSCredentialsProvider(URI uri, Configuration conf, String providerClass)
+	private static AWSCredentialsProvider getCustomAWSCredentialsProvider(URI uri, Configuration conf, String providerClass)
     {
         try {
             log.debug("Using AWS credential provider %s for URI %s", providerClass, uri);
@@ -771,7 +756,7 @@ public class PrestoS3FileSystem
         }
     }
 
-    private static Optional<AWSCredentials> getAwsCredentials(URI uri, Configuration conf)
+	private static Optional<AWSCredentials> getAwsCredentials(URI uri, Configuration conf)
     {
         String accessKey = conf.get(S3_ACCESS_KEY);
         String secretKey = conf.get(S3_SECRET_KEY);
@@ -792,6 +777,60 @@ public class PrestoS3FileSystem
             return Optional.empty();
         }
         return Optional.of(new BasicAWSCredentials(accessKey, secretKey));
+    }
+
+	@VisibleForTesting
+    AmazonS3 getS3Client()
+    {
+        return s3;
+    }
+
+	@VisibleForTesting
+    void setS3Client(AmazonS3 client)
+    {
+        s3 = client;
+    }
+
+	/**
+     * Helper function used to work around the fact that if you use an S3 bucket with an '_' that java.net.URI
+     * behaves differently and sets the host value to null whereas S3 buckets without '_' have a properly
+     * set host field. '_' is only allowed in S3 bucket names in us-east-1.
+     *
+     * @param uri The URI from which to extract a host value.
+     * @return The host value where uri.getAuthority() is used when uri.getHost() returns null as long as no UserInfo is present.
+     * @throws IllegalArgumentException If the bucket can not be determined from the URI.
+     */
+    public static String getBucketName(URI uri)
+    {
+        if (uri.getHost() != null) {
+            return uri.getHost();
+        }
+
+        if (uri.getUserInfo() == null) {
+            return uri.getAuthority();
+        }
+
+        throw new IllegalArgumentException("Unable to determine S3 bucket from URI.");
+    }
+
+	public static PrestoS3FileSystemStats getFileSystemStats()
+    {
+        return STATS;
+    }
+
+	/**
+     * This exception is for stopping retries for S3 calls that shouldn't be retried.
+     * For example, "Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Forbidden (Service: Amazon S3; Status Code: 403 ..."
+     */
+    @VisibleForTesting
+    static class UnrecoverableS3OperationException
+            extends IOException
+    {
+        public UnrecoverableS3OperationException(Path path, Throwable cause)
+        {
+            // append the path info to the message
+            super(format("%s (Path: %s)", cause, path), cause);
+        }
     }
 
     private static class PrestoS3InputStream
@@ -1001,11 +1040,12 @@ public class PrestoS3FileSystem
         private void openStream()
                 throws IOException
         {
-            if (in == null) {
-                in = openStream(path, nextReadPosition);
-                streamPosition = nextReadPosition;
-                STATS.connectionOpened();
-            }
+            if (in != null) {
+				return;
+			}
+			in = openStream(path, nextReadPosition);
+			streamPosition = nextReadPosition;
+			STATS.connectionOpened();
         }
 
         private InputStream openStream(Path path, long start)
@@ -1046,11 +1086,12 @@ public class PrestoS3FileSystem
 
         private void closeStream()
         {
-            if (in != null) {
-                abortStream(in);
-                in = null;
-                STATS.connectionReleased();
-            }
+            if (in == null) {
+				return;
+			}
+			abortStream(in);
+			in = null;
+			STATS.connectionReleased();
         }
 
         private void checkClosed()
@@ -1223,51 +1264,13 @@ public class PrestoS3FileSystem
                     }
 
                     double transferred = transfer.getProgress().getPercentTransferred();
-                    if (transferred >= (previousTransferred + 10.0)) {
-                        log.debug("Upload percentage (%s/%s): %.0f%%", host, key, transferred);
-                        previousTransferred = transferred;
-                    }
+                    if (!(transferred >= (previousTransferred + 10.0))) {
+						return;
+					}
+					log.debug("Upload percentage (%s/%s): %.0f%%", host, key, transferred);
+					previousTransferred = transferred;
                 }
             };
         }
-    }
-
-    @VisibleForTesting
-    AmazonS3 getS3Client()
-    {
-        return s3;
-    }
-
-    @VisibleForTesting
-    void setS3Client(AmazonS3 client)
-    {
-        s3 = client;
-    }
-
-    /**
-     * Helper function used to work around the fact that if you use an S3 bucket with an '_' that java.net.URI
-     * behaves differently and sets the host value to null whereas S3 buckets without '_' have a properly
-     * set host field. '_' is only allowed in S3 bucket names in us-east-1.
-     *
-     * @param uri The URI from which to extract a host value.
-     * @return The host value where uri.getAuthority() is used when uri.getHost() returns null as long as no UserInfo is present.
-     * @throws IllegalArgumentException If the bucket can not be determined from the URI.
-     */
-    public static String getBucketName(URI uri)
-    {
-        if (uri.getHost() != null) {
-            return uri.getHost();
-        }
-
-        if (uri.getUserInfo() == null) {
-            return uri.getAuthority();
-        }
-
-        throw new IllegalArgumentException("Unable to determine S3 bucket from URI.");
-    }
-
-    public static PrestoS3FileSystemStats getFileSystemStats()
-    {
-        return STATS;
     }
 }

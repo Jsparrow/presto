@@ -146,15 +146,16 @@ public class BigintGroupByHash
             BIGINT.writeLong(blockBuilder, valuesByGroupId.get(groupId));
         }
 
-        if (outputRawHash) {
-            BlockBuilder hashBlockBuilder = pageBuilder.getBlockBuilder(outputChannelOffset + 1);
-            if (groupId == nullGroupId) {
-                BIGINT.writeLong(hashBlockBuilder, NULL_HASH_CODE);
-            }
-            else {
-                BIGINT.writeLong(hashBlockBuilder, BigintOperators.hashCode(valuesByGroupId.get(groupId)));
-            }
-        }
+        if (!outputRawHash) {
+			return;
+		}
+		BlockBuilder hashBlockBuilder = pageBuilder.getBlockBuilder(outputChannelOffset + 1);
+		if (groupId == nullGroupId) {
+		    BIGINT.writeLong(hashBlockBuilder, NULL_HASH_CODE);
+		}
+		else {
+		    BIGINT.writeLong(hashBlockBuilder, BigintOperators.hashCode(valuesByGroupId.get(groupId)));
+		}
     }
 
     @Override

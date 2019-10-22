@@ -79,7 +79,7 @@ public class SplitToMapFunction
                 if (value.indexOf(keyValueDelimiter) >= 0) {
                     throw new PrestoException(
                             INVALID_FUNCTION_ARGUMENT,
-                            "Key-value delimiter must appear exactly once in each entry. Bad input: '" + keyValuePair.toStringUtf8() + "'");
+                            new StringBuilder().append("Key-value delimiter must appear exactly once in each entry. Bad input: '").append(keyValuePair.toStringUtf8()).append("'").toString());
                 }
 
                 if (map.containsKey(key)) {
@@ -97,7 +97,7 @@ public class SplitToMapFunction
             else {
                 throw new PrestoException(
                         INVALID_FUNCTION_ARGUMENT,
-                        "Key-value delimiter must appear exactly once in each entry. Bad input: '" + keyValuePair.toStringUtf8() + "'");
+                        new StringBuilder().append("Key-value delimiter must appear exactly once in each entry. Bad input: '").append(keyValuePair.toStringUtf8()).append("'").toString());
             }
 
             if (entryEnd < 0) {
@@ -113,10 +113,10 @@ public class SplitToMapFunction
         }
         BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(0);
         BlockBuilder singleMapBlockBuilder = blockBuilder.beginBlockEntry();
-        for (Map.Entry<Slice, Slice> entry : map.entrySet()) {
+        map.entrySet().forEach(entry -> {
             VARCHAR.writeSlice(singleMapBlockBuilder, entry.getKey());
             VARCHAR.writeSlice(singleMapBlockBuilder, entry.getValue());
-        }
+        });
         blockBuilder.closeEntry();
         pageBuilder.declarePosition();
 

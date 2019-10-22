@@ -59,11 +59,8 @@ public class HiveZeroRowFileCreator
         JobConf conf = configureCompression(hdfsEnvironment.getConfiguration(hdfsContext, destinationDirectory), compressionCodec);
         List<ListenableFuture<?>> commitFutures = new ArrayList<>();
 
-        for (String fileName : fileNames) {
-            commitFutures.add(
-                    executor.submit(
-                            () -> writeZeroRowFile(session, new Path(destinationDirectory, fileName), conf, schema, format.getSerDe(), format.getOutputFormat())));
-        }
+        fileNames.forEach(fileName -> commitFutures.add(executor.submit(() -> writeZeroRowFile(session, new Path(destinationDirectory, fileName),
+				conf, schema, format.getSerDe(), format.getOutputFormat()))));
 
         ListenableFuture<?> listenableFutureAggregate = whenAllSucceed(commitFutures).call(() -> null, directExecutor());
         try {

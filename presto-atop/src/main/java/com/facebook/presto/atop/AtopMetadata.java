@@ -45,11 +45,14 @@ import static com.facebook.presto.atop.AtopTable.AtopColumn.END_TIME;
 import static com.facebook.presto.atop.AtopTable.AtopColumn.START_TIME;
 import static com.facebook.presto.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AtopMetadata
         implements ConnectorMetadata
 {
-    private static final AtopColumnHandle START_TIME_HANDLE = new AtopColumnHandle(START_TIME.getName());
+    private static final Logger logger = LoggerFactory.getLogger(AtopMetadata.class);
+	private static final AtopColumnHandle START_TIME_HANDLE = new AtopColumnHandle(START_TIME.getName());
     private static final AtopColumnHandle END_TIME_HANDLE = new AtopColumnHandle(END_TIME.getName());
     private final TypeManager typeManager;
     private final String environment;
@@ -81,7 +84,8 @@ public class AtopMetadata
             return new AtopTableHandle(schemaName, table);
         }
         catch (IllegalArgumentException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 
@@ -95,14 +99,14 @@ public class AtopMetadata
         Optional<Map<ColumnHandle, Domain>> domains = constraint.getSummary().getDomains();
         Domain endTimeDomain = Domain.all(TIMESTAMP_WITH_TIME_ZONE);
         Domain startTimeDomain = Domain.all(TIMESTAMP_WITH_TIME_ZONE);
-        if (domains.isPresent()) {
-            if (domains.get().containsKey(START_TIME_HANDLE)) {
-                startTimeDomain = domains.get().get(START_TIME_HANDLE);
+        domains.ifPresent(value -> {
+            if (value.containsKey(START_TIME_HANDLE)) {
+                startTimeDomain = value.get(START_TIME_HANDLE);
             }
-            if (domains.get().containsKey(END_TIME_HANDLE)) {
-                endTimeDomain = domains.get().get(END_TIME_HANDLE);
+            if (value.containsKey(END_TIME_HANDLE)) {
+                endTimeDomain = value.get(END_TIME_HANDLE);
             }
-        }
+        });
         AtopTableLayoutHandle layoutHandle = new AtopTableLayoutHandle(tableHandle, startTimeDomain, endTimeDomain);
         ConnectorTableLayout tableLayout = getTableLayout(session, layoutHandle);
         return ImmutableList.of(new ConnectorTableLayoutResult(tableLayout, constraint.getSummary()));
@@ -119,9 +123,7 @@ public class AtopMetadata
     {
         AtopTableHandle atopTableHandle = (AtopTableHandle) tableHandle;
         ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
-        for (AtopColumn column : atopTableHandle.getTable().getColumns()) {
-            columns.add(new ColumnMetadata(column.getName(), typeManager.getType(column.getType())));
-        }
+        atopTableHandle.getTable().getColumns().forEach(column -> columns.add(new ColumnMetadata(column.getName(), typeManager.getType(column.getType()))));
         SchemaTableName schemaTableName = new SchemaTableName(atopTableHandle.getSchema(), atopTableHandle.getTable().getName());
         return new ConnectorTableMetadata(schemaTableName, columns.build());
     }
@@ -147,9 +149,7 @@ public class AtopMetadata
     {
         AtopTableHandle atopTableHandle = (AtopTableHandle) tableHandle;
         ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
-        for (AtopColumn column : atopTableHandle.getTable().getColumns()) {
-            columnHandles.put(column.getName(), new AtopColumnHandle(column.getName()));
-        }
+        atopTableHandle.getTable().getColumns().forEach(column -> columnHandles.put(column.getName(), new AtopColumnHandle(column.getName())));
         return columnHandles.build();
     }
 
@@ -157,10 +157,10 @@ public class AtopMetadata
     public Map<SchemaTableName, List<ColumnMetadata>> listTableColumns(ConnectorSession session, SchemaTablePrefix prefix)
     {
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix.getSchemaName())) {
+        listTables(session, prefix.getSchemaName()).forEach(tableName -> {
             ConnectorTableMetadata tableMetadata = getTableMetadata(session, getTableHandle(session, tableName));
             columns.put(tableName, tableMetadata.getColumns());
-        }
+        });
         return columns.build();
     }
 

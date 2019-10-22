@@ -42,17 +42,8 @@ public class TestCsvPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "\"first\",\"last\",\"quantity\"\n" +
-                "\"hello\",\"world\",\"123\"\n" +
-                "\"a\",\"\",\"4.5\"\n" +
-                "\"some long\n" +
-                "text that\n" +
-                "does not\n" +
-                "fit on\n" +
-                "one line\",\"more\n" +
-                "text\",\"4567\"\n" +
-                "\"bye\",\"done\",\"-15\"\n";
+        String expected = new StringBuilder().append("").append("\"first\",\"last\",\"quantity\"\n").append("\"hello\",\"world\",\"123\"\n").append("\"a\",\"\",\"4.5\"\n").append("\"some long\n").append("text that\n").append("does not\n").append("fit on\n")
+				.append("one line\",\"more\n").append("text\",\"4567\"\n").append("\"bye\",\"done\",\"-15\"\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }
@@ -84,9 +75,7 @@ public class TestCsvPrinter
                 true);
         printer.finish();
 
-        String expected = "" +
-                "\"hello\",\"world\",\"123\"\n" +
-                "\"a\",\"\",\"4.5\"\n";
+        String expected = new StringBuilder().append("").append("\"hello\",\"world\",\"123\"\n").append("\"a\",\"\",\"4.5\"\n").toString();
 
         assertEquals(writer.getBuffer().toString(), expected);
     }

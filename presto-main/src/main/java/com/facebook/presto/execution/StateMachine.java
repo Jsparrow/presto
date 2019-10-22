@@ -217,9 +217,7 @@ public class StateMachine<T>
             catch (Throwable e) {
                 log.error(e, "Error setting future state for %s", name);
             }
-            for (StateChangeListener<T> stateChangeListener : stateChangeListeners) {
-                fireStateChangedListener(newState, stateChangeListener);
-            }
+            stateChangeListeners.forEach(stateChangeListener -> fireStateChangedListener(newState, stateChangeListener));
         });
     }
 
@@ -291,18 +289,13 @@ public class StateMachine<T>
         }
     }
 
-    public interface StateChangeListener<T>
-    {
-        void stateChanged(T newState);
-    }
-
     @Override
     public String toString()
     {
         return get().toString();
     }
 
-    private void safeExecute(Runnable command)
+	private void safeExecute(Runnable command)
     {
         try {
             executor.execute(command);
@@ -313,5 +306,10 @@ public class StateMachine<T>
             }
             throw e;
         }
+    }
+
+	public interface StateChangeListener<T>
+    {
+        void stateChanged(T newState);
     }
 }

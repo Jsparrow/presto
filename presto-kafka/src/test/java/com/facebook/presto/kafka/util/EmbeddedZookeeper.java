@@ -27,11 +27,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EmbeddedZookeeper
         implements Closeable
 {
-    private final int port;
+    private static final Logger logger = LoggerFactory.getLogger(EmbeddedZookeeper.class);
+	private final int port;
     private final File zkDataDir;
     private final ZooKeeperServer zkServer;
     private final ServerCnxnFactory cnxnFactory;
@@ -70,21 +73,21 @@ public class EmbeddedZookeeper
     public void close()
             throws IOException
     {
-        if (started.get() && !stopped.getAndSet(true)) {
-            cnxnFactory.shutdown();
-            try {
-                cnxnFactory.join();
-            }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            if (zkServer.isRunning()) {
-                zkServer.shutdown();
-            }
-
-            deleteRecursively(zkDataDir.toPath(), ALLOW_INSECURE);
-        }
+        if (!(started.get() && !stopped.getAndSet(true))) {
+			return;
+		}
+		cnxnFactory.shutdown();
+		try {
+		    cnxnFactory.join();
+		}
+		catch (InterruptedException e) {
+		    logger.error(e.getMessage(), e);
+			Thread.currentThread().interrupt();
+		}
+		if (zkServer.isRunning()) {
+		    zkServer.shutdown();
+		}
+		deleteRecursively(zkDataDir.toPath(), ALLOW_INSECURE);
     }
 
     public String getConnectString()

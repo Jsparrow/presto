@@ -421,7 +421,7 @@ public class TestMapFlatSelectiveStreamReader
             return keys.stream()
                     .map(Number.class::cast)
                     .mapToLong(Number::longValue)
-                    .mapToObj(key -> new Subfield.LongSubscript(key))
+                    .mapToObj(Subfield.LongSubscript::new)
                     .map(subscript -> new Subfield("c", ImmutableList.of(subscript)))
                     .collect(toImmutableList());
         }
@@ -429,7 +429,7 @@ public class TestMapFlatSelectiveStreamReader
         if (keyType == VARCHAR) {
             return keys.stream()
                     .map(String.class::cast)
-                    .map(key -> new Subfield.StringSubscript(key))
+                    .map(Subfield.StringSubscript::new)
                     .map(subscript -> new Subfield("c", ImmutableList.of(subscript)))
                     .collect(toImmutableList());
         }
@@ -478,73 +478,66 @@ public class TestMapFlatSelectiveStreamReader
 
     static class ExpectedValuesBuilder<K, V>
     {
-        enum Frequency
-        {
-            NONE,
-            SOME,
-            ALL
-        }
-
         private final Function<Integer, K> keyConverter;
-        private final Function<Integer, V> valueConverter;
-        private Frequency nullValuesFrequency = NONE;
-        private Frequency nullRowsFrequency = NONE;
-        private Frequency emptyMapsFrequency = NONE;
-        private boolean mixedEncodings;
-        private boolean missingSequences;
+		private final Function<Integer, V> valueConverter;
+		private Frequency nullValuesFrequency = NONE;
+		private Frequency nullRowsFrequency = NONE;
+		private Frequency emptyMapsFrequency = NONE;
+		private boolean mixedEncodings;
+		private boolean missingSequences;
 
-        private ExpectedValuesBuilder(Function<Integer, K> keyConverter, Function<Integer, V> valueConverter)
+		private ExpectedValuesBuilder(Function<Integer, K> keyConverter, Function<Integer, V> valueConverter)
         {
             this.keyConverter = keyConverter;
             this.valueConverter = valueConverter;
         }
 
-        public static <T> ExpectedValuesBuilder<T, T> get(Function<Integer, T> converter)
+		public static <T> ExpectedValuesBuilder<T, T> get(Function<Integer, T> converter)
         {
             return new ExpectedValuesBuilder<>(converter, converter);
         }
 
-        public static <K, V> ExpectedValuesBuilder<K, V> get(Function<Integer, K> keyConverter, Function<Integer, V> valueConverter)
+		public static <K, V> ExpectedValuesBuilder<K, V> get(Function<Integer, K> keyConverter, Function<Integer, V> valueConverter)
         {
             return new ExpectedValuesBuilder<>(keyConverter, valueConverter);
         }
 
-        public ExpectedValuesBuilder<K, V> setNullValuesFrequency(Frequency frequency)
+		public ExpectedValuesBuilder<K, V> setNullValuesFrequency(Frequency frequency)
         {
             this.nullValuesFrequency = frequency;
 
             return this;
         }
 
-        public ExpectedValuesBuilder<K, V> setNullRowsFrequency(Frequency frequency)
+		public ExpectedValuesBuilder<K, V> setNullRowsFrequency(Frequency frequency)
         {
             this.nullRowsFrequency = frequency;
 
             return this;
         }
 
-        public ExpectedValuesBuilder<K, V> setEmptyMapsFrequency(Frequency frequency)
+		public ExpectedValuesBuilder<K, V> setEmptyMapsFrequency(Frequency frequency)
         {
             this.emptyMapsFrequency = frequency;
 
             return this;
         }
 
-        public ExpectedValuesBuilder<K, V> setMixedEncodings()
+		public ExpectedValuesBuilder<K, V> setMixedEncodings()
         {
             this.mixedEncodings = true;
 
             return this;
         }
 
-        public ExpectedValuesBuilder<K, V> setMissingSequences()
+		public ExpectedValuesBuilder<K, V> setMissingSequences()
         {
             this.missingSequences = true;
 
             return this;
         }
 
-        public List<Map<K, V>> build()
+		public List<Map<K, V>> build()
         {
             List<Map<K, V>> result = new ArrayList<>(NUM_ROWS);
 
@@ -587,7 +580,7 @@ public class TestMapFlatSelectiveStreamReader
             return result;
         }
 
-        private boolean passesFrequencyCheck(Frequency frequency, int i)
+		private boolean passesFrequencyCheck(Frequency frequency, int i)
         {
             switch (frequency) {
                 case NONE:
@@ -599,6 +592,13 @@ public class TestMapFlatSelectiveStreamReader
                 default:
                     throw new IllegalArgumentException("Got unexpected Frequency: " + frequency);
             }
+        }
+
+		enum Frequency
+        {
+            NONE,
+            SOME,
+            ALL
         }
     }
 

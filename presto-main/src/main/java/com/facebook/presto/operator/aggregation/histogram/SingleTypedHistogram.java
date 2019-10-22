@@ -46,7 +46,21 @@ public class SingleTypedHistogram
     private IntBigArray hashPositions;
     private final LongBigArray counts;
 
-    private SingleTypedHistogram(Type type, int expectedSize, int hashCapacity, BlockBuilder values)
+    public SingleTypedHistogram(Type type, int expectedSize)
+    {
+        this(type, expectedSize, computeBucketCount(expectedSize), type.createBlockBuilder(null, computeBucketCount(expectedSize)));
+    }
+
+	public SingleTypedHistogram(Block block, Type type, int expectedSize)
+    {
+        this(type, expectedSize);
+        requireNonNull(block, "block is null");
+        for (int i = 0; i < block.getPositionCount(); i += 2) {
+            add(i, block, BIGINT.getLong(block, i + 1));
+        }
+    }
+
+	private SingleTypedHistogram(Type type, int expectedSize, int hashCapacity, BlockBuilder values)
     {
         this.type = type;
         this.expectedSize = expectedSize;
@@ -63,32 +77,18 @@ public class SingleTypedHistogram
         counts.ensureCapacity(hashCapacity);
     }
 
-    public SingleTypedHistogram(Type type, int expectedSize)
-    {
-        this(type, expectedSize, computeBucketCount(expectedSize), type.createBlockBuilder(null, computeBucketCount(expectedSize)));
-    }
-
-    private static int computeBucketCount(int expectedSize)
+	private static int computeBucketCount(int expectedSize)
     {
         return arraySize(expectedSize, FILL_RATIO);
     }
 
-    public SingleTypedHistogram(Block block, Type type, int expectedSize)
-    {
-        this(type, expectedSize);
-        requireNonNull(block, "block is null");
-        for (int i = 0; i < block.getPositionCount(); i += 2) {
-            add(i, block, BIGINT.getLong(block, i + 1));
-        }
-    }
-
-    @Override
+	@Override
     public long getEstimatedSize()
     {
         return INSTANCE_SIZE + values.getRetainedSizeInBytes() + counts.sizeOf() + hashPositions.sizeOf();
     }
 
-    @Override
+	@Override
     public void serialize(BlockBuilder out)
     {
         if (values.getPositionCount() == 0) {
@@ -105,13 +105,13 @@ public class SingleTypedHistogram
         }
     }
 
-    @Override
+	@Override
     public void addAll(TypedHistogram other)
     {
         other.readAllValues((block, position, count) -> add(position, block, count));
     }
 
-    @Override
+	@Override
     public void readAllValues(HistogramValueReader reader)
     {
         for (int i = 0; i < values.getPositionCount(); i++) {
@@ -122,7 +122,7 @@ public class SingleTypedHistogram
         }
     }
 
-    @Override
+	@Override
     public void add(int position, Block block, long count)
     {
         int hashPosition = getBucketId(TypeUtils.hashPosition(type, block, position), mask);
@@ -144,25 +144,25 @@ public class SingleTypedHistogram
         addNewGroup(hashPosition, position, block, count);
     }
 
-    @Override
+	@Override
     public Type getType()
     {
         return type;
     }
 
-    @Override
+	@Override
     public int getExpectedSize()
     {
         return expectedSize;
     }
 
-    @Override
+	@Override
     public boolean isEmpty()
     {
         return values.getPositionCount() == 0;
     }
 
-    private void addNewGroup(int hashPosition, int position, Block block, long count)
+	private void addNewGroup(int hashPosition, int position, Block block, long count)
     {
         hashPositions.set(hashPosition, values.getPositionCount());
         counts.set(values.getPositionCount(), count);
@@ -174,7 +174,7 @@ public class SingleTypedHistogram
         }
     }
 
-    private void rehash()
+	private void rehash()
     {
         long newCapacityLong = hashCapacity * 2L;
         if (newCapacityLong > Integer.MAX_VALUE) {
@@ -206,12 +206,12 @@ public class SingleTypedHistogram
         this.counts.ensureCapacity(maxFill);
     }
 
-    private static int getBucketId(long rawHash, int mask)
+	private static int getBucketId(long rawHash, int mask)
     {
         return ((int) murmurHash3(rawHash)) & mask;
     }
 
-    private static int calculateMaxFill(int hashSize)
+	private static int calculateMaxFill(int hashSize)
     {
         checkArgument(hashSize > 0, "hashSize must be greater than 0");
         int maxFill = (int) Math.ceil(hashSize * FILL_RATIO);

@@ -156,25 +156,26 @@ public class DictionaryCompressionOptimizer
         }
 
         // if the stripe is larger then the minimum stripe size, we are not required to convert any more dictionary columns to direct
-        if (bufferedBytes >= stripeMinBytes) {
-            // check if we can get better compression by converting a dictionary column to direct.  This can happen when then there are multiple
-            // dictionary columns and one does not compress well, so if we convert it to direct we can continue to use the existing dictionaries
-            // for the other columns.
-            double currentCompressionRatio = currentCompressionRatio(nonDictionaryBufferedBytes);
-            while (!directConversionCandidates.isEmpty() && bufferedBytes < stripeMaxBytes) {
-                DictionaryCompressionProjection projection = selectDictionaryColumnToConvert(nonDictionaryBufferedBytes, stripeRowCount);
-                if (projection.getPredictedFileCompressionRatio() < currentCompressionRatio) {
-                    return;
-                }
+		if (bufferedBytes < stripeMinBytes) {
+			return;
+		}
+		// check if we can get better compression by converting a dictionary column to direct.  This can happen when then there are multiple
+		// dictionary columns and one does not compress well, so if we convert it to direct we can continue to use the existing dictionaries
+		// for the other columns.
+		double currentCompressionRatio = currentCompressionRatio(nonDictionaryBufferedBytes);
+		while (!directConversionCandidates.isEmpty() && bufferedBytes < stripeMaxBytes) {
+		    DictionaryCompressionProjection projection = selectDictionaryColumnToConvert(nonDictionaryBufferedBytes, stripeRowCount);
+		    if (projection.getPredictedFileCompressionRatio() < currentCompressionRatio) {
+		        return;
+		    }
 
-                int selectDictionaryColumnBufferedBytes = toIntExact(projection.getColumnToConvert().getBufferedBytes());
-                OptionalInt directBytes = tryConvertToDirect(projection.getColumnToConvert(), getMaxDirectBytes(bufferedBytes));
-                if (directBytes.isPresent()) {
-                    bufferedBytes = bufferedBytes + directBytes.getAsInt() - selectDictionaryColumnBufferedBytes;
-                    nonDictionaryBufferedBytes += directBytes.getAsInt();
-                }
-            }
-        }
+		    int selectDictionaryColumnBufferedBytes = toIntExact(projection.getColumnToConvert().getBufferedBytes());
+		    OptionalInt directBytes = tryConvertToDirect(projection.getColumnToConvert(), getMaxDirectBytes(bufferedBytes));
+		    if (directBytes.isPresent()) {
+		        bufferedBytes = bufferedBytes + directBytes.getAsInt() - selectDictionaryColumnBufferedBytes;
+		        nonDictionaryBufferedBytes += directBytes.getAsInt();
+		    }
+		}
     }
 
     private int convertLowCompressionStreams(int bufferedBytes)
@@ -376,13 +377,13 @@ public class DictionaryCompressionOptimizer
         {
             this.rowCount = rowCount;
             long currentValueCount = dictionaryColumn.getValueCount();
-            if (currentValueCount - pendingPastValueCount >= 1024) {
-                pastValueCount = pendingPastValueCount;
-                pastDictionaryEntries = pendingPastDictionaryEntries;
-
-                pendingPastValueCount = currentValueCount;
-                pendingPastDictionaryEntries = dictionaryColumn.getDictionaryEntries();
-            }
+            if (!(currentValueCount - pendingPastValueCount >= 1024)) {
+				return;
+			}
+			pastValueCount = pendingPastValueCount;
+			pastDictionaryEntries = pendingPastDictionaryEntries;
+			pendingPastValueCount = currentValueCount;
+			pendingPastDictionaryEntries = dictionaryColumn.getDictionaryEntries();
         }
 
         public long getRawBytes()

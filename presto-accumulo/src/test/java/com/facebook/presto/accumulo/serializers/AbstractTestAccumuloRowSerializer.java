@@ -57,15 +57,15 @@ import static org.testng.Assert.assertEquals;
 
 public abstract class AbstractTestAccumuloRowSerializer
 {
-    private final Class<? extends AccumuloRowSerializer> serializerClass;
     private static final String COLUMN_NAME = "foo";
+	private final Class<? extends AccumuloRowSerializer> serializerClass;
 
-    protected AbstractTestAccumuloRowSerializer(Class<? extends AccumuloRowSerializer> serializerClass)
+	protected AbstractTestAccumuloRowSerializer(Class<? extends AccumuloRowSerializer> serializerClass)
     {
         this.serializerClass = serializerClass;
     }
 
-    @Test
+	@Test
     public void testArray()
             throws Exception
     {
@@ -81,7 +81,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testBoolean()
             throws Exception
     {
@@ -104,7 +104,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, false);
     }
 
-    @Test
+	@Test
     public void testDate()
             throws Exception
     {
@@ -119,7 +119,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(MILLISECONDS.toDays(actual.getTime()), MILLISECONDS.toDays(expected.getTime()));
     }
 
-    @Test
+	@Test
     public void testDouble()
             throws Exception
     {
@@ -135,7 +135,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testFloat()
             throws Exception
     {
@@ -151,7 +151,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testInt()
             throws Exception
     {
@@ -168,7 +168,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testLong()
             throws Exception
     {
@@ -184,7 +184,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testMap()
             throws Exception
     {
@@ -206,7 +206,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testSmallInt()
             throws Exception
     {
@@ -222,7 +222,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testTime()
             throws Exception
     {
@@ -238,7 +238,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testTimestamp()
             throws Exception
     {
@@ -254,7 +254,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testTinyInt()
             throws Exception
     {
@@ -270,7 +270,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testVarbinary()
             throws Exception
     {
@@ -286,7 +286,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testVarchar()
             throws Exception
     {
@@ -302,7 +302,7 @@ public abstract class AbstractTestAccumuloRowSerializer
         assertEquals(actual, expected);
     }
 
-    protected void deserializeData(AccumuloRowSerializer serializer, byte[] data)
+	protected void deserializeData(AccumuloRowSerializer serializer, byte[] data)
     {
         Mutation m = new Mutation("row");
         m.put(b("a"), b("a"), data);
@@ -312,12 +312,12 @@ public abstract class AbstractTestAccumuloRowSerializer
         serializer.deserialize(new SimpleImmutableEntry<>(key, value));
     }
 
-    protected static byte[] b(String str)
+	protected static byte[] b(String str)
     {
         return str.getBytes(UTF_8);
     }
 
-    protected static byte[] b()
+	protected static byte[] b()
     {
         return new byte[0];
     }

@@ -139,6 +139,8 @@ import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class SqlToRowExpressionTranslator
 {
@@ -166,7 +168,8 @@ public final class SqlToRowExpressionTranslator
     private static class Visitor
             extends AstVisitor<RowExpression, Void>
     {
-        private final Map<NodeRef<Expression>, Type> types;
+        private final Logger logger = LoggerFactory.getLogger(Visitor.class);
+		private final Map<NodeRef<Expression>, Type> types;
         private final Map<VariableReferenceExpression, Integer> layout;
         private final TypeManager typeManager;
         private final FunctionManager functionManager;
@@ -278,7 +281,8 @@ public final class SqlToRowExpressionTranslator
                 type = typeManager.getType(parseTypeSignature(node.getType()));
             }
             catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Unsupported type: " + node.getType());
+                logger.error(e.getMessage(), e);
+				throw new IllegalArgumentException("Unsupported type: " + node.getType());
             }
 
             try {
@@ -293,7 +297,8 @@ public final class SqlToRowExpressionTranslator
                 }
             }
             catch (NumberFormatException e) {
-                throw new SemanticException(SemanticErrorCode.INVALID_LITERAL, node, format("Invalid formatted generic %s literal: %s", type, node));
+                logger.error(e.getMessage(), e);
+				throw new SemanticException(SemanticErrorCode.INVALID_LITERAL, node, format("Invalid formatted generic %s literal: %s", type, node));
             }
 
             if (JSON.equals(type)) {
@@ -419,11 +424,10 @@ public final class SqlToRowExpressionTranslator
         {
             ImmutableList.Builder<Type> valueTypesBuilder = ImmutableList.builder();
             ImmutableList.Builder<RowExpression> argumentsBuilder = ImmutableList.builder();
-            for (Expression value : node.getValues()) {
-                RowExpression valueRowExpression = process(value, context);
-                valueTypesBuilder.add(valueRowExpression.getType());
-                argumentsBuilder.add(valueRowExpression);
-            }
+            node.getValues().stream().map(value -> process(value, context)).forEach(valueRowExpression -> {
+				valueTypesBuilder.add(valueRowExpression.getType());
+				argumentsBuilder.add(valueRowExpression);
+			});
             RowExpression function = process(node.getFunction(), context);
             argumentsBuilder.add(function);
 
@@ -509,13 +513,8 @@ public final class SqlToRowExpressionTranslator
 
             arguments.add(process(node.getOperand(), context));
 
-            for (WhenClause clause : node.getWhenClauses()) {
-                arguments.add(specialForm(
-                        WHEN,
-                        getType(clause),
-                        process(clause.getOperand(), context),
-                        process(clause.getResult(), context)));
-            }
+            node.getWhenClauses().forEach(clause -> arguments.add(specialForm(WHEN, getType(clause), process(clause.getOperand(), context),
+					process(clause.getResult(), context))));
 
             Type returnType = getType(node);
 
@@ -622,9 +621,7 @@ public final class SqlToRowExpressionTranslator
             ImmutableList.Builder<RowExpression> arguments = ImmutableList.builder();
             arguments.add(process(node.getValue(), context));
             InListExpression values = (InListExpression) node.getValueList();
-            for (Expression value : values.getValues()) {
-                arguments.add(process(value, context));
-            }
+            values.getValues().forEach(value -> arguments.add(process(value, context)));
 
             return specialForm(IN, BOOLEAN, arguments.build());
         }
@@ -686,12 +683,11 @@ public final class SqlToRowExpressionTranslator
             RowExpression value = process(node.getValue(), context);
             RowExpression pattern = process(node.getPattern(), context);
 
-            if (node.getEscape().isPresent()) {
-                RowExpression escape = process(node.getEscape().get(), context);
-                return likeFunctionCall(value, call("LIKE_PATTERN", functionResolution.likePatternFunction(), LIKE_PATTERN, pattern, escape));
-            }
-
-            return likeFunctionCall(value, call(CAST.name(), functionManager.lookupCast(CAST, VARCHAR.getTypeSignature(), LIKE_PATTERN.getTypeSignature()), LIKE_PATTERN, pattern));
+            if (!node.getEscape().isPresent()) {
+				return likeFunctionCall(value, call(CAST.name(), functionManager.lookupCast(CAST, VARCHAR.getTypeSignature(), LIKE_PATTERN.getTypeSignature()), LIKE_PATTERN, pattern));
+			}
+			RowExpression escape = process(node.getEscape().get(), context);
+			return likeFunctionCall(value, call("LIKE_PATTERN", functionResolution.likePatternFunction(), LIKE_PATTERN, pattern, escape));
         }
 
         private RowExpression likeFunctionCall(RowExpression value, RowExpression pattern)
@@ -711,24 +707,24 @@ public final class SqlToRowExpressionTranslator
             RowExpression index = process(node.getIndex(), context);
 
             // this block will handle row subscript, converts the ROW_CONSTRUCTOR with subscript to a DEREFERENCE expression
-            if (base.getType() instanceof RowType) {
-                checkState(index instanceof ConstantExpression, "Subscript expression on ROW requires a ConstantExpression");
-                ConstantExpression position = (ConstantExpression) index;
-                checkState(position.getValue() instanceof Long, "ConstantExpression should contain a valid integer index into the row");
-                Long offset = (Long) position.getValue();
-                checkState(
-                        offset >= 1 && offset <= base.getType().getTypeParameters().size(),
-                        "Subscript index out of bounds %s: should be >= 1 and <= %s",
-                        offset,
-                        base.getType().getTypeParameters().size());
-                return specialForm(DEREFERENCE, getType(node), base, Expressions.constant(offset - 1, INTEGER));
-            }
-            return call(
-                    SUBSCRIPT.name(),
-                    functionManager.resolveOperator(SUBSCRIPT, fromTypes(base.getType(), index.getType())),
-                    getType(node),
-                    base,
-                    index);
+			if (!(base.getType() instanceof RowType)) {
+				return call(
+				        SUBSCRIPT.name(),
+				        functionManager.resolveOperator(SUBSCRIPT, fromTypes(base.getType(), index.getType())),
+				        getType(node),
+				        base,
+				        index);
+			}
+			checkState(index instanceof ConstantExpression, "Subscript expression on ROW requires a ConstantExpression");
+			ConstantExpression position = (ConstantExpression) index;
+			checkState(position.getValue() instanceof Long, "ConstantExpression should contain a valid integer index into the row");
+			Long offset = (Long) position.getValue();
+			checkState(
+			        offset >= 1 && offset <= base.getType().getTypeParameters().size(),
+			        "Subscript index out of bounds %s: should be >= 1 and <= %s",
+			        offset,
+			        base.getType().getTypeParameters().size());
+			return specialForm(DEREFERENCE, getType(node), base, Expressions.constant(offset - 1, INTEGER));
         }
 
         @Override

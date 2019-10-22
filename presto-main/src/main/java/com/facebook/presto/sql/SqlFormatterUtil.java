@@ -25,10 +25,14 @@ import java.util.Optional;
 
 import static com.facebook.presto.spi.StandardErrorCode.GENERIC_INTERNAL_ERROR;
 import static com.facebook.presto.sql.parser.ParsingOptions.DecimalLiteralTreatment.REJECT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class SqlFormatterUtil
 {
-    private SqlFormatterUtil() {}
+    private static final Logger logger = LoggerFactory.getLogger(SqlFormatterUtil.class);
+
+	private SqlFormatterUtil() {}
 
     public static String getFormattedSql(Statement statement, SqlParser sqlParser, Optional<List<Expression>> parameters)
     {
@@ -41,7 +45,8 @@ public final class SqlFormatterUtil
             parsed = sqlParser.createStatement(sql, parsingOptions);
         }
         catch (ParsingException e) {
-            throw new PrestoException(GENERIC_INTERNAL_ERROR, "Formatted query does not parse: " + statement);
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(GENERIC_INTERNAL_ERROR, "Formatted query does not parse: " + statement);
         }
         if (!statement.equals(parsed)) {
             throw new PrestoException(GENERIC_INTERNAL_ERROR, "Query does not round-trip: " + statement);

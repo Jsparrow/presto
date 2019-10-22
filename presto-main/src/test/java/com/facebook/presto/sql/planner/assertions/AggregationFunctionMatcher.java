@@ -98,7 +98,7 @@ public class AggregationFunctionMatcher
         for (int i = 0; i < expectedSortOrder.getSortItems().size(); i++) {
             VariableReferenceExpression orderingVariable = orderingScheme.getOrderByVariables().get(i);
             if (expectedSortOrder.getSortItems().get(i).getSortKey().equals(new SymbolReference(orderingVariable.getName())) &&
-                    toSortOrder(expectedSortOrder.getSortItems().get(i)).equals(orderingScheme.getOrdering(orderingVariable))) {
+                    toSortOrder(expectedSortOrder.getSortItems().get(i)) == orderingScheme.getOrdering(orderingVariable)) {
                 continue;
             }
             return false;
@@ -109,14 +109,14 @@ public class AggregationFunctionMatcher
     private static boolean isEquivalent(Optional<Expression> expression, Optional<RowExpression> rowExpression)
     {
         // Function's argument provided by FunctionCallProvider is SymbolReference that already resolved from symbolAliases.
-        if (rowExpression.isPresent() && expression.isPresent()) {
-            if (isExpression(rowExpression.get())) {
-                return expression.get().equals(castToExpression(rowExpression.get()));
-            }
-            checkArgument(rowExpression.get() instanceof VariableReferenceExpression, "can only process variableReference");
-            return expression.get().equals(new SymbolReference(((VariableReferenceExpression) rowExpression.get()).getName()));
-        }
-        return rowExpression.isPresent() == expression.isPresent();
+		if (!(rowExpression.isPresent() && expression.isPresent())) {
+			return rowExpression.isPresent() == expression.isPresent();
+		}
+		if (isExpression(rowExpression.get())) {
+		    return expression.get().equals(castToExpression(rowExpression.get()));
+		}
+		checkArgument(rowExpression.get() instanceof VariableReferenceExpression, "can only process variableReference");
+		return expression.get().equals(new SymbolReference(((VariableReferenceExpression) rowExpression.get()).getName()));
     }
 
     @Override

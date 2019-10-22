@@ -72,6 +72,6 @@ public class TpcdsPartitioningHandle
     @Override
     public String toString()
     {
-        return table + ":" + totalRows;
+        return new StringBuilder().append(table).append(":").append(totalRows).toString();
     }
 }

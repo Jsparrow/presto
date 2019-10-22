@@ -447,8 +447,8 @@ public class OptimizedPartitionedOutputOperator
             // Populate positions to copy for each destination partition.
             int positionCount = page.getPositionCount();
 
-            for (int i = 0; i < partitionBuffers.length; i++) {
-                partitionBuffers[i].resetPositions(positionCount);
+            for (OptimizedPartitionedOutputOperator.PartitionBuffer partitionBuffer : partitionBuffers) {
+                partitionBuffer.resetPositions(positionCount);
             }
 
             Block nullBlock = nullChannel.isPresent() ? page.getBlock(nullChannel.getAsInt()) : null;
@@ -459,8 +459,8 @@ public class OptimizedPartitionedOutputOperator
                         nullBlock != null && nullBlock.isNull(position);
 
                 if (shouldReplicate) {
-                    for (int i = 0; i < partitionBuffers.length; i++) {
-                        partitionBuffers[i].addPosition(position);
+                    for (OptimizedPartitionedOutputOperator.PartitionBuffer partitionBuffer : partitionBuffers) {
+                        partitionBuffer.addPosition(position);
                     }
                     hasAnyRowBeenReplicated = true;
                 }
@@ -476,8 +476,8 @@ public class OptimizedPartitionedOutputOperator
             }
 
             // Copy the data to their destination partitions and flush when the buffer is full.
-            for (int i = 0; i < partitionBuffers.length; i++) {
-                partitionBuffers[i].appendData(decodedBlocks, fixedWidthRowSize, variableWidthChannels, outputBuffer);
+			for (OptimizedPartitionedOutputOperator.PartitionBuffer partitionBuffer : partitionBuffers) {
+                partitionBuffer.appendData(decodedBlocks, fixedWidthRowSize, variableWidthChannels, outputBuffer);
             }
 
             // Return all borrowed arrays
@@ -491,8 +491,8 @@ public class OptimizedPartitionedOutputOperator
 
         public void flush()
         {
-            for (int i = 0; i < partitionBuffers.length; i++) {
-                partitionBuffers[i].flush(outputBuffer);
+            for (OptimizedPartitionedOutputOperator.PartitionBuffer partitionBuffer : partitionBuffers) {
+                partitionBuffer.flush(outputBuffer);
             }
         }
 
@@ -504,12 +504,12 @@ public class OptimizedPartitionedOutputOperator
             // In both cases, the arrayAllocator doesn't need to be counted.
             long size = 0;
 
-            for (int i = 0; i < partitionBuffers.length; i++) {
-                size += partitionBuffers[i].getRetainedSizeInBytes();
+            for (OptimizedPartitionedOutputOperator.PartitionBuffer partitionBuffer : partitionBuffers) {
+                size += partitionBuffer.getRetainedSizeInBytes();
             }
 
-            for (int i = 0; i < decodedBlocks.length; i++) {
-                size += decodedBlocks[i] == null ? 0 : decodedBlocks[i].getRetainedSizeInBytes();
+            for (DecodedBlockNode decodedBlock : decodedBlocks) {
+                size += decodedBlock == null ? 0 : decodedBlock.getRetainedSizeInBytes();
             }
 
             return size;
@@ -630,12 +630,13 @@ public class OptimizedPartitionedOutputOperator
         private void initializeBlockEncodingBuffers(DecodedBlockNode[] decodedBlocks)
         {
             // Create buffers has to be done after seeing the first page.
-            if (blockEncodingBuffers == null) {
-                blockEncodingBuffers = new BlockEncodingBuffer[channelCount];
-                for (int i = 0; i < channelCount; i++) {
-                    blockEncodingBuffers[i] = createBlockEncodingBuffers(decodedBlocks[i]);
-                }
-            }
+			if (blockEncodingBuffers != null) {
+				return;
+			}
+			blockEncodingBuffers = new BlockEncodingBuffer[channelCount];
+			for (int i = 0; i < channelCount; i++) {
+			    blockEncodingBuffers[i] = createBlockEncodingBuffers(decodedBlocks[i]);
+			}
         }
 
         /**
@@ -649,9 +650,7 @@ public class OptimizedPartitionedOutputOperator
 
             serializedRowSizes = ensureCapacity(serializedRowSizes, positionCount, SMALL, INITIALIZE);
 
-            for (int i : variableWidthChannels) {
-                blockEncodingBuffers[i].accumulateSerializedRowSizes(serializedRowSizes);
-            }
+            variableWidthChannels.stream().mapToInt(Integer::valueOf).forEach(i -> blockEncodingBuffers[i].accumulateSerializedRowSizes(serializedRowSizes));
 
             for (int i = 0; i < positionCount; i++) {
                 serializedRowSizes[i] += fixedWidthRowSize;

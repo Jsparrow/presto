@@ -138,7 +138,7 @@ public class AllOrNoneValueSet
     @Override
     public String toString(ConnectorSession session)
     {
-        return "[" + (all ? "ALL" : "NONE") + "]";
+        return new StringBuilder().append("[").append(all ? "ALL" : "NONE").append("]").toString();
     }
 
     @Override

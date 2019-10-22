@@ -50,11 +50,15 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RcFileReader
         implements Closeable
 {
-    private static final Slice RCFILE_MAGIC = Slices.utf8Slice("RCF");
+    private static final Logger logger = LoggerFactory.getLogger(RcFileReader.class);
+
+	private static final Slice RCFILE_MAGIC = Slices.utf8Slice("RCF");
 
     // These numbers were chosen arbitrarily, and are only to prevent corrupt files from causing OOMs
     private static final int MAX_METADATA_ENTRIES = 500_000;
@@ -204,18 +208,17 @@ public class RcFileReader
             columnCount = Integer.parseInt(columnCountString);
         }
         catch (NumberFormatException e) {
-            throw corrupt("Invalid column count %s in RCFile %s", columnCountString, dataSource);
+            logger.error(e.getMessage(), e);
+			throw corrupt("Invalid column count %s in RCFile %s", columnCountString, dataSource);
         }
 
         // initialize columns
         verify(columnCount <= MAX_COLUMN_COUNT, "Too many columns (%s) in RCFile %s", columnCountString, dataSource);
         columns = new Column[columnCount];
-        for (Entry<Integer, Type> entry : readColumns.entrySet()) {
-            if (entry.getKey() < columnCount) {
-                ColumnEncoding columnEncoding = encoding.getEncoding(entry.getValue());
-                columns[entry.getKey()] = new Column(columnEncoding, decompressor);
-            }
-        }
+        readColumns.entrySet().stream().filter(entry -> entry.getKey() < columnCount).forEach(entry -> {
+		    ColumnEncoding columnEncoding = encoding.getEncoding(entry.getValue());
+		    columns[entry.getKey()] = new Column(columnEncoding, decompressor);
+		});
 
         // read sync bytes
         syncFirst = input.readLong();
@@ -293,17 +296,18 @@ public class RcFileReader
                 decompressor.destroy();
             }
         }
-        if (writeChecksumBuilder.isPresent()) {
-            WriteChecksum actualChecksum = writeChecksumBuilder.get().build();
-            validateWrite(validation -> validation.getChecksum().getTotalRowCount() == actualChecksum.getTotalRowCount(), "Invalid row count");
-            List<Long> columnHashes = actualChecksum.getColumnHashes();
-            for (int i = 0; i < columnHashes.size(); i++) {
-                int columnIndex = i;
-                validateWrite(validation -> validation.getChecksum().getColumnHashes().get(columnIndex).equals(columnHashes.get(columnIndex)),
-                        "Invalid checksum for column %s", columnIndex);
-            }
-            validateWrite(validation -> validation.getChecksum().getRowGroupHash() == actualChecksum.getRowGroupHash(), "Invalid row group checksum");
-        }
+        if (!writeChecksumBuilder.isPresent()) {
+			return;
+		}
+		WriteChecksum actualChecksum = writeChecksumBuilder.get().build();
+		validateWrite(validation -> validation.getChecksum().getTotalRowCount() == actualChecksum.getTotalRowCount(), "Invalid row count");
+		List<Long> columnHashes = actualChecksum.getColumnHashes();
+		for (int i = 0; i < columnHashes.size(); i++) {
+		    int columnIndex = i;
+		    validateWrite(validation -> validation.getChecksum().getColumnHashes().get(columnIndex).equals(columnHashes.get(columnIndex)),
+		            "Invalid checksum for column %s", columnIndex);
+		}
+		validateWrite(validation -> validation.getChecksum().getRowGroupHash() == actualChecksum.getRowGroupHash(), "Invalid row group checksum");
     }
 
     public int advance()
@@ -425,13 +429,12 @@ public class RcFileReader
         checkArgument(readColumns.containsKey(columnIndex), "Column %s is not being read", columnIndex);
         checkState(currentChunkRowCount > 0, "No more data");
 
-        if (columnIndex >= columns.length) {
-            Type type = readColumns.get(columnIndex);
-            Block nullBlock = type.createBlockBuilder(null, 1, 0).appendNull().build();
-            return new RunLengthEncodedBlock(nullBlock, currentChunkRowCount);
-        }
-
-        return columns[columnIndex].readBlock(rowGroupPosition, currentChunkRowCount);
+        if (columnIndex < columns.length) {
+			return columns[columnIndex].readBlock(rowGroupPosition, currentChunkRowCount);
+		}
+		Type type = readColumns.get(columnIndex);
+		Block nullBlock = type.createBlockBuilder(null, 1, 0).appendNull().build();
+		return new RunLengthEncodedBlock(nullBlock, currentChunkRowCount);
     }
 
     public RcFileDataSourceId getId()
@@ -456,6 +459,7 @@ public class RcFileReader
             close();
         }
         catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 
@@ -499,13 +503,14 @@ public class RcFileReader
     private void validateWritePageChecksum()
             throws IOException
     {
-        if (writeChecksumBuilder.isPresent()) {
-            Block[] blocks = new Block[columns.length];
-            for (int columnIndex = 0; columnIndex < columns.length; columnIndex++) {
-                blocks[columnIndex] = readBlock(columnIndex);
-            }
-            writeChecksumBuilder.get().addPage(new Page(currentChunkRowCount, blocks));
-        }
+        if (!writeChecksumBuilder.isPresent()) {
+			return;
+		}
+		Block[] blocks = new Block[columns.length];
+		for (int columnIndex = 0; columnIndex < columns.length; columnIndex++) {
+		    blocks[columnIndex] = readBlock(columnIndex);
+		}
+		writeChecksumBuilder.get().addPage(new Page(currentChunkRowCount, blocks));
     }
 
     static void validateFile(

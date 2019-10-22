@@ -63,7 +63,7 @@ public class TestUrlFunctions
         for (String[] outputInputPair : outputInputPairs) {
             String input = outputInputPair[1];
             String output = outputInputPair[0];
-            assertFunction("url_encode('" + input + "')", createVarcharType(input.length() * 12), output);
+            assertFunction(new StringBuilder().append("url_encode('").append(input).append("')").toString(), createVarcharType(input.length() * 12), output);
         }
 
         assertFunction("url_encode('\uD867\uDE3D')", createVarcharType(12), "%F0%A9%B8%BD");
@@ -83,22 +83,22 @@ public class TestUrlFunctions
         for (String[] inputOutputPair : inputOutputPairs) {
             String input = inputOutputPair[0];
             String output = inputOutputPair[1];
-            assertFunction("url_decode('" + input + "')", createVarcharType(input.length()), output);
+            assertFunction(new StringBuilder().append("url_decode('").append(input).append("')").toString(), createVarcharType(input.length()), output);
         }
     }
 
     private void validateUrlExtract(String url, String protocol, String host, Long port, String path, String query, String fragment)
     {
-        assertFunction("url_extract_protocol('" + url + "')", createVarcharType(url.length()), protocol);
-        assertFunction("url_extract_host('" + url + "')", createVarcharType(url.length()), host);
+        assertFunction(new StringBuilder().append("url_extract_protocol('").append(url).append("')").toString(), createVarcharType(url.length()), protocol);
+        assertFunction(new StringBuilder().append("url_extract_host('").append(url).append("')").toString(), createVarcharType(url.length()), host);
         if (port == null) {
-            assertFunction("url_extract_port('" + url + "')", BIGINT, null);
+            assertFunction(new StringBuilder().append("url_extract_port('").append(url).append("')").toString(), BIGINT, null);
         }
         else {
-            assertFunction("url_extract_port('" + url + "')", BIGINT, port);
+            assertFunction(new StringBuilder().append("url_extract_port('").append(url).append("')").toString(), BIGINT, port);
         }
-        assertFunction("url_extract_path('" + url + "')", createVarcharType(url.length()), path);
-        assertFunction("url_extract_query('" + url + "')", createVarcharType(url.length()), query);
-        assertFunction("url_extract_fragment('" + url + "')", createVarcharType(url.length()), fragment);
+        assertFunction(new StringBuilder().append("url_extract_path('").append(url).append("')").toString(), createVarcharType(url.length()), path);
+        assertFunction(new StringBuilder().append("url_extract_query('").append(url).append("')").toString(), createVarcharType(url.length()), query);
+        assertFunction(new StringBuilder().append("url_extract_fragment('").append(url).append("')").toString(), createVarcharType(url.length()), fragment);
     }
 }

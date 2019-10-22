@@ -126,13 +126,13 @@ public class BenchmarkDriverOptions
     private static Map<String, String> toProperties(List<ClientSessionProperty> sessionProperties)
     {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (ClientSessionProperty sessionProperty : sessionProperties) {
+        sessionProperties.forEach(sessionProperty -> {
             String name = sessionProperty.getName();
             if (sessionProperty.getCatalog().isPresent()) {
-                name = sessionProperty.getCatalog().get() + "." + name;
+                name = new StringBuilder().append(sessionProperty.getCatalog().get()).append(".").append(name).toString();
             }
             builder.put(name, sessionProperty.getValue());
-        }
+        });
         return builder.build();
     }
 
@@ -204,7 +204,8 @@ public class BenchmarkDriverOptions
         @Override
         public String toString()
         {
-            return (catalog.isPresent() ? catalog.get() + '.' : "") + name + '=' + value;
+            return new StringBuilder().append(catalog.isPresent() ? catalog.get() + '.' : "").append(name).append('=').append(value)
+					.toString();
         }
 
         @Override

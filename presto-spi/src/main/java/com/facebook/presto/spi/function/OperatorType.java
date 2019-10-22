@@ -80,17 +80,17 @@ public enum OperatorType
 
     public boolean isComparisonOperator()
     {
-        return this.equals(EQUAL) ||
-                this.equals(NOT_EQUAL) ||
-                this.equals(LESS_THAN) ||
-                this.equals(LESS_THAN_OR_EQUAL) ||
-                this.equals(GREATER_THAN) ||
-                this.equals(GREATER_THAN_OR_EQUAL) ||
-                this.equals(IS_DISTINCT_FROM);
+        return this == EQUAL ||
+                this == NOT_EQUAL ||
+                this == LESS_THAN ||
+                this == LESS_THAN_OR_EQUAL ||
+                this == GREATER_THAN ||
+                this == GREATER_THAN_OR_EQUAL ||
+                this == IS_DISTINCT_FROM;
     }
 
     public boolean isArithmeticOperator()
     {
-        return this.equals(ADD) || this.equals(SUBTRACT) || this.equals(MULTIPLY) || this.equals(DIVIDE) || this.equals(MODULUS);
+        return this == ADD || this == SUBTRACT || this == MULTIPLY || this == DIVIDE || this == MODULUS;
     }
 }

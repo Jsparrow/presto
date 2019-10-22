@@ -141,10 +141,11 @@ public abstract class AbstractTestHiveFileSystem
     @AfterClass(alwaysRun = true)
     public void tearDown()
     {
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+        if (executor == null) {
+			return;
+		}
+		executor.shutdownNow();
+		executor = null;
     }
 
     protected abstract Path getBasePath();
@@ -554,13 +555,11 @@ public abstract class AbstractTestHiveFileSystem
             }
 
             Optional<List<String>> partitionNames = getPartitionNames(schemaName, tableName);
-            if (partitionNames.isPresent()) {
-                getPartitionsByNames(schemaName, tableName, partitionNames.get()).values().stream()
-                        .map(Optional::get)
-                        .map(partition -> partition.getStorage().getLocation())
-                        .filter(location -> !location.startsWith(table.getStorage().getLocation()))
-                        .forEach(locations::add);
-            }
+            partitionNames.ifPresent(value -> getPartitionsByNames(schemaName, tableName, value).values().stream()
+			        .map(Optional::get)
+			        .map(partition -> partition.getStorage().getLocation())
+			        .filter(location -> !location.startsWith(table.getStorage().getLocation()))
+			        .forEach(locations::add));
 
             return locations.build();
         }

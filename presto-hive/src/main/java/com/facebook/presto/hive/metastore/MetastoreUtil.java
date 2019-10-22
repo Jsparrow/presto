@@ -104,7 +104,7 @@ public class MetastoreUtil
         schema.setProperty(FILE_INPUT_FORMAT, storage.getStorageFormat().getInputFormat());
         schema.setProperty(FILE_OUTPUT_FORMAT, storage.getStorageFormat().getOutputFormat());
 
-        schema.setProperty(META_TABLE_NAME, databaseName + "." + tableName);
+        schema.setProperty(META_TABLE_NAME, new StringBuilder().append(databaseName).append(".").append(tableName).toString());
         schema.setProperty(META_TABLE_LOCATION, storage.getLocation());
 
         if (storage.getBucketProperty().isPresent()) {
@@ -118,9 +118,7 @@ public class MetastoreUtil
             schema.setProperty(BUCKET_COUNT, "0");
         }
 
-        for (Map.Entry<String, String> param : storage.getSerdeParameters().entrySet()) {
-            schema.setProperty(param.getKey(), (param.getValue() != null) ? param.getValue() : "");
-        }
+        storage.getSerdeParameters().entrySet().forEach(param -> schema.setProperty(param.getKey(), (param.getValue() != null) ? param.getValue() : ""));
         schema.setProperty(SERIALIZATION_LIB, storage.getStorageFormat().getSerDe());
 
         StringBuilder columnNameBuilder = new StringBuilder();
@@ -155,7 +153,7 @@ public class MetastoreUtil
             partString += partKey.getName();
             partTypesString += partTypesStringSep;
             partTypesString += partKey.getType().getHiveTypeName().toString();
-            if (partStringSep.length() == 0) {
+            if (partStringSep.isEmpty()) {
                 partStringSep = "/";
                 partTypesStringSep = ":";
             }
@@ -166,12 +164,8 @@ public class MetastoreUtil
         }
 
         if (tableParameters != null) {
-            for (Map.Entry<String, String> entry : tableParameters.entrySet()) {
-                // add non-null parameters to the schema
-                if (entry.getValue() != null) {
-                    schema.setProperty(entry.getKey(), entry.getValue());
-                }
-            }
+            // add non-null parameters to the schema
+			tableParameters.entrySet().stream().filter(entry -> entry.getValue() != null).forEach(entry -> schema.setProperty(entry.getKey(), entry.getValue()));
         }
 
         return schema;
@@ -180,15 +174,9 @@ public class MetastoreUtil
     public static Properties getHiveSchema(Map<String, String> serdeParameters, Map<String, String> tableParameters)
     {
         Properties schema = new Properties();
-        for (Map.Entry<String, String> param : serdeParameters.entrySet()) {
-            schema.setProperty(param.getKey(), (param.getValue() != null) ? param.getValue() : "");
-        }
-        for (Map.Entry<String, String> entry : tableParameters.entrySet()) {
-            // add non-null parameters to the schema
-            if (entry.getValue() != null) {
-                schema.setProperty(entry.getKey(), entry.getValue());
-            }
-        }
+        serdeParameters.entrySet().forEach(param -> schema.setProperty(param.getKey(), (param.getValue() != null) ? param.getValue() : ""));
+        // add non-null parameters to the schema
+		tableParameters.entrySet().stream().filter(entry -> entry.getValue() != null).forEach(entry -> schema.setProperty(entry.getKey(), entry.getValue()));
         return schema;
     }
 
@@ -292,12 +280,13 @@ public class MetastoreUtil
         }
 
         String prestoOffline = parameters.get(PRESTO_OFFLINE);
-        if (!isNullOrEmpty(prestoOffline)) {
-            if (partitionName.isPresent()) {
-                throw new PartitionOfflineException(tableName, partitionName.get(), true, prestoOffline);
-            }
-            throw new TableOfflineException(tableName, true, prestoOffline);
-        }
+        if (isNullOrEmpty(prestoOffline)) {
+			return;
+		}
+		if (partitionName.isPresent()) {
+		    throw new PartitionOfflineException(tableName, partitionName.get(), true, prestoOffline);
+		}
+		throw new TableOfflineException(tableName, true, prestoOffline);
     }
 
     public static void verifyCanDropColumn(ExtendedHiveMetastore metastore, String databaseName, String tableName, String columnName)

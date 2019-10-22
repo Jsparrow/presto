@@ -181,9 +181,7 @@ public abstract class AbstractVerification
         QueryStage setupStage = determinismAnalysis ? DETERMINISM_ANALYSIS : forSetup(bundle.getCluster());
         QueryStage mainStage = determinismAnalysis ? DETERMINISM_ANALYSIS : forMain(bundle.getCluster());
 
-        for (Statement setupQuery : bundle.getSetupQueries()) {
-            prestoAction.execute(setupQuery, setupStage);
-        }
+        bundle.getSetupQueries().forEach(setupQuery -> prestoAction.execute(setupQuery, setupStage));
         return getPrestoAction().execute(bundle.getQuery(), mainStage);
     }
 
@@ -193,14 +191,14 @@ public abstract class AbstractVerification
             return;
         }
 
-        for (Statement teardownQuery : bundle.getTeardownQueries()) {
+        bundle.getTeardownQueries().forEach(teardownQuery -> {
             try {
                 prestoAction.execute(teardownQuery, forTeardown(bundle.getCluster()));
             }
             catch (Throwable t) {
                 log.warn("Failed to teardown %s: %s", bundle.getCluster().name().toLowerCase(ENGLISH), formatSql(teardownQuery));
             }
-        }
+        });
     }
 
     private VerifierQueryEvent buildEvent(

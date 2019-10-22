@@ -55,13 +55,12 @@ public abstract class AbstractDateTimeJsonValueProvider
 
         Type type = columnHandle.getType();
 
-        if (type == TIME || type == TIME_WITH_TIME_ZONE) {
-            if (millis < 0 || millis >= TimeUnit.DAYS.toMillis(1)) {
-                throw new PrestoException(
-                        DECODER_CONVERSION_NOT_SUPPORTED,
-                        format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
-            }
-        }
+        boolean condition = (type == TIME || type == TIME_WITH_TIME_ZONE) && (millis < 0 || millis >= TimeUnit.DAYS.toMillis(1));
+		if (condition) {
+		    throw new PrestoException(
+		            DECODER_CONVERSION_NOT_SUPPORTED,
+		            format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
+		}
 
         if (type.equals(DATE)) {
             return TimeUnit.MILLISECONDS.toDays(millis);

@@ -99,7 +99,7 @@ public class HiveLocationService
             createDirectory(context, hdfsEnvironment, writePath);
             return new LocationHandle(targetPath, writePath, tempPath, tableType, STAGE_AND_MOVE_TO_TARGET_DIRECTORY);
         }
-        if (tableType.equals(EXISTING)) {
+        if (tableType == EXISTING) {
             return new LocationHandle(targetPath, targetPath, tempPath, tableType, DIRECT_TO_TARGET_EXISTING_DIRECTORY);
         }
         return new LocationHandle(targetPath, targetPath, tempPath, tableType, DIRECT_TO_TARGET_NEW_DIRECTORY);
@@ -128,33 +128,30 @@ public class HiveLocationService
     public WriteInfo getPartitionWriteInfo(LocationHandle locationHandle, Optional<Partition> partition, String partitionName)
     {
         Optional<Path> tempPath = locationHandle.getTempPath().map(path -> new Path(path, randomUUID().toString().replaceAll("-", "_")));
-        if (partition.isPresent()) {
-            // existing partition
-            WriteMode writeMode = locationHandle.getWriteMode();
-            Path targetPath = new Path(partition.get().getStorage().getLocation());
-
-            Path writePath;
-            switch (writeMode) {
-                case STAGE_AND_MOVE_TO_TARGET_DIRECTORY:
-                    writePath = new Path(locationHandle.getWritePath(), partitionName);
-                    break;
-                case DIRECT_TO_TARGET_EXISTING_DIRECTORY:
-                    writePath = targetPath;
-                    break;
-                case DIRECT_TO_TARGET_NEW_DIRECTORY:
-                default:
-                    throw new UnsupportedOperationException(format("inserting into existing partition is not supported for %s", writeMode));
-            }
-
-            return new WriteInfo(targetPath, writePath, tempPath, writeMode);
-        }
-        else {
-            // new partition
+        // new partition
+		if (!partition.isPresent()) {
+			// new partition
             return new WriteInfo(
                     new Path(locationHandle.getTargetPath(), partitionName),
                     new Path(locationHandle.getWritePath(), partitionName),
                     tempPath,
                     locationHandle.getWriteMode());
-        }
+		}
+		// existing partition
+		WriteMode writeMode = locationHandle.getWriteMode();
+		Path targetPath = new Path(partition.get().getStorage().getLocation());
+		Path writePath;
+		switch (writeMode) {
+		    case STAGE_AND_MOVE_TO_TARGET_DIRECTORY:
+		        writePath = new Path(locationHandle.getWritePath(), partitionName);
+		        break;
+		    case DIRECT_TO_TARGET_EXISTING_DIRECTORY:
+		        writePath = targetPath;
+		        break;
+		    case DIRECT_TO_TARGET_NEW_DIRECTORY:
+		    default:
+		        throw new UnsupportedOperationException(format("inserting into existing partition is not supported for %s", writeMode));
+		}
+		return new WriteInfo(targetPath, writePath, tempPath, writeMode);
     }
 }

@@ -38,17 +38,6 @@ public class ResourceGroupGlobalProperties
         return cpuQuotaPeriod;
     }
 
-    public static class Mapper
-            implements RowMapper<ResourceGroupGlobalProperties>
-    {
-        @Override
-        public ResourceGroupGlobalProperties map(ResultSet resultSet, StatementContext context)
-                throws SQLException
-        {
-            return new ResourceGroupGlobalProperties(Optional.ofNullable(resultSet.getString("value")).map(Duration::valueOf));
-        }
-    }
-
     @Override
     public boolean equals(Object other)
     {
@@ -64,9 +53,20 @@ public class ResourceGroupGlobalProperties
         return cpuQuotaPeriod.equals(that.cpuQuotaPeriod);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(cpuQuotaPeriod);
+    }
+
+	public static class Mapper
+            implements RowMapper<ResourceGroupGlobalProperties>
+    {
+        @Override
+        public ResourceGroupGlobalProperties map(ResultSet resultSet, StatementContext context)
+                throws SQLException
+        {
+            return new ResourceGroupGlobalProperties(Optional.ofNullable(resultSet.getString("value")).map(Duration::valueOf));
+        }
     }
 }

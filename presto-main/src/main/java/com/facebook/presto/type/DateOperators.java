@@ -114,17 +114,14 @@ public final class DateOperators
     @SqlType(StandardTypes.TIMESTAMP)
     public static long castToTimestamp(ConnectorSession session, @SqlType(StandardTypes.DATE) long value)
     {
-        if (session.isLegacyTimestamp()) {
-            long utcMillis = TimeUnit.DAYS.toMillis(value);
-
-            // date is encoded as milliseconds at midnight in UTC
-            // convert to midnight in the session timezone
-            ISOChronology chronology = getChronology(session.getTimeZoneKey());
-            return utcMillis - chronology.getZone().getOffset(utcMillis);
-        }
-        else {
-            return TimeUnit.DAYS.toMillis(value);
-        }
+        if (!session.isLegacyTimestamp()) {
+			return TimeUnit.DAYS.toMillis(value);
+		}
+		long utcMillis = TimeUnit.DAYS.toMillis(value);
+		// date is encoded as milliseconds at midnight in UTC
+		// convert to midnight in the session timezone
+		ISOChronology chronology = getChronology(session.getTimeZoneKey());
+		return utcMillis - chronology.getZone().getOffset(utcMillis);
     }
 
     @ScalarOperator(CAST)
@@ -169,7 +166,21 @@ public final class DateOperators
         return AbstractIntType.hash((int) value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.DATE) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.DATE) long value)
+    {
+        return XxHash64.hash(value);
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class DateDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -203,19 +214,5 @@ public final class DateOperators
             }
             return notEqual(DATE.getLong(left, leftPosition), DATE.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.DATE) long value, @IsNull boolean isNull)
-    {
-        return isNull;
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.DATE) long value)
-    {
-        return XxHash64.hash(value);
     }
 }

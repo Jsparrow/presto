@@ -74,11 +74,7 @@ public class StructColumnWriter
     public List<ColumnWriter> getNestedColumnWriters()
     {
         ImmutableList.Builder<ColumnWriter> nestedColumnWriters = ImmutableList.builder();
-        for (ColumnWriter structField : structFields) {
-            nestedColumnWriters
-                    .add(structField)
-                    .addAll(structField.getNestedColumnWriters());
-        }
+        structFields.forEach(structField -> nestedColumnWriters.add(structField).addAll(structField.getNestedColumnWriters()));
         return nestedColumnWriters.build();
     }
 
@@ -213,9 +209,7 @@ public class StructColumnWriter
 
         ImmutableList.Builder<StreamDataOutput> outputDataStreams = ImmutableList.builder();
         presentStream.getStreamDataOutput(column).ifPresent(outputDataStreams::add);
-        for (ColumnWriter structField : structFields) {
-            outputDataStreams.addAll(structField.getDataStreams());
-        }
+        structFields.forEach(structField -> outputDataStreams.addAll(structField.getDataStreams()));
         return outputDataStreams.build();
     }
 

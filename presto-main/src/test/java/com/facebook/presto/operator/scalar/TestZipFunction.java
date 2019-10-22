@@ -112,7 +112,7 @@ public class TestZipFunction
     {
         for (int arity = MIN_ARITY; arity <= MAX_ARITY; arity++) {
             String[] arguments = IntStream.rangeClosed(1, arity)
-                    .mapToObj(index -> "ARRAY[" + index + "]")
+                    .mapToObj(index -> new StringBuilder().append("ARRAY[").append(index).append("]").toString())
                     .toArray(String[]::new);
             Type[] types = IntStream.rangeClosed(1, arity)
                     .mapToObj(index -> INTEGER)

@@ -39,10 +39,14 @@ import static com.facebook.presto.spi.type.UnscaledDecimal128Arithmetic.unscaled
 import static com.facebook.presto.spi.type.UnscaledDecimal128Arithmetic.unscaledDecimalToBigInteger;
 import static com.facebook.presto.spi.type.UnscaledDecimal128Arithmetic.unscaledDecimalToUnscaledLongUnsafe;
 import static java.lang.String.format;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class DecimalToDecimalCasts
 {
-    public static final Signature SIGNATURE = SignatureBuilder.builder()
+    private static final Logger logger = LoggerFactory.getLogger(DecimalToDecimalCasts.class);
+
+	public static final Signature SIGNATURE = SignatureBuilder.builder()
             .kind(SCALAR)
             .operatorType(CAST)
             .typeVariableConstraints(withVariadicBound("F", DECIMAL), withVariadicBound("T", DECIMAL))
@@ -150,7 +154,8 @@ public final class DecimalToDecimalCasts
             return result;
         }
         catch (ArithmeticException e) {
-            throw throwCastException(unscaledDecimalToBigInteger(value), sourcePrecision, sourceScale, resultPrecision, resultScale);
+            logger.error(e.getMessage(), e);
+			throw throwCastException(unscaledDecimalToBigInteger(value), sourcePrecision, sourceScale, resultPrecision, resultScale);
         }
     }
 

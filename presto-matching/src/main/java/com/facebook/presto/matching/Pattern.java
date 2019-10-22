@@ -28,27 +28,27 @@ public abstract class Pattern<T>
 {
     private final Pattern<?> previous;
 
-    public static Pattern<Object> any()
-    {
-        return typeOf(Object.class);
-    }
-
-    public static <T> Pattern<T> typeOf(Class<T> expectedClass)
-    {
-        return new TypeOfPattern<>(expectedClass);
-    }
-
     protected Pattern()
     {
         this(null);
     }
 
-    protected Pattern(Pattern<?> previous)
+	protected Pattern(Pattern<?> previous)
     {
         this.previous = previous;
     }
 
-    //FIXME make sure there's a proper toString,
+	public static Pattern<Object> any()
+    {
+        return typeOf(Object.class);
+    }
+
+	public static <T> Pattern<T> typeOf(Class<T> expectedClass)
+    {
+        return new TypeOfPattern<>(expectedClass);
+    }
+
+	//FIXME make sure there's a proper toString,
     // like with(propName)\n\tfilter(isEmpty)
     // or with(propName) map(isEmpty) equalTo(true)
     public static <F, T extends Iterable<S>, S> PropertyPattern<F, T> empty(Property<F, T> property)
@@ -56,41 +56,41 @@ public abstract class Pattern<T>
         return PropertyPattern.upcast(property.matching(Iterables::isEmpty));
     }
 
-    public static <F, T extends Iterable<S>, S> PropertyPattern<F, T> nonEmpty(Property<F, T> property)
+	public static <F, T extends Iterable<S>, S> PropertyPattern<F, T> nonEmpty(Property<F, T> property)
     {
         return PropertyPattern.upcast(property.matching(not(Iterables::isEmpty)));
     }
 
-    public Pattern<T> capturedAs(Capture<T> capture)
+	public Pattern<T> capturedAs(Capture<T> capture)
     {
         return new CapturePattern<>(capture, this);
     }
 
-    public Pattern<T> matching(Predicate<? super T> predicate)
+	public Pattern<T> matching(Predicate<? super T> predicate)
     {
         return new FilterPattern<>(predicate, this);
     }
 
-    public Pattern<T> with(PropertyPattern<? super T, ?> pattern)
+	public Pattern<T> with(PropertyPattern<? super T, ?> pattern)
     {
         return new WithPattern<>(pattern, this);
     }
 
-    public Pattern<?> previous()
+	public Pattern<?> previous()
     {
         return previous;
     }
 
-    public abstract Match<T> accept(Matcher matcher, Object object, Captures captures);
+	public abstract Match<T> accept(Matcher matcher, Object object, Captures captures);
 
-    public abstract void accept(PatternVisitor patternVisitor);
+	public abstract void accept(PatternVisitor patternVisitor);
 
-    public boolean matches(Object object)
+	public boolean matches(Object object)
     {
         return DEFAULT_MATCHER.match(this, object).isPresent();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         DefaultPrinter printer = new DefaultPrinter();

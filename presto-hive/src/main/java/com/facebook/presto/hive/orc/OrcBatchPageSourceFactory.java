@@ -72,11 +72,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OrcBatchPageSourceFactory
         implements HiveBatchPageSourceFactory
 {
-    private final TypeManager typeManager;
+    private static final Logger logger = LoggerFactory.getLogger(OrcBatchPageSourceFactory.class);
+	private final TypeManager typeManager;
     private final boolean useOrcColumnNames;
     private final HdfsEnvironment hdfsEnvironment;
     private final FileFormatDataSourceStats stats;
@@ -201,7 +204,7 @@ public class OrcBatchPageSourceFactory
                     stats);
         }
         catch (Exception e) {
-            if (nullToEmpty(e.getMessage()).trim().equals("Filesystem closed") ||
+            if ("Filesystem closed".equals(nullToEmpty(e.getMessage()).trim()) ||
                     e instanceof FileNotFoundException) {
                 throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, e);
             }
@@ -215,13 +218,11 @@ public class OrcBatchPageSourceFactory
             List<HiveColumnHandle> physicalColumns = getPhysicalHiveColumnHandles(columns, useOrcColumnNames, reader, path);
             ImmutableMap.Builder<Integer, Type> includedColumns = ImmutableMap.builder();
             ImmutableList.Builder<ColumnReference<HiveColumnHandle>> columnReferences = ImmutableList.builder();
-            for (HiveColumnHandle column : physicalColumns) {
-                if (column.getColumnType() == REGULAR) {
-                    Type type = typeManager.getType(column.getTypeSignature());
-                    includedColumns.put(column.getHiveColumnIndex(), type);
-                    columnReferences.add(new ColumnReference<>(column, column.getHiveColumnIndex(), type));
-                }
-            }
+            physicalColumns.stream().filter(column -> column.getColumnType() == REGULAR).forEach(column -> {
+			    Type type = typeManager.getType(column.getTypeSignature());
+			    includedColumns.put(column.getHiveColumnIndex(), type);
+			    columnReferences.add(new ColumnReference<>(column, column.getHiveColumnIndex(), type));
+			});
 
             OrcPredicate predicate = new TupleDomainOrcPredicate<>(effectivePredicate, columnReferences.build(), orcBloomFiltersEnabled, Optional.of(domainCompactionThreshold));
 
@@ -247,12 +248,13 @@ public class OrcBatchPageSourceFactory
                 orcDataSource.close();
             }
             catch (IOException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
             if (e instanceof PrestoException) {
                 throw (PrestoException) e;
             }
             String message = splitError(e, path, start, length);
-            if (e.getClass().getSimpleName().equals("BlockMissingException")) {
+            if ("BlockMissingException".equals(e.getClass().getSimpleName())) {
                 throw new PrestoException(HIVE_MISSING_DATA, message, e);
             }
             throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, message, e);

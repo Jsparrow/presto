@@ -45,7 +45,13 @@ public class SimplifyRowExpressions
         super(new Rewriter(metadata));
     }
 
-    private static class Rewriter
+    @VisibleForTesting
+    public static RowExpression rewrite(RowExpression expression, Metadata metadata, ConnectorSession session)
+    {
+        return new Rewriter(metadata).rewrite(expression, session);
+    }
+
+	private static class Rewriter
             implements PlanRowExpressionRewriter
     {
         private final RowExpressionOptimizer optimizer;
@@ -72,12 +78,6 @@ public class SimplifyRowExpressions
             }
             return RowExpressionTreeRewriter.rewriteWith(logicalExpressionRewriter, optimizedRowExpression, true);
         }
-    }
-
-    @VisibleForTesting
-    public static RowExpression rewrite(RowExpression expression, Metadata metadata, ConnectorSession session)
-    {
-        return new Rewriter(metadata).rewrite(expression, session);
     }
 
     private static class LogicalExpressionRewriter

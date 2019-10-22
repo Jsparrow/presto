@@ -27,7 +27,62 @@ import static java.util.Objects.requireNonNull;
 public class ValuesOperator
         implements Operator
 {
-    public static class ValuesOperatorFactory
+    private final OperatorContext operatorContext;
+	private final Iterator<Page> pages;
+
+	public ValuesOperator(OperatorContext operatorContext, List<Page> pages)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+
+        requireNonNull(pages, "pages is null");
+
+        this.pages = ImmutableList.copyOf(pages).iterator();
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        Iterators.size(pages);
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return !pages.hasNext();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!pages.hasNext()) {
+            return null;
+        }
+        Page page = pages.next();
+        if (page != null) {
+            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
+        }
+        return page;
+    }
+
+	public static class ValuesOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -61,60 +116,5 @@ public class ValuesOperator
         {
             return new ValuesOperatorFactory(operatorId, planNodeId, pages);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final Iterator<Page> pages;
-
-    public ValuesOperator(OperatorContext operatorContext, List<Page> pages)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-
-        requireNonNull(pages, "pages is null");
-
-        this.pages = ImmutableList.copyOf(pages).iterator();
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        Iterators.size(pages);
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return !pages.hasNext();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!pages.hasNext()) {
-            return null;
-        }
-        Page page = pages.next();
-        if (page != null) {
-            operatorContext.recordProcessedInput(page.getSizeInBytes(), page.getPositionCount());
-        }
-        return page;
     }
 }

@@ -188,18 +188,20 @@ public abstract class AbstractMinMaxAggregationFunction
 
     public static void minInput(Type type, BlockPositionState state, Block block, int position)
     {
-        if (state.getBlock() == null || type.compareTo(block, position, state.getBlock(), state.getPosition()) < 0) {
-            state.setBlock(block);
-            state.setPosition(position);
-        }
+        if (!(state.getBlock() == null || type.compareTo(block, position, state.getBlock(), state.getPosition()) < 0)) {
+			return;
+		}
+		state.setBlock(block);
+		state.setPosition(position);
     }
 
     public static void maxInput(Type type, BlockPositionState state, Block block, int position)
     {
-        if (state.getBlock() == null || type.compareTo(block, position, state.getBlock(), state.getPosition()) > 0) {
-            state.setBlock(block);
-            state.setPosition(position);
-        }
+        if (!(state.getBlock() == null || type.compareTo(block, position, state.getBlock(), state.getPosition()) > 0)) {
+			return;
+		}
+		state.setBlock(block);
+		state.setPosition(position);
     }
 
     public static void combine(MethodHandle methodHandle, NullableLongState state, NullableLongState otherState)
@@ -219,18 +221,20 @@ public abstract class AbstractMinMaxAggregationFunction
 
     public static void minCombine(Type type, BlockPositionState state, BlockPositionState otherState)
     {
-        if (state.getBlock() == null || type.compareTo(otherState.getBlock(), otherState.getPosition(), state.getBlock(), state.getPosition()) < 0) {
-            state.setBlock(otherState.getBlock());
-            state.setPosition(otherState.getPosition());
-        }
+        if (!(state.getBlock() == null || type.compareTo(otherState.getBlock(), otherState.getPosition(), state.getBlock(), state.getPosition()) < 0)) {
+			return;
+		}
+		state.setBlock(otherState.getBlock());
+		state.setPosition(otherState.getPosition());
     }
 
     public static void maxCombine(Type type, BlockPositionState state, BlockPositionState otherState)
     {
-        if (state.getBlock() == null || type.compareTo(otherState.getBlock(), otherState.getPosition(), state.getBlock(), state.getPosition()) > 0) {
-            state.setBlock(otherState.getBlock());
-            state.setPosition(otherState.getPosition());
-        }
+        if (!(state.getBlock() == null || type.compareTo(otherState.getBlock(), otherState.getPosition(), state.getBlock(), state.getPosition()) > 0)) {
+			return;
+		}
+		state.setBlock(otherState.getBlock());
+		state.setPosition(otherState.getPosition());
     }
 
     private static void compareAndUpdateState(MethodHandle methodHandle, NullableLongState state, long value)

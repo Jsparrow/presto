@@ -38,17 +38,17 @@ import static com.facebook.presto.util.Failures.checkCondition;
 @Description("Sorts the given array with a lambda comparator.")
 public final class ArraySortComparatorFunction
 {
-    private final PageBuilder pageBuilder;
     private static final int INITIAL_LENGTH = 128;
-    private List<Integer> positions = Ints.asList(new int[INITIAL_LENGTH]);
+	private final PageBuilder pageBuilder;
+	private List<Integer> positions = Ints.asList(new int[INITIAL_LENGTH]);
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     public ArraySortComparatorFunction(@TypeParameter("T") Type elementType)
     {
         pageBuilder = new PageBuilder(ImmutableList.of(elementType));
     }
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     @TypeParameterSpecialization(name = "T", nativeContainerType = long.class)
     @SqlType("array(T)")
     public Block sortLong(
@@ -68,7 +68,7 @@ public final class ArraySortComparatorFunction
         return computeResultBlock(type, block, arrayLength);
     }
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     @TypeParameterSpecialization(name = "T", nativeContainerType = double.class)
     @SqlType("array(T)")
     public Block sortDouble(
@@ -88,7 +88,7 @@ public final class ArraySortComparatorFunction
         return computeResultBlock(type, block, arrayLength);
     }
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     @TypeParameterSpecialization(name = "T", nativeContainerType = boolean.class)
     @SqlType("array(T)")
     public Block sortBoolean(
@@ -108,7 +108,7 @@ public final class ArraySortComparatorFunction
         return computeResultBlock(type, block, arrayLength);
     }
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     @TypeParameterSpecialization(name = "T", nativeContainerType = Slice.class)
     @SqlType("array(T)")
     public Block sortSlice(
@@ -128,7 +128,7 @@ public final class ArraySortComparatorFunction
         return computeResultBlock(type, block, arrayLength);
     }
 
-    @TypeParameter("T")
+	@TypeParameter("T")
     @TypeParameterSpecialization(name = "T", nativeContainerType = Block.class)
     @SqlType("array(T)")
     public Block sortObject(
@@ -148,7 +148,7 @@ public final class ArraySortComparatorFunction
         return computeResultBlock(type, block, arrayLength);
     }
 
-    private void initPositionsList(int arrayLength)
+	private void initPositionsList(int arrayLength)
     {
         if (positions.size() < arrayLength) {
             positions = Ints.asList(new int[arrayLength]);
@@ -158,7 +158,7 @@ public final class ArraySortComparatorFunction
         }
     }
 
-    private void sortPositions(int arrayLength, Comparator<Integer> comparator)
+	private void sortPositions(int arrayLength, Comparator<Integer> comparator)
     {
         List<Integer> list = positions.subList(0, arrayLength);
 
@@ -170,7 +170,7 @@ public final class ArraySortComparatorFunction
         }
     }
 
-    private Block computeResultBlock(Type type, Block block, int arrayLength)
+	private Block computeResultBlock(Type type, Block block, int arrayLength)
     {
         if (pageBuilder.isFull()) {
             pageBuilder.reset();
@@ -186,7 +186,7 @@ public final class ArraySortComparatorFunction
         return blockBuilder.getRegion(blockBuilder.getPositionCount() - arrayLength, arrayLength);
     }
 
-    private static int comparatorResult(Long result)
+	private static int comparatorResult(Long result)
     {
         checkCondition(
                 (result != null) && ((result == -1) || (result == 0) || (result == 1)),
@@ -195,7 +195,7 @@ public final class ArraySortComparatorFunction
         return result.intValue();
     }
 
-    @FunctionalInterface
+	@FunctionalInterface
     public interface ComparatorLongLambda
             extends LambdaFunctionInterface
     {

@@ -55,9 +55,7 @@ public class RedisRecordSet
         this.columnHandles = requireNonNull(columnHandles, "columnHandles is null");
 
         ImmutableList.Builder<Type> typeBuilder = ImmutableList.builder();
-        for (DecoderColumnHandle handle : columnHandles) {
-            typeBuilder.add(handle.getType());
-        }
+        columnHandles.forEach(handle -> typeBuilder.add(handle.getType()));
         this.columnTypes = typeBuilder.build();
     }
 

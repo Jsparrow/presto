@@ -62,6 +62,6 @@ public final class CatalogSchemaName
     @Override
     public String toString()
     {
-        return catalogName + '.' + schemaName;
+        return new StringBuilder().append(catalogName).append('.').append(schemaName).toString();
     }
 }

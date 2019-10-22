@@ -132,9 +132,6 @@ public class TestShardPredicate
         ShardPredicate shardPredicate = ShardPredicate.create(tupleDomain);
         assertEquals(
                 shardPredicate.getPredicate(),
-                "(((bucket_number >= ? OR bucket_number IS NULL) AND (bucket_number <= ? OR bucket_number IS NULL)) " +
-                        "OR ((bucket_number >= ? OR bucket_number IS NULL) AND (bucket_number <= ? OR bucket_number IS NULL))) " +
-                        "AND (((c1_max >= ? OR c1_max IS NULL) AND (c1_min <= ? OR c1_min IS NULL)) " +
-                        "OR ((c1_max >= ? OR c1_max IS NULL) AND (c1_min <= ? OR c1_min IS NULL)))");
+                new StringBuilder().append("(((bucket_number >= ? OR bucket_number IS NULL) AND (bucket_number <= ? OR bucket_number IS NULL)) ").append("OR ((bucket_number >= ? OR bucket_number IS NULL) AND (bucket_number <= ? OR bucket_number IS NULL))) ").append("AND (((c1_max >= ? OR c1_max IS NULL) AND (c1_min <= ? OR c1_min IS NULL)) ").append("OR ((c1_max >= ? OR c1_max IS NULL) AND (c1_min <= ? OR c1_min IS NULL)))").toString());
     }
 }

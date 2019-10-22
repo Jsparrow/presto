@@ -35,6 +35,8 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Default field decoder for the JSON format. Supports json format coercions to implicitly convert e.g. string to long values.
@@ -103,7 +105,8 @@ public class DefaultJsonFieldDecoder
     public static class JsonValueProvider
             extends FieldValueProvider
     {
-        private final JsonNode value;
+        private final Logger logger = LoggerFactory.getLogger(JsonValueProvider.class);
+		private final JsonNode value;
         private final DecoderColumnHandle columnHandle;
         private final long minValue;
         private final long maxValue;
@@ -152,6 +155,7 @@ public class DefaultJsonFieldDecoder
                 }
             }
             catch (NumberFormatException ignore) {
+				logger.error(ignore.getMessage(), ignore);
                 // ignore
             }
             throw new PrestoException(
@@ -171,6 +175,7 @@ public class DefaultJsonFieldDecoder
                 }
             }
             catch (NumberFormatException ignore) {
+				logger.error(ignore.getMessage(), ignore);
                 // ignore
             }
             throw new PrestoException(

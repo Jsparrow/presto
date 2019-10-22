@@ -144,28 +144,22 @@ public class PlanNodeStatsEstimateMath
         return result.build();
     }
 
-    @FunctionalInterface
-    private interface RangeAdditionStrategy
-    {
-        StatisticRange add(StatisticRange leftRange, StatisticRange rightRange);
-    }
-
     public static PlanNodeStatsEstimate addStatsAndSumDistinctValues(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right)
     {
         return addStats(left, right, StatisticRange::addAndSumDistinctValues);
     }
 
-    public static PlanNodeStatsEstimate addStatsAndMaxDistinctValues(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right)
+	public static PlanNodeStatsEstimate addStatsAndMaxDistinctValues(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right)
     {
         return addStats(left, right, StatisticRange::addAndMaxDistinctValues);
     }
 
-    public static PlanNodeStatsEstimate addStatsAndCollapseDistinctValues(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right)
+	public static PlanNodeStatsEstimate addStatsAndCollapseDistinctValues(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right)
     {
         return addStats(left, right, StatisticRange::addAndCollapseDistinctValues);
     }
 
-    private static PlanNodeStatsEstimate addStats(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right, RangeAdditionStrategy strategy)
+	private static PlanNodeStatsEstimate addStats(PlanNodeStatsEstimate left, PlanNodeStatsEstimate right, RangeAdditionStrategy strategy)
     {
         if (left.isOutputRowCountUnknown() || right.isOutputRowCountUnknown()) {
             return PlanNodeStatsEstimate.unknown();
@@ -193,7 +187,7 @@ public class PlanNodeStatsEstimateMath
         return statsBuilder.setOutputRowCount(newRowCount).build();
     }
 
-    private static VariableStatsEstimate addColumnStats(VariableStatsEstimate leftStats, double leftRows, VariableStatsEstimate rightStats, double rightRows, double newRowCount, RangeAdditionStrategy strategy)
+	private static VariableStatsEstimate addColumnStats(VariableStatsEstimate leftStats, double leftRows, VariableStatsEstimate rightStats, double rightRows, double newRowCount, RangeAdditionStrategy strategy)
     {
         checkArgument(newRowCount > 0, "newRowCount must be greater than zero");
 
@@ -216,5 +210,11 @@ public class PlanNodeStatsEstimateMath
                 .setAverageRowSize(newAverageRowSize)
                 .setNullsFraction(newNullsFraction)
                 .build();
+    }
+
+	@FunctionalInterface
+    private interface RangeAdditionStrategy
+    {
+        StatisticRange add(StatisticRange leftRange, StatisticRange rightRange);
     }
 }

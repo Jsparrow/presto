@@ -72,8 +72,6 @@ public class FutureStateChange<T>
             listeners.clear();
         }
 
-        for (SettableFuture<T> future : futures) {
-            executor.execute(() -> future.set(newState));
-        }
+        futures.forEach(future -> executor.execute(() -> future.set(newState)));
     }
 }

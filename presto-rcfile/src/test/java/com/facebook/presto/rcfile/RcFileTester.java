@@ -184,11 +184,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
 public class RcFileTester
 {
-    private static final TypeManager TYPE_MANAGER = new TypeRegistry();
+    private static final Logger logger = LoggerFactory.getLogger(RcFileTester.class);
+	private static final TypeManager TYPE_MANAGER = new TypeRegistry();
 
     static {
         // associate TYPE_MANAGER with a function manager
@@ -198,112 +201,15 @@ public class RcFileTester
     }
 
     public static final DateTimeZone HIVE_STORAGE_TIME_ZONE = DateTimeZone.forID("America/Bahia_Banderas");
+	private boolean structTestsEnabled;
+	private boolean mapTestsEnabled;
+	private boolean listTestsEnabled;
+	private boolean complexStructuralTestsEnabled;
+	private boolean readLastBatchOnlyEnabled;
+	private Set<Format> formats = ImmutableSet.of();
+	private Set<Compression> compressions = ImmutableSet.of();
 
-    public enum Format
-    {
-        BINARY {
-            @Override
-            @SuppressWarnings("deprecation")
-            public Serializer createSerializer()
-            {
-                return new LazyBinaryColumnarSerDe();
-            }
-
-            @Override
-            public RcFileEncoding getVectorEncoding()
-            {
-                return new BinaryRcFileEncoding();
-            }
-        },
-
-        TEXT {
-            @Override
-            @SuppressWarnings("deprecation")
-            public Serializer createSerializer()
-            {
-                try {
-                    ColumnarSerDe columnarSerDe = new ColumnarSerDe();
-                    Properties tableProperties = new Properties();
-                    tableProperties.setProperty("columns", "test");
-                    tableProperties.setProperty("columns.types", "string");
-                    columnarSerDe.initialize(new JobConf(false), tableProperties);
-                    return columnarSerDe;
-                }
-                catch (SerDeException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            @Override
-            public RcFileEncoding getVectorEncoding()
-            {
-                return new TextRcFileEncoding(HIVE_STORAGE_TIME_ZONE);
-            }
-        };
-
-        @SuppressWarnings("deprecation")
-        public abstract Serializer createSerializer();
-
-        public abstract RcFileEncoding getVectorEncoding();
-    }
-
-    public enum Compression
-    {
-        BZIP2 {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.of(BZip2Codec.class.getName());
-            }
-        },
-        ZLIB {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.of(GzipCodec.class.getName());
-            }
-        },
-        SNAPPY {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.of(SnappyCodec.class.getName());
-            }
-        },
-        LZO {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.of(LzoCodec.class.getName());
-            }
-        },
-        LZ4 {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.of(Lz4Codec.class.getName());
-            }
-        },
-        NONE {
-            @Override
-            Optional<String> getCodecName()
-            {
-                return Optional.empty();
-            }
-        };
-
-        abstract Optional<String> getCodecName();
-    }
-
-    private boolean structTestsEnabled;
-    private boolean mapTestsEnabled;
-    private boolean listTestsEnabled;
-    private boolean complexStructuralTestsEnabled;
-    private boolean readLastBatchOnlyEnabled;
-    private Set<Format> formats = ImmutableSet.of();
-    private Set<Compression> compressions = ImmutableSet.of();
-
-    public static RcFileTester quickTestRcFileReader()
+	public static RcFileTester quickTestRcFileReader()
     {
         RcFileTester rcFileTester = new RcFileTester();
         rcFileTester.structTestsEnabled = true;
@@ -316,7 +222,7 @@ public class RcFileTester
         return rcFileTester;
     }
 
-    public static RcFileTester fullTestRcFileReader()
+	public static RcFileTester fullTestRcFileReader()
     {
         RcFileTester rcFileTester = new RcFileTester();
         rcFileTester.structTestsEnabled = true;
@@ -332,7 +238,7 @@ public class RcFileTester
         return rcFileTester;
     }
 
-    public void testRoundTrip(Type type, Iterable<?> writeValues, Format... skipFormats)
+	public void testRoundTrip(Type type, Iterable<?> writeValues, Format... skipFormats)
             throws Exception
     {
         ImmutableSet<Format> skipFormatsSet = ImmutableSet.copyOf(skipFormats);
@@ -376,7 +282,7 @@ public class RcFileTester
         }
     }
 
-    private void testStructRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
+	private void testStructRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
             throws Exception
     {
         // values in simple struct and mix in some null values
@@ -386,7 +292,7 @@ public class RcFileTester
                 skipFormats);
     }
 
-    private void testMapRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
+	private void testMapRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
             throws Exception
     {
         // json does not support null keys, so we just write the first value
@@ -399,7 +305,7 @@ public class RcFileTester
                 skipFormats);
     }
 
-    private void testListRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
+	private void testListRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
             throws Exception
     {
         // values in simple list and mix in some null values
@@ -409,14 +315,14 @@ public class RcFileTester
                 skipFormats);
     }
 
-    private void testRoundTripType(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
+	private void testRoundTripType(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
             throws Exception
     {
         // mix in some nulls
         assertRoundTrip(type, insertNullEvery(5, writeValues), skipFormats);
     }
 
-    private void assertRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
+	private void assertRoundTrip(Type type, Iterable<?> writeValues, Set<Format> skipFormats)
             throws Exception
     {
         List<?> finalValues = Lists.newArrayList(writeValues);
@@ -454,7 +360,7 @@ public class RcFileTester
         }
     }
 
-    private static void assertFileContentsNew(
+	private static void assertFileContentsNew(
             Type type,
             TempFile tempFile,
             Format format,
@@ -499,7 +405,7 @@ public class RcFileTester
         }
     }
 
-    private static void assertColumnValueEquals(Type type, Object actual, Object expected)
+	private static void assertColumnValueEquals(Type type, Object actual, Object expected)
     {
         if (actual == null) {
             assertNull(expected);
@@ -536,6 +442,7 @@ public class RcFileTester
                         iterator.remove();
                     }
                     catch (AssertionError ignored) {
+						logger.error(ignored.getMessage(), ignored);
                     }
                 }
             }
@@ -571,7 +478,7 @@ public class RcFileTester
         }
     }
 
-    private static void assertIndexOf(RcFileReader recordReader, File file)
+	private static void assertIndexOf(RcFileReader recordReader, File file)
             throws IOException
     {
         List<Long> syncPositionsBruteForce = getSyncPositionsBruteForce(recordReader, file);
@@ -580,7 +487,7 @@ public class RcFileTester
         assertEquals(syncPositionsBruteForce, syncPositionsSimple);
     }
 
-    private static List<Long> getSyncPositionsBruteForce(RcFileReader recordReader, File file)
+	private static List<Long> getSyncPositionsBruteForce(RcFileReader recordReader, File file)
     {
         Slice slice = Slices.allocate((int) file.length());
         try (InputStream in = new FileInputStream(file)) {
@@ -606,7 +513,7 @@ public class RcFileTester
         return syncPositionsBruteForce;
     }
 
-    private static List<Long> getSyncPositionsSimple(RcFileReader recordReader, File file)
+	private static List<Long> getSyncPositionsSimple(RcFileReader recordReader, File file)
             throws IOException
     {
         List<Long> syncPositions = new ArrayList<>();
@@ -634,7 +541,7 @@ public class RcFileTester
         return syncPositions;
     }
 
-    private static RcFileReader createRcFileReader(TempFile tempFile, Type type, RcFileEncoding encoding)
+	private static RcFileReader createRcFileReader(TempFile tempFile, Type type, RcFileEncoding encoding)
             throws IOException
     {
         RcFileDataSource rcFileDataSource = new FileRcFileDataSource(tempFile.getFile());
@@ -652,7 +559,7 @@ public class RcFileTester
         return rcFileReader;
     }
 
-    private static DataSize writeRcFileColumnNew(File outputFile, Format format, Compression compression, Type type, Iterator<?> values, Map<String, String> metadata)
+	private static DataSize writeRcFileColumnNew(File outputFile, Format format, Compression compression, Type type, Iterator<?> values, Map<String, String> metadata)
             throws Exception
     {
         OutputStreamSliceOutput output = new OutputStreamSliceOutput(new FileOutputStream(outputFile));
@@ -681,7 +588,7 @@ public class RcFileTester
         return new DataSize(output.size(), BYTE);
     }
 
-    private static void writeValue(Type type, BlockBuilder blockBuilder, Object value)
+	private static void writeValue(Type type, BlockBuilder blockBuilder, Object value)
     {
         if (value == null) {
             blockBuilder.appendNull();
@@ -734,9 +641,7 @@ public class RcFileTester
                     List<?> array = (List<?>) value;
                     Type elementType = type.getTypeParameters().get(0);
                     BlockBuilder arrayBlockBuilder = blockBuilder.beginBlockEntry();
-                    for (Object elementValue : array) {
-                        writeValue(elementType, arrayBlockBuilder, elementValue);
-                    }
+                    array.forEach(elementValue -> writeValue(elementType, arrayBlockBuilder, elementValue));
                     blockBuilder.closeEntry();
                 }
                 else if (MAP.equals(baseType)) {
@@ -767,7 +672,7 @@ public class RcFileTester
         }
     }
 
-    private static <K extends LongWritable, V extends BytesRefArrayWritable> void assertFileContentsOld(
+	private static <K extends LongWritable, V extends BytesRefArrayWritable> void assertFileContentsOld(
             Type type,
             TempFile tempFile,
             Format format,
@@ -817,7 +722,7 @@ public class RcFileTester
         assertFalse(iterator.hasNext());
     }
 
-    private static Object decodeRecordReaderValue(Type type, Object actualValue)
+	private static Object decodeRecordReaderValue(Type type, Object actualValue)
     {
         if (actualValue instanceof LazyPrimitive) {
             actualValue = ((LazyPrimitive<?, ?>) actualValue).getWritableObject();
@@ -890,7 +795,7 @@ public class RcFileTester
         return actualValue;
     }
 
-    private static List<Object> decodeRecordReaderList(Type type, List<?> list)
+	private static List<Object> decodeRecordReaderList(Type type, List<?> list)
     {
         Type elementType = type.getTypeParameters().get(0);
         return list.stream()
@@ -898,7 +803,7 @@ public class RcFileTester
                 .collect(toList());
     }
 
-    private static Object decodeRecordReaderMap(Type type, Map<?, ?> map)
+	private static Object decodeRecordReaderMap(Type type, Map<?, ?> map)
     {
         Type keyType = type.getTypeParameters().get(0);
         Type valueType = type.getTypeParameters().get(1);
@@ -909,7 +814,7 @@ public class RcFileTester
         return newMap;
     }
 
-    private static List<Object> decodeRecordReaderStruct(Type type, List<?> fields)
+	private static List<Object> decodeRecordReaderStruct(Type type, List<?> fields)
     {
         List<Type> fieldTypes = type.getTypeParameters();
         List<Object> newFields = new ArrayList<>(fields.size());
@@ -921,7 +826,7 @@ public class RcFileTester
         return newFields;
     }
 
-    private static DataSize writeRcFileColumnOld(File outputFile, Format format, Compression compression, Type type, Iterator<?> values)
+	private static DataSize writeRcFileColumnOld(File outputFile, Format format, Compression compression, Type type, Iterator<?> values)
             throws Exception
     {
         ObjectInspector columnObjectInspector = getJavaObjectInspector(type);
@@ -951,7 +856,7 @@ public class RcFileTester
         return new DataSize(outputFile.length(), BYTE).convertToMostSuccinctDataSize();
     }
 
-    private static ObjectInspector getJavaObjectInspector(Type type)
+	private static ObjectInspector getJavaObjectInspector(Type type)
     {
         if (type.equals(BOOLEAN)) {
             return javaBooleanObjectInspector;
@@ -1010,7 +915,7 @@ public class RcFileTester
         throw new IllegalArgumentException("unsupported type: " + type);
     }
 
-    private static Object preprocessWriteValueOld(Type type, Object value)
+	private static Object preprocessWriteValueOld(Type type, Object value)
     {
         if (value == null) {
             return null;
@@ -1088,7 +993,7 @@ public class RcFileTester
         throw new IllegalArgumentException("unsupported type: " + type);
     }
 
-    private static RecordWriter createRcFileWriterOld(File outputFile, Compression compression, ObjectInspector columnObjectInspector)
+	private static RecordWriter createRcFileWriterOld(File outputFile, Compression compression, ObjectInspector columnObjectInspector)
             throws IOException
     {
         JobConf jobConf = new JobConf(false);
@@ -1104,12 +1009,12 @@ public class RcFileTester
                 () -> {});
     }
 
-    private static SettableStructObjectInspector createSettableStructObjectInspector(String name, ObjectInspector objectInspector)
+	private static SettableStructObjectInspector createSettableStructObjectInspector(String name, ObjectInspector objectInspector)
     {
         return getStandardStructObjectInspector(ImmutableList.of(name), ImmutableList.of(objectInspector));
     }
 
-    @SuppressWarnings("SpellCheckingInspection")
+	@SuppressWarnings("SpellCheckingInspection")
     private static Properties createTableProperties(String name, String type)
     {
         Properties orderTableProperties = new Properties();
@@ -1117,6 +1022,178 @@ public class RcFileTester
         orderTableProperties.setProperty("columns.types", type);
         orderTableProperties.setProperty("file.inputformat", RCFileInputFormat.class.getName());
         return orderTableProperties;
+    }
+
+	private static <T> Iterable<T> insertNullEvery(int n, Iterable<T> iterable)
+    {
+        return () -> new AbstractIterator<T>()
+        {
+            private final Iterator<T> delegate = iterable.iterator();
+            private int position;
+
+            @Override
+            protected T computeNext()
+            {
+                position++;
+                if (position > n) {
+                    position = 0;
+                    return null;
+                }
+
+                if (!delegate.hasNext()) {
+                    return endOfData();
+                }
+
+                return delegate.next();
+            }
+        };
+    }
+
+	private static RowType createRowType(Type type)
+    {
+        return RowType.from(ImmutableList.of(
+                RowType.field("a", type),
+                RowType.field("b", type),
+                RowType.field("c", type)));
+    }
+
+	private static Object toHiveStruct(Object input)
+    {
+        List<Object> data = new ArrayList<>();
+        data.add(input);
+        data.add(input);
+        data.add(input);
+        return data;
+    }
+
+	private static MapType createMapType(Type type)
+    {
+        return (MapType) TYPE_MANAGER.getParameterizedType(StandardTypes.MAP, ImmutableList.of(
+                TypeSignatureParameter.of(type.getTypeSignature()),
+                TypeSignatureParameter.of(type.getTypeSignature())));
+    }
+
+	private static Object toHiveMap(Object nullKeyValue, Object input)
+    {
+        Map<Object, Object> map = new HashMap<>();
+        if (input == null) {
+            // json doesn't support null keys, so just write the nullKeyValue
+            map.put(nullKeyValue, null);
+        }
+        else {
+            map.put(input, input);
+        }
+        return map;
+    }
+
+	private static ArrayType createListType(Type type)
+    {
+        return new ArrayType(type);
+    }
+
+	private static Object toHiveList(Object input)
+    {
+        ArrayList<Object> list = new ArrayList<>(4);
+        for (int i = 0; i < 4; i++) {
+            list.add(input);
+        }
+        return list;
+    }
+
+	public enum Format
+    {
+        BINARY {
+            @Override
+            @SuppressWarnings("deprecation")
+            public Serializer createSerializer()
+            {
+                return new LazyBinaryColumnarSerDe();
+            }
+
+            @Override
+            public RcFileEncoding getVectorEncoding()
+            {
+                return new BinaryRcFileEncoding();
+            }
+        },
+
+        TEXT {
+            @Override
+            @SuppressWarnings("deprecation")
+            public Serializer createSerializer()
+            {
+                try {
+                    ColumnarSerDe columnarSerDe = new ColumnarSerDe();
+                    Properties tableProperties = new Properties();
+                    tableProperties.setProperty("columns", "test");
+                    tableProperties.setProperty("columns.types", "string");
+                    columnarSerDe.initialize(new JobConf(false), tableProperties);
+                    return columnarSerDe;
+                }
+                catch (SerDeException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public RcFileEncoding getVectorEncoding()
+            {
+                return new TextRcFileEncoding(HIVE_STORAGE_TIME_ZONE);
+            }
+        };
+
+        @SuppressWarnings("deprecation")
+        public abstract Serializer createSerializer();
+
+        public abstract RcFileEncoding getVectorEncoding();
+    }
+
+	public enum Compression
+    {
+        BZIP2 {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.of(BZip2Codec.class.getName());
+            }
+        },
+        ZLIB {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.of(GzipCodec.class.getName());
+            }
+        },
+        SNAPPY {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.of(SnappyCodec.class.getName());
+            }
+        },
+        LZO {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.of(LzoCodec.class.getName());
+            }
+        },
+        LZ4 {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.of(Lz4Codec.class.getName());
+            }
+        },
+        NONE {
+            @Override
+            Optional<String> getCodecName()
+            {
+                return Optional.empty();
+            }
+        };
+
+        abstract Optional<String> getCodecName();
     }
 
     private static class TempFile
@@ -1144,81 +1221,5 @@ public class RcFileTester
             // hadoop creates crc files that must be deleted also, so just delete the whole directory
             deleteRecursively(tempDir.toPath(), ALLOW_INSECURE);
         }
-    }
-
-    private static <T> Iterable<T> insertNullEvery(int n, Iterable<T> iterable)
-    {
-        return () -> new AbstractIterator<T>()
-        {
-            private final Iterator<T> delegate = iterable.iterator();
-            private int position;
-
-            @Override
-            protected T computeNext()
-            {
-                position++;
-                if (position > n) {
-                    position = 0;
-                    return null;
-                }
-
-                if (!delegate.hasNext()) {
-                    return endOfData();
-                }
-
-                return delegate.next();
-            }
-        };
-    }
-
-    private static RowType createRowType(Type type)
-    {
-        return RowType.from(ImmutableList.of(
-                RowType.field("a", type),
-                RowType.field("b", type),
-                RowType.field("c", type)));
-    }
-
-    private static Object toHiveStruct(Object input)
-    {
-        List<Object> data = new ArrayList<>();
-        data.add(input);
-        data.add(input);
-        data.add(input);
-        return data;
-    }
-
-    private static MapType createMapType(Type type)
-    {
-        return (MapType) TYPE_MANAGER.getParameterizedType(StandardTypes.MAP, ImmutableList.of(
-                TypeSignatureParameter.of(type.getTypeSignature()),
-                TypeSignatureParameter.of(type.getTypeSignature())));
-    }
-
-    private static Object toHiveMap(Object nullKeyValue, Object input)
-    {
-        Map<Object, Object> map = new HashMap<>();
-        if (input == null) {
-            // json doesn't support null keys, so just write the nullKeyValue
-            map.put(nullKeyValue, null);
-        }
-        else {
-            map.put(input, input);
-        }
-        return map;
-    }
-
-    private static ArrayType createListType(Type type)
-    {
-        return new ArrayType(type);
-    }
-
-    private static Object toHiveList(Object input)
-    {
-        ArrayList<Object> list = new ArrayList<>(4);
-        for (int i = 0; i < 4; i++) {
-            list.add(input);
-        }
-        return list;
     }
 }

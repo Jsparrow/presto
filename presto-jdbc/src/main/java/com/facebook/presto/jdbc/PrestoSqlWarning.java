@@ -22,7 +22,6 @@ public class PrestoSqlWarning
 {
     public PrestoSqlWarning()
     {
-        super();
     }
 
     public PrestoSqlWarning(PrestoWarning warning)

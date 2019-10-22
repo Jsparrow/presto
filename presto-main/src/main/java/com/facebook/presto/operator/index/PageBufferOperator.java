@@ -27,7 +27,76 @@ import static java.util.Objects.requireNonNull;
 public class PageBufferOperator
         implements Operator
 {
-    public static class PageBufferOperatorFactory
+    private final OperatorContext operatorContext;
+	private final PageBuffer pageBuffer;
+	private ListenableFuture<?> blocked = NOT_BLOCKED;
+	private boolean finished;
+
+	public PageBufferOperator(OperatorContext operatorContext, PageBuffer pageBuffer)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.pageBuffer = requireNonNull(pageBuffer, "pageBuffer is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finished = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        updateBlockedIfNecessary();
+        return finished && blocked == NOT_BLOCKED;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        updateBlockedIfNecessary();
+        return blocked;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        updateBlockedIfNecessary();
+        return !finished && blocked == NOT_BLOCKED;
+    }
+
+	private void updateBlockedIfNecessary()
+    {
+        if (blocked != NOT_BLOCKED && blocked.isDone()) {
+            blocked = NOT_BLOCKED;
+        }
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(blocked == NOT_BLOCKED, "output is already blocked");
+        ListenableFuture<?> future = pageBuffer.add(page);
+        if (!future.isDone()) {
+            this.blocked = future;
+        }
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	public static class PageBufferOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -58,74 +127,5 @@ public class PageBufferOperator
         {
             return new PageBufferOperatorFactory(operatorId, planNodeId, pageBuffer);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final PageBuffer pageBuffer;
-    private ListenableFuture<?> blocked = NOT_BLOCKED;
-    private boolean finished;
-
-    public PageBufferOperator(OperatorContext operatorContext, PageBuffer pageBuffer)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.pageBuffer = requireNonNull(pageBuffer, "pageBuffer is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finished = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        updateBlockedIfNecessary();
-        return finished && blocked == NOT_BLOCKED;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        updateBlockedIfNecessary();
-        return blocked;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        updateBlockedIfNecessary();
-        return !finished && blocked == NOT_BLOCKED;
-    }
-
-    private void updateBlockedIfNecessary()
-    {
-        if (blocked != NOT_BLOCKED && blocked.isDone()) {
-            blocked = NOT_BLOCKED;
-        }
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(blocked == NOT_BLOCKED, "output is already blocked");
-        ListenableFuture<?> future = pageBuffer.add(page);
-        if (!future.isDone()) {
-            this.blocked = future;
-        }
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
     }
 }

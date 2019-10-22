@@ -691,21 +691,18 @@ public class TestOptimizedPartitionedOutputOperator
 
         Map<Integer, List<Page>> expectedPageList = new HashMap<>();
 
-        for (Page page : pages) {
+        pages.forEach(page -> {
             Map<Integer, List<Integer>> positionsByPartition = new HashMap<>();
             for (int i = 0; i < page.getPositionCount(); i++) {
                 int partitionNumber = partitionFunction.getPartition(page, i);
                 positionsByPartition.computeIfAbsent(partitionNumber, k -> new ArrayList<>()).add(i);
             }
 
-            for (Map.Entry<Integer, List<Integer>> entry : positionsByPartition.entrySet()) {
-                if (!entry.getValue().isEmpty()) {
-                    expectedPageList.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).add(copyPositions(page, entry.getValue()));
-                }
-            }
+            positionsByPartition.entrySet().stream().filter(entry -> !entry.getValue().isEmpty()).forEach(entry -> expectedPageList.computeIfAbsent(entry.getKey(), k -> new ArrayList<>())
+					.add(copyPositions(page, entry.getValue())));
 
             operator.addInput(page);
-        }
+        });
         operator.finish();
 
         Map<Integer, Page> expectedPages = Maps.transformValues(expectedPageList, outputPages -> mergePages(types, outputPages));
@@ -715,10 +712,10 @@ public class TestOptimizedPartitionedOutputOperator
 
         assertEquals(actualPages.keySet(), expectedPages.keySet());
 
-        for (Map.Entry<Integer, Page> entry : expectedPages.entrySet()) {
+        expectedPages.entrySet().forEach(entry -> {
             int key = entry.getKey();
             assertPageEquals(types, actualPages.get(key), entry.getValue());
-        }
+        });
     }
 
     private void testReplicated(List<Type> types, List<Page> pages, DataSize maxMemory)
@@ -732,9 +729,7 @@ public class TestOptimizedPartitionedOutputOperator
                 outputBuffer,
                 OptionalInt.of(types.size() - 1), maxMemory);
 
-        for (Page page : pages) {
-            operator.addInput(page);
-        }
+        pages.forEach(operator::addInput);
         operator.finish();
 
         Map<Integer, List<Page>> acutualPageLists = outputBuffer.getPages();

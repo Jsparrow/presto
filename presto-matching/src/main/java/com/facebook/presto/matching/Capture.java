@@ -21,22 +21,22 @@ public class Capture<T>
 
     private final String description;
 
-    public static <T> Capture<T> newCapture()
-    {
-        return newCapture("");
-    }
-
-    public static <T> Capture<T> newCapture(String description)
-    {
-        return new Capture<>(description + "@" + sequenceCounter.incrementAndGet());
-    }
-
     private Capture(String description)
     {
         this.description = description;
     }
 
-    public String description()
+	public static <T> Capture<T> newCapture()
+    {
+        return newCapture("");
+    }
+
+	public static <T> Capture<T> newCapture(String description)
+    {
+        return new Capture<>(new StringBuilder().append(description).append("@").append(sequenceCounter.incrementAndGet()).toString());
+    }
+
+	public String description()
     {
         return description;
     }

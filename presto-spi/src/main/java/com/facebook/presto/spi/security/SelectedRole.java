@@ -25,17 +25,13 @@ import static java.util.Objects.requireNonNull;
 
 public class SelectedRole
 {
-    public enum Type
-    {
-        ROLE, ALL, NONE
-    }
-
     private static final Pattern PATTERN = Pattern.compile("(ROLE|ALL|NONE)(\\{(.+?)\\})?");
 
-    private final Type type;
-    private final Optional<String> role;
+	private final Type type;
 
-    @JsonCreator
+	private final Optional<String> role;
+
+	@JsonCreator
     public SelectedRole(@JsonProperty("type") Type type, @JsonProperty("role") Optional<String> role)
     {
         this.type = requireNonNull(type, "type is null");
@@ -45,19 +41,19 @@ public class SelectedRole
         }
     }
 
-    @JsonProperty
+	@JsonProperty
     public Type getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Optional<String> getRole()
     {
         return role;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -71,13 +67,13 @@ public class SelectedRole
                 Objects.equals(role, that.role);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, role);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         StringBuilder result = new StringBuilder();
@@ -86,7 +82,7 @@ public class SelectedRole
         return result.toString();
     }
 
-    public static SelectedRole valueOf(String value)
+	public static SelectedRole valueOf(String value)
     {
         Matcher m = PATTERN.matcher(value);
         if (m.matches()) {
@@ -95,5 +91,10 @@ public class SelectedRole
             return new SelectedRole(type, role);
         }
         throw new IllegalArgumentException("Could not parse selected role: " + value);
+    }
+
+	public enum Type
+    {
+        ROLE, ALL, NONE
     }
 }

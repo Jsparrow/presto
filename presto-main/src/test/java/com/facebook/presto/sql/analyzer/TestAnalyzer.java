@@ -302,16 +302,12 @@ public class TestAnalyzer
     @Test
     public void testGroupByWithSubquerySelectExpressionWithDereferenceExpression()
     {
-        analyze("SELECT (SELECT t.a.someField) " +
-                "FROM (VALUES ROW(CAST(ROW(1) AS ROW(someField BIGINT)), 2)) t(a, b) " +
-                "GROUP BY a");
+        analyze(new StringBuilder().append("SELECT (SELECT t.a.someField) ").append("FROM (VALUES ROW(CAST(ROW(1) AS ROW(someField BIGINT)), 2)) t(a, b) ").append("GROUP BY a").toString());
 
         assertFails(
                 MUST_BE_AGGREGATE_OR_GROUP_BY,
                 "line 1:16: Subquery uses 't.a' which must appear in GROUP BY clause",
-                "SELECT (SELECT t.a.someField) " +
-                        "FROM (VALUES ROW(CAST(ROW(1) AS ROW(someField BIGINT)), 2)) t(a, b) " +
-                        "GROUP BY b");
+                new StringBuilder().append("SELECT (SELECT t.a.someField) ").append("FROM (VALUES ROW(CAST(ROW(1) AS ROW(someField BIGINT)), 2)) t(a, b) ").append("GROUP BY b").toString());
     }
 
     @Test
@@ -379,10 +375,7 @@ public class TestAnalyzer
     @Test
     public void testGroupingTooManyArguments()
     {
-        String grouping = "GROUPING(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a," +
-                "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a," +
-                "a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a," +
-                "a, a)";
+        String grouping = new StringBuilder().append("GROUPING(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,").append("a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,").append("a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a,").append("a, a)").toString();
         assertFails(INVALID_PROCEDURE_ARGUMENTS, String.format("SELECT a, b, %s + 1 FROM t1 GROUP BY GROUPING SETS ((a), (a, b))", grouping));
         assertFails(INVALID_PROCEDURE_ARGUMENTS, String.format("SELECT a, b, %s as g FROM t1 GROUP BY a, b HAVING g > 0", grouping));
         assertFails(INVALID_PROCEDURE_ARGUMENTS, String.format("SELECT a, b, rank() OVER (PARTITION BY %s) FROM t1 GROUP BY GROUPING SETS ((a), (a, b))", grouping));
@@ -485,9 +478,7 @@ public class TestAnalyzer
         analyze("SELECT a x FROM t1 ORDER BY a + 1");
 
         assertFails(TYPE_MISMATCH, 3, 10,
-                "SELECT x.c as x\n" +
-                        "FROM (VALUES 1) x(c)\n" +
-                        "ORDER BY x.c");
+                new StringBuilder().append("SELECT x.c as x\n").append("FROM (VALUES 1) x(c)\n").append("ORDER BY x.c").toString());
     }
 
     @Test
@@ -517,18 +508,12 @@ public class TestAnalyzer
 
         analyze("SELECT a FROM t1 GROUP BY a ORDER BY MAX((SELECT x FROM (VALUES 4) t(x)))");
 
-        analyze("SELECT CAST(ROW(1) AS ROW(someField BIGINT)) AS x\n" +
-                "FROM (VALUES (1, 2)) t(a, b)\n" +
-                "GROUP BY b\n" +
-                "ORDER BY (SELECT x.someField)");
+        analyze(new StringBuilder().append("SELECT CAST(ROW(1) AS ROW(someField BIGINT)) AS x\n").append("FROM (VALUES (1, 2)) t(a, b)\n").append("GROUP BY b\n").append("ORDER BY (SELECT x.someField)").toString());
 
         assertFails(
                 REFERENCE_TO_OUTPUT_ATTRIBUTE_WITHIN_ORDER_BY_AGGREGATION,
                 "line 4:22: Invalid reference to output projection attribute from ORDER BY aggregation",
-                "SELECT CAST(ROW(1) AS ROW(someField BIGINT)) AS x\n" +
-                        "FROM (VALUES (1, 2)) t(a, b)\n" +
-                        "GROUP BY b\n" +
-                        "ORDER BY MAX((SELECT x.someField))");
+                new StringBuilder().append("SELECT CAST(ROW(1) AS ROW(someField BIGINT)) AS x\n").append("FROM (VALUES (1, 2)) t(a, b)\n").append("GROUP BY b\n").append("ORDER BY MAX((SELECT x.someField))").toString());
     }
 
     @Test
@@ -539,26 +524,14 @@ public class TestAnalyzer
                 new TaskManagerConfig(),
                 new MemoryManagerConfig(),
                 new FeaturesConfig().setMaxGroupingSets(2048)))).build();
-        analyze(session, "SELECT a, b, c, d, e, f, g, h, i, j, k, SUM(l)" +
-                "FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))\n" +
-                "t (a, b, c, d, e, f, g, h, i, j, k, l)\n" +
-                "GROUP BY CUBE (a, b, c, d, e, f), CUBE (g, h, i, j, k)");
+        analyze(session, new StringBuilder().append("SELECT a, b, c, d, e, f, g, h, i, j, k, SUM(l)").append("FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))\n").append("t (a, b, c, d, e, f, g, h, i, j, k, l)\n").append("GROUP BY CUBE (a, b, c, d, e, f), CUBE (g, h, i, j, k)").toString());
         assertFails(session, TOO_MANY_GROUPING_SETS,
                 "line 3:10: GROUP BY has 4096 grouping sets but can contain at most 2048",
-                "SELECT a, b, c, d, e, f, g, h, i, j, k, l, SUM(m)" +
-                        "FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))\n" +
-                        "t (a, b, c, d, e, f, g, h, i, j, k, l, m)\n" +
-                        "GROUP BY CUBE (a, b, c, d, e, f), CUBE (g, h, i, j, k, l)");
+                new StringBuilder().append("SELECT a, b, c, d, e, f, g, h, i, j, k, l, SUM(m)").append("FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))\n").append("t (a, b, c, d, e, f, g, h, i, j, k, l, m)\n").append("GROUP BY CUBE (a, b, c, d, e, f), CUBE (g, h, i, j, k, l)").toString());
         assertFails(session, TOO_MANY_GROUPING_SETS,
                 format("line 3:10: GROUP BY has more than %s grouping sets but can contain at most 2048", Integer.MAX_VALUE),
-                "SELECT a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, " +
-                        "q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae, SUM(af)" +
-                        "FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, " +
-                        "17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32))\n" +
-                        "t (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, " +
-                        "q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae, af)\n" +
-                        "GROUP BY CUBE (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, " +
-                        "q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae)");
+                new StringBuilder().append("SELECT a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, ").append("q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae, SUM(af)").append("FROM (VALUES (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, ").append("17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32))\n").append("t (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, ").append("q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae, af)\n").append("GROUP BY CUBE (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, ")
+						.append("q, r, s, t, u, v, x, w, y, z, aa, ab, ac, ad, ae)").toString());
     }
 
     @Test
@@ -832,27 +805,21 @@ public class TestAnalyzer
     public void testDuplicateWithQuery()
     {
         assertFails(DUPLICATE_RELATION,
-                "WITH a AS (SELECT * FROM t1)," +
-                        "     a AS (SELECT * FROM t1)" +
-                        "SELECT * FROM a");
+                new StringBuilder().append("WITH a AS (SELECT * FROM t1),").append("     a AS (SELECT * FROM t1)").append("SELECT * FROM a").toString());
     }
 
     @Test
     public void testCaseInsensitiveDuplicateWithQuery()
     {
         assertFails(DUPLICATE_RELATION,
-                "WITH a AS (SELECT * FROM t1)," +
-                        "     A AS (SELECT * FROM t1)" +
-                        "SELECT * FROM a");
+                new StringBuilder().append("WITH a AS (SELECT * FROM t1),").append("     A AS (SELECT * FROM t1)").append("SELECT * FROM a").toString());
     }
 
     @Test
     public void testWithForwardReference()
     {
         assertFails(MISSING_TABLE,
-                "WITH a AS (SELECT * FROM b)," +
-                        "     b AS (SELECT * FROM t1)" +
-                        "SELECT * FROM a");
+                new StringBuilder().append("WITH a AS (SELECT * FROM b),").append("     b AS (SELECT * FROM t1)").append("SELECT * FROM a").toString());
     }
 
     @Test
@@ -1750,8 +1717,7 @@ public class TestAnalyzer
                 fail(format("Expected error %s, but found %s: %s", error, e.getCode(), e.getMessage()), e);
             }
 
-            if (location.isPresent()) {
-                NodeLocation expected = location.get();
+            location.ifPresent(expected -> {
                 NodeLocation actual = e.getNode().getLocation().get();
 
                 if (expected.getLineNumber() != actual.getLineNumber() || expected.getColumnNumber() != actual.getColumnNumber()) {
@@ -1763,7 +1729,7 @@ public class TestAnalyzer
                             actual.getLineNumber(),
                             actual.getColumnNumber()));
                 }
-            }
+            });
         }
     }
 

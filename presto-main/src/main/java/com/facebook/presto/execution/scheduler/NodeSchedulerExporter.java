@@ -27,10 +27,13 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class NodeSchedulerExporter
 {
-    private final MBeanExporter exporter;
+    private static final Logger logger = LoggerFactory.getLogger(NodeSchedulerExporter.class);
+	private final MBeanExporter exporter;
     @GuardedBy("this")
     private final List<String> objectNames = new ArrayList<>();
 
@@ -39,29 +42,31 @@ public final class NodeSchedulerExporter
     {
         this.exporter = requireNonNull(exporter, "exporter is null");
         Map<String, CounterStat> topologicalSplitCounters = nodeScheduler.getTopologicalSplitCounters();
-        for (Map.Entry<String, CounterStat> entry : topologicalSplitCounters.entrySet()) {
+        topologicalSplitCounters.entrySet().forEach(entry -> {
             try {
                 String objectName = ObjectNames.builder(NodeScheduler.class).withProperty("segment", entry.getKey()).build();
                 this.exporter.export(objectName, entry.getValue());
                 objectNames.add(objectName);
             }
             catch (JmxException e) {
+				logger.error(e.getMessage(), e);
                 // ignored
             }
-        }
+        });
     }
 
     @PreDestroy
     public synchronized void destroy()
     {
-        for (String objectName : objectNames) {
+        objectNames.forEach(objectName -> {
             try {
                 exporter.unexport(objectName);
             }
             catch (JmxException e) {
+				logger.error(e.getMessage(), e);
                 // ignored
             }
-        }
+        });
         objectNames.clear();
     }
 }

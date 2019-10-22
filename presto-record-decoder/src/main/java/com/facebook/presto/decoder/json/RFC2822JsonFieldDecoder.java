@@ -34,6 +34,8 @@ import static com.facebook.presto.spi.type.TimestampType.TIMESTAMP;
 import static com.facebook.presto.spi.type.TimestampWithTimeZoneType.TIMESTAMP_WITH_TIME_ZONE;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * RFC 2822 date format decoder.
@@ -68,7 +70,9 @@ public class RFC2822JsonFieldDecoder
     public static class RFC2822JsonValueProvider
             extends AbstractDateTimeJsonValueProvider
     {
-        public RFC2822JsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
+        private final Logger logger = LoggerFactory.getLogger(RFC2822JsonValueProvider.class);
+
+		public RFC2822JsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
         {
             super(value, columnHandle);
         }
@@ -81,7 +85,8 @@ public class RFC2822JsonFieldDecoder
                     return FORMATTER.parseMillis(value.asText());
                 }
                 catch (IllegalArgumentException e) {
-                    throw new PrestoException(
+                    logger.error(e.getMessage(), e);
+					throw new PrestoException(
                             DECODER_CONVERSION_NOT_SUPPORTED,
                             format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
                 }

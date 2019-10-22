@@ -44,11 +44,6 @@ public class PlanNodeStatsEstimate
     private final double outputRowCount;
     private final PMap<VariableReferenceExpression, VariableStatsEstimate> variableStatistics;
 
-    public static PlanNodeStatsEstimate unknown()
-    {
-        return UNKNOWN;
-    }
-
     @JsonCreator
     public PlanNodeStatsEstimate(
             @JsonProperty("outputRowCount") double outputRowCount,
@@ -57,14 +52,19 @@ public class PlanNodeStatsEstimate
         this(outputRowCount, HashTreePMap.from(requireNonNull(variableStatistics, "variableStatistics is null")));
     }
 
-    private PlanNodeStatsEstimate(double outputRowCount, PMap<VariableReferenceExpression, VariableStatsEstimate> variableStatistics)
+	private PlanNodeStatsEstimate(double outputRowCount, PMap<VariableReferenceExpression, VariableStatsEstimate> variableStatistics)
     {
         checkArgument(isNaN(outputRowCount) || outputRowCount >= 0, "outputRowCount cannot be negative");
         this.outputRowCount = outputRowCount;
         this.variableStatistics = variableStatistics;
     }
 
-    /**
+	public static PlanNodeStatsEstimate unknown()
+    {
+        return UNKNOWN;
+    }
+
+	/**
      * Returns estimated number of rows.
      * Unknown value is represented by {@link Double#NaN}
      */
@@ -74,7 +74,7 @@ public class PlanNodeStatsEstimate
         return outputRowCount;
     }
 
-    /**
+	/**
      * Returns estimated data size.
      * Unknown value is represented by {@link Double#NaN}
      */
@@ -87,7 +87,7 @@ public class PlanNodeStatsEstimate
                 .sum();
     }
 
-    private double getOutputSizeForVariable(VariableStatsEstimate variableStatistics, Type type)
+	private double getOutputSizeForVariable(VariableStatsEstimate variableStatistics, Type type)
     {
         checkArgument(type != null, "type is null");
 
@@ -117,40 +117,40 @@ public class PlanNodeStatsEstimate
         return outputSize;
     }
 
-    public PlanNodeStatsEstimate mapOutputRowCount(Function<Double, Double> mappingFunction)
+	public PlanNodeStatsEstimate mapOutputRowCount(Function<Double, Double> mappingFunction)
     {
         return buildFrom(this).setOutputRowCount(mappingFunction.apply(outputRowCount)).build();
     }
 
-    public PlanNodeStatsEstimate mapVariableColumnStatistics(VariableReferenceExpression variable, Function<VariableStatsEstimate, VariableStatsEstimate> mappingFunction)
+	public PlanNodeStatsEstimate mapVariableColumnStatistics(VariableReferenceExpression variable, Function<VariableStatsEstimate, VariableStatsEstimate> mappingFunction)
     {
         return buildFrom(this)
                 .addVariableStatistics(variable, mappingFunction.apply(getVariableStatistics(variable)))
                 .build();
     }
 
-    public VariableStatsEstimate getVariableStatistics(VariableReferenceExpression variable)
+	public VariableStatsEstimate getVariableStatistics(VariableReferenceExpression variable)
     {
         return variableStatistics.getOrDefault(variable, VariableStatsEstimate.unknown());
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<VariableReferenceExpression, VariableStatsEstimate> getVariableStatistics()
     {
         return variableStatistics;
     }
 
-    public Set<VariableReferenceExpression> getVariablesWithKnownStatistics()
+	public Set<VariableReferenceExpression> getVariablesWithKnownStatistics()
     {
         return variableStatistics.keySet();
     }
 
-    public boolean isOutputRowCountUnknown()
+	public boolean isOutputRowCountUnknown()
     {
         return isNaN(outputRowCount);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -159,7 +159,7 @@ public class PlanNodeStatsEstimate
                 .toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -173,23 +173,23 @@ public class PlanNodeStatsEstimate
                 Objects.equals(variableStatistics, that.variableStatistics);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(outputRowCount, variableStatistics);
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public static Builder buildFrom(PlanNodeStatsEstimate other)
+	public static Builder buildFrom(PlanNodeStatsEstimate other)
     {
         return new Builder(other.getOutputRowCount(), other.variableStatistics);
     }
 
-    public static final class Builder
+	public static final class Builder
     {
         private double outputRowCount;
         private PMap<VariableReferenceExpression, VariableStatsEstimate> variableStatistics;

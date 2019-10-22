@@ -102,20 +102,20 @@ public class JoinNode
         checkArgument(!(criteria.isEmpty() && leftHashVariable.isPresent()), "Left hash variable is only valid in an equijoin");
         checkArgument(!(criteria.isEmpty() && rightHashVariable.isPresent()), "Right hash variable is only valid in an equijoin");
 
-        if (distributionType.isPresent()) {
+        distributionType.ifPresent(value -> {
             // The implementation of full outer join only works if the data is hash partitioned.
             checkArgument(
-                    !(distributionType.get() == REPLICATED && type.mustPartition()),
+                    !(value == REPLICATED && type.mustPartition()),
                     "%s join do not work with %s distribution type",
                     type,
-                    distributionType.get());
+                    value);
             // It does not make sense to PARTITION when there is nothing to partition on
             checkArgument(
-                    !(distributionType.get() == PARTITIONED && type.mustReplicate(criteria)),
+                    !(value == PARTITIONED && type.mustReplicate(criteria)),
                     "Equi criteria are empty, so %s join should not have %s distribution type",
                     type,
-                    distributionType.get());
-        }
+                    value);
+        });
     }
 
     public JoinNode flipChildren()
@@ -170,13 +170,103 @@ public class JoinNode
                 .build();
     }
 
-    public enum DistributionType
+    @JsonProperty
+    public Type getType()
+    {
+        return type;
+    }
+
+	@JsonProperty
+    public PlanNode getLeft()
+    {
+        return left;
+    }
+
+	@JsonProperty
+    public PlanNode getRight()
+    {
+        return right;
+    }
+
+	@JsonProperty
+    public List<EquiJoinClause> getCriteria()
+    {
+        return criteria;
+    }
+
+	@JsonProperty
+    public Optional<RowExpression> getFilter()
+    {
+        return filter;
+    }
+
+	public Optional<SortExpressionContext> getSortExpressionContext(FunctionManager functionManager)
+    {
+        return filter
+                .flatMap(filter -> extractSortExpression(ImmutableSet.copyOf(right.getOutputVariables()), filter, functionManager));
+    }
+
+	@JsonProperty
+    public Optional<VariableReferenceExpression> getLeftHashVariable()
+    {
+        return leftHashVariable;
+    }
+
+	@JsonProperty
+    public Optional<VariableReferenceExpression> getRightHashVariable()
+    {
+        return rightHashVariable;
+    }
+
+	@Override
+    public List<PlanNode> getSources()
+    {
+        return ImmutableList.of(left, right);
+    }
+
+	@Override
+    @JsonProperty
+    public List<VariableReferenceExpression> getOutputVariables()
+    {
+        return outputVariables;
+    }
+
+	@JsonProperty
+    public Optional<DistributionType> getDistributionType()
+    {
+        return distributionType;
+    }
+
+	@Override
+    public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitJoin(this, context);
+    }
+
+	@Override
+    public PlanNode replaceChildren(List<PlanNode> newChildren)
+    {
+        checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
+        return new JoinNode(getId(), type, newChildren.get(0), newChildren.get(1), criteria, outputVariables, filter, leftHashVariable, rightHashVariable, distributionType);
+    }
+
+	public JoinNode withDistributionType(DistributionType distributionType)
+    {
+        return new JoinNode(getId(), type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, Optional.of(distributionType));
+    }
+
+	public boolean isCrossJoin()
+    {
+        return criteria.isEmpty() && !filter.isPresent() && type == INNER;
+    }
+
+	public enum DistributionType
     {
         PARTITIONED,
         REPLICATED
     }
 
-    public enum Type
+	public enum Type
     {
         INNER("InnerJoin"),
         LEFT("LeftJoin"),
@@ -208,97 +298,7 @@ public class JoinNode
         }
     }
 
-    @JsonProperty
-    public Type getType()
-    {
-        return type;
-    }
-
-    @JsonProperty
-    public PlanNode getLeft()
-    {
-        return left;
-    }
-
-    @JsonProperty
-    public PlanNode getRight()
-    {
-        return right;
-    }
-
-    @JsonProperty
-    public List<EquiJoinClause> getCriteria()
-    {
-        return criteria;
-    }
-
-    @JsonProperty
-    public Optional<RowExpression> getFilter()
-    {
-        return filter;
-    }
-
-    public Optional<SortExpressionContext> getSortExpressionContext(FunctionManager functionManager)
-    {
-        return filter
-                .flatMap(filter -> extractSortExpression(ImmutableSet.copyOf(right.getOutputVariables()), filter, functionManager));
-    }
-
-    @JsonProperty
-    public Optional<VariableReferenceExpression> getLeftHashVariable()
-    {
-        return leftHashVariable;
-    }
-
-    @JsonProperty
-    public Optional<VariableReferenceExpression> getRightHashVariable()
-    {
-        return rightHashVariable;
-    }
-
-    @Override
-    public List<PlanNode> getSources()
-    {
-        return ImmutableList.of(left, right);
-    }
-
-    @Override
-    @JsonProperty
-    public List<VariableReferenceExpression> getOutputVariables()
-    {
-        return outputVariables;
-    }
-
-    @JsonProperty
-    public Optional<DistributionType> getDistributionType()
-    {
-        return distributionType;
-    }
-
-    @Override
-    public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitJoin(this, context);
-    }
-
-    @Override
-    public PlanNode replaceChildren(List<PlanNode> newChildren)
-    {
-        checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
-        return new JoinNode(getId(), type, newChildren.get(0), newChildren.get(1), criteria, outputVariables, filter, leftHashVariable, rightHashVariable, distributionType);
-    }
-
-    public JoinNode withDistributionType(DistributionType distributionType)
-    {
-        return new JoinNode(getId(), type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, Optional.of(distributionType));
-    }
-
-    public boolean isCrossJoin()
-    {
-        return criteria.isEmpty() && !filter.isPresent() && type == INNER;
-    }
-
-    public static class EquiJoinClause
+	public static class EquiJoinClause
     {
         private final VariableReferenceExpression left;
         private final VariableReferenceExpression right;

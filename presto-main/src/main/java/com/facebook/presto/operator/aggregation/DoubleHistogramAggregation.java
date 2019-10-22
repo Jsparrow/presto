@@ -42,15 +42,6 @@ public final class DoubleHistogramAggregation
     {
     }
 
-    @AccumulatorStateMetadata(stateSerializerClass = DoubleHistogramStateSerializer.class, stateFactoryClass = NumericHistogramStateFactory.class)
-    public interface State
-            extends AccumulatorState
-    {
-        NumericHistogram get();
-
-        void set(NumericHistogram value);
-    }
-
     @InputFunction
     public static void add(@AggregationState State state, @SqlType(BIGINT) long buckets, @SqlType(DOUBLE) double value, @SqlType(DOUBLE) double weight)
     {
@@ -64,13 +55,13 @@ public final class DoubleHistogramAggregation
         histogram.add(value, weight);
     }
 
-    @InputFunction
+	@InputFunction
     public static void add(@AggregationState State state, @SqlType(BIGINT) long buckets, @SqlType(DOUBLE) double value)
     {
         add(state, buckets, value, 1);
     }
 
-    @CombineFunction
+	@CombineFunction
     public static void merge(@AggregationState State state, State other)
     {
         NumericHistogram input = other.get();
@@ -84,7 +75,7 @@ public final class DoubleHistogramAggregation
         }
     }
 
-    @OutputFunction("map(double,double)")
+	@OutputFunction("map(double,double)")
     public static void output(@AggregationState State state, BlockBuilder out)
     {
         if (state.get() == null) {
@@ -94,11 +85,20 @@ public final class DoubleHistogramAggregation
             Map<Double, Double> value = state.get().getBuckets();
 
             BlockBuilder entryBuilder = out.beginBlockEntry();
-            for (Map.Entry<Double, Double> entry : value.entrySet()) {
+            value.entrySet().forEach(entry -> {
                 DoubleType.DOUBLE.writeDouble(entryBuilder, entry.getKey());
                 DoubleType.DOUBLE.writeDouble(entryBuilder, entry.getValue());
-            }
+            });
             out.closeEntry();
         }
+    }
+
+	@AccumulatorStateMetadata(stateSerializerClass = DoubleHistogramStateSerializer.class, stateFactoryClass = NumericHistogramStateFactory.class)
+    public interface State
+            extends AccumulatorState
+    {
+        NumericHistogram get();
+
+        void set(NumericHistogram value);
     }
 }

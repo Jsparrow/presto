@@ -97,7 +97,24 @@ public final class SortExpressionExtractor
         return new SortExpressionContext(left.getSortExpression(), searchExpressions.build());
     }
 
-    private static class SortExpressionVisitor
+    private static Optional<VariableReferenceExpression> asBuildVariableReference(Set<VariableReferenceExpression> buildLayout, RowExpression expression)
+    {
+        // Currently only we support only symbol as sort expression on build side
+        if (expression instanceof VariableReferenceExpression) {
+            VariableReferenceExpression reference = (VariableReferenceExpression) expression;
+            if (buildLayout.contains(reference)) {
+                return Optional.of(reference);
+            }
+        }
+        return Optional.empty();
+    }
+
+	private static boolean hasBuildVariableReference(Set<VariableReferenceExpression> buildVariables, RowExpression expression)
+    {
+        return expression.accept(new BuildVariableReferenceFinder(buildVariables), null);
+    }
+
+	private static class SortExpressionVisitor
             implements RowExpressionVisitor<Optional<SortExpressionContext>, Void>
     {
         private final Set<VariableReferenceExpression> buildVariables;
@@ -170,23 +187,6 @@ public final class SortExpressionExtractor
         }
     }
 
-    private static Optional<VariableReferenceExpression> asBuildVariableReference(Set<VariableReferenceExpression> buildLayout, RowExpression expression)
-    {
-        // Currently only we support only symbol as sort expression on build side
-        if (expression instanceof VariableReferenceExpression) {
-            VariableReferenceExpression reference = (VariableReferenceExpression) expression;
-            if (buildLayout.contains(reference)) {
-                return Optional.of(reference);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static boolean hasBuildVariableReference(Set<VariableReferenceExpression> buildVariables, RowExpression expression)
-    {
-        return expression.accept(new BuildVariableReferenceFinder(buildVariables), null);
-    }
-
     private static class BuildVariableReferenceFinder
             implements RowExpressionVisitor<Boolean, Void>
     {
@@ -206,12 +206,7 @@ public final class SortExpressionExtractor
         @Override
         public Boolean visitCall(CallExpression call, Void context)
         {
-            for (RowExpression argument : call.getArguments()) {
-                if (argument.accept(this, context)) {
-                    return true;
-                }
-            }
-            return false;
+            return call.getArguments().stream().anyMatch(argument -> argument.accept(this, context));
         }
 
         @Override
@@ -235,12 +230,7 @@ public final class SortExpressionExtractor
         @Override
         public Boolean visitSpecialForm(SpecialFormExpression specialForm, Void context)
         {
-            for (RowExpression argument : specialForm.getArguments()) {
-                if (argument.accept(this, context)) {
-                    return true;
-                }
-            }
-            return false;
+            return specialForm.getArguments().stream().anyMatch(argument -> argument.accept(this, context));
         }
     }
 }

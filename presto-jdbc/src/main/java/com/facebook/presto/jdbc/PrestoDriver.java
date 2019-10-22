@@ -42,11 +42,6 @@ public class PrestoDriver
 
     private static final String DRIVER_URL_START = "jdbc:presto:";
 
-    private final OkHttpClient httpClient = new OkHttpClient.Builder()
-            .addInterceptor(userAgent(DRIVER_NAME + "/" + DRIVER_VERSION))
-            .socketFactory(new SocketChannelSocketFactory())
-            .build();
-
     static {
         String version = nullToEmpty(PrestoDriver.class.getPackage().getImplementationVersion());
         Matcher matcher = Pattern.compile("^(\\d+)\\.(\\d+)($|[.-])").matcher(version);
@@ -69,14 +64,19 @@ public class PrestoDriver
         }
     }
 
-    @Override
+	private final OkHttpClient httpClient = new OkHttpClient.Builder()
+            .addInterceptor(userAgent(new StringBuilder().append(DRIVER_NAME).append("/").append(DRIVER_VERSION).toString()))
+            .socketFactory(new SocketChannelSocketFactory())
+            .build();
+
+	@Override
     public void close()
     {
         httpClient.dispatcher().executorService().shutdown();
         httpClient.connectionPool().evictAll();
     }
 
-    @Override
+	@Override
     public Connection connect(String url, Properties info)
             throws SQLException
     {
@@ -93,14 +93,14 @@ public class PrestoDriver
         return new PrestoConnection(uri, executor);
     }
 
-    @Override
+	@Override
     public boolean acceptsURL(String url)
             throws SQLException
     {
         return url.startsWith(DRIVER_URL_START);
     }
 
-    @Override
+	@Override
     public DriverPropertyInfo[] getPropertyInfo(String url, Properties info)
             throws SQLException
     {
@@ -111,26 +111,26 @@ public class PrestoDriver
                 .toArray(DriverPropertyInfo[]::new);
     }
 
-    @Override
+	@Override
     public int getMajorVersion()
     {
         return DRIVER_VERSION_MAJOR;
     }
 
-    @Override
+	@Override
     public int getMinorVersion()
     {
         return DRIVER_VERSION_MINOR;
     }
 
-    @Override
+	@Override
     public boolean jdbcCompliant()
     {
         // TODO: pass compliance tests
         return false;
     }
 
-    @Override
+	@Override
     public Logger getParentLogger()
             throws SQLFeatureNotSupportedException
     {

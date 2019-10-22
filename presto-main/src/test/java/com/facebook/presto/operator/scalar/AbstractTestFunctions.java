@@ -234,7 +234,7 @@ public abstract class AbstractTestFunctions
 
     protected static SqlDecimal maxPrecisionDecimal(long value)
     {
-        final String maxPrecisionFormat = "%0" + (Decimals.MAX_PRECISION + (value < 0 ? 1 : 0)) + "d";
+        final String maxPrecisionFormat = new StringBuilder().append("%0").append(Decimals.MAX_PRECISION + (value < 0 ? 1 : 0)).append("d").toString();
         return decimal(String.format(maxPrecisionFormat, value));
     }
 

@@ -61,7 +61,7 @@ public class BenchmarkUncheckedByteArrays
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkUncheckedByteArrays.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkUncheckedByteArrays.class.getSimpleName()).append(".*").toString())
                 .build();
         new Runner(options).run();
     }
@@ -188,8 +188,8 @@ public class BenchmarkUncheckedByteArrays
     private int sequentialCopyToSliceOutput(SliceOutput sliceOutput, long[] values)
     {
         sliceOutput.reset();
-        for (int i = 0; i < values.length; i++) {
-            sliceOutput.writeLong(values[i]);
+        for (long value : values) {
+            sliceOutput.writeLong(value);
         }
         return sliceOutput.size();
     }
@@ -208,43 +208,6 @@ public class BenchmarkUncheckedByteArrays
     private static class TestingSliceOutput
     {
         private static Unsafe unsafe;
-        public int size;
-        private byte[] buffer;
-
-        TestingSliceOutput(int initialSize)
-        {
-            buffer = new byte[initialSize];
-        }
-
-        public void writeLong(long value)
-        {
-            unsafe.putLong(buffer, (long) size + ARRAY_BYTE_BASE_OFFSET, value);
-            size += ARRAY_LONG_INDEX_SCALE;
-        }
-
-        public void writeLong(long value, int address)
-        {
-            unsafe.putLong(buffer, (long) address + ARRAY_BYTE_BASE_OFFSET, value);
-        }
-
-        public void writeLong(long value, boolean isNull)
-        {
-            unsafe.putLong(buffer, (long) size + ARRAY_BYTE_BASE_OFFSET, value);
-            if (!isNull) {
-                size += ARRAY_LONG_INDEX_SCALE;
-            }
-        }
-
-        public int size()
-        {
-            return size;
-        }
-
-        public void reset()
-        {
-            size = 0;
-        }
-
         static {
             try {
                 Field field = Unsafe.class.getDeclaredField("theUnsafe");
@@ -258,6 +221,43 @@ public class BenchmarkUncheckedByteArrays
                 throw new RuntimeException(e);
             }
         }
+
+		public int size;
+		private byte[] buffer;
+
+		TestingSliceOutput(int initialSize)
+        {
+            buffer = new byte[initialSize];
+        }
+
+		public void writeLong(long value)
+        {
+            unsafe.putLong(buffer, (long) size + ARRAY_BYTE_BASE_OFFSET, value);
+            size += ARRAY_LONG_INDEX_SCALE;
+        }
+
+		public void writeLong(long value, int address)
+        {
+            unsafe.putLong(buffer, (long) address + ARRAY_BYTE_BASE_OFFSET, value);
+        }
+
+		public void writeLong(long value, boolean isNull)
+        {
+            unsafe.putLong(buffer, (long) size + ARRAY_BYTE_BASE_OFFSET, value);
+            if (!isNull) {
+                size += ARRAY_LONG_INDEX_SCALE;
+            }
+        }
+
+		public int size()
+        {
+            return size;
+        }
+
+		public void reset()
+        {
+            size = 0;
+        }
     }
 
     @State(Scope.Thread)
@@ -268,7 +268,7 @@ public class BenchmarkUncheckedByteArrays
         private final Random random = new Random(0);
 
         private final long[] longValues = LongStream.range(0, POSITIONS_PER_PAGE).map(i -> random.nextLong()).toArray();
-        private final boolean[] nulls = Booleans.toArray(Stream.generate(() -> random.nextBoolean()).limit(POSITIONS_PER_PAGE).collect(Collectors.toCollection(ArrayList::new)));
+        private final boolean[] nulls = Booleans.toArray(Stream.generate(random::nextBoolean).limit(POSITIONS_PER_PAGE).collect(Collectors.toCollection(ArrayList::new)));
         private final int[] positions = IntStream.range(0, POSITIONS_PER_PAGE).toArray();
 
         private final byte[] byteValues = new byte[POSITIONS_PER_PAGE * ARRAY_LONG_INDEX_SCALE];

@@ -34,11 +34,6 @@ public final class CharType
 
     private final int length;
 
-    public static CharType createCharType(long length)
-    {
-        return new CharType(length);
-    }
-
     private CharType(long length)
     {
         super(
@@ -53,24 +48,29 @@ public final class CharType
         this.length = (int) length;
     }
 
-    public int getLength()
+	public static CharType createCharType(long length)
+    {
+        return new CharType(length);
+    }
+
+	public int getLength()
     {
         return length;
     }
 
-    @Override
+	@Override
     public boolean isComparable()
     {
         return true;
     }
 
-    @Override
+	@Override
     public boolean isOrderable()
     {
         return true;
     }
 
-    @Override
+	@Override
     public Object getObjectValue(ConnectorSession session, Block block, int position)
     {
         if (block.isNull(position)) {
@@ -87,7 +87,7 @@ public final class CharType
         return builder.toString();
     }
 
-    @Override
+	@Override
     public boolean equalTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         int leftLength = leftBlock.getSliceLength(leftPosition);
@@ -98,13 +98,13 @@ public final class CharType
         return leftBlock.equals(leftPosition, 0, rightBlock, rightPosition, 0, leftLength);
     }
 
-    @Override
+	@Override
     public long hash(Block block, int position)
     {
         return block.hash(position, 0, block.getSliceLength(position));
     }
 
-    @Override
+	@Override
     public int compareTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         Slice leftSlice = leftBlock.getSlice(leftPosition, 0, leftBlock.getSliceLength(leftPosition));
@@ -113,7 +113,7 @@ public final class CharType
         return compareChars(leftSlice, rightSlice);
     }
 
-    @Override
+	@Override
     public void appendTo(Block block, int position, BlockBuilder blockBuilder)
     {
         if (block.isNull(position)) {
@@ -125,24 +125,24 @@ public final class CharType
         }
     }
 
-    @Override
+	@Override
     public Slice getSlice(Block block, int position)
     {
         return block.getSlice(position, 0, block.getSliceLength(position));
     }
 
-    public void writeString(BlockBuilder blockBuilder, String value)
+	public void writeString(BlockBuilder blockBuilder, String value)
     {
         writeSlice(blockBuilder, Slices.utf8Slice(value));
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value)
     {
         writeSlice(blockBuilder, value, 0, value.length());
     }
 
-    @Override
+	@Override
     public void writeSlice(BlockBuilder blockBuilder, Slice value, int offset, int length)
     {
         if (length > 0 && value.getByte(offset + length - 1) == ' ') {
@@ -151,7 +151,7 @@ public final class CharType
         blockBuilder.writeBytes(value, offset, length).closeEntry();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -166,19 +166,19 @@ public final class CharType
         return Objects.equals(this.length, other.length);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(length);
     }
 
-    @Override
+	@Override
     public String getDisplayName()
     {
         return getTypeSignature().toString();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return getDisplayName();

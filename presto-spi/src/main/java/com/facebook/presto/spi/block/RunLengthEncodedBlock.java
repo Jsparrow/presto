@@ -31,20 +31,10 @@ public class RunLengthEncodedBlock
         implements Block
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(RunLengthEncodedBlock.class).instanceSize();
+	private final Block value;
+	private final int positionCount;
 
-    public static Block create(Type type, Object value, int positionCount)
-    {
-        Block block = Utils.nativeValueToBlock(type, value);
-        if (block instanceof RunLengthEncodedBlock) {
-            block = ((RunLengthEncodedBlock) block).getValue();
-        }
-        return new RunLengthEncodedBlock(block, positionCount);
-    }
-
-    private final Block value;
-    private final int positionCount;
-
-    public RunLengthEncodedBlock(Block value, int positionCount)
+	public RunLengthEncodedBlock(Block value, int positionCount)
     {
         requireNonNull(value, "value is null");
         if (value.getPositionCount() != 1) {
@@ -65,55 +55,64 @@ public class RunLengthEncodedBlock
         this.positionCount = positionCount;
     }
 
-    public Block getValue()
+	public static Block create(Type type, Object value, int positionCount)
+    {
+        Block block = Utils.nativeValueToBlock(type, value);
+        if (block instanceof RunLengthEncodedBlock) {
+            block = ((RunLengthEncodedBlock) block).getValue();
+        }
+        return new RunLengthEncodedBlock(block, positionCount);
+    }
+
+	public Block getValue()
     {
         return value;
     }
 
-    @Override
+	@Override
     public int getPositionCount()
     {
         return positionCount;
     }
 
-    @Override
+	@Override
     public long getSizeInBytes()
     {
         return value.getSizeInBytes();
     }
 
-    @Override
+	@Override
     public long getLogicalSizeInBytes()
     {
         return positionCount * value.getLogicalSizeInBytes();
     }
 
-    @Override
+	@Override
     public long getRetainedSizeInBytes()
     {
         return INSTANCE_SIZE + value.getRetainedSizeInBytes();
     }
 
-    @Override
+	@Override
     public long getEstimatedDataSizeForStats(int position)
     {
         return value.getEstimatedDataSizeForStats(0);
     }
 
-    @Override
+	@Override
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
     {
         consumer.accept(value, value.getRetainedSizeInBytes());
         consumer.accept(this, (long) INSTANCE_SIZE);
     }
 
-    @Override
+	@Override
     public String getEncodingName()
     {
         return RunLengthBlockEncoding.NAME;
     }
 
-    @Override
+	@Override
     public Block getPositions(int[] positions, int offset, int length)
     {
         checkArrayRange(positions, offset, length);
@@ -123,7 +122,7 @@ public class RunLengthEncodedBlock
         return new RunLengthEncodedBlock(value, length);
     }
 
-    @Override
+	@Override
     public Block copyPositions(int[] positions, int offset, int length)
     {
         checkArrayRange(positions, offset, length);
@@ -133,152 +132,152 @@ public class RunLengthEncodedBlock
         return new RunLengthEncodedBlock(value.copyRegion(0, 1), length);
     }
 
-    @Override
+	@Override
     public Block getRegion(int positionOffset, int length)
     {
         checkValidRegion(positionCount, positionOffset, length);
         return new RunLengthEncodedBlock(value, length);
     }
 
-    @Override
+	@Override
     public long getRegionSizeInBytes(int position, int length)
     {
         return value.getSizeInBytes();
     }
 
-    @Override
+	@Override
     public long getPositionsSizeInBytes(boolean[] positions)
     {
         return value.getSizeInBytes();
     }
 
-    @Override
+	@Override
     public Block copyRegion(int positionOffset, int length)
     {
         checkValidRegion(positionCount, positionOffset, length);
         return new RunLengthEncodedBlock(value.copyRegion(0, 1), length);
     }
 
-    @Override
+	@Override
     public int getSliceLength(int position)
     {
         checkReadablePosition(position);
         return value.getSliceLength(0);
     }
 
-    @Override
+	@Override
     public byte getByte(int position)
     {
         checkReadablePosition(position);
         return value.getByte(0);
     }
 
-    @Override
+	@Override
     public short getShort(int position)
     {
         checkReadablePosition(position);
         return value.getShort(0);
     }
 
-    @Override
+	@Override
     public int getInt(int position)
     {
         checkReadablePosition(position);
         return value.getInt(0);
     }
 
-    @Override
+	@Override
     public long getLong(int position)
     {
         checkReadablePosition(position);
         return value.getLong(0);
     }
 
-    @Override
+	@Override
     public long getLong(int position, int offset)
     {
         checkReadablePosition(position);
         return value.getLong(0, offset);
     }
 
-    @Override
+	@Override
     public Slice getSlice(int position, int offset, int length)
     {
         checkReadablePosition(position);
         return value.getSlice(0, offset, length);
     }
 
-    @Override
+	@Override
     public Block getBlock(int position)
     {
         checkReadablePosition(position);
         return value.getBlock(0);
     }
 
-    @Override
+	@Override
     public boolean bytesEqual(int position, int offset, Slice otherSlice, int otherOffset, int length)
     {
         checkReadablePosition(position);
         return value.bytesEqual(0, offset, otherSlice, otherOffset, length);
     }
 
-    @Override
+	@Override
     public int bytesCompare(int position, int offset, int length, Slice otherSlice, int otherOffset, int otherLength)
     {
         checkReadablePosition(position);
         return value.bytesCompare(0, offset, length, otherSlice, otherOffset, otherLength);
     }
 
-    @Override
+	@Override
     public void writeBytesTo(int position, int offset, int length, BlockBuilder blockBuilder)
     {
         checkReadablePosition(position);
         value.writeBytesTo(0, offset, length, blockBuilder);
     }
 
-    @Override
+	@Override
     public void writePositionTo(int position, BlockBuilder blockBuilder)
     {
         checkReadablePosition(position);
         value.writePositionTo(0, blockBuilder);
     }
 
-    @Override
+	@Override
     public boolean equals(int position, int offset, Block otherBlock, int otherPosition, int otherOffset, int length)
     {
         checkReadablePosition(position);
         return value.equals(0, offset, otherBlock, otherPosition, otherOffset, length);
     }
 
-    @Override
+	@Override
     public long hash(int position, int offset, int length)
     {
         checkReadablePosition(position);
         return value.hash(0, offset, length);
     }
 
-    @Override
+	@Override
     public int compareTo(int leftPosition, int leftOffset, int leftLength, Block rightBlock, int rightPosition, int rightOffset, int rightLength)
     {
         checkReadablePosition(leftPosition);
         return value.compareTo(0, leftOffset, leftLength, rightBlock, rightPosition, rightOffset, rightLength);
     }
 
-    @Override
+	@Override
     public Block getSingleValueBlock(int position)
     {
         checkReadablePosition(position);
         return value;
     }
 
-    @Override
+	@Override
     public boolean isNull(int position)
     {
         checkReadablePosition(position);
         return value.isNull(0);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         StringBuilder sb = new StringBuilder(getClass().getSimpleName());
@@ -288,7 +287,7 @@ public class RunLengthEncodedBlock
         return sb.toString();
     }
 
-    @Override
+	@Override
     public Block getLoadedBlock()
     {
         Block loadedValueBlock = value.getLoadedBlock();
@@ -299,76 +298,76 @@ public class RunLengthEncodedBlock
         return new RunLengthEncodedBlock(loadedValueBlock, positionCount);
     }
 
-    private void checkReadablePosition(int position)
+	private void checkReadablePosition(int position)
     {
         if (position < 0 || position >= positionCount) {
             throw new IllegalArgumentException("position is not valid");
         }
     }
 
-    @Override
+	@Override
     public byte getByteUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getByte(0);
     }
 
-    @Override
+	@Override
     public short getShortUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getShort(0);
     }
 
-    @Override
+	@Override
     public int getIntUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getInt(0);
     }
 
-    @Override
+	@Override
     public long getLongUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getLong(0);
     }
 
-    @Override
+	@Override
     public long getLongUnchecked(int internalPosition, int offset)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getLong(0, offset);
     }
 
-    @Override
+	@Override
     public Slice getSliceUnchecked(int internalPosition, int offset, int length)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getSlice(0, offset, length);
     }
 
-    @Override
+	@Override
     public int getSliceLengthUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getSliceLength(0);
     }
 
-    @Override
+	@Override
     public Block getBlockUnchecked(int internalPosition)
     {
         assert internalPositionInRange(internalPosition, getOffsetBase(), getPositionCount());
         return value.getBlock(0);
     }
 
-    @Override
+	@Override
     public int getOffsetBase()
     {
         return 0;
     }
 
-    @Override
+	@Override
     public boolean isNullUnchecked(int internalPosition)
     {
         assert mayHaveNull() : "no nulls present";

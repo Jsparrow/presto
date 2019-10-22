@@ -158,13 +158,13 @@ public class Page
         }
 
         Map<DictionaryId, DictionaryBlockIndexes> dictionaryBlocks = getRelatedDictionaryBlocks();
-        for (DictionaryBlockIndexes blockIndexes : dictionaryBlocks.values()) {
+        dictionaryBlocks.values().forEach(blockIndexes -> {
             List<DictionaryBlock> compactBlocks = compactRelatedBlocks(blockIndexes.getBlocks());
             List<Integer> indexes = blockIndexes.getIndexes();
             for (int i = 0; i < compactBlocks.size(); i++) {
                 blocks[indexes.get(i)] = compactBlocks.get(i);
             }
-        }
+        });
 
         updateRetainedSize();
     }

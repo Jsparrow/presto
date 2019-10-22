@@ -58,18 +58,18 @@ public class PushTopNThroughUnion
 
         ImmutableList.Builder<PlanNode> sources = ImmutableList.builder();
 
-        for (PlanNode source : unionNode.getSources()) {
+        unionNode.getSources().forEach(source -> {
             SymbolMapper.Builder symbolMapper = SymbolMapper.builder();
 
             Set<VariableReferenceExpression> sourceOutputVariables = ImmutableSet.copyOf(source.getOutputVariables());
 
-            for (VariableReferenceExpression unionOutput : unionNode.getOutputVariables()) {
+            unionNode.getOutputVariables().forEach(unionOutput -> {
                 Set<VariableReferenceExpression> inputVariables = ImmutableSet.copyOf(unionNode.getVariableMapping().get(unionOutput));
                 VariableReferenceExpression unionInput = getLast(intersection(inputVariables, sourceOutputVariables));
                 symbolMapper.put(unionOutput, unionInput);
-            }
+            });
             sources.add(symbolMapper.build().map(topNNode, source, context.getIdAllocator().getNextId()));
-        }
+        });
 
         return Result.ofPlanNode(new UnionNode(
                 unionNode.getId(),

@@ -404,7 +404,7 @@ public class MetastoreHiveStatisticsProvider
 
         TableStatistics.Builder result = TableStatistics.builder();
         result.setRowCount(Estimate.of(rowCount));
-        for (Map.Entry<String, ColumnHandle> column : columns.entrySet()) {
+        columns.entrySet().forEach(column -> {
             String columnName = column.getKey();
             HiveColumnHandle columnHandle = (HiveColumnHandle) column.getValue();
             Type columnType = columnTypes.get(columnName);
@@ -416,7 +416,7 @@ public class MetastoreHiveStatisticsProvider
                 columnStatistics = createDataColumnStatistics(columnName, columnType, rowCount, statistics.values());
             }
             result.setColumnStatistics(columnHandle, columnStatistics);
-        }
+        });
         return result.build();
     }
 
@@ -538,11 +538,11 @@ public class MetastoreHiveStatisticsProvider
             return OptionalDouble.empty();
         }
         OptionalLong rowCount = partitionStatistics.getBasicStatistics().getRowCount();
-        if (rowCount.isPresent()) {
-            verify(rowCount.getAsLong() >= 0, "rowCount must be greater than or equal to zero");
-            return OptionalDouble.of(rowCount.getAsLong());
-        }
-        return OptionalDouble.empty();
+        if (!rowCount.isPresent()) {
+			return OptionalDouble.empty();
+		}
+		verify(rowCount.getAsLong() >= 0, "rowCount must be greater than or equal to zero");
+		return OptionalDouble.of(rowCount.getAsLong());
     }
 
     @VisibleForTesting

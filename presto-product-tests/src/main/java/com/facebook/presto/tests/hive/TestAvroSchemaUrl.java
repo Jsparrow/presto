@@ -68,13 +68,7 @@ public class TestAvroSchemaUrl
     public void testHiveCreatedTable(String schemaLocation)
     {
         onHive().executeQuery("DROP TABLE IF EXISTS test_avro_schema_url_hive");
-        onHive().executeQuery(format("" +
-                        "CREATE TABLE test_avro_schema_url_hive " +
-                        "ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe' " +
-                        "STORED AS " +
-                        "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' " +
-                        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
-                        "TBLPROPERTIES ('avro.schema.url'='%s')",
+        onHive().executeQuery(format(new StringBuilder().append("").append("CREATE TABLE test_avro_schema_url_hive ").append("ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe' ").append("STORED AS ").append("INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' ").append("OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' ").append("TBLPROPERTIES ('avro.schema.url'='%s')").toString(),
                 schemaLocation));
         onHive().executeQuery("INSERT INTO test_avro_schema_url_hive VALUES ('some text', 123042)");
 

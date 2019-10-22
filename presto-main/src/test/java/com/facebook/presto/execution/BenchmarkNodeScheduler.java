@@ -100,13 +100,13 @@ public class BenchmarkNodeScheduler
         Set<Split> batch = new HashSet<>();
         while (splits.hasNext() || !batch.isEmpty()) {
             Multimap<InternalNode, Split> assignments = data.getNodeSelector().computeAssignments(batch, remoteTasks).getAssignments();
-            for (InternalNode node : assignments.keySet()) {
+            assignments.keySet().forEach(node -> {
                 MockRemoteTaskFactory.MockRemoteTask remoteTask = data.getTaskMap().get(node);
                 remoteTask.addSplits(ImmutableMultimap.<PlanNodeId, Split>builder()
                         .putAll(new PlanNodeId("sourceId"), assignments.get(node))
                         .build());
                 remoteTask.startSplits(MAX_SPLITS_PER_NODE);
-            }
+            });
             if (assignments.size() == batch.size()) {
                 batch.clear();
             }
@@ -122,7 +122,23 @@ public class BenchmarkNodeScheduler
         return remoteTasks;
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkNodeScheduler.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	private static HostAddress addressForHost(int host)
+    {
+        int rack = Integer.hashCode(host) % RACKS;
+        return HostAddress.fromParts(new StringBuilder().append("host").append(host).append(".rack").append(rack).toString(), 1);
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -224,16 +240,6 @@ public class BenchmarkNodeScheduler
         }
     }
 
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkNodeScheduler.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
-    }
-
     private static class BenchmarkNetworkTopology
             implements NetworkTopology
     {
@@ -279,11 +285,5 @@ public class BenchmarkNodeScheduler
         {
             return this;
         }
-    }
-
-    private static HostAddress addressForHost(int host)
-    {
-        int rack = Integer.hashCode(host) % RACKS;
-        return HostAddress.fromParts("host" + host + ".rack" + rack, 1);
     }
 }

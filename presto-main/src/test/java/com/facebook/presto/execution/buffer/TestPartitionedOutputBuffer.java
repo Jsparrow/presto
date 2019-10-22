@@ -59,10 +59,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestPartitionedOutputBuffer
 {
-    private static final String TASK_INSTANCE_ID = "task-instance-id";
+    private static final Logger logger = LoggerFactory.getLogger(TestPartitionedOutputBuffer.class);
+	private static final String TASK_INSTANCE_ID = "task-instance-id";
     private static final ImmutableList<BigintType> TYPES = ImmutableList.of(BIGINT);
     private static final OutputBufferId FIRST = new OutputBufferId(0);
     private static final OutputBufferId SECOND = new OutputBufferId(1);
@@ -79,10 +82,11 @@ public class TestPartitionedOutputBuffer
     @AfterClass(alwaysRun = true)
     public void tearDown()
     {
-        if (stateNotificationExecutor != null) {
-            stateNotificationExecutor.shutdownNow();
-            stateNotificationExecutor = null;
-        }
+        if (stateNotificationExecutor == null) {
+			return;
+		}
+		stateNotificationExecutor.shutdownNow();
+		stateNotificationExecutor = null;
     }
 
     @Test
@@ -93,12 +97,14 @@ public class TestPartitionedOutputBuffer
             fail("Expected IllegalStateException");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         try {
             createPartitionedBuffer(createInitialEmptyOutputBuffers(PARTITIONED), new DataSize(0, BYTE));
             fail("Expected IllegalStateException");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 
@@ -338,6 +344,7 @@ public class TestPartitionedOutputBuffer
             fail("Expected IllegalStateException from addQueue after noMoreQueues has been called");
         }
         catch (IllegalArgumentException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
     }
 

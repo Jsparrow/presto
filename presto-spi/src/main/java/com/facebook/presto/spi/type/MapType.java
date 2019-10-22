@@ -39,17 +39,16 @@ import static java.util.Objects.requireNonNull;
 public class MapType
         extends AbstractType
 {
-    private final Type keyType;
-    private final Type valueType;
     private static final String MAP_NULL_ELEMENT_MSG = "MAP comparison not supported for null value elements";
-    private static final int EXPECTED_BYTES_PER_ENTRY = 32;
+	private static final int EXPECTED_BYTES_PER_ENTRY = 32;
+	private final Type keyType;
+	private final Type valueType;
+	private final MethodHandle keyNativeHashCode;
+	private final MethodHandle keyBlockHashCode;
+	private final MethodHandle keyBlockNativeEquals;
+	private final MethodHandle keyBlockEquals;
 
-    private final MethodHandle keyNativeHashCode;
-    private final MethodHandle keyBlockHashCode;
-    private final MethodHandle keyBlockNativeEquals;
-    private final MethodHandle keyBlockEquals;
-
-    public MapType(
+	public MapType(
             Type keyType,
             Type valueType,
             MethodHandle keyBlockNativeEquals,
@@ -75,7 +74,7 @@ public class MapType
         this.keyBlockEquals = keyBlockEquals;
     }
 
-    @Override
+	@Override
     public BlockBuilder createBlockBuilder(BlockBuilderStatus blockBuilderStatus, int expectedEntries, int expectedBytesPerEntry)
     {
         return new MapBlockBuilder(
@@ -89,29 +88,29 @@ public class MapType
                 expectedEntries);
     }
 
-    @Override
+	@Override
     public BlockBuilder createBlockBuilder(BlockBuilderStatus blockBuilderStatus, int expectedEntries)
     {
         return createBlockBuilder(blockBuilderStatus, expectedEntries, EXPECTED_BYTES_PER_ENTRY);
     }
 
-    public Type getKeyType()
+	public Type getKeyType()
     {
         return keyType;
     }
 
-    public Type getValueType()
+	public Type getValueType()
     {
         return valueType;
     }
 
-    @Override
+	@Override
     public boolean isComparable()
     {
         return valueType.isComparable();
     }
 
-    @Override
+	@Override
     public long hash(Block block, int position)
     {
         Block mapBlock = getObject(block, position);
@@ -123,7 +122,7 @@ public class MapType
         return result;
     }
 
-    @Override
+	@Override
     public boolean equalTo(Block leftBlock, int leftPosition, Block rightBlock, int rightPosition)
     {
         Block leftMapBlock = leftBlock.getBlock(leftPosition);
@@ -155,7 +154,106 @@ public class MapType
         return true;
     }
 
-    private static final class KeyWrapper
+	@Override
+    public Object getObjectValue(ConnectorSession session, Block block, int position)
+    {
+        if (block.isNull(position)) {
+            return null;
+        }
+
+        Block singleMapBlock = block.getBlock(position);
+        if (!(singleMapBlock instanceof SingleMapBlock)) {
+            throw new UnsupportedOperationException("Map is encoded with legacy block representation");
+        }
+        Map<Object, Object> map = new HashMap<>();
+        for (int i = 0; i < singleMapBlock.getPositionCount(); i += 2) {
+            map.put(keyType.getObjectValue(session, singleMapBlock, i), valueType.getObjectValue(session, singleMapBlock, i + 1));
+        }
+
+        return Collections.unmodifiableMap(map);
+    }
+
+	@Override
+    public void appendTo(Block block, int position, BlockBuilder blockBuilder)
+    {
+        if (block.isNull(position)) {
+            blockBuilder.appendNull();
+        }
+        else {
+            block.writePositionTo(position, blockBuilder);
+        }
+    }
+
+	@Override
+    public Block getObject(Block block, int position)
+    {
+        return block.getBlock(position);
+    }
+
+	@Override
+    public Block getBlockUnchecked(Block block, int internalPosition)
+    {
+        return block.getBlockUnchecked(internalPosition);
+    }
+
+	@Override
+    public void writeObject(BlockBuilder blockBuilder, Object value)
+    {
+        if (!(value instanceof SingleMapBlock)) {
+            throw new IllegalArgumentException("Maps must be represented with SingleMapBlock");
+        }
+        blockBuilder.appendStructure((Block) value);
+    }
+
+	@Override
+    public List<Type> getTypeParameters()
+    {
+        return asList(getKeyType(), getValueType());
+    }
+
+	@Override
+    public String getDisplayName()
+    {
+        return new StringBuilder().append("map(").append(keyType.getDisplayName()).append(", ").append(valueType.getDisplayName()).append(")").toString();
+    }
+
+	public Block createBlockFromKeyValue(int positionCount, Optional<boolean[]> mapIsNull, int[] offsets, Block keyBlock, Block valueBlock)
+    {
+        return MapBlock.fromKeyValueBlock(
+                positionCount,
+                mapIsNull,
+                offsets,
+                keyBlock,
+                valueBlock,
+                this,
+                keyBlockNativeEquals,
+                keyNativeHashCode,
+                keyBlockHashCode);
+    }
+
+	/**
+     * Create a map block directly without per element validations.
+     * <p>
+     * Internal use by com.facebook.presto.spi.Block only.
+     */
+    public static Block createMapBlockInternal(
+            TypeManager typeManager,
+            Type keyType,
+            int startOffset,
+            int positionCount,
+            Optional<boolean[]> mapIsNull,
+            int[] offsets,
+            Block keyBlock,
+            Block valueBlock,
+            HashTables hashTables)
+    {
+        // TypeManager caches types. Therefore, it is important that we go through it instead of coming up with the MethodHandles directly.
+        // BIGINT is chosen arbitrarily here. Any type will do.
+        MapType mapType = (MapType) typeManager.getType(new TypeSignature(StandardTypes.MAP, TypeSignatureParameter.of(keyType.getTypeSignature()), TypeSignatureParameter.of(BIGINT.getTypeSignature())));
+        return MapBlock.createMapBlockInternal(startOffset, positionCount, mapIsNull, offsets, keyBlock, valueBlock, hashTables, keyType, mapType.keyBlockNativeEquals, mapType.keyNativeHashCode, mapType.keyBlockHashCode);
+    }
+
+	private static final class KeyWrapper
     {
         private final Type type;
         private final Block block;
@@ -193,104 +291,5 @@ public class MapType
             KeyWrapper other = (KeyWrapper) obj;
             return type.equalTo(this.block, this.position, other.getBlock(), other.getPosition());
         }
-    }
-
-    @Override
-    public Object getObjectValue(ConnectorSession session, Block block, int position)
-    {
-        if (block.isNull(position)) {
-            return null;
-        }
-
-        Block singleMapBlock = block.getBlock(position);
-        if (!(singleMapBlock instanceof SingleMapBlock)) {
-            throw new UnsupportedOperationException("Map is encoded with legacy block representation");
-        }
-        Map<Object, Object> map = new HashMap<>();
-        for (int i = 0; i < singleMapBlock.getPositionCount(); i += 2) {
-            map.put(keyType.getObjectValue(session, singleMapBlock, i), valueType.getObjectValue(session, singleMapBlock, i + 1));
-        }
-
-        return Collections.unmodifiableMap(map);
-    }
-
-    @Override
-    public void appendTo(Block block, int position, BlockBuilder blockBuilder)
-    {
-        if (block.isNull(position)) {
-            blockBuilder.appendNull();
-        }
-        else {
-            block.writePositionTo(position, blockBuilder);
-        }
-    }
-
-    @Override
-    public Block getObject(Block block, int position)
-    {
-        return block.getBlock(position);
-    }
-
-    @Override
-    public Block getBlockUnchecked(Block block, int internalPosition)
-    {
-        return block.getBlockUnchecked(internalPosition);
-    }
-
-    @Override
-    public void writeObject(BlockBuilder blockBuilder, Object value)
-    {
-        if (!(value instanceof SingleMapBlock)) {
-            throw new IllegalArgumentException("Maps must be represented with SingleMapBlock");
-        }
-        blockBuilder.appendStructure((Block) value);
-    }
-
-    @Override
-    public List<Type> getTypeParameters()
-    {
-        return asList(getKeyType(), getValueType());
-    }
-
-    @Override
-    public String getDisplayName()
-    {
-        return "map(" + keyType.getDisplayName() + ", " + valueType.getDisplayName() + ")";
-    }
-
-    public Block createBlockFromKeyValue(int positionCount, Optional<boolean[]> mapIsNull, int[] offsets, Block keyBlock, Block valueBlock)
-    {
-        return MapBlock.fromKeyValueBlock(
-                positionCount,
-                mapIsNull,
-                offsets,
-                keyBlock,
-                valueBlock,
-                this,
-                keyBlockNativeEquals,
-                keyNativeHashCode,
-                keyBlockHashCode);
-    }
-
-    /**
-     * Create a map block directly without per element validations.
-     * <p>
-     * Internal use by com.facebook.presto.spi.Block only.
-     */
-    public static Block createMapBlockInternal(
-            TypeManager typeManager,
-            Type keyType,
-            int startOffset,
-            int positionCount,
-            Optional<boolean[]> mapIsNull,
-            int[] offsets,
-            Block keyBlock,
-            Block valueBlock,
-            HashTables hashTables)
-    {
-        // TypeManager caches types. Therefore, it is important that we go through it instead of coming up with the MethodHandles directly.
-        // BIGINT is chosen arbitrarily here. Any type will do.
-        MapType mapType = (MapType) typeManager.getType(new TypeSignature(StandardTypes.MAP, TypeSignatureParameter.of(keyType.getTypeSignature()), TypeSignatureParameter.of(BIGINT.getTypeSignature())));
-        return MapBlock.createMapBlockInternal(startOffset, positionCount, mapIsNull, offsets, keyBlock, valueBlock, hashTables, keyType, mapType.keyBlockNativeEquals, mapType.keyNativeHashCode, mapType.keyBlockHashCode);
     }
 }

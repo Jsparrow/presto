@@ -361,7 +361,7 @@ public final class Partitioning
                         }
                     }
                     else {
-                        if (entry.getValue() instanceof SpecialFormExpression && ((SpecialFormExpression) entry.getValue()).getForm().equals(COALESCE)) {
+                        if (entry.getValue() instanceof SpecialFormExpression && ((SpecialFormExpression) entry.getValue()).getForm() == COALESCE) {
                             Set<RowExpression> assignmentArguments = ImmutableSet.copyOf(((SpecialFormExpression) entry.getValue()).getArguments());
                             if (!assignmentArguments.stream().allMatch(VariableReferenceExpression.class::isInstance)) {
                                 continue;

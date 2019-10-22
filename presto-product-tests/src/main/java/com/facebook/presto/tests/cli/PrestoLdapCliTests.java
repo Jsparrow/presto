@@ -79,7 +79,8 @@ public class PrestoLdapCliTests
             throws IOException
     {}
 
-    @AfterTestWithContext
+    @Override
+	@AfterTestWithContext
     public void stopPresto()
             throws InterruptedException
     {

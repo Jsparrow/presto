@@ -36,10 +36,13 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTypedSet
 {
-    private static final String FUNCTION_NAME = "typed_set_test";
+    private static final Logger logger = LoggerFactory.getLogger(TestTypedSet.class);
+	private static final String FUNCTION_NAME = "typed_set_test";
 
     @Test
     public void testConstructor()
@@ -51,6 +54,7 @@ public class TestTypedSet
                 fail("Should throw exception if expectedSize < 0");
             }
             catch (IllegalArgumentException e) {
+				logger.error(e.getMessage(), e);
                 // ignored
             }
         }
@@ -61,6 +65,7 @@ public class TestTypedSet
             fail("Should throw exception if type is null");
         }
         catch (NullPointerException | IllegalArgumentException e) {
+			logger.error(e.getMessage(), e);
             // ignored
         }
     }
@@ -218,11 +223,7 @@ public class TestTypedSet
                         createLongsBlock(nCopies(expectedSetSizes.get(expectedSetSizes.size() - 1) * 2, null)),
                         createLongsBlock(nCopies(expectedSetSizes.get(expectedSetSizes.size() - 1) * 2, 0L)));
 
-        for (int expectedSetSize : expectedSetSizes) {
-            for (Block block : longBlocks) {
-                testBigint(block, expectedSetSize);
-            }
-        }
+        expectedSetSizes.stream().mapToInt(Integer::valueOf).forEach(expectedSetSize -> longBlocks.forEach(block -> testBigint(block, expectedSetSize)));
     }
 
     @Test

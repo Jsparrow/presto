@@ -84,7 +84,30 @@ public class BenchmarkArrayIntersect
                 data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    @Test
+    public void verify()
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayIntersect().arrayIntersect(data);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkArrayIntersect().arrayIntersect(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkArrayIntersect.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -171,28 +194,5 @@ public class BenchmarkArrayIntersect
         {
             return page;
         }
-    }
-
-    @Test
-    public void verify()
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayIntersect().arrayIntersect(data);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkArrayIntersect().arrayIntersect(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkArrayIntersect.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

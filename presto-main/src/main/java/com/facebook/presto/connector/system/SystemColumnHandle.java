@@ -76,15 +76,13 @@ public class SystemColumnHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + columnName;
+        return new StringBuilder().append(connectorId).append(":").append(columnName).toString();
     }
 
     public static Map<String, ColumnHandle> toSystemColumnHandles(ConnectorId connectorId, ConnectorTableMetadata tableMetadata)
     {
         ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
-        for (ColumnMetadata columnMetadata : tableMetadata.getColumns()) {
-            columnHandles.put(columnMetadata.getName(), new SystemColumnHandle(connectorId, columnMetadata.getName()));
-        }
+        tableMetadata.getColumns().forEach(columnMetadata -> columnHandles.put(columnMetadata.getName(), new SystemColumnHandle(connectorId, columnMetadata.getName())));
 
         return columnHandles.build();
     }

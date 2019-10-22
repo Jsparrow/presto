@@ -39,11 +39,14 @@ import static com.facebook.presto.orc.OrcReader.INITIAL_BATCH_SIZE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static java.util.Objects.requireNonNull;
 import static org.joda.time.DateTimeZone.UTC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TempFileReader
         extends AbstractIterator<Page>
 {
-    private final List<Type> types;
+    private static final Logger logger = LoggerFactory.getLogger(TempFileReader.class);
+	private final List<Type> types;
     private final OrcBatchRecordReader reader;
 
     public TempFileReader(List<Type> types, OrcDataSource dataSource)
@@ -72,7 +75,8 @@ public class TempFileReader
                     INITIAL_BATCH_SIZE);
         }
         catch (IOException e) {
-            throw new PrestoException(HIVE_WRITER_DATA_ERROR, "Failed to read temporary data");
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_WRITER_DATA_ERROR, "Failed to read temporary data");
         }
     }
 
@@ -96,7 +100,8 @@ public class TempFileReader
             return new Page(batchSize, blocks);
         }
         catch (IOException e) {
-            throw new PrestoException(HIVE_WRITER_DATA_ERROR, "Failed to read temporary data");
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(HIVE_WRITER_DATA_ERROR, "Failed to read temporary data");
         }
     }
 }

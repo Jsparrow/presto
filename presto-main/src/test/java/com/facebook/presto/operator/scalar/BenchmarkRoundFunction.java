@@ -130,7 +130,7 @@ public class BenchmarkRoundFunction
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkRoundFunction.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkRoundFunction.class.getSimpleName()).append(".*").toString())
                 .build();
         new Runner(options).run();
     }

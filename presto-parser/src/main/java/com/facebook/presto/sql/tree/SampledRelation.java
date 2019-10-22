@@ -25,27 +25,21 @@ import static java.util.Objects.requireNonNull;
 public class SampledRelation
         extends Relation
 {
-    public enum Type
-    {
-        BERNOULLI,
-        SYSTEM
-    }
-
     private final Relation relation;
-    private final Type type;
-    private final Expression samplePercentage;
+	private final Type type;
+	private final Expression samplePercentage;
 
-    public SampledRelation(Relation relation, Type type, Expression samplePercentage)
+	public SampledRelation(Relation relation, Type type, Expression samplePercentage)
     {
         this(Optional.empty(), relation, type, samplePercentage);
     }
 
-    public SampledRelation(NodeLocation location, Relation relation, Type type, Expression samplePercentage)
+	public SampledRelation(NodeLocation location, Relation relation, Type type, Expression samplePercentage)
     {
         this(Optional.of(location), relation, type, samplePercentage);
     }
 
-    private SampledRelation(Optional<NodeLocation> location, Relation relation, Type type, Expression samplePercentage)
+	private SampledRelation(Optional<NodeLocation> location, Relation relation, Type type, Expression samplePercentage)
     {
         super(location);
         this.relation = requireNonNull(relation, "relation is null");
@@ -53,34 +47,34 @@ public class SampledRelation
         this.samplePercentage = requireNonNull(samplePercentage, "samplePercentage is null");
     }
 
-    public Relation getRelation()
+	public Relation getRelation()
     {
         return relation;
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Expression getSamplePercentage()
+	public Expression getSamplePercentage()
     {
         return samplePercentage;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitSampledRelation(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of(relation, samplePercentage);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -90,7 +84,7 @@ public class SampledRelation
                 .toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -105,9 +99,15 @@ public class SampledRelation
                 Objects.equals(samplePercentage, that.samplePercentage);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(relation, type, samplePercentage);
+    }
+
+	public enum Type
+    {
+        BERNOULLI,
+        SYSTEM
     }
 }

@@ -82,44 +82,40 @@ public class OrcWriter
 
     static final String PRESTO_ORC_WRITER_VERSION_METADATA_KEY = "presto.writer.version";
     static final String PRESTO_ORC_WRITER_VERSION;
-    private final OrcWriterStats stats;
-
     static {
         String version = OrcWriter.class.getPackage().getImplementationVersion();
         PRESTO_ORC_WRITER_VERSION = version == null ? "UNKNOWN" : version;
     }
 
-    private final OrcDataSink orcDataSink;
-    private final List<Type> types;
-    private final OrcEncoding orcEncoding;
-    private final CompressionKind compression;
-    private final int stripeMinBytes;
-    private final int stripeMaxBytes;
-    private final int chunkMaxLogicalBytes;
-    private final int stripeMaxRowCount;
-    private final int rowGroupMaxRowCount;
-    private final int maxCompressionBufferSize;
-    private final Map<String, String> userMetadata;
-    private final CompressedMetadataWriter metadataWriter;
-    private final DateTimeZone hiveStorageTimeZone;
-
-    private final List<ClosedStripe> closedStripes = new ArrayList<>();
-    private final List<OrcType> orcTypes;
-
-    private final List<ColumnWriter> columnWriters;
-    private final DictionaryCompressionOptimizer dictionaryCompressionOptimizer;
-    private int stripeRowCount;
-    private int rowGroupRowCount;
-    private int bufferedBytes;
-    private long columnWritersRetainedBytes;
-    private long closedStripesRetainedBytes;
-    private long previouslyRecordedSizeInBytes;
-    private boolean closed;
-
-    @Nullable
+	private final OrcWriterStats stats;
+	private final OrcDataSink orcDataSink;
+	private final List<Type> types;
+	private final OrcEncoding orcEncoding;
+	private final CompressionKind compression;
+	private final int stripeMinBytes;
+	private final int stripeMaxBytes;
+	private final int chunkMaxLogicalBytes;
+	private final int stripeMaxRowCount;
+	private final int rowGroupMaxRowCount;
+	private final int maxCompressionBufferSize;
+	private final Map<String, String> userMetadata;
+	private final CompressedMetadataWriter metadataWriter;
+	private final DateTimeZone hiveStorageTimeZone;
+	private final List<ClosedStripe> closedStripes = new ArrayList<>();
+	private final List<OrcType> orcTypes;
+	private final List<ColumnWriter> columnWriters;
+	private final DictionaryCompressionOptimizer dictionaryCompressionOptimizer;
+	private int stripeRowCount;
+	private int rowGroupRowCount;
+	private int bufferedBytes;
+	private long columnWritersRetainedBytes;
+	private long closedStripesRetainedBytes;
+	private long previouslyRecordedSizeInBytes;
+	private boolean closed;
+	@Nullable
     private final OrcWriteValidation.OrcWriteValidationBuilder validationBuilder;
 
-    public OrcWriter(
+	public OrcWriter(
             OrcDataSink orcDataSink,
             List<String> columnNames,
             List<Type> types,
@@ -177,11 +173,8 @@ public class OrcWriter
                 sliceColumnWriters.add((SliceDictionaryColumnWriter) columnWriter);
             }
             else {
-                for (ColumnWriter nestedColumnWriter : columnWriter.getNestedColumnWriters()) {
-                    if (nestedColumnWriter instanceof SliceDictionaryColumnWriter) {
-                        sliceColumnWriters.add((SliceDictionaryColumnWriter) nestedColumnWriter);
-                    }
-                }
+                columnWriter.getNestedColumnWriters().stream().filter(nestedColumnWriter -> nestedColumnWriter instanceof SliceDictionaryColumnWriter)
+						.forEach(nestedColumnWriter -> sliceColumnWriters.add((SliceDictionaryColumnWriter) nestedColumnWriter));
             }
         }
         this.columnWriters = columnWriters.build();
@@ -192,15 +185,13 @@ public class OrcWriter
                 stripeMaxRowCount,
                 toIntExact(requireNonNull(options.getDictionaryMaxMemory(), "dictionaryMaxMemory is null").toBytes()));
 
-        for (Entry<String, String> entry : this.userMetadata.entrySet()) {
-            recordValidation(validation -> validation.addMetadataProperty(entry.getKey(), utf8Slice(entry.getValue())));
-        }
+        this.userMetadata.entrySet().forEach(entry -> recordValidation(validation -> validation.addMetadataProperty(entry.getKey(), utf8Slice(entry.getValue()))));
 
         this.previouslyRecordedSizeInBytes = getRetainedBytes();
         stats.updateSizeInBytes(previouslyRecordedSizeInBytes);
     }
 
-    /**
+	/**
      * Number of bytes already flushed to the data sink.
      */
     public long getWrittenBytes()
@@ -208,7 +199,7 @@ public class OrcWriter
         return orcDataSink.size();
     }
 
-    /**
+	/**
      * Number of pending bytes not yet flushed.
      */
     public int getBufferedBytes()
@@ -216,7 +207,7 @@ public class OrcWriter
         return bufferedBytes;
     }
 
-    public long getRetainedBytes()
+	public long getRetainedBytes()
     {
         return INSTANCE_SIZE +
                 columnWritersRetainedBytes +
@@ -225,7 +216,7 @@ public class OrcWriter
                 (validationBuilder == null ? 0 : validationBuilder.getRetainedSize());
     }
 
-    public void write(Page page)
+	public void write(Page page)
             throws IOException
     {
         requireNonNull(page, "page is null");
@@ -267,7 +258,7 @@ public class OrcWriter
         previouslyRecordedSizeInBytes = recordedSizeInBytes;
     }
 
-    private void writeChunk(Page chunk)
+	private void writeChunk(Page chunk)
             throws IOException
     {
         if (rowGroupRowCount == 0) {
@@ -310,7 +301,7 @@ public class OrcWriter
         columnWritersRetainedBytes = columnWriters.stream().mapToLong(ColumnWriter::getRetainedBytes).sum();
     }
 
-    private void finishRowGroup()
+	private void finishRowGroup()
     {
         Map<Integer, ColumnStatistics> columnStatistics = new HashMap<>();
         columnWriters.forEach(columnWriter -> columnStatistics.putAll(columnWriter.finishRowGroup()));
@@ -318,7 +309,7 @@ public class OrcWriter
         rowGroupRowCount = 0;
     }
 
-    private void flushStripe(FlushReason flushReason)
+	private void flushStripe(FlushReason flushReason)
             throws IOException
     {
         List<OrcDataOutput> outputData = new ArrayList<>();
@@ -350,7 +341,7 @@ public class OrcWriter
         }
     }
 
-    /**
+	/**
      * Collect the data for for the stripe.  This is not the actual data, but
      * instead are functions that know how to write the data.
      */
@@ -400,11 +391,11 @@ public class OrcWriter
         Collections.sort(dataStreams);
 
         // add data streams
-        for (StreamDataOutput dataStream : dataStreams) {
+		dataStreams.forEach(dataStream -> {
             // The ordering is critical because the stream only contain a length with no offset.
             outputData.add(dataStream);
             allStreams.add(dataStream.getStream());
-        }
+        });
 
         Map<Integer, ColumnEncoding> columnEncodings = new HashMap<>();
         columnWriters.forEach(columnWriter -> columnEncodings.putAll(columnWriter.getColumnEncodings()));
@@ -434,7 +425,7 @@ public class OrcWriter
         return outputData;
     }
 
-    @Override
+	@Override
     public void close()
             throws IOException
     {
@@ -450,7 +441,7 @@ public class OrcWriter
         orcDataSink.close();
     }
 
-    /**
+	/**
      * Collect the data for for the file footer.  This is not the actual data, but
      * instead are functions that know how to write the data.
      */
@@ -502,14 +493,14 @@ public class OrcWriter
         return outputData;
     }
 
-    private void recordValidation(Consumer<OrcWriteValidationBuilder> task)
+	private void recordValidation(Consumer<OrcWriteValidationBuilder> task)
     {
         if (validationBuilder != null) {
             task.accept(validationBuilder);
         }
     }
 
-    public void validate(OrcDataSource input)
+	public void validate(OrcDataSource input)
             throws OrcCorruptionException
     {
         checkState(validationBuilder != null, "validation is not enabled");
@@ -522,7 +513,7 @@ public class OrcWriter
                 orcEncoding);
     }
 
-    private int estimateAverageLogicalSizePerRow(Page page)
+	private int estimateAverageLogicalSizePerRow(Page page)
     {
         checkArgument(page.getPositionCount() > 0, "page is empty");
         // sample at most 100 rows to estimate average row logical size
@@ -530,7 +521,7 @@ public class OrcWriter
         return toIntExact(chunk.getLogicalSizeInBytes() / chunk.getPositionCount());
     }
 
-    private static <T> List<T> toDenseList(Map<Integer, T> data, int expectedSize)
+	private static <T> List<T> toDenseList(Map<Integer, T> data, int expectedSize)
     {
         checkArgument(data.size() == expectedSize);
         ArrayList<T> list = new ArrayList<>(expectedSize);
@@ -540,7 +531,7 @@ public class OrcWriter
         return ImmutableList.copyOf(list);
     }
 
-    private static List<ColumnStatistics> toFileStats(List<List<ColumnStatistics>> stripes)
+	private static List<ColumnStatistics> toFileStats(List<List<ColumnStatistics>> stripes)
     {
         if (stripes.isEmpty()) {
             return ImmutableList.of();
@@ -558,7 +549,7 @@ public class OrcWriter
         return fileStats.build();
     }
 
-    private static class ClosedStripe
+	private static class ClosedStripe
     {
         private static final int INSTANCE_SIZE = ClassLayout.parseClass(ClosedStripe.class).instanceSize() + ClassLayout.parseClass(StripeInformation.class).instanceSize();
 

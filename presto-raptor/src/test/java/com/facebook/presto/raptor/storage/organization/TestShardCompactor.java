@@ -252,12 +252,12 @@ public class TestShardCompactor
             throws IOException
     {
         MaterializedResult.Builder rows = MaterializedResult.resultBuilder(SESSION, columnTypes);
-        for (UUID uuid : uuids) {
+        uuids.forEach(uuid -> {
             try (ConnectorPageSource pageSource = getPageSource(storageManager, columnIds, columnTypes, uuid)) {
                 MaterializedResult result = materializeSourceDataStream(SESSION, pageSource, columnTypes);
                 rows.rows(result.getMaterializedRows());
             }
-        }
+        });
         return rows.build();
     }
 

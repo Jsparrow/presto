@@ -88,9 +88,7 @@ class StatementClientV1
     private static final JsonCodec<QueryResults> QUERY_RESULTS_CODEC = jsonCodec(QueryResults.class);
 
     private static final Splitter SESSION_HEADER_SPLITTER = Splitter.on('=').limit(2).trimResults();
-    private static final String USER_AGENT_VALUE = StatementClientV1.class.getSimpleName() +
-            "/" +
-            firstNonNull(StatementClientV1.class.getPackage().getImplementationVersion(), "unknown");
+    private static final String USER_AGENT_VALUE = new StringBuilder().append(StatementClientV1.class.getSimpleName()).append("/").append(firstNonNull(StatementClientV1.class.getPackage().getImplementationVersion(), "unknown")).toString();
 
     private final OkHttpClient httpClient;
     private final String query;
@@ -168,29 +166,19 @@ class StatementClientV1
         }
 
         Map<String, String> property = session.getProperties();
-        for (Entry<String, String> entry : property.entrySet()) {
-            builder.addHeader(PRESTO_SESSION, entry.getKey() + "=" + entry.getValue());
-        }
+        property.entrySet().forEach(entry -> builder.addHeader(PRESTO_SESSION, new StringBuilder().append(entry.getKey()).append("=").append(entry.getValue()).toString()));
 
         Map<String, String> resourceEstimates = session.getResourceEstimates();
-        for (Entry<String, String> entry : resourceEstimates.entrySet()) {
-            builder.addHeader(PRESTO_RESOURCE_ESTIMATE, entry.getKey() + "=" + entry.getValue());
-        }
+        resourceEstimates.entrySet().forEach(entry -> builder.addHeader(PRESTO_RESOURCE_ESTIMATE, new StringBuilder().append(entry.getKey()).append("=").append(entry.getValue()).toString()));
 
         Map<String, SelectedRole> roles = session.getRoles();
-        for (Entry<String, SelectedRole> entry : roles.entrySet()) {
-            builder.addHeader(PrestoHeaders.PRESTO_ROLE, entry.getKey() + '=' + urlEncode(entry.getValue().toString()));
-        }
+        roles.entrySet().forEach(entry -> builder.addHeader(PrestoHeaders.PRESTO_ROLE, new StringBuilder().append(entry.getKey()).append('=').append(urlEncode(entry.getValue().toString())).toString()));
 
         Map<String, String> extraCredentials = session.getExtraCredentials();
-        for (Entry<String, String> entry : extraCredentials.entrySet()) {
-            builder.addHeader(PRESTO_EXTRA_CREDENTIAL, entry.getKey() + "=" + entry.getValue());
-        }
+        extraCredentials.entrySet().forEach(entry -> builder.addHeader(PRESTO_EXTRA_CREDENTIAL, new StringBuilder().append(entry.getKey()).append("=").append(entry.getValue()).toString()));
 
         Map<String, String> statements = session.getPreparedStatements();
-        for (Entry<String, String> entry : statements.entrySet()) {
-            builder.addHeader(PRESTO_PREPARED_STATEMENT, urlEncode(entry.getKey()) + "=" + urlEncode(entry.getValue()));
-        }
+        statements.entrySet().forEach(entry -> builder.addHeader(PRESTO_PREPARED_STATEMENT, new StringBuilder().append(urlEncode(entry.getKey())).append("=").append(urlEncode(entry.getValue())).toString()));
 
         builder.addHeader(PRESTO_TRANSACTION_ID, session.getTransactionId() == null ? "NONE" : session.getTransactionId());
 
@@ -209,22 +197,26 @@ class StatementClientV1
         return timeZone;
     }
 
-    public boolean isRunning()
+    @Override
+	public boolean isRunning()
     {
         return state.get() == State.RUNNING;
     }
 
-    public boolean isClientAborted()
+    @Override
+	public boolean isClientAborted()
     {
         return state.get() == State.CLIENT_ABORTED;
     }
 
-    public boolean isClientError()
+    @Override
+	public boolean isClientError()
     {
         return state.get() == State.CLIENT_ERROR;
     }
 
-    public boolean isFinished()
+    @Override
+	public boolean isFinished()
     {
         return state.get() == State.FINISHED;
     }
@@ -417,9 +409,7 @@ class StatementClientV1
             }
             addedPreparedStatements.put(urlDecode(keyValue.get(0)), urlDecode(keyValue.get(1)));
         }
-        for (String entry : headers.values(PRESTO_DEALLOCATED_PREPARE)) {
-            deallocatedPreparedStatements.add(urlDecode(entry));
-        }
+        headers.values(PRESTO_DEALLOCATED_PREPARE).forEach(entry -> deallocatedPreparedStatements.add(urlDecode(entry)));
 
         String startedTransactionId = headers.get(PRESTO_STARTED_TRANSACTION_ID);
         if (startedTransactionId != null) {
@@ -434,18 +424,18 @@ class StatementClientV1
 
     private RuntimeException requestFailedException(String task, Request request, JsonResponse<QueryResults> response)
     {
-        if (!response.hasValue()) {
-            if (response.getStatusCode() == HTTP_UNAUTHORIZED) {
-                return new ClientException("Authentication failed" +
-                        Optional.ofNullable(response.getStatusMessage())
-                                .map(message -> ": " + message)
-                                .orElse(""));
-            }
-            return new RuntimeException(
-                    format("Error %s at %s returned an invalid response: %s [Error: %s]", task, request.url(), response, response.getResponseBody()),
-                    response.getException());
-        }
-        return new RuntimeException(format("Error %s at %s returned HTTP %s", task, request.url(), response.getStatusCode()));
+        if (response.hasValue()) {
+			return new RuntimeException(format("Error %s at %s returned HTTP %s", task, request.url(), response.getStatusCode()));
+		}
+		if (response.getStatusCode() == HTTP_UNAUTHORIZED) {
+		    return new ClientException("Authentication failed" +
+		            Optional.ofNullable(response.getStatusMessage())
+		                    .map(message -> ": " + message)
+		                    .orElse(""));
+		}
+		return new RuntimeException(
+		        format("Error %s at %s returned an invalid response: %s [Error: %s]", task, request.url(), response, response.getResponseBody()),
+		        response.getException());
     }
 
     @Override
@@ -463,12 +453,13 @@ class StatementClientV1
     public void close()
     {
         // If the query is not done, abort the query.
-        if (state.compareAndSet(State.RUNNING, State.CLIENT_ABORTED)) {
-            URI uri = currentResults.get().getNextUri();
-            if (uri != null) {
-                httpDelete(uri);
-            }
-        }
+		if (!state.compareAndSet(State.RUNNING, State.CLIENT_ABORTED)) {
+			return;
+		}
+		URI uri = currentResults.get().getNextUri();
+		if (uri != null) {
+		    httpDelete(uri);
+		}
     }
 
     private void httpDelete(URI uri)

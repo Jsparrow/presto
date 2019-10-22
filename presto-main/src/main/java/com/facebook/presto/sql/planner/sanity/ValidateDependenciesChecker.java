@@ -135,13 +135,13 @@ public final class ValidateDependenciesChecker
             Set<VariableReferenceExpression> inputs = createInputs(source, boundVariables);
             checkDependencies(inputs, node.getGroupingKeys(), "Invalid node. Grouping key variables (%s) not in source plan output (%s)", node.getGroupingKeys(), node.getSource().getOutputVariables());
 
-            for (Aggregation aggregation : node.getAggregations().values()) {
+            node.getAggregations().values().forEach(aggregation -> {
                 Set<VariableReferenceExpression> dependencies = extractAggregationUniqueVariables(aggregation, types);
                 checkDependencies(inputs, dependencies, "Invalid node. Aggregation dependencies (%s) not in source plan output (%s)", dependencies, node.getSource().getOutputVariables());
-                aggregation.getMask().ifPresent(mask -> {
-                    checkDependencies(inputs, ImmutableSet.of(mask), "Invalid node. Aggregation mask symbol (%s) not in source plan output (%s)", mask, node.getSource().getOutputVariables());
-                });
-            }
+                aggregation.getMask().ifPresent(mask -> checkDependencies(inputs, ImmutableSet.of(mask),
+						"Invalid node. Aggregation mask symbol (%s) not in source plan output (%s)", mask,
+						node.getSource().getOutputVariables()));
+            });
 
             return null;
         }
@@ -177,29 +177,20 @@ public final class ValidateDependenciesChecker
             Set<VariableReferenceExpression> inputs = createInputs(source, boundVariables);
 
             checkDependencies(inputs, node.getPartitionBy(), "Invalid node. Partition by symbols (%s) not in source plan output (%s)", node.getPartitionBy(), node.getSource().getOutputVariables());
-            if (node.getOrderingScheme().isPresent()) {
-                checkDependencies(
-                        inputs,
-                        node.getOrderingScheme().get().getOrderByVariables(),
-                        "Invalid node. Order by symbols (%s) not in source plan output (%s)",
-                        node.getOrderingScheme().get().getOrderByVariables(), node.getSource().getOutputVariables());
-            }
+            node.getOrderingScheme().ifPresent(value -> checkDependencies(
+			        inputs,
+			        value.getOrderByVariables(),
+			        "Invalid node. Order by symbols (%s) not in source plan output (%s)",
+			        value.getOrderByVariables(), node.getSource().getOutputVariables()));
 
             ImmutableList.Builder<VariableReferenceExpression> bounds = ImmutableList.builder();
-            for (WindowNode.Frame frame : node.getFrames()) {
-                if (frame.getStartValue().isPresent()) {
-                    bounds.add(frame.getStartValue().get());
-                }
-                if (frame.getEndValue().isPresent()) {
-                    bounds.add(frame.getEndValue().get());
-                }
-            }
+            node.getFrames().forEach(frame -> {
+                frame.getStartValue().ifPresent(bounds::add);
+                frame.getEndValue().ifPresent(bounds::add);
+            });
             checkDependencies(inputs, bounds.build(), "Invalid node. Frame bounds (%s) not in source plan output (%s)", bounds.build(), node.getSource().getOutputVariables());
 
-            for (WindowNode.Function function : node.getWindowFunctions().values()) {
-                Set<VariableReferenceExpression> dependencies = WindowNodeUtil.extractWindowFunctionUniqueVariables(function, types);
-                checkDependencies(inputs, dependencies, "Invalid node. Window function dependencies (%s) not in source plan output (%s)", dependencies, node.getSource().getOutputVariables());
-            }
+            node.getWindowFunctions().values().stream().map(function -> WindowNodeUtil.extractWindowFunctionUniqueVariables(function, types)).forEach(dependencies -> checkDependencies(inputs, dependencies, "Invalid node. Window function dependencies (%s) not in source plan output (%s)", dependencies, node.getSource().getOutputVariables()));
 
             return null;
         }
@@ -276,7 +267,7 @@ public final class ValidateDependenciesChecker
             source.accept(this, boundVariables); // visit child
 
             Set<VariableReferenceExpression> inputs = createInputs(source, boundVariables);
-            for (RowExpression expression : node.getAssignments().getExpressions()) {
+            node.getAssignments().getExpressions().forEach(expression -> {
                 Set<VariableReferenceExpression> dependencies;
                 if (isExpression(expression)) {
                     dependencies = VariablesExtractor.extractUnique(castToExpression(expression), types);
@@ -285,7 +276,7 @@ public final class ValidateDependenciesChecker
                     dependencies = VariablesExtractor.extractUnique(expression);
                 }
                 checkDependencies(inputs, dependencies, "Invalid node. Expression dependencies (%s) not in source plan output (%s)", dependencies, inputs);
-            }
+            });
 
             return null;
         }
@@ -369,10 +360,10 @@ public final class ValidateDependenciesChecker
                     .addAll(rightInputs)
                     .build();
 
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
+            node.getCriteria().forEach(clause -> {
                 checkArgument(leftInputs.contains(clause.getLeft()), "Symbol from join clause (%s) not in left source (%s)", clause.getLeft(), node.getLeft().getOutputVariables());
                 checkArgument(rightInputs.contains(clause.getRight()), "Symbol from join clause (%s) not in right source (%s)", clause.getRight(), node.getRight().getOutputVariables());
-            }
+            });
 
             node.getFilter().ifPresent(predicate -> {
                 // Only verify names here as filter expression would contain type cast, which will be translated to an non-existent variable in
@@ -471,10 +462,10 @@ public final class ValidateDependenciesChecker
 
             Set<VariableReferenceExpression> probeInputs = createInputs(node.getProbeSource(), boundVariables);
             Set<VariableReferenceExpression> indexSourceInputs = createInputs(node.getIndexSource(), boundVariables);
-            for (IndexJoinNode.EquiJoinClause clause : node.getCriteria()) {
+            node.getCriteria().forEach(clause -> {
                 checkArgument(probeInputs.contains(clause.getProbe()), "Probe variable from index join clause (%s) not in probe source (%s)", clause.getProbe(), node.getProbeSource().getOutputVariables());
                 checkArgument(indexSourceInputs.contains(clause.getIndex()), "Index variable from index join clause (%s) not in index source (%s)", clause.getIndex(), node.getIndexSource().getOutputVariables());
-            }
+            });
 
             Set<VariableReferenceExpression> lookupVariables = node.getCriteria().stream()
                     .map(IndexJoinNode.EquiJoinClause::getIndex)
@@ -687,7 +678,7 @@ public final class ValidateDependenciesChecker
                     .addAll(createInputs(node.getInput(), boundVariables))
                     .build();
 
-            for (RowExpression expression : node.getSubqueryAssignments().getExpressions()) {
+            node.getSubqueryAssignments().getExpressions().forEach(expression -> {
                 Set<VariableReferenceExpression> dependencies;
                 if (isExpression(expression)) {
                     dependencies = VariablesExtractor.extractUnique(castToExpression(expression), types);
@@ -696,7 +687,7 @@ public final class ValidateDependenciesChecker
                     dependencies = VariablesExtractor.extractUnique(expression);
                 }
                 checkDependencies(inputs, dependencies, "Invalid node. Expression dependencies (%s) not in source plan output (%s)", dependencies, inputs);
-            }
+            });
 
             return null;
         }

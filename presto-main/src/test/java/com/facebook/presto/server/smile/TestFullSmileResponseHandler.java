@@ -133,7 +133,12 @@ public class TestFullSmileResponseHandler
         assertEquals(response.getResponseBytes(), response.getSmileBytes());
     }
 
-    public static class User
+    private static Response mockResponse(HttpStatus status, MediaType type, byte[] content)
+    {
+        return new TestingResponse(status, contentType(type), content);
+    }
+
+	public static class User
     {
         private final String name;
         private final int age;
@@ -156,10 +161,5 @@ public class TestFullSmileResponseHandler
         {
             return age;
         }
-    }
-
-    private static Response mockResponse(HttpStatus status, MediaType type, byte[] content)
-    {
-        return new TestingResponse(status, contentType(type), content);
     }
 }

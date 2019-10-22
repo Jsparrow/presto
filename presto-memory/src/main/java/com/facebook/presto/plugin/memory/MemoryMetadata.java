@@ -177,10 +177,11 @@ public class MemoryMetadata
     {
         MemoryTableHandle handle = (MemoryTableHandle) tableHandle;
         Long tableId = tableIds.remove(handle.toSchemaTableName());
-        if (tableId != null) {
-            tables.remove(tableId);
-            tableDataFragments.remove(tableId);
-        }
+        if (tableId == null) {
+			return;
+		}
+		tables.remove(tableId);
+		tableDataFragments.remove(tableId);
     }
 
     @Override
@@ -325,10 +326,7 @@ public class MemoryMetadata
                 table.getTableName());
         Map<HostAddress, MemoryDataFragment> dataFragments = tableDataFragments.get(table.getTableId());
 
-        for (Slice fragment : fragments) {
-            MemoryDataFragment memoryDataFragment = MemoryDataFragment.fromSlice(fragment);
-            dataFragments.merge(memoryDataFragment.getHostAddress(), memoryDataFragment, MemoryDataFragment::merge);
-        }
+        fragments.stream().map(MemoryDataFragment::fromSlice).forEach(memoryDataFragment -> dataFragments.merge(memoryDataFragment.getHostAddress(), memoryDataFragment, MemoryDataFragment::merge));
     }
 
     @Override

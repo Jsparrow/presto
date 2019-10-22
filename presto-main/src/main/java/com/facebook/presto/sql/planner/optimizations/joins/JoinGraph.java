@@ -57,39 +57,12 @@ public class JoinGraph
     private final Multimap<PlanNodeId, Edge> edges;
     private final PlanNodeId rootId;
 
-    /**
-     * Builds all (distinct) {@link JoinGraph}-es whole plan tree.
-     */
-    public static List<JoinGraph> buildFrom(PlanNode plan)
-    {
-        return buildFrom(plan, Lookup.noLookup());
-    }
-
-    /**
-     * Builds {@link JoinGraph} containing {@code plan} node.
-     */
-    public static JoinGraph buildShallowFrom(PlanNode plan, Lookup lookup)
-    {
-        JoinGraph graph = plan.accept(new Builder(true, lookup), new Context());
-        return graph;
-    }
-
-    private static List<JoinGraph> buildFrom(PlanNode plan, Lookup lookup)
-    {
-        Context context = new Context();
-        JoinGraph graph = plan.accept(new Builder(false, lookup), context);
-        if (graph.size() > 1) {
-            context.addSubGraph(graph);
-        }
-        return context.getGraphs();
-    }
-
     public JoinGraph(PlanNode node)
     {
         this(ImmutableList.of(node), ImmutableMultimap.of(), node.getId(), ImmutableList.of(), Optional.empty());
     }
 
-    public JoinGraph(
+	public JoinGraph(
             List<PlanNode> nodes,
             Multimap<PlanNodeId, Edge> edges,
             PlanNodeId rootId,
@@ -103,17 +76,44 @@ public class JoinGraph
         this.assignments = assignments;
     }
 
-    public JoinGraph withAssignments(Map<VariableReferenceExpression, Expression> assignments)
+	/**
+     * Builds all (distinct) {@link JoinGraph}-es whole plan tree.
+     */
+    public static List<JoinGraph> buildFrom(PlanNode plan)
+    {
+        return buildFrom(plan, Lookup.noLookup());
+    }
+
+	/**
+     * Builds {@link JoinGraph} containing {@code plan} node.
+     */
+    public static JoinGraph buildShallowFrom(PlanNode plan, Lookup lookup)
+    {
+        JoinGraph graph = plan.accept(new Builder(true, lookup), new Context());
+        return graph;
+    }
+
+	private static List<JoinGraph> buildFrom(PlanNode plan, Lookup lookup)
+    {
+        Context context = new Context();
+        JoinGraph graph = plan.accept(new Builder(false, lookup), context);
+        if (graph.size() > 1) {
+            context.addSubGraph(graph);
+        }
+        return context.getGraphs();
+    }
+
+	public JoinGraph withAssignments(Map<VariableReferenceExpression, Expression> assignments)
     {
         return new JoinGraph(nodes, edges, rootId, filters, Optional.of(assignments));
     }
 
-    public Optional<Map<VariableReferenceExpression, Expression>> getAssignments()
+	public Optional<Map<VariableReferenceExpression, Expression>> getAssignments()
     {
         return assignments;
     }
 
-    public JoinGraph withFilter(Expression expression)
+	public JoinGraph withFilter(Expression expression)
     {
         ImmutableList.Builder<Expression> filters = ImmutableList.builder();
         filters.addAll(this.filters);
@@ -122,74 +122,65 @@ public class JoinGraph
         return new JoinGraph(nodes, edges, rootId, filters.build(), assignments);
     }
 
-    public List<Expression> getFilters()
+	public List<Expression> getFilters()
     {
         return filters;
     }
 
-    public PlanNodeId getRootId()
+	public PlanNodeId getRootId()
     {
         return rootId;
     }
 
-    public JoinGraph withRootId(PlanNodeId rootId)
+	public JoinGraph withRootId(PlanNodeId rootId)
     {
         return new JoinGraph(nodes, edges, rootId, filters, assignments);
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return nodes.isEmpty();
     }
 
-    public int size()
+	public int size()
     {
         return nodes.size();
     }
 
-    public PlanNode getNode(int index)
+	public PlanNode getNode(int index)
     {
         return nodes.get(index);
     }
 
-    public List<PlanNode> getNodes()
+	public List<PlanNode> getNodes()
     {
         return nodes;
     }
 
-    public Collection<Edge> getEdges(PlanNode node)
+	public Collection<Edge> getEdges(PlanNode node)
     {
         return ImmutableList.copyOf(edges.get(node.getId()));
     }
 
-    @Override
+	@Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
 
-        for (PlanNode nodeFrom : nodes) {
-            builder.append(nodeFrom.getId())
-                    .append(" = ")
-                    .append(nodeFrom.toString())
-                    .append("\n");
-        }
-        for (PlanNode nodeFrom : nodes) {
+        nodes.forEach(nodeFrom -> builder.append(nodeFrom.getId()).append(" = ").append(nodeFrom.toString()).append("\n"));
+        nodes.forEach(nodeFrom -> {
             builder.append(nodeFrom.getId())
                     .append(":");
-            for (Edge nodeTo : edges.get(nodeFrom.getId())) {
-                builder.append(" ").append(nodeTo.getTargetNode().getId());
-            }
+            edges.get(nodeFrom.getId()).forEach(nodeTo -> builder.append(" ").append(nodeTo.getTargetNode().getId()));
             builder.append("\n");
-        }
+        });
 
         return builder.toString();
     }
 
-    private JoinGraph joinWith(JoinGraph other, List<JoinNode.EquiJoinClause> joinClauses, Context context, PlanNodeId newRoot)
+	private JoinGraph joinWith(JoinGraph other, List<JoinNode.EquiJoinClause> joinClauses, Context context, PlanNodeId newRoot)
     {
-        for (PlanNode node : other.nodes) {
-            checkState(!edges.containsKey(node.getId()), format("Node [%s] appeared in two JoinGraphs", node));
-        }
+        other.nodes.forEach(node -> checkState(!edges.containsKey(node.getId()), format("Node [%s] appeared in two JoinGraphs", node)));
 
         List<PlanNode> nodes = ImmutableList.<PlanNode>builder()
                 .addAll(this.nodes)
@@ -205,7 +196,7 @@ public class JoinGraph
                 .addAll(other.filters)
                 .build();
 
-        for (JoinNode.EquiJoinClause edge : joinClauses) {
+        joinClauses.forEach(edge -> {
             VariableReferenceExpression leftVariable = edge.getLeft();
             VariableReferenceExpression rightVariable = edge.getRight();
             checkState(context.containsVariable(leftVariable));
@@ -215,12 +206,12 @@ public class JoinGraph
             PlanNode right = context.getVariableSource(rightVariable);
             edges.put(left.getId(), new Edge(right, leftVariable, rightVariable));
             edges.put(right.getId(), new Edge(left, rightVariable, leftVariable));
-        }
+        });
 
         return new JoinGraph(nodes, edges.build(), newRoot, joinedFilters, Optional.empty());
     }
 
-    private static class Builder
+	private static class Builder
             extends InternalPlanVisitor<JoinGraph, Context>
     {
         // TODO When com.facebook.presto.sql.planner.optimizations.EliminateCrossJoins is removed, remove 'shallow' flag
@@ -246,9 +237,7 @@ public class JoinGraph
                 }
             }
 
-            for (VariableReferenceExpression variable : node.getOutputVariables()) {
-                context.setVariableSource(variable, node);
-            }
+            node.getOutputVariables().forEach(variable -> context.setVariableSource(variable, node));
             return new JoinGraph(node);
         }
 
@@ -281,11 +270,11 @@ public class JoinGraph
         @Override
         public JoinGraph visitProject(ProjectNode node, Context context)
         {
-            if (isIdentity(node)) {
-                JoinGraph graph = node.getSource().accept(this, context);
-                return graph.withAssignments(transformValues(node.getAssignments().getMap(), OriginalExpressionUtils::castToExpression));
-            }
-            return visitPlan(node, context);
+            if (!isIdentity(node)) {
+				return visitPlan(node, context);
+			}
+			JoinGraph graph = node.getSource().accept(this, context);
+			return graph.withAssignments(transformValues(node.getAssignments().getMap(), OriginalExpressionUtils::castToExpression));
         }
 
         @Override

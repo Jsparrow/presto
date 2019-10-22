@@ -67,10 +67,7 @@ public final class ApproximateDoublePercentileArrayAggregations
 
         BlockBuilder blockBuilder = out.beginBlockEntry();
 
-        for (int i = 0; i < percentiles.size(); i++) {
-            Double percentile = percentiles.get(i);
-            DOUBLE.writeDouble(blockBuilder, sortableLongToDouble(digest.getQuantile(percentile)));
-        }
+        percentiles.forEach(percentile -> DOUBLE.writeDouble(blockBuilder, sortableLongToDouble(digest.getQuantile(percentile))));
 
         out.closeEntry();
     }

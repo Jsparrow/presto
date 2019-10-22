@@ -181,16 +181,12 @@ public class PlanFragment
             nodes.add(node);
         }
 
-        for (PlanNode source : node.getSources()) {
-            nodes.addAll(findSources(source, nodeIds));
-        }
+        node.getSources().forEach(source -> nodes.addAll(findSources(source, nodeIds)));
     }
 
     private static void findRemoteSourceNodes(PlanNode node, Builder<RemoteSourceNode> builder)
     {
-        for (PlanNode source : node.getSources()) {
-            findRemoteSourceNodes(source, builder);
-        }
+        node.getSources().forEach(source -> findRemoteSourceNodes(source, builder));
 
         if (node instanceof RemoteSourceNode) {
             builder.add((RemoteSourceNode) node);

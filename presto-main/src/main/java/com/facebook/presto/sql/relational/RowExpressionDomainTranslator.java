@@ -91,6 +91,8 @@ import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class RowExpressionDomainTranslator
         implements DomainTranslator
@@ -293,10 +295,61 @@ public final class RowExpressionDomainTranslator
                 && !range.getHigh().isUpperUnbounded() && range.getHigh().getBound() == Marker.Bound.EXACTLY;
     }
 
-    private static class Visitor<T>
+    private static RowExpression isNull(RowExpression expression)
+    {
+        return new SpecialFormExpression(IS_NULL, BOOLEAN, expression);
+    }
+
+	private static RowExpression not(StandardFunctionResolution resolution, RowExpression expression)
+    {
+        return call("not", resolution.notFunction(), expression.getType(), expression);
+    }
+
+	private RowExpression in(RowExpression value, List<RowExpression> inList)
+    {
+        return new SpecialFormExpression(IN, BOOLEAN, ImmutableList.<RowExpression>builder().add(value).addAll(inList).build());
+    }
+
+	private RowExpression binaryOperator(OperatorType operatorType, RowExpression left, RowExpression right)
+    {
+        return call(operatorType.name(), functionManager.resolveOperator(operatorType, fromTypes(left.getType(), right.getType())), BOOLEAN, left, right);
+    }
+
+	private RowExpression greaterThan(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(OperatorType.GREATER_THAN, left, right);
+    }
+
+	private RowExpression lessThan(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(OperatorType.LESS_THAN, left, right);
+    }
+
+	private RowExpression greaterThanOrEqual(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(GREATER_THAN_OR_EQUAL, left, right);
+    }
+
+	private RowExpression lessThanOrEqual(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(LESS_THAN_OR_EQUAL, left, right);
+    }
+
+	private RowExpression equal(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(EQUAL, left, right);
+    }
+
+	private RowExpression notEqual(RowExpression left, RowExpression right)
+    {
+        return binaryOperator(NOT_EQUAL, left, right);
+    }
+
+	private static class Visitor<T>
             implements RowExpressionVisitor<ExtractionResult<T>, Boolean>
     {
-        private final InterpretedFunctionInvoker functionInvoker;
+        private final Logger logger = LoggerFactory.getLogger(Visitor.class);
+		private final InterpretedFunctionInvoker functionInvoker;
         private final Metadata metadata;
         private final ConnectorSession session;
         private final FunctionManager functionManager;
@@ -331,9 +384,9 @@ public final class RowExpressionDomainTranslator
                     checkState(!values.isEmpty(), "values should never be empty");
 
                     ImmutableList.Builder<RowExpression> disjuncts = ImmutableList.builder();
-                    for (RowExpression expression : values) {
-                        disjuncts.add(call(EQUAL.name(), functionManager.resolveOperator(EQUAL, fromTypes(target.getType(), expression.getType())), BOOLEAN, target, expression));
-                    }
+                    values.forEach(expression -> disjuncts.add(call(EQUAL.name(),
+							functionManager.resolveOperator(EQUAL, fromTypes(target.getType(), expression.getType())),
+							BOOLEAN, target, expression)));
                     ExtractionResult extractionResult = or(disjuncts.build()).accept(this, complement);
 
                     // preserve original IN predicate as remaining predicate
@@ -570,7 +623,8 @@ public final class RowExpressionDomainTranslator
                 return Optional.of(metadata.getFunctionManager().lookupCast(SATURATED_FLOOR_CAST, fromType.getTypeSignature(), toType.getTypeSignature()));
             }
             catch (OperatorNotFoundException e) {
-                return Optional.empty();
+                logger.error(e.getMessage(), e);
+				return Optional.empty();
             }
         }
 
@@ -811,56 +865,6 @@ public final class RowExpressionDomainTranslator
                     throw new IllegalStateException("Can not extract predicate from special form: " + node.getForm());
             }
         }
-    }
-
-    private static RowExpression isNull(RowExpression expression)
-    {
-        return new SpecialFormExpression(IS_NULL, BOOLEAN, expression);
-    }
-
-    private static RowExpression not(StandardFunctionResolution resolution, RowExpression expression)
-    {
-        return call("not", resolution.notFunction(), expression.getType(), expression);
-    }
-
-    private RowExpression in(RowExpression value, List<RowExpression> inList)
-    {
-        return new SpecialFormExpression(IN, BOOLEAN, ImmutableList.<RowExpression>builder().add(value).addAll(inList).build());
-    }
-
-    private RowExpression binaryOperator(OperatorType operatorType, RowExpression left, RowExpression right)
-    {
-        return call(operatorType.name(), functionManager.resolveOperator(operatorType, fromTypes(left.getType(), right.getType())), BOOLEAN, left, right);
-    }
-
-    private RowExpression greaterThan(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(OperatorType.GREATER_THAN, left, right);
-    }
-
-    private RowExpression lessThan(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(OperatorType.LESS_THAN, left, right);
-    }
-
-    private RowExpression greaterThanOrEqual(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(GREATER_THAN_OR_EQUAL, left, right);
-    }
-
-    private RowExpression lessThanOrEqual(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(LESS_THAN_OR_EQUAL, left, right);
-    }
-
-    private RowExpression equal(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(EQUAL, left, right);
-    }
-
-    private RowExpression notEqual(RowExpression left, RowExpression right)
-    {
-        return binaryOperator(NOT_EQUAL, left, right);
     }
 
     private static class NormalizedSimpleComparison

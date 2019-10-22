@@ -43,9 +43,10 @@ public class InvocationConvention
         return hasSession;
     }
 
-    public String toString()
+    @Override
+	public String toString()
     {
-        return "(" + argumentConventionList.toString() + ")" + returnConvention;
+        return new StringBuilder().append("(").append(argumentConventionList.toString()).append(")").append(returnConvention).toString();
     }
 
     public enum InvocationArgumentConvention

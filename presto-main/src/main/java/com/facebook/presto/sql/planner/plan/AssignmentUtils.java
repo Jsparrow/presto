@@ -48,9 +48,7 @@ public class AssignmentUtils
     public static Map<VariableReferenceExpression, RowExpression> identitiesAsSymbolReferences(Collection<VariableReferenceExpression> variables)
     {
         Map<VariableReferenceExpression, RowExpression> map = new LinkedHashMap<>();
-        for (VariableReferenceExpression variable : variables) {
-            map.put(variable, castToRowExpression(asSymbolReference(variable)));
-        }
+        variables.forEach(variable -> map.put(variable, castToRowExpression(asSymbolReference(variable))));
         return map;
     }
 
@@ -76,11 +74,11 @@ public class AssignmentUtils
     {
         //TODO this will be checking against VariableExpression once getOutput returns VariableReferenceExpression
         RowExpression value = assignments.get(output);
-        if (isExpression(value)) {
-            Expression expression = castToExpression(value);
-            return expression instanceof SymbolReference && ((SymbolReference) expression).getName().equals(output.getName());
-        }
-        return value instanceof VariableReferenceExpression && ((VariableReferenceExpression) value).getName().equals(output.getName());
+        if (!isExpression(value)) {
+			return value instanceof VariableReferenceExpression && ((VariableReferenceExpression) value).getName().equals(output.getName());
+		}
+		Expression expression = castToExpression(value);
+		return expression instanceof SymbolReference && ((SymbolReference) expression).getName().equals(output.getName());
     }
 
     @Deprecated

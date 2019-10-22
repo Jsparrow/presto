@@ -63,9 +63,7 @@ public final class WindowPartition
 
         // reset functions for new partition
         WindowIndex windowIndex = new PagesWindowIndex(pagesIndex, partitionStart, partitionEnd);
-        for (FramedWindowFunction framedWindowFunction : windowFunctions) {
-            framedWindowFunction.getFunction().reset(windowIndex);
-        }
+        windowFunctions.forEach(framedWindowFunction -> framedWindowFunction.getFunction().reset(windowIndex));
 
         currentPosition = partitionStart;
         updatePeerGroup();
@@ -117,28 +115,6 @@ public final class WindowPartition
         currentPosition++;
     }
 
-    private static class Range
-    {
-        private final int start;
-        private final int end;
-
-        Range(int start, int end)
-        {
-            this.start = start;
-            this.end = end;
-        }
-
-        public int getStart()
-        {
-            return start;
-        }
-
-        public int getEnd()
-        {
-            return end;
-        }
-    }
-
     private void updatePeerGroup()
     {
         peerGroupStart = currentPosition;
@@ -149,7 +125,7 @@ public final class WindowPartition
         }
     }
 
-    private Range getFrameRange(FrameInfo frameInfo)
+	private Range getFrameRange(FrameInfo frameInfo)
     {
         int rowPosition = currentPosition - partitionStart;
         int endPosition = partitionEnd - partitionStart - 1;
@@ -199,7 +175,7 @@ public final class WindowPartition
         return new Range(frameStart, frameEnd);
     }
 
-    private boolean emptyFrame(FrameInfo frameInfo, int rowPosition, int endPosition)
+	private boolean emptyFrame(FrameInfo frameInfo, int rowPosition, int endPosition)
     {
         BoundType startType = frameInfo.getStartType();
         BoundType endType = frameInfo.getEndType();
@@ -233,7 +209,7 @@ public final class WindowPartition
         return (start > end) || ((start > positions) && (end > positions));
     }
 
-    private static int preceding(int rowPosition, long value)
+	private static int preceding(int rowPosition, long value)
     {
         if (value > rowPosition) {
             return 0;
@@ -241,7 +217,7 @@ public final class WindowPartition
         return toIntExact(rowPosition - value);
     }
 
-    private static int following(int rowPosition, int endPosition, long value)
+	private static int following(int rowPosition, int endPosition, long value)
     {
         if (value > (endPosition - rowPosition)) {
             return endPosition;
@@ -249,21 +225,43 @@ public final class WindowPartition
         return toIntExact(rowPosition + value);
     }
 
-    private long getStartValue(FrameInfo frameInfo)
+	private long getStartValue(FrameInfo frameInfo)
     {
         return getFrameValue(frameInfo.getStartChannel(), "starting");
     }
 
-    private long getEndValue(FrameInfo frameInfo)
+	private long getEndValue(FrameInfo frameInfo)
     {
         return getFrameValue(frameInfo.getEndChannel(), "ending");
     }
 
-    private long getFrameValue(int channel, String type)
+	private long getFrameValue(int channel, String type)
     {
         checkCondition(!pagesIndex.isNull(channel, currentPosition), INVALID_WINDOW_FRAME, "Window frame %s offset must not be null", type);
         long value = pagesIndex.getLong(channel, currentPosition);
         checkCondition(value >= 0, INVALID_WINDOW_FRAME, "Window frame %s offset must not be negative", value);
         return value;
+    }
+
+	private static class Range
+    {
+        private final int start;
+        private final int end;
+
+        Range(int start, int end)
+        {
+            this.start = start;
+            this.end = end;
+        }
+
+        public int getStart()
+        {
+            return start;
+        }
+
+        public int getEnd()
+        {
+            return end;
+        }
     }
 }

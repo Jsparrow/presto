@@ -61,12 +61,11 @@ public final class AtopPageSourceProvider
         ImmutableList.Builder<Type> types = ImmutableList.builder();
         ImmutableList.Builder<AtopColumn> atopColumns = ImmutableList.builder();
 
-        for (ColumnHandle column : columns) {
-            AtopColumnHandle atopColumnHandle = (AtopColumnHandle) column;
-            AtopColumn atopColumn = atopSplit.getTable().getColumn(atopColumnHandle.getName());
-            atopColumns.add(atopColumn);
-            types.add(typeManager.getType(atopColumn.getType()));
-        }
+        columns.stream().map(column -> (AtopColumnHandle) column).forEach(atopColumnHandle -> {
+			AtopColumn atopColumn = atopSplit.getTable().getColumn(atopColumnHandle.getName());
+			atopColumns.add(atopColumn);
+			types.add(typeManager.getType(atopColumn.getType()));
+		});
 
         ZonedDateTime date = atopSplit.getDate();
         checkArgument(date.equals(date.withHour(0).withMinute(0).withSecond(0).withNano(0)), "Expected date to be at beginning of day");

@@ -37,7 +37,131 @@ import static java.util.Objects.requireNonNull;
 public class SpatialIndexBuilderOperator
         implements Operator
 {
-    @FunctionalInterface
+    private final OperatorContext operatorContext;
+	private final LocalMemoryContext localUserMemoryContext;
+	private final PagesSpatialIndexFactory pagesSpatialIndexFactory;
+	private final List<Integer> outputChannels;
+	private final int indexChannel;
+	private final Optional<Integer> radiusChannel;
+	private final Optional<Integer> partitionChannel;
+	private final SpatialPredicate spatialRelationshipTest;
+	private final Optional<JoinFilterFunctionFactory> filterFunctionFactory;
+	private final Map<Integer, Rectangle> partitions;
+	private final PagesIndex index;
+	private ListenableFuture<?> indexNotNeeded;
+	private boolean finishing;
+	private boolean finished;
+
+	private SpatialIndexBuilderOperator(
+            OperatorContext operatorContext,
+            PagesSpatialIndexFactory pagesSpatialIndexFactory,
+            List<Integer> outputChannels,
+            int indexChannel,
+            Optional<Integer> radiusChannel,
+            Optional<Integer> partitionChannel,
+            SpatialPredicate spatialRelationshipTest,
+            Optional<JoinFilterFunctionFactory> filterFunctionFactory,
+            int expectedPositions,
+            PagesIndex.Factory pagesIndexFactory,
+            Map<Integer, Rectangle> partitions)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
+        this.spatialRelationshipTest = requireNonNull(spatialRelationshipTest, "spatialRelationshipTest is null");
+        this.filterFunctionFactory = filterFunctionFactory;
+
+        this.pagesSpatialIndexFactory = requireNonNull(pagesSpatialIndexFactory, "pagesSpatialIndexFactory is null");
+        this.index = pagesIndexFactory.newPagesIndex(pagesSpatialIndexFactory.getTypes(), expectedPositions);
+
+        this.outputChannels = requireNonNull(outputChannels, "outputChannels is null");
+        this.indexChannel = indexChannel;
+        this.radiusChannel = radiusChannel;
+        this.partitionChannel = requireNonNull(partitionChannel, "partitionChannel is null");
+
+        this.partitions = requireNonNull(partitions, "partitions is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finished;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        requireNonNull(page, "page is null");
+        checkState(!isFinished(), "Operator is already finished");
+
+        index.addPage(page);
+
+        if (!localUserMemoryContext.trySetBytes((index.getEstimatedSize().toBytes()))) {
+            index.compact();
+            localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
+        }
+
+        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        return null;
+    }
+
+	@Override
+    public ListenableFuture<?> isBlocked()
+    {
+        if (indexNotNeeded != null && !indexNotNeeded.isDone()) {
+            return indexNotNeeded;
+        }
+        return NOT_BLOCKED;
+    }
+
+	@Override
+    public void finish()
+    {
+        if (finishing) {
+            return;
+        }
+
+        finishing = true;
+        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
+        PagesSpatialIndexSupplier spatialIndex = index.createPagesSpatialIndex(operatorContext.getSession(), indexChannel, radiusChannel, partitionChannel, spatialRelationshipTest, filterFunctionFactory, outputChannels, partitions, localUserMemoryContext);
+        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes() + spatialIndex.getEstimatedSize().toBytes());
+        indexNotNeeded = pagesSpatialIndexFactory.lendPagesSpatialIndex(spatialIndex);
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        if (finished) {
+            return true;
+        }
+
+        if (finishing && indexNotNeeded.isDone()) {
+            index.clear();
+            localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
+            finished = true;
+        }
+
+        return finished;
+    }
+
+	@Override
+    public void close()
+    {
+        index.clear();
+        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
+    }
+
+	@FunctionalInterface
     public interface SpatialPredicate
     {
         boolean apply(OGCGeometry probe, OGCGeometry build, OptionalDouble radius);
@@ -130,132 +254,5 @@ public class SpatialIndexBuilderOperator
         {
             throw new UnsupportedOperationException("Spatial index build can not be duplicated");
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalMemoryContext localUserMemoryContext;
-    private final PagesSpatialIndexFactory pagesSpatialIndexFactory;
-
-    private final List<Integer> outputChannels;
-    private final int indexChannel;
-    private final Optional<Integer> radiusChannel;
-    private final Optional<Integer> partitionChannel;
-    private final SpatialPredicate spatialRelationshipTest;
-    private final Optional<JoinFilterFunctionFactory> filterFunctionFactory;
-    private final Map<Integer, Rectangle> partitions;
-
-    private final PagesIndex index;
-    private ListenableFuture<?> indexNotNeeded;
-
-    private boolean finishing;
-    private boolean finished;
-
-    private SpatialIndexBuilderOperator(
-            OperatorContext operatorContext,
-            PagesSpatialIndexFactory pagesSpatialIndexFactory,
-            List<Integer> outputChannels,
-            int indexChannel,
-            Optional<Integer> radiusChannel,
-            Optional<Integer> partitionChannel,
-            SpatialPredicate spatialRelationshipTest,
-            Optional<JoinFilterFunctionFactory> filterFunctionFactory,
-            int expectedPositions,
-            PagesIndex.Factory pagesIndexFactory,
-            Map<Integer, Rectangle> partitions)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-        this.spatialRelationshipTest = requireNonNull(spatialRelationshipTest, "spatialRelationshipTest is null");
-        this.filterFunctionFactory = filterFunctionFactory;
-
-        this.pagesSpatialIndexFactory = requireNonNull(pagesSpatialIndexFactory, "pagesSpatialIndexFactory is null");
-        this.index = pagesIndexFactory.newPagesIndex(pagesSpatialIndexFactory.getTypes(), expectedPositions);
-
-        this.outputChannels = requireNonNull(outputChannels, "outputChannels is null");
-        this.indexChannel = indexChannel;
-        this.radiusChannel = radiusChannel;
-        this.partitionChannel = requireNonNull(partitionChannel, "partitionChannel is null");
-
-        this.partitions = requireNonNull(partitions, "partitions is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finished;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        requireNonNull(page, "page is null");
-        checkState(!isFinished(), "Operator is already finished");
-
-        index.addPage(page);
-
-        if (!localUserMemoryContext.trySetBytes((index.getEstimatedSize().toBytes()))) {
-            index.compact();
-            localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
-        }
-
-        operatorContext.recordOutput(page.getSizeInBytes(), page.getPositionCount());
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        return null;
-    }
-
-    @Override
-    public ListenableFuture<?> isBlocked()
-    {
-        if (indexNotNeeded != null && !indexNotNeeded.isDone()) {
-            return indexNotNeeded;
-        }
-        return NOT_BLOCKED;
-    }
-
-    @Override
-    public void finish()
-    {
-        if (finishing) {
-            return;
-        }
-
-        finishing = true;
-        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
-        PagesSpatialIndexSupplier spatialIndex = index.createPagesSpatialIndex(operatorContext.getSession(), indexChannel, radiusChannel, partitionChannel, spatialRelationshipTest, filterFunctionFactory, outputChannels, partitions, localUserMemoryContext);
-        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes() + spatialIndex.getEstimatedSize().toBytes());
-        indexNotNeeded = pagesSpatialIndexFactory.lendPagesSpatialIndex(spatialIndex);
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        if (finished) {
-            return true;
-        }
-
-        if (finishing && indexNotNeeded.isDone()) {
-            index.clear();
-            localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
-            finished = true;
-        }
-
-        return finished;
-    }
-
-    @Override
-    public void close()
-    {
-        index.clear();
-        localUserMemoryContext.setBytes(index.getEstimatedSize().toBytes());
     }
 }

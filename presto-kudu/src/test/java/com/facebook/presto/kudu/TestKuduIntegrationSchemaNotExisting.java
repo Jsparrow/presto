@@ -26,30 +26,20 @@ public class TestKuduIntegrationSchemaNotExisting
         extends AbstractTestQueryFramework
 {
     private static String oldPrefix;
-    private QueryRunner queryRunner;
+	private static final String SCHEMA_NAME = "test_presto_schema";
+	private static final String CREATE_SCHEMA = "create schema kudu." + SCHEMA_NAME;
+	private static final String DROP_SCHEMA = "drop schema if exists kudu." + SCHEMA_NAME;
+	private static final String CREATE_TABLE = new StringBuilder().append("create table if not exists kudu.").append(SCHEMA_NAME).append(".test_presto_table (\n").append("id INT WITH (primary_key=true),\n").append("user_name VARCHAR\n").append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id'],\n").append(" partition_by_hash_buckets = 2\n")
+			.append(")").toString();
+	private static final String DROP_TABLE = new StringBuilder().append("drop table if exists kudu.").append(SCHEMA_NAME).append(".test_presto_table").toString();
+	private QueryRunner queryRunner;
 
-    private static final String SCHEMA_NAME = "test_presto_schema";
-
-    private static final String CREATE_SCHEMA = "create schema kudu." + SCHEMA_NAME;
-
-    private static final String DROP_SCHEMA = "drop schema if exists kudu." + SCHEMA_NAME;
-
-    private static final String CREATE_TABLE = "create table if not exists kudu." + SCHEMA_NAME + ".test_presto_table (\n" +
-            "id INT WITH (primary_key=true),\n" +
-            "user_name VARCHAR\n" +
-            ") WITH (\n" +
-            " partition_by_hash_columns = ARRAY['id'],\n" +
-            " partition_by_hash_buckets = 2\n" +
-            ")";
-
-    private static final String DROP_TABLE = "drop table if exists kudu." + SCHEMA_NAME + ".test_presto_table";
-
-    public TestKuduIntegrationSchemaNotExisting()
+	public TestKuduIntegrationSchemaNotExisting()
     {
-        super(() -> createKuduQueryRunner());
+        super(TestKuduIntegrationSchemaNotExisting::createKuduQueryRunner);
     }
 
-    private static QueryRunner createKuduQueryRunner()
+	private static QueryRunner createKuduQueryRunner()
             throws Exception
     {
         oldPrefix = System.getProperty("kudu.schema-emulation.prefix");
@@ -63,7 +53,7 @@ public class TestKuduIntegrationSchemaNotExisting
         }
     }
 
-    @Test
+	@Test
     public void testCreateTableWithoutSchema()
     {
         try {
@@ -71,28 +61,29 @@ public class TestKuduIntegrationSchemaNotExisting
             fail();
         }
         catch (Exception e) {
-            assertEquals("Schema " + SCHEMA_NAME + " not found", e.getMessage());
+            assertEquals(new StringBuilder().append("Schema ").append(SCHEMA_NAME).append(" not found").toString(), e.getMessage());
         }
 
         queryRunner.execute(CREATE_SCHEMA);
         queryRunner.execute(CREATE_TABLE);
     }
 
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         queryRunner = getQueryRunner();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public final void destroy()
     {
         System.setProperty("kudu.schema-emulation.prefix", oldPrefix);
-        if (queryRunner != null) {
-            queryRunner.execute(DROP_TABLE);
-            queryRunner.execute(DROP_SCHEMA);
-            queryRunner.close();
-            queryRunner = null;
-        }
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.execute(DROP_TABLE);
+		queryRunner.execute(DROP_SCHEMA);
+		queryRunner.close();
+		queryRunner = null;
     }
 }

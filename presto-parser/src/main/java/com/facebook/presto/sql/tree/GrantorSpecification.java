@@ -21,31 +21,26 @@ import static java.util.Objects.requireNonNull;
 
 public class GrantorSpecification
 {
-    public enum Type
-    {
-        PRINCIPAL, CURRENT_USER, CURRENT_ROLE
-    }
-
     private final Type type;
-    private final Optional<PrincipalSpecification> principal;
+	private final Optional<PrincipalSpecification> principal;
 
-    public GrantorSpecification(Type type, Optional<PrincipalSpecification> principal)
+	public GrantorSpecification(Type type, Optional<PrincipalSpecification> principal)
     {
         this.type = requireNonNull(type, "type is null");
         this.principal = requireNonNull(principal, "principal is null");
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Optional<PrincipalSpecification> getPrincipal()
+	public Optional<PrincipalSpecification> getPrincipal()
     {
         return principal;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -59,18 +54,23 @@ public class GrantorSpecification
                 Objects.equals(principal, that.principal);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, principal);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .add("principal", principal)
                 .toString();
+    }
+
+	public enum Type
+    {
+        PRINCIPAL, CURRENT_USER, CURRENT_ROLE
     }
 }

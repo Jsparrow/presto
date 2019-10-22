@@ -147,12 +147,10 @@ public class DynamicLifespanScheduler
 
         synchronized (this) {
             this.failedTasks.add(taskId);
-            for (int driverGroupId : runningDriverGroupIdsByTask[taskId]) {
-                for (SourceScheduler sourceScheduler : sourceSchedulers) {
-                    sourceScheduler.rewindLifespan(Lifespan.driverGroup(driverGroupId), partitionHandles.get(driverGroupId));
-                }
+            runningDriverGroupIdsByTask[taskId].stream().mapToInt(Integer::valueOf).forEach(driverGroupId -> {
+                sourceSchedulers.forEach(sourceScheduler -> sourceScheduler.rewindLifespan(Lifespan.driverGroup(driverGroupId), partitionHandles.get(driverGroupId)));
                 driverGroupQueue.enqueue(driverGroupId);
-            }
+            });
             runningDriverGroupIdsByTask[taskId].clear();
         }
     }

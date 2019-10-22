@@ -125,11 +125,14 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.stream.Collectors.toList;
 import static org.joda.time.DateTimeZone.UTC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OrcStorageManager
         implements StorageManager
 {
-    // Raptor does not store time-related data types as they are in ORC.
+    private static final Logger logger = LoggerFactory.getLogger(OrcStorageManager.class);
+	// Raptor does not store time-related data types as they are in ORC.
     // They will be casted to BIGINT or INTEGER to avoid timezone conversion.
     // This is due to the historical reason of using the legacy ORC read/writer that does not support timestamp types.
     // In order to be consistent, we still enforce the conversion.
@@ -234,13 +237,13 @@ public class OrcStorageManager
         this.minAvailableSpace = requireNonNull(minAvailableSpace, "minAvailableSpace is null");
         this.shardRecorder = requireNonNull(shardRecorder, "shardRecorder is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
-        this.deletionExecutor = newFixedThreadPool(deletionThreads, daemonThreadsNamed("raptor-delete-" + connectorId + "-%s"));
-        this.commitExecutor = newCachedThreadPool(daemonThreadsNamed("raptor-commit-" + connectorId + "-%s"));
+        this.deletionExecutor = newFixedThreadPool(deletionThreads, daemonThreadsNamed(new StringBuilder().append("raptor-delete-").append(connectorId).append("-%s").toString()));
+        this.commitExecutor = newCachedThreadPool(daemonThreadsNamed(new StringBuilder().append("raptor-commit-").append(connectorId).append("-%s").toString()));
         this.compression = requireNonNull(compression, "compression is null");
         this.orcOptimizedWriterStage = requireNonNull(orcOptimizedWriterStage, "orcOptimizedWriterStage is null");
         this.orcDataEnvironment = requireNonNull(orcDataEnvironment, "orcDataEnvironment is null");
         this.fileSystem = requireNonNull(orcDataEnvironment.getFileSystem(), "fileSystem is null");
-        this.fileRewriter = new OrcFileRewriter(readerAttributes, orcOptimizedWriterStage.equals(ENABLED_AND_VALIDATED), stats, typeManager, orcDataEnvironment, compression, orcFileTailSource);
+        this.fileRewriter = new OrcFileRewriter(readerAttributes, orcOptimizedWriterStage == ENABLED_AND_VALIDATED, stats, typeManager, orcDataEnvironment, compression, orcFileTailSource);
         this.orcFileTailSource = requireNonNull(orcFileTailSource, "orcFileTailSource is null");
     }
 
@@ -392,7 +395,8 @@ public class OrcStorageManager
                 throw new PrestoException(RAPTOR_RECOVERY_ERROR, "Error recovering shard " + shardUuid, e.getCause());
             }
             catch (TimeoutException e) {
-                throw new PrestoException(RAPTOR_RECOVERY_TIMEOUT, "Shard is being recovered from backup. Please retry in a few minutes: " + shardUuid);
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(RAPTOR_RECOVERY_TIMEOUT, "Shard is being recovered from backup. Please retry in a few minutes: " + shardUuid);
             }
         }
 
@@ -563,12 +567,12 @@ public class OrcStorageManager
     private static OrcPredicate getPredicate(TupleDomain<RaptorColumnHandle> effectivePredicate, Map<Long, Integer> indexMap)
     {
         ImmutableList.Builder<ColumnReference<RaptorColumnHandle>> columns = ImmutableList.builder();
-        for (RaptorColumnHandle column : effectivePredicate.getDomains().get().keySet()) {
+        effectivePredicate.getDomains().get().keySet().forEach(column -> {
             Integer index = indexMap.get(column.getColumnId());
             if (index != null) {
                 columns.add(new ColumnReference<>(column, index, column.getColumnType()));
             }
-        }
+        });
         return new TupleDomainOrcPredicate<>(effectivePredicate, columns.build(), false, Optional.empty());
     }
 
@@ -581,10 +585,21 @@ public class OrcStorageManager
         return map.build();
     }
 
-    private class OrcStoragePageSink
+    private static void closeQuietly(Closeable closeable)
+    {
+        try {
+            closeable.close();
+        }
+        catch (IOException ignored) {
+			logger.error(ignored.getMessage(), ignored);
+        }
+    }
+
+	private class OrcStoragePageSink
             implements StoragePageSink
     {
-        private final long transactionId;
+        private final Logger logger1 = LoggerFactory.getLogger(OrcStoragePageSink.class);
+		private final long transactionId;
         private final List<Long> columnIds;
         private final List<Type> columnTypes;
         private final OptionalInt bucketNumber;
@@ -635,28 +650,24 @@ public class OrcStorageManager
         @Override
         public void flush()
         {
-            if (writer != null) {
-                try {
-                    writer.close();
-                }
-                catch (IOException e) {
-                    throw new PrestoException(RAPTOR_ERROR, "Failed to close writer", e);
-                }
-
-                shardRecorder.recordCreatedShard(transactionId, shardUuid);
-
-                Path stagingFile = storageService.getStagingFile(shardUuid);
-                futures.add(backupManager.submit(shardUuid, stagingFile));
-
-                Set<String> nodes = ImmutableSet.of(nodeId);
-                long rowCount = writer.getRowCount();
-                long uncompressedSize = writer.getUncompressedSize();
-
-                shards.add(createShardInfo(shardUuid, bucketNumber, stagingFile, nodes, rowCount, uncompressedSize));
-
-                writer = null;
-                shardUuid = null;
-            }
+            if (writer == null) {
+				return;
+			}
+			try {
+			    writer.close();
+			}
+			catch (IOException e) {
+			    throw new PrestoException(RAPTOR_ERROR, "Failed to close writer", e);
+			}
+			shardRecorder.recordCreatedShard(transactionId, shardUuid);
+			Path stagingFile = storageService.getStagingFile(shardUuid);
+			futures.add(backupManager.submit(shardUuid, stagingFile));
+			Set<String> nodes = ImmutableSet.of(nodeId);
+			long rowCount = writer.getRowCount();
+			long uncompressedSize = writer.getUncompressedSize();
+			shards.add(createShardInfo(shardUuid, bucketNumber, stagingFile, nodes, rowCount, uncompressedSize));
+			writer = null;
+			shardUuid = null;
         }
 
         @Override
@@ -668,9 +679,7 @@ public class OrcStorageManager
             flush();
 
             return allAsList(futures).thenApplyAsync(ignored -> {
-                for (ShardInfo shard : shards) {
-                    writeShard(shard.getShardUuid());
-                }
+                shards.forEach(shard -> writeShard(shard.getShardUuid()));
                 return ImmutableList.copyOf(shards);
             }, commitExecutor);
         }
@@ -693,52 +702,41 @@ public class OrcStorageManager
                 }
             }
             finally {
-                for (Path file : stagingFiles) {
+                stagingFiles.forEach(file -> {
                     try {
                         fileSystem.delete(file, false);
                     }
                     catch (IOException e) {
+						logger1.error(e.getMessage(), e);
                         // ignore
                     }
-                }
+                });
 
                 // cancel incomplete backup jobs
                 futures.forEach(future -> future.cancel(true));
 
                 // delete completed backup shards
-                backupStore.ifPresent(backupStore -> {
-                    for (ShardInfo shard : shards) {
-                        backupStore.deleteShard(shard.getShardUuid());
-                    }
-                });
+                backupStore.ifPresent(backupStore -> shards.forEach(shard -> backupStore.deleteShard(shard.getShardUuid())));
             }
         }
 
         private void createWriterIfNecessary()
         {
-            if (writer == null) {
-                shardUuid = UUID.randomUUID();
-                Path stagingFile = storageService.getStagingFile(shardUuid);
-                storageService.createParents(stagingFile);
-                stagingFiles.add(stagingFile);
-                OrcDataSink sink;
-                try {
-                    sink = orcDataEnvironment.createOrcDataSink(stagingFile);
-                }
-                catch (IOException e) {
-                    throw new PrestoException(RAPTOR_ERROR, format("Failed to create staging file %s", stagingFile), e);
-                }
-                writer = new OrcFileWriter(columnIds, columnTypes, sink, orcOptimizedWriterStage.equals(ENABLED_AND_VALIDATED), stats, typeManager, compression);
-            }
-        }
-    }
-
-    private static void closeQuietly(Closeable closeable)
-    {
-        try {
-            closeable.close();
-        }
-        catch (IOException ignored) {
+            if (writer != null) {
+				return;
+			}
+			shardUuid = UUID.randomUUID();
+			Path stagingFile = storageService.getStagingFile(shardUuid);
+			storageService.createParents(stagingFile);
+			stagingFiles.add(stagingFile);
+			OrcDataSink sink;
+			try {
+			    sink = orcDataEnvironment.createOrcDataSink(stagingFile);
+			}
+			catch (IOException e) {
+			    throw new PrestoException(RAPTOR_ERROR, format("Failed to create staging file %s", stagingFile), e);
+			}
+			writer = new OrcFileWriter(columnIds, columnTypes, sink, orcOptimizedWriterStage == ENABLED_AND_VALIDATED, stats, typeManager, compression);
         }
     }
 }

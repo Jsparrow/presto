@@ -19,23 +19,23 @@ import javax.annotation.concurrent.Immutable;
 public class Parameter
         extends Variable
 {
-    public static Parameter arg(String name, Class<?> type)
-    {
-        return new Parameter(name, ParameterizedType.type(type));
-    }
-
-    public static Parameter arg(String name, ParameterizedType type)
-    {
-        return new Parameter(name, type);
-    }
-
     Parameter(String name, ParameterizedType type)
     {
         super(name, type);
     }
 
-    String getSourceString()
+	public static Parameter arg(String name, Class<?> type)
     {
-        return getType().getJavaClassName() + " " + getName();
+        return new Parameter(name, ParameterizedType.type(type));
+    }
+
+	public static Parameter arg(String name, ParameterizedType type)
+    {
+        return new Parameter(name, type);
+    }
+
+	String getSourceString()
+    {
+        return new StringBuilder().append(getType().getJavaClassName()).append(" ").append(getName()).toString();
     }
 }

@@ -372,11 +372,11 @@ public class TestResourceGroups
         List<MockQueryExecution> orderedQueries = new ArrayList<>(queries.values());
         reverse(orderedQueries);
 
-        for (MockQueryExecution query : orderedQueries) {
+        orderedQueries.forEach(query -> {
             root.processQueuedQueries();
             assertEquals(query.getState(), RUNNING);
             query.complete();
-        }
+        });
     }
 
     @Test(timeOut = 10_000)

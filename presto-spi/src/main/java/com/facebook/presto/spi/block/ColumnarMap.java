@@ -30,7 +30,18 @@ public class ColumnarMap
     private final Type keyType;
     private final int[] hashTables;
 
-    public static ColumnarMap toColumnarMap(Block block)
+    private ColumnarMap(Block nullCheckBlock, int offsetsOffset, int[] offsets, Block keysBlock, Block valuesBlock, Type keyType, Optional<int[]> hashTables)
+    {
+        this.nullCheckBlock = nullCheckBlock;
+        this.offsetsOffset = offsetsOffset;
+        this.offsets = offsets;
+        this.keysBlock = keysBlock;
+        this.valuesBlock = valuesBlock;
+        this.keyType = keyType;
+        this.hashTables = hashTables.orElse(null);
+    }
+
+	public static ColumnarMap toColumnarMap(Block block)
     {
         requireNonNull(block, "block is null");
 
@@ -60,7 +71,7 @@ public class ColumnarMap
         return new ColumnarMap(block, offsetBase, offsets, keysBlock, valuesBlock, mapBlock.keyType, hashTables);
     }
 
-    private static ColumnarMap toColumnarMap(DictionaryBlock dictionaryBlock)
+	private static ColumnarMap toColumnarMap(DictionaryBlock dictionaryBlock)
     {
         ColumnarMap columnarMap = toColumnarMap(dictionaryBlock.getDictionary());
 
@@ -95,7 +106,7 @@ public class ColumnarMap
                 columnarMap.getHashTables());
     }
 
-    private static ColumnarMap toColumnarMap(RunLengthEncodedBlock rleBlock)
+	private static ColumnarMap toColumnarMap(RunLengthEncodedBlock rleBlock)
     {
         ColumnarMap columnarMap = toColumnarMap(rleBlock.getValue());
 
@@ -126,68 +137,57 @@ public class ColumnarMap
                 columnarMap.getHashTables());
     }
 
-    private ColumnarMap(Block nullCheckBlock, int offsetsOffset, int[] offsets, Block keysBlock, Block valuesBlock, Type keyType, Optional<int[]> hashTables)
-    {
-        this.nullCheckBlock = nullCheckBlock;
-        this.offsetsOffset = offsetsOffset;
-        this.offsets = offsets;
-        this.keysBlock = keysBlock;
-        this.valuesBlock = valuesBlock;
-        this.keyType = keyType;
-        this.hashTables = hashTables.orElse(null);
-    }
-
-    public int getPositionCount()
+	public int getPositionCount()
     {
         return nullCheckBlock.getPositionCount();
     }
 
-    public boolean isNull(int position)
+	public boolean isNull(int position)
     {
         return nullCheckBlock.isNull(position);
     }
 
-    public int getEntryCount(int position)
+	public int getEntryCount(int position)
     {
         return (offsets[position + 1 + offsetsOffset] - offsets[position + offsetsOffset]);
     }
 
-    public int getOffset(int position)
+	public int getOffset(int position)
     {
         return (offsets[position + offsetsOffset] - offsets[offsetsOffset]);
     }
 
-    public int getAbsoluteOffset(int position)
+	public int getAbsoluteOffset(int position)
     {
         return offsets[position + offsetsOffset];
     }
 
-    public Block getKeysBlock()
+	public Block getKeysBlock()
     {
         return keysBlock;
     }
 
-    public Block getValuesBlock()
+	public Block getValuesBlock()
     {
         return valuesBlock;
     }
 
-    public Block getNullCheckBlock()
+	public Block getNullCheckBlock()
     {
         return nullCheckBlock;
     }
 
-    public Type getKeyType()
+	public Type getKeyType()
     {
         return keyType;
     }
 
-    public Optional<int[]> getHashTables()
+	public Optional<int[]> getHashTables()
     {
         return Optional.ofNullable(hashTables);
     }
 
-    public long getRetainedSizeInBytes()
+	public long getRetainedSizeInBytes()
     {
         return nullCheckBlock.getRetainedSizeInBytes() + keysBlock.getRetainedSizeInBytes() + valuesBlock.getRetainedSizeInBytes() + sizeOf(offsets) + sizeOf(hashTables);
     }

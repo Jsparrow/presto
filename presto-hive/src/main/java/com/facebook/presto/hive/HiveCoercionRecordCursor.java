@@ -46,6 +46,8 @@ import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HiveCoercionRecordCursor
         implements RecordCursor
@@ -181,7 +183,97 @@ public class HiveCoercionRecordCursor
         return delegate;
     }
 
-    private abstract static class Coercer
+    private static Coercer createCoercer(TypeManager typeManager, HiveType fromHiveType, HiveType toHiveType, BridgingRecordCursor bridgingRecordCursor)
+    {
+        Type fromType = typeManager.getType(fromHiveType.getTypeSignature());
+        Type toType = typeManager.getType(toHiveType.getTypeSignature());
+        if (toType instanceof VarcharType && (fromHiveType.equals(HIVE_BYTE) || fromHiveType.equals(HIVE_SHORT) || fromHiveType.equals(HIVE_INT) || fromHiveType.equals(HIVE_LONG))) {
+            return new IntegerNumberToVarcharCoercer();
+        }
+        else if (fromType instanceof VarcharType && (toHiveType.equals(HIVE_BYTE) || toHiveType.equals(HIVE_SHORT) || toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG))) {
+            return new VarcharToIntegerNumberCoercer(toHiveType);
+        }
+        else if (fromHiveType.equals(HIVE_BYTE) && toHiveType.equals(HIVE_SHORT) || toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG)) {
+            return new IntegerNumberUpscaleCoercer();
+        }
+        else if (fromHiveType.equals(HIVE_SHORT) && toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG)) {
+            return new IntegerNumberUpscaleCoercer();
+        }
+        else if (fromHiveType.equals(HIVE_INT) && toHiveType.equals(HIVE_LONG)) {
+            return new IntegerNumberUpscaleCoercer();
+        }
+        else if (fromHiveType.equals(HIVE_FLOAT) && toHiveType.equals(HIVE_DOUBLE)) {
+            return new FloatToDoubleCoercer();
+        }
+        else if (isArrayType(fromType) && isArrayType(toType)) {
+            return new ListCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
+        }
+        else if (isMapType(fromType) && isMapType(toType)) {
+            return new MapCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
+        }
+        else if (isRowType(fromType) && isRowType(toType)) {
+            return new StructCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
+        }
+
+        throw new PrestoException(NOT_SUPPORTED, format("Unsupported coercion from %s to %s", fromHiveType, toHiveType));
+    }
+
+	private static void rewriteBlock(
+            Type fromType,
+            Type toType,
+            Block block,
+            int position,
+            BlockBuilder blockBuilder,
+            Coercer coercer,
+            BridgingRecordCursor bridgingRecordCursor)
+    {
+        Class<?> fromJavaType = fromType.getJavaType();
+        if (fromJavaType == long.class) {
+            bridgingRecordCursor.setValue(fromType.getLong(block, position));
+        }
+        else if (fromJavaType == double.class) {
+            bridgingRecordCursor.setValue(fromType.getDouble(block, position));
+        }
+        else if (fromJavaType == boolean.class) {
+            bridgingRecordCursor.setValue(fromType.getBoolean(block, position));
+        }
+        else if (fromJavaType == Slice.class) {
+            bridgingRecordCursor.setValue(fromType.getSlice(block, position));
+        }
+        else if (fromJavaType == Block.class) {
+            bridgingRecordCursor.setValue(fromType.getObject(block, position));
+        }
+        else {
+            bridgingRecordCursor.setValue(null);
+        }
+        coercer.reset();
+        Class<?> toJaveType = toType.getJavaType();
+        if (coercer.isNull(bridgingRecordCursor, 0)) {
+            blockBuilder.appendNull();
+        }
+        else if (toJaveType == long.class) {
+            toType.writeLong(blockBuilder, coercer.getLong(bridgingRecordCursor, 0));
+        }
+        else if (toJaveType == double.class) {
+            toType.writeDouble(blockBuilder, coercer.getDouble(bridgingRecordCursor, 0));
+        }
+        else if (toJaveType == boolean.class) {
+            toType.writeBoolean(blockBuilder, coercer.getBoolean(bridgingRecordCursor, 0));
+        }
+        else if (toJaveType == Slice.class) {
+            toType.writeSlice(blockBuilder, coercer.getSlice(bridgingRecordCursor, 0));
+        }
+        else if (toJaveType == Block.class) {
+            toType.writeObject(blockBuilder, coercer.getObject(bridgingRecordCursor, 0));
+        }
+        else {
+            throw new PrestoException(NOT_SUPPORTED, format("Unsupported coercion from %s to %s", fromType.getDisplayName(), toType.getDisplayName()));
+        }
+        coercer.reset();
+        bridgingRecordCursor.close();
+    }
+
+	private abstract static class Coercer
     {
         private boolean isNull;
         private boolean loaded;
@@ -236,13 +328,14 @@ public class HiveCoercionRecordCursor
 
         private void assureLoaded(RecordCursor delegate, int field)
         {
-            if (!loaded) {
-                isNull = delegate.isNull(field);
-                if (!isNull) {
-                    coerce(delegate, field);
-                }
-                loaded = true;
-            }
+            if (loaded) {
+				return;
+			}
+			isNull = delegate.isNull(field);
+			if (!isNull) {
+			    coerce(delegate, field);
+			}
+			loaded = true;
         }
 
         protected abstract void coerce(RecordCursor delegate, int field);
@@ -278,41 +371,6 @@ public class HiveCoercionRecordCursor
         }
     }
 
-    private static Coercer createCoercer(TypeManager typeManager, HiveType fromHiveType, HiveType toHiveType, BridgingRecordCursor bridgingRecordCursor)
-    {
-        Type fromType = typeManager.getType(fromHiveType.getTypeSignature());
-        Type toType = typeManager.getType(toHiveType.getTypeSignature());
-        if (toType instanceof VarcharType && (fromHiveType.equals(HIVE_BYTE) || fromHiveType.equals(HIVE_SHORT) || fromHiveType.equals(HIVE_INT) || fromHiveType.equals(HIVE_LONG))) {
-            return new IntegerNumberToVarcharCoercer();
-        }
-        else if (fromType instanceof VarcharType && (toHiveType.equals(HIVE_BYTE) || toHiveType.equals(HIVE_SHORT) || toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG))) {
-            return new VarcharToIntegerNumberCoercer(toHiveType);
-        }
-        else if (fromHiveType.equals(HIVE_BYTE) && toHiveType.equals(HIVE_SHORT) || toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG)) {
-            return new IntegerNumberUpscaleCoercer();
-        }
-        else if (fromHiveType.equals(HIVE_SHORT) && toHiveType.equals(HIVE_INT) || toHiveType.equals(HIVE_LONG)) {
-            return new IntegerNumberUpscaleCoercer();
-        }
-        else if (fromHiveType.equals(HIVE_INT) && toHiveType.equals(HIVE_LONG)) {
-            return new IntegerNumberUpscaleCoercer();
-        }
-        else if (fromHiveType.equals(HIVE_FLOAT) && toHiveType.equals(HIVE_DOUBLE)) {
-            return new FloatToDoubleCoercer();
-        }
-        else if (isArrayType(fromType) && isArrayType(toType)) {
-            return new ListCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
-        }
-        else if (isMapType(fromType) && isMapType(toType)) {
-            return new MapCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
-        }
-        else if (isRowType(fromType) && isRowType(toType)) {
-            return new StructCoercer(typeManager, fromHiveType, toHiveType, bridgingRecordCursor);
-        }
-
-        throw new PrestoException(NOT_SUPPORTED, format("Unsupported coercion from %s to %s", fromHiveType, toHiveType));
-    }
-
     private static class IntegerNumberUpscaleCoercer
             extends Coercer
     {
@@ -346,7 +404,8 @@ public class HiveCoercionRecordCursor
     private static class VarcharToIntegerNumberCoercer
             extends Coercer
     {
-        private final long maxValue;
+        private final Logger logger = LoggerFactory.getLogger(VarcharToIntegerNumberCoercer.class);
+		private final long maxValue;
         private final long minValue;
 
         public VarcharToIntegerNumberCoercer(HiveType type)
@@ -385,7 +444,8 @@ public class HiveCoercionRecordCursor
                 }
             }
             catch (NumberFormatException e) {
-                setIsNull(true);
+                logger.error(e.getMessage(), e);
+				setIsNull(true);
             }
         }
     }
@@ -567,61 +627,6 @@ public class HiveCoercionRecordCursor
             pageBuilder.declarePosition();
             setObject(toType.getObject(blockBuilder, blockBuilder.getPositionCount() - 1));
         }
-    }
-
-    private static void rewriteBlock(
-            Type fromType,
-            Type toType,
-            Block block,
-            int position,
-            BlockBuilder blockBuilder,
-            Coercer coercer,
-            BridgingRecordCursor bridgingRecordCursor)
-    {
-        Class<?> fromJavaType = fromType.getJavaType();
-        if (fromJavaType == long.class) {
-            bridgingRecordCursor.setValue(fromType.getLong(block, position));
-        }
-        else if (fromJavaType == double.class) {
-            bridgingRecordCursor.setValue(fromType.getDouble(block, position));
-        }
-        else if (fromJavaType == boolean.class) {
-            bridgingRecordCursor.setValue(fromType.getBoolean(block, position));
-        }
-        else if (fromJavaType == Slice.class) {
-            bridgingRecordCursor.setValue(fromType.getSlice(block, position));
-        }
-        else if (fromJavaType == Block.class) {
-            bridgingRecordCursor.setValue(fromType.getObject(block, position));
-        }
-        else {
-            bridgingRecordCursor.setValue(null);
-        }
-        coercer.reset();
-        Class<?> toJaveType = toType.getJavaType();
-        if (coercer.isNull(bridgingRecordCursor, 0)) {
-            blockBuilder.appendNull();
-        }
-        else if (toJaveType == long.class) {
-            toType.writeLong(blockBuilder, coercer.getLong(bridgingRecordCursor, 0));
-        }
-        else if (toJaveType == double.class) {
-            toType.writeDouble(blockBuilder, coercer.getDouble(bridgingRecordCursor, 0));
-        }
-        else if (toJaveType == boolean.class) {
-            toType.writeBoolean(blockBuilder, coercer.getBoolean(bridgingRecordCursor, 0));
-        }
-        else if (toJaveType == Slice.class) {
-            toType.writeSlice(blockBuilder, coercer.getSlice(bridgingRecordCursor, 0));
-        }
-        else if (toJaveType == Block.class) {
-            toType.writeObject(blockBuilder, coercer.getObject(bridgingRecordCursor, 0));
-        }
-        else {
-            throw new PrestoException(NOT_SUPPORTED, format("Unsupported coercion from %s to %s", fromType.getDisplayName(), toType.getDisplayName()));
-        }
-        coercer.reset();
-        bridgingRecordCursor.close();
     }
 
     private static class BridgingRecordCursor

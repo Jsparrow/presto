@@ -67,32 +67,12 @@ public class PreparedStatements
     private static final String INSERT_SQL = "INSERT INTO %s VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
     private static final String SELECT_STAR_SQL = "SELECT * FROM %s";
 
-    private static class ImmutableAllTypesTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return immutableTable(ALL_HIVE_SIMPLE_TYPES_TEXTFILE);
-        }
-    }
-
-    private static class MutableAllTypesTable
-            implements RequirementsProvider
-    {
-        @Override
-        public Requirement getRequirements(Configuration configuration)
-        {
-            return mutableTable(ALL_HIVE_SIMPLE_TYPES_TEXTFILE, TABLE_NAME_MUTABLE, CREATED);
-        }
-    }
-
     @Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(ImmutableAllTypesTable.class)
     public void preparedSelectApi()
     {
         if (usingTeradataJdbcDriver(connection())) {
-            String selectSql = "SELECT c_int FROM " + TABLE_NAME + " WHERE c_int = ?";
+            String selectSql = new StringBuilder().append("SELECT c_int FROM ").append(TABLE_NAME).append(" WHERE c_int = ?").toString();
             final int testValue = 2147483647;
 
             assertThat(query(selectSql, param(INTEGER, testValue))).containsOnly(row(testValue));
@@ -106,13 +86,13 @@ public class PreparedStatements
         }
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(ImmutableAllTypesTable.class)
     public void preparedSelectSql()
             throws SQLException
     {
         if (usingTeradataJdbcDriver(connection())) {
-            String prepareSql = "PREPARE ps1 from SELECT c_int FROM " + TABLE_NAME + " WHERE c_int = ?";
+            String prepareSql = new StringBuilder().append("PREPARE ps1 from SELECT c_int FROM ").append(TABLE_NAME).append(" WHERE c_int = ?").toString();
             final int testValue = 2147483647;
             String executeSql = "EXECUTE ps1 using ";
 
@@ -131,7 +111,7 @@ public class PreparedStatements
         }
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(MutableAllTypesTable.class)
     public void preparedInsertVarbinaryApi()
     {
@@ -169,7 +149,7 @@ public class PreparedStatements
         }
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(MutableAllTypesTable.class)
     public void preparedInsertApi()
     {
@@ -239,7 +219,7 @@ public class PreparedStatements
                             127,
                             32767,
                             2147483647,
-                            new Long("9223372036854775807"),
+                            Long.valueOf("9223372036854775807"),
                             Float.valueOf("123.345"),
                             234.567,
                             BigDecimal.valueOf(345),
@@ -274,7 +254,7 @@ public class PreparedStatements
         }
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(MutableAllTypesTable.class)
     public void preparedInsertSql()
             throws SQLException
@@ -287,56 +267,17 @@ public class PreparedStatements
 
             Statement statement = connection().createStatement();
             statement.execute(insertSqlWithTable);
-            statement.execute(executeSql +
-                    "cast(127 as tinyint), " +
-                    "cast(32767 as smallint), " +
-                    "2147483647, " +
-                    "9223372036854775807, " +
-                    "cast(123.345 as real), " +
-                    "cast(234.567 as double), " +
-                    "cast(345 as decimal(10)), " +
-                    "cast(345.678 as decimal(10,5)), " +
-                    "timestamp '2015-05-10 12:15:35', " +
-                    "date '2015-05-10', " +
-                    "'ala ma kota', " +
-                    "'ala ma kot', " +
-                    "cast('ala ma' as char(10)), " +
-                    "true, " +
-                    "X'00010203002AF9'");
+            statement.execute(new StringBuilder().append(executeSql).append("cast(127 as tinyint), ").append("cast(32767 as smallint), ").append("2147483647, ").append("9223372036854775807, ").append("cast(123.345 as real), ").append("cast(234.567 as double), ")
+					.append("cast(345 as decimal(10)), ").append("cast(345.678 as decimal(10,5)), ").append("timestamp '2015-05-10 12:15:35', ").append("date '2015-05-10', ").append("'ala ma kota', ").append("'ala ma kot', ").append("cast('ala ma' as char(10)), ").append("true, ").append("X'00010203002AF9'")
+					.toString());
 
-            statement.execute(executeSql +
-                    "cast(1 as tinyint), " +
-                    "cast(2 as smallint), " +
-                    "3, " +
-                    "4, " +
-                    "cast(5.6 as real), " +
-                    "cast(7.8 as double), " +
-                    "cast(9 as decimal(10)), " +
-                    "cast(2.3 as decimal(10,5)), " +
-                    "timestamp '2012-05-10 1:35:15', " +
-                    "date '2014-03-10', " +
-                    "'abc', " +
-                    "'def', " +
-                    "cast('ghi' as char(10)), " +
-                    "false, " +
-                    "varbinary 'jkl'");
+            statement.execute(new StringBuilder().append(executeSql).append("cast(1 as tinyint), ").append("cast(2 as smallint), ").append("3, ").append("4, ").append("cast(5.6 as real), ").append("cast(7.8 as double), ")
+					.append("cast(9 as decimal(10)), ").append("cast(2.3 as decimal(10,5)), ").append("timestamp '2012-05-10 1:35:15', ").append("date '2014-03-10', ").append("'abc', ").append("'def', ").append("cast('ghi' as char(10)), ").append("false, ").append("varbinary 'jkl'")
+					.toString());
 
-            statement.execute(executeSql +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null");
+            statement.execute(new StringBuilder().append(executeSql).append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ")
+					.append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null")
+					.toString());
 
             QueryResult result = query(selectSqlWithTable);
             assertColumnTypes(result);
@@ -345,7 +286,7 @@ public class PreparedStatements
                             127,
                             32767,
                             2147483647,
-                            new Long("9223372036854775807"),
+                            Long.valueOf("9223372036854775807"),
                             Float.valueOf("123.345"),
                             234.567,
                             BigDecimal.valueOf(345),
@@ -380,7 +321,7 @@ public class PreparedStatements
         }
     }
 
-    @Test(groups = {JDBC, SIMBA_JDBC})
+	@Test(groups = {JDBC, SIMBA_JDBC})
     @Requires(MutableAllTypesTable.class)
     public void preparedInsertVarbinarySql()
             throws SQLException
@@ -393,22 +334,9 @@ public class PreparedStatements
 
             Statement statement = connection().createStatement();
             statement.execute(insertSqlWithTable);
-            statement.execute(executeSql +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "null, " +
-                    "X'00010203002AF9'");
+            statement.execute(new StringBuilder().append(executeSql).append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ")
+					.append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("null, ").append("X'00010203002AF9'")
+					.toString());
 
             QueryResult result = query(selectSqlWithTable);
             assertColumnTypes(result);
@@ -421,7 +349,7 @@ public class PreparedStatements
         }
     }
 
-    private void assertColumnTypes(QueryResult queryResult)
+	private void assertColumnTypes(QueryResult queryResult)
     {
         assertThat(queryResult).hasColumns(
                 TINYINT,
@@ -441,8 +369,28 @@ public class PreparedStatements
                 VARBINARY);
     }
 
-    private Connection connection()
+	private Connection connection()
     {
         return defaultQueryExecutor().getConnection();
+    }
+
+	private static class ImmutableAllTypesTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return immutableTable(ALL_HIVE_SIMPLE_TYPES_TEXTFILE);
+        }
+    }
+
+    private static class MutableAllTypesTable
+            implements RequirementsProvider
+    {
+        @Override
+        public Requirement getRequirements(Configuration configuration)
+        {
+            return mutableTable(ALL_HIVE_SIMPLE_TYPES_TEXTFILE, TABLE_NAME_MUTABLE, CREATED);
+        }
     }
 }

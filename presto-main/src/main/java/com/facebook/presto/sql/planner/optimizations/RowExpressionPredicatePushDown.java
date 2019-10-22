@@ -750,42 +750,6 @@ public class RowExpressionPredicatePushDown
                     logicalRowExpressions.combineConjuncts(postJoinConjuncts.build()));
         }
 
-        private static class OuterJoinPushDownResult
-        {
-            private final RowExpression outerJoinPredicate;
-            private final RowExpression innerJoinPredicate;
-            private final RowExpression joinPredicate;
-            private final RowExpression postJoinPredicate;
-
-            private OuterJoinPushDownResult(RowExpression outerJoinPredicate, RowExpression innerJoinPredicate, RowExpression joinPredicate, RowExpression postJoinPredicate)
-            {
-                this.outerJoinPredicate = outerJoinPredicate;
-                this.innerJoinPredicate = innerJoinPredicate;
-                this.joinPredicate = joinPredicate;
-                this.postJoinPredicate = postJoinPredicate;
-            }
-
-            private RowExpression getOuterJoinPredicate()
-            {
-                return outerJoinPredicate;
-            }
-
-            private RowExpression getInnerJoinPredicate()
-            {
-                return innerJoinPredicate;
-            }
-
-            public RowExpression getJoinPredicate()
-            {
-                return joinPredicate;
-            }
-
-            private RowExpression getPostJoinPredicate()
-            {
-                return postJoinPredicate;
-            }
-        }
-
         private InnerJoinPushDownResult processInnerJoin(RowExpression inheritedPredicate, RowExpression leftEffectivePredicate, RowExpression rightEffectivePredicate, RowExpression joinPredicate, Collection<VariableReferenceExpression> leftVariables)
         {
             checkArgument(Iterables.all(VariablesExtractor.extractUnique(leftEffectivePredicate), in(leftVariables)), "leftEffectivePredicate must only contain variables from leftVariables");
@@ -878,58 +842,20 @@ public class RowExpressionPredicatePushDown
                     logicalRowExpressions.combineConjuncts(joinConjuncts.build()), TRUE_CONSTANT);
         }
 
-        private static class InnerJoinPushDownResult
-        {
-            private final RowExpression leftPredicate;
-            private final RowExpression rightPredicate;
-            private final RowExpression joinPredicate;
-            private final RowExpression postJoinPredicate;
-
-            private InnerJoinPushDownResult(RowExpression leftPredicate, RowExpression rightPredicate, RowExpression joinPredicate, RowExpression postJoinPredicate)
-            {
-                this.leftPredicate = leftPredicate;
-                this.rightPredicate = rightPredicate;
-                this.joinPredicate = joinPredicate;
-                this.postJoinPredicate = postJoinPredicate;
-            }
-
-            private RowExpression getLeftPredicate()
-            {
-                return leftPredicate;
-            }
-
-            private RowExpression getRightPredicate()
-            {
-                return rightPredicate;
-            }
-
-            private RowExpression getJoinPredicate()
-            {
-                return joinPredicate;
-            }
-
-            private RowExpression getPostJoinPredicate()
-            {
-                return postJoinPredicate;
-            }
-        }
-
-        private RowExpression extractJoinPredicate(JoinNode joinNode)
+		private RowExpression extractJoinPredicate(JoinNode joinNode)
         {
             ImmutableList.Builder<RowExpression> builder = ImmutableList.builder();
-            for (JoinNode.EquiJoinClause equiJoinClause : joinNode.getCriteria()) {
-                builder.add(toRowExpression(equiJoinClause));
-            }
+            joinNode.getCriteria().forEach(equiJoinClause -> builder.add(toRowExpression(equiJoinClause)));
             joinNode.getFilter().ifPresent(builder::add);
             return logicalRowExpressions.combineConjuncts(builder.build());
         }
 
-        private RowExpression toRowExpression(JoinNode.EquiJoinClause equiJoinClause)
+		private RowExpression toRowExpression(JoinNode.EquiJoinClause equiJoinClause)
         {
             return buildEqualsExpression(functionManager, equiJoinClause.getLeft(), equiJoinClause.getRight());
         }
 
-        private JoinNode tryNormalizeToOuterToInnerJoin(JoinNode node, RowExpression inheritedPredicate)
+		private JoinNode tryNormalizeToOuterToInnerJoin(JoinNode node, RowExpression inheritedPredicate)
         {
             checkArgument(EnumSet.of(INNER, RIGHT, LEFT, FULL).contains(node.getType()), "Unsupported join type: %s", node.getType());
 
@@ -959,7 +885,7 @@ public class RowExpressionPredicatePushDown
             return new JoinNode(node.getId(), JoinNode.Type.INNER, node.getLeft(), node.getRight(), node.getCriteria(), node.getOutputVariables(), node.getFilter(), node.getLeftHashVariable(), node.getRightHashVariable(), node.getDistributionType());
         }
 
-        private boolean canConvertOuterToInner(List<VariableReferenceExpression> innerVariablesForOuterJoin, RowExpression inheritedPredicate)
+		private boolean canConvertOuterToInner(List<VariableReferenceExpression> innerVariablesForOuterJoin, RowExpression inheritedPredicate)
         {
             Set<VariableReferenceExpression> innerVariables = ImmutableSet.copyOf(innerVariablesForOuterJoin);
             for (RowExpression conjunct : extractConjuncts(inheritedPredicate)) {
@@ -977,18 +903,18 @@ public class RowExpressionPredicatePushDown
             return false;
         }
 
-        // Temporary implementation for joins because the SimplifyExpressions optimizers can not run properly on join clauses
+		// Temporary implementation for joins because the SimplifyExpressions optimizers can not run properly on join clauses
         private RowExpression simplifyExpression(RowExpression expression)
         {
             return new RowExpressionOptimizer(metadata).optimize(expression, ExpressionOptimizer.Level.SERIALIZABLE, session.toConnectorSession());
         }
 
-        private boolean areExpressionsEquivalent(RowExpression leftExpression, RowExpression rightExpression)
+		private boolean areExpressionsEquivalent(RowExpression leftExpression, RowExpression rightExpression)
         {
             return expressionEquivalence.areExpressionsEquivalent(simplifyExpression(leftExpression), simplifyExpression(rightExpression));
         }
 
-        /**
+		/**
          * Evaluates an expression's response to binding the specified input symbols to NULL
          */
         private RowExpression nullInputEvaluator(final Collection<VariableReferenceExpression> nullSymbols, RowExpression expression)
@@ -998,7 +924,7 @@ public class RowExpressionPredicatePushDown
             return new RowExpressionOptimizer(metadata).optimize(expression, ExpressionOptimizer.Level.OPTIMIZED, session.toConnectorSession());
         }
 
-        private Predicate<RowExpression> joinEqualityExpression(final Collection<VariableReferenceExpression> leftVariables)
+		private Predicate<RowExpression> joinEqualityExpression(final Collection<VariableReferenceExpression> leftVariables)
         {
             return expression -> {
                 // At this point in time, our join predicates need to be deterministic
@@ -1015,18 +941,18 @@ public class RowExpressionPredicatePushDown
             };
         }
 
-        private boolean isOperation(RowExpression expression, OperatorType type)
+		private boolean isOperation(RowExpression expression, OperatorType type)
         {
             if (expression instanceof CallExpression) {
                 Optional<OperatorType> operatorType = functionManager.getFunctionMetadata(((CallExpression) expression).getFunctionHandle()).getOperatorType();
                 if (operatorType.isPresent()) {
-                    return operatorType.get().equals(type);
+                    return operatorType.get() == type;
                 }
             }
             return false;
         }
 
-        @Override
+		@Override
         public PlanNode visitSemiJoin(SemiJoinNode node, RewriteContext<RowExpression> context)
         {
             RowExpression inheritedPredicate = context.get();
@@ -1036,7 +962,7 @@ public class RowExpressionPredicatePushDown
             return visitFilteringSemiJoin(node, context);
         }
 
-        private PlanNode visitNonFilteringSemiJoin(SemiJoinNode node, RewriteContext<RowExpression> context)
+		private PlanNode visitNonFilteringSemiJoin(SemiJoinNode node, RewriteContext<RowExpression> context)
         {
             RowExpression inheritedPredicate = context.get();
             List<RowExpression> sourceConjuncts = new ArrayList<>();
@@ -1080,7 +1006,7 @@ public class RowExpressionPredicatePushDown
             return output;
         }
 
-        private PlanNode visitFilteringSemiJoin(SemiJoinNode node, RewriteContext<RowExpression> context)
+		private PlanNode visitFilteringSemiJoin(SemiJoinNode node, RewriteContext<RowExpression> context)
         {
             RowExpression inheritedPredicate = context.get();
             RowExpression deterministicInheritedPredicate = logicalRowExpressions.filterDeterministicConjuncts(inheritedPredicate);
@@ -1165,20 +1091,20 @@ public class RowExpressionPredicatePushDown
             return output;
         }
 
-        private Iterable<RowExpression> nonInferrableConjuncts(RowExpression inheritedPredicate)
+		private Iterable<RowExpression> nonInferrableConjuncts(RowExpression inheritedPredicate)
         {
             return new RowExpressionEqualityInference.Builder(functionManager, typeManager)
                     .nonInferrableConjuncts(inheritedPredicate);
         }
 
-        private RowExpressionEqualityInference createEqualityInference(RowExpression... expressions)
+		private RowExpressionEqualityInference createEqualityInference(RowExpression... expressions)
         {
             return new RowExpressionEqualityInference.Builder(functionManager, typeManager)
                     .addEqualityInference(expressions)
                     .build();
         }
 
-        @Override
+		@Override
         public PlanNode visitAggregation(AggregationNode node, RewriteContext<RowExpression> context)
         {
             if (node.hasEmptyGroupingSet()) {
@@ -1245,7 +1171,7 @@ public class RowExpressionPredicatePushDown
             return output;
         }
 
-        @Override
+		@Override
         public PlanNode visitUnnest(UnnestNode node, RewriteContext<RowExpression> context)
         {
             RowExpression inheritedPredicate = context.get();
@@ -1288,13 +1214,13 @@ public class RowExpressionPredicatePushDown
             return output;
         }
 
-        @Override
+		@Override
         public PlanNode visitSample(SampleNode node, RewriteContext<RowExpression> context)
         {
             return context.defaultRewrite(node, context.get());
         }
 
-        @Override
+		@Override
         public PlanNode visitTableScan(TableScanNode node, RewriteContext<RowExpression> context)
         {
             RowExpression predicate = simplifyExpression(context.get());
@@ -1306,7 +1232,7 @@ public class RowExpressionPredicatePushDown
             return node;
         }
 
-        @Override
+		@Override
         public PlanNode visitAssignUniqueId(AssignUniqueId node, RewriteContext<RowExpression> context)
         {
             Set<VariableReferenceExpression> predicateVariables = VariablesExtractor.extractUnique(context.get());
@@ -1314,7 +1240,7 @@ public class RowExpressionPredicatePushDown
             return context.defaultRewrite(node, context.get());
         }
 
-        private static CallExpression buildEqualsExpression(FunctionManager functionManager, RowExpression left, RowExpression right)
+		private static CallExpression buildEqualsExpression(FunctionManager functionManager, RowExpression left, RowExpression right)
         {
             return call(
                     EQUAL.getFunctionName().getSuffix(),
@@ -1322,6 +1248,78 @@ public class RowExpressionPredicatePushDown
                     BOOLEAN,
                     left,
                     right);
+        }
+
+		private static class OuterJoinPushDownResult
+        {
+            private final RowExpression outerJoinPredicate;
+            private final RowExpression innerJoinPredicate;
+            private final RowExpression joinPredicate;
+            private final RowExpression postJoinPredicate;
+
+            private OuterJoinPushDownResult(RowExpression outerJoinPredicate, RowExpression innerJoinPredicate, RowExpression joinPredicate, RowExpression postJoinPredicate)
+            {
+                this.outerJoinPredicate = outerJoinPredicate;
+                this.innerJoinPredicate = innerJoinPredicate;
+                this.joinPredicate = joinPredicate;
+                this.postJoinPredicate = postJoinPredicate;
+            }
+
+            private RowExpression getOuterJoinPredicate()
+            {
+                return outerJoinPredicate;
+            }
+
+            private RowExpression getInnerJoinPredicate()
+            {
+                return innerJoinPredicate;
+            }
+
+            public RowExpression getJoinPredicate()
+            {
+                return joinPredicate;
+            }
+
+            private RowExpression getPostJoinPredicate()
+            {
+                return postJoinPredicate;
+            }
+        }
+
+        private static class InnerJoinPushDownResult
+        {
+            private final RowExpression leftPredicate;
+            private final RowExpression rightPredicate;
+            private final RowExpression joinPredicate;
+            private final RowExpression postJoinPredicate;
+
+            private InnerJoinPushDownResult(RowExpression leftPredicate, RowExpression rightPredicate, RowExpression joinPredicate, RowExpression postJoinPredicate)
+            {
+                this.leftPredicate = leftPredicate;
+                this.rightPredicate = rightPredicate;
+                this.joinPredicate = joinPredicate;
+                this.postJoinPredicate = postJoinPredicate;
+            }
+
+            private RowExpression getLeftPredicate()
+            {
+                return leftPredicate;
+            }
+
+            private RowExpression getRightPredicate()
+            {
+                return rightPredicate;
+            }
+
+            private RowExpression getJoinPredicate()
+            {
+                return joinPredicate;
+            }
+
+            private RowExpression getPostJoinPredicate()
+            {
+                return postJoinPredicate;
+            }
         }
     }
 }

@@ -83,7 +83,114 @@ public class CostCalculatorWithEstimatedExchanges
                 costEstimate.getNetworkCost() + estimatedExchangeCost.getNetworkCost());
     }
 
-    private static class ExchangeCostEstimator
+    public static LocalCostEstimate calculateRemoteGatherCost(double inputSizeInBytes)
+    {
+        return LocalCostEstimate.ofNetwork(inputSizeInBytes);
+    }
+
+	public static LocalCostEstimate calculateRemoteRepartitionCost(double inputSizeInBytes)
+    {
+        return LocalCostEstimate.of(inputSizeInBytes, 0, inputSizeInBytes);
+    }
+
+	public static LocalCostEstimate calculateLocalRepartitionCost(double inputSizeInBytes)
+    {
+        return LocalCostEstimate.ofCpu(inputSizeInBytes);
+    }
+
+	public static LocalCostEstimate calculateRemoteReplicateCost(double inputSizeInBytes, int destinationTaskCount)
+    {
+        return LocalCostEstimate.ofNetwork(inputSizeInBytes * destinationTaskCount);
+    }
+
+	public static LocalCostEstimate calculateJoinCostWithoutOutput(
+            PlanNode probe,
+            PlanNode build,
+            StatsProvider stats,
+            TypeProvider types,
+            boolean replicated,
+            int estimatedSourceDistributedTaskCount)
+    {
+        LocalCostEstimate exchangesCost = calculateJoinExchangeCost(
+                probe,
+                build,
+                stats,
+                replicated,
+                estimatedSourceDistributedTaskCount);
+        LocalCostEstimate inputCost = calculateJoinInputCost(
+                probe,
+                build,
+                stats,
+                types,
+                replicated,
+                estimatedSourceDistributedTaskCount);
+        return addPartialComponents(exchangesCost, inputCost);
+    }
+
+	private static LocalCostEstimate calculateJoinExchangeCost(
+            PlanNode probe,
+            PlanNode build,
+            StatsProvider stats,
+            boolean replicated,
+            int estimatedSourceDistributedTaskCount)
+    {
+        double probeSizeInBytes = stats.getStats(probe).getOutputSizeInBytes(probe.getOutputVariables());
+        double buildSizeInBytes = stats.getStats(build).getOutputSizeInBytes(build.getOutputVariables());
+        if (replicated) {
+            // assuming the probe side of a replicated join is always source distributed
+            LocalCostEstimate replicateCost = calculateRemoteReplicateCost(buildSizeInBytes, estimatedSourceDistributedTaskCount);
+            // cost of the copies repartitioning is added in CostCalculatorUsingExchanges#calculateJoinCost
+            LocalCostEstimate localRepartitionCost = calculateLocalRepartitionCost(buildSizeInBytes);
+            return addPartialComponents(replicateCost, localRepartitionCost);
+        }
+        else {
+            LocalCostEstimate probeCost = calculateRemoteRepartitionCost(probeSizeInBytes);
+            LocalCostEstimate buildRemoteRepartitionCost = calculateRemoteRepartitionCost(buildSizeInBytes);
+            LocalCostEstimate buildLocalRepartitionCost = calculateLocalRepartitionCost(buildSizeInBytes);
+            return addPartialComponents(probeCost, buildRemoteRepartitionCost, buildLocalRepartitionCost);
+        }
+    }
+
+	public static LocalCostEstimate calculateJoinInputCost(
+            PlanNode probe,
+            PlanNode build,
+            StatsProvider stats,
+            TypeProvider types,
+            boolean replicated,
+            int estimatedSourceDistributedTaskCount)
+    {
+        int buildSizeMultiplier = replicated ? estimatedSourceDistributedTaskCount : 1;
+
+        PlanNodeStatsEstimate probeStats = stats.getStats(probe);
+        PlanNodeStatsEstimate buildStats = stats.getStats(build);
+
+        double buildSideSize = buildStats.getOutputSizeInBytes(build.getOutputVariables());
+        double probeSideSize = probeStats.getOutputSizeInBytes(probe.getOutputVariables());
+
+        double cpuCost = probeSideSize + buildSideSize * buildSizeMultiplier;
+
+        /*
+         * HACK!
+         *
+         * Stats model doesn't multiply the number of rows by the number of tasks for replicated
+         * exchange to avoid misestimation of the JOIN output.
+         *
+         * Thus the cost estimation for the operations that come after a replicated exchange is
+         * underestimated. And the cost of operations over the replicated copies must be explicitly
+         * added here.
+         */
+        if (replicated) {
+            // add the cost of a local repartitioning of build side copies
+            // cost of the repartitioning of a single data copy has been already added in calculateExchangeCost
+            cpuCost += buildSideSize * (buildSizeMultiplier - 1);
+        }
+
+        double memoryCost = buildSideSize * buildSizeMultiplier;
+
+        return LocalCostEstimate.of(cpuCost, memoryCost, 0);
+    }
+
+	private static class ExchangeCostEstimator
             extends InternalPlanVisitor<LocalCostEstimate, Void>
     {
         private final StatsProvider stats;
@@ -130,7 +237,6 @@ public class CostCalculatorWithEstimatedExchanges
                     node.getLeft(),
                     node.getRight(),
                     stats,
-                    types,
                     Objects.equals(node.getDistributionType(), Optional.of(JoinNode.DistributionType.REPLICATED)),
                     taskCountEstimator.estimateSourceDistributedTaskCount());
         }
@@ -142,7 +248,6 @@ public class CostCalculatorWithEstimatedExchanges
                     node.getSource(),
                     node.getFilteringSource(),
                     stats,
-                    types,
                     Objects.equals(node.getDistributionType(), Optional.of(SemiJoinNode.DistributionType.REPLICATED)),
                     taskCountEstimator.estimateSourceDistributedTaskCount());
         }
@@ -154,7 +259,6 @@ public class CostCalculatorWithEstimatedExchanges
                     node.getLeft(),
                     node.getRight(),
                     stats,
-                    types,
                     node.getDistributionType() == SpatialJoinNode.DistributionType.REPLICATED,
                     taskCountEstimator.estimateSourceDistributedTaskCount());
         }
@@ -174,114 +278,5 @@ public class CostCalculatorWithEstimatedExchanges
         {
             return stats.getStats(node);
         }
-    }
-
-    public static LocalCostEstimate calculateRemoteGatherCost(double inputSizeInBytes)
-    {
-        return LocalCostEstimate.ofNetwork(inputSizeInBytes);
-    }
-
-    public static LocalCostEstimate calculateRemoteRepartitionCost(double inputSizeInBytes)
-    {
-        return LocalCostEstimate.of(inputSizeInBytes, 0, inputSizeInBytes);
-    }
-
-    public static LocalCostEstimate calculateLocalRepartitionCost(double inputSizeInBytes)
-    {
-        return LocalCostEstimate.ofCpu(inputSizeInBytes);
-    }
-
-    public static LocalCostEstimate calculateRemoteReplicateCost(double inputSizeInBytes, int destinationTaskCount)
-    {
-        return LocalCostEstimate.ofNetwork(inputSizeInBytes * destinationTaskCount);
-    }
-
-    public static LocalCostEstimate calculateJoinCostWithoutOutput(
-            PlanNode probe,
-            PlanNode build,
-            StatsProvider stats,
-            TypeProvider types,
-            boolean replicated,
-            int estimatedSourceDistributedTaskCount)
-    {
-        LocalCostEstimate exchangesCost = calculateJoinExchangeCost(
-                probe,
-                build,
-                stats,
-                types,
-                replicated,
-                estimatedSourceDistributedTaskCount);
-        LocalCostEstimate inputCost = calculateJoinInputCost(
-                probe,
-                build,
-                stats,
-                types,
-                replicated,
-                estimatedSourceDistributedTaskCount);
-        return addPartialComponents(exchangesCost, inputCost);
-    }
-
-    private static LocalCostEstimate calculateJoinExchangeCost(
-            PlanNode probe,
-            PlanNode build,
-            StatsProvider stats,
-            TypeProvider types,
-            boolean replicated,
-            int estimatedSourceDistributedTaskCount)
-    {
-        double probeSizeInBytes = stats.getStats(probe).getOutputSizeInBytes(probe.getOutputVariables());
-        double buildSizeInBytes = stats.getStats(build).getOutputSizeInBytes(build.getOutputVariables());
-        if (replicated) {
-            // assuming the probe side of a replicated join is always source distributed
-            LocalCostEstimate replicateCost = calculateRemoteReplicateCost(buildSizeInBytes, estimatedSourceDistributedTaskCount);
-            // cost of the copies repartitioning is added in CostCalculatorUsingExchanges#calculateJoinCost
-            LocalCostEstimate localRepartitionCost = calculateLocalRepartitionCost(buildSizeInBytes);
-            return addPartialComponents(replicateCost, localRepartitionCost);
-        }
-        else {
-            LocalCostEstimate probeCost = calculateRemoteRepartitionCost(probeSizeInBytes);
-            LocalCostEstimate buildRemoteRepartitionCost = calculateRemoteRepartitionCost(buildSizeInBytes);
-            LocalCostEstimate buildLocalRepartitionCost = calculateLocalRepartitionCost(buildSizeInBytes);
-            return addPartialComponents(probeCost, buildRemoteRepartitionCost, buildLocalRepartitionCost);
-        }
-    }
-
-    public static LocalCostEstimate calculateJoinInputCost(
-            PlanNode probe,
-            PlanNode build,
-            StatsProvider stats,
-            TypeProvider types,
-            boolean replicated,
-            int estimatedSourceDistributedTaskCount)
-    {
-        int buildSizeMultiplier = replicated ? estimatedSourceDistributedTaskCount : 1;
-
-        PlanNodeStatsEstimate probeStats = stats.getStats(probe);
-        PlanNodeStatsEstimate buildStats = stats.getStats(build);
-
-        double buildSideSize = buildStats.getOutputSizeInBytes(build.getOutputVariables());
-        double probeSideSize = probeStats.getOutputSizeInBytes(probe.getOutputVariables());
-
-        double cpuCost = probeSideSize + buildSideSize * buildSizeMultiplier;
-
-        /*
-         * HACK!
-         *
-         * Stats model doesn't multiply the number of rows by the number of tasks for replicated
-         * exchange to avoid misestimation of the JOIN output.
-         *
-         * Thus the cost estimation for the operations that come after a replicated exchange is
-         * underestimated. And the cost of operations over the replicated copies must be explicitly
-         * added here.
-         */
-        if (replicated) {
-            // add the cost of a local repartitioning of build side copies
-            // cost of the repartitioning of a single data copy has been already added in calculateExchangeCost
-            cpuCost += buildSideSize * (buildSizeMultiplier - 1);
-        }
-
-        double memoryCost = buildSideSize * buildSizeMultiplier;
-
-        return LocalCostEstimate.of(cpuCost, memoryCost, 0);
     }
 }

@@ -54,7 +54,7 @@ class GetElementBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return instance + "[" + index + "]";
+        return new StringBuilder().append(instance).append("[").append(index).append("]").toString();
     }
 
     @Override

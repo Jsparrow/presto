@@ -185,11 +185,9 @@ public class FixedSourcePartitionedScheduler
         List<ListenableFuture<?>> blocked = new ArrayList<>();
         BlockedReason blockedReason = BlockedReason.NO_ACTIVE_DRIVER_GROUP;
 
-        if (groupedLifespanScheduler.isPresent()) {
-            if (groupedLifespanScheduler.get().allLifespanExecutionFinished()) {
-                for (SourceScheduler sourceScheduler : sourceSchedulers) {
-                    sourceScheduler.notifyAllLifespansFinishedExecution();
-                }
+        groupedLifespanScheduler.ifPresent(value -> {
+            if (value.allLifespanExecutionFinished()) {
+                sourceSchedulers.forEach(SourceScheduler::notifyAllLifespansFinishedExecution);
             }
             else {
                 // Start new driver groups on the first scheduler if necessary,
@@ -197,9 +195,9 @@ public class FixedSourcePartitionedScheduler
                 //
                 // Invoke schedule method to get a new SettableFuture every time.
                 // Reusing previously returned SettableFuture could lead to the ListenableFuture retaining too many listeners.
-                blocked.add(groupedLifespanScheduler.get().schedule(sourceSchedulers.get(0)));
+                blocked.add(value.schedule(sourceSchedulers.get(0)));
             }
-        }
+        });
 
         int splitsScheduled = 0;
         Iterator<SourceScheduler> schedulerIterator = sourceSchedulers.iterator();
@@ -207,9 +205,7 @@ public class FixedSourcePartitionedScheduler
         while (schedulerIterator.hasNext()) {
             SourceScheduler sourceScheduler = schedulerIterator.next();
 
-            for (Lifespan lifespan : driverGroupsToStart) {
-                sourceScheduler.startLifespan(lifespan, partitionHandleFor(lifespan));
-            }
+            driverGroupsToStart.forEach(lifespan -> sourceScheduler.startLifespan(lifespan, partitionHandleFor(lifespan)));
 
             ScheduleResult schedule = sourceScheduler.schedule();
             if (schedule.getSplitsScheduled() > 0) {
@@ -257,14 +253,14 @@ public class FixedSourcePartitionedScheduler
     @Override
     public void close()
     {
-        for (SourceScheduler sourceScheduler : sourceSchedulers) {
+        sourceSchedulers.forEach(sourceScheduler -> {
             try {
                 sourceScheduler.close();
             }
             catch (Throwable t) {
                 log.warn(t, "Error closing split source");
             }
-        }
+        });
         sourceSchedulers.clear();
     }
 

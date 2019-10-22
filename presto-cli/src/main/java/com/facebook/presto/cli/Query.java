@@ -49,11 +49,15 @@ import static com.google.common.base.Verify.verify;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Query
         implements Closeable
 {
-    private static final Signal SIGINT = new Signal("INT");
+    private static final Logger logger = LoggerFactory.getLogger(Query.class);
+
+	private static final Signal SIGINT = new Signal("INT");
 
     private final AtomicBoolean ignoreUserInterrupt = new AtomicBoolean();
     private final StatementClient client;
@@ -181,12 +185,11 @@ public class Query
         }
 
         verify(client.isFinished());
-        if (client.finalStatusInfo().getError() != null) {
-            renderFailure(errorChannel);
-            return false;
-        }
-
-        return true;
+        if (client.finalStatusInfo().getError() == null) {
+			return true;
+		}
+		renderFailure(errorChannel);
+		return false;
     }
 
     private void processInitialStatusUpdates(WarningsPrinter warningsPrinter)
@@ -232,7 +235,8 @@ public class Query
             doRenderResults(out, outputFormat, interactive, columns);
         }
         catch (QueryAbortedException e) {
-            System.out.println("(query aborted by user)");
+            logger.error(e.getMessage(), e);
+			logger.info("(query aborted by user)");
             client.close();
         }
         catch (IOException e) {

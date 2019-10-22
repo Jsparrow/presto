@@ -42,12 +42,8 @@ public class BucketReassigner
     public String getNextReassignmentDestination()
     {
         if (!initialized) {
-            for (String node : activeNodes) {
-                nodeBucketCounts.put(node, 0);
-            }
-            for (BucketNode bucketNode : bucketNodes) {
-                nodeBucketCounts.computeIfPresent(bucketNode.getNodeIdentifier(), (node, bucketCount) -> bucketCount + 1);
-            }
+            activeNodes.forEach(node -> nodeBucketCounts.put(node, 0));
+            bucketNodes.forEach(bucketNode -> nodeBucketCounts.computeIfPresent(bucketNode.getNodeIdentifier(), (node, bucketCount) -> bucketCount + 1));
             initialized = true;
         }
 

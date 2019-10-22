@@ -88,14 +88,14 @@ public final class WindowNodeUtil
     public static Set<VariableReferenceExpression> extractWindowFunctionUniqueVariables(WindowNode.Function function, TypeProvider types)
     {
         ImmutableSet.Builder<VariableReferenceExpression> builder = ImmutableSet.builder();
-        for (RowExpression argument : function.getFunctionCall().getArguments()) {
+        function.getFunctionCall().getArguments().forEach(argument -> {
             if (isExpression(argument)) {
                 builder.addAll(VariablesExtractor.extractAll(castToExpression(argument), types));
             }
             else {
                 builder.addAll(VariablesExtractor.extractAll(argument));
             }
-        }
+        });
         return builder.build();
     }
 }

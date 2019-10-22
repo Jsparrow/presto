@@ -153,9 +153,7 @@ public final class MetadataReader
         Map<String, String> keyValueMetaData = new HashMap<>();
         List<KeyValue> keyValueList = fileMetaData.getKey_value_metadata();
         if (keyValueList != null) {
-            for (KeyValue keyValue : keyValueList) {
-                keyValueMetaData.put(keyValue.key, keyValue.value);
-            }
+            keyValueList.forEach(keyValue -> keyValueMetaData.put(keyValue.key, keyValue.value));
         }
         return new ParquetMetadata(new org.apache.parquet.hadoop.metadata.FileMetaData(messageType, keyValueMetaData, fileMetaData.getCreated_by()), blocks);
     }
@@ -217,9 +215,7 @@ public final class MetadataReader
     private static Set<org.apache.parquet.column.Encoding> readEncodings(List<Encoding> encodings)
     {
         Set<org.apache.parquet.column.Encoding> columnEncodings = new HashSet<>();
-        for (Encoding encoding : encodings) {
-            columnEncodings.add(org.apache.parquet.column.Encoding.valueOf(encoding.name()));
-        }
+        encodings.forEach(encoding -> columnEncodings.add(org.apache.parquet.column.Encoding.valueOf(encoding.name())));
         return Collections.unmodifiableSet(columnEncodings);
     }
 

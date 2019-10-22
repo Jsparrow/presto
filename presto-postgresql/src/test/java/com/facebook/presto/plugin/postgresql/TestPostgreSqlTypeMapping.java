@@ -232,7 +232,7 @@ public class TestPostgreSqlTypeMapping
         // Note: there is identical test for MySQL
 
         ZoneId jvmZone = ZoneId.systemDefault();
-        checkState(jvmZone.getId().equals("America/Bahia_Banderas"), "This test assumes certain JVM time zone");
+        checkState("America/Bahia_Banderas".equals(jvmZone.getId()), "This test assumes certain JVM time zone");
         LocalDate dateOfLocalTimeChangeForwardAtMidnightInJvmZone = LocalDate.of(1970, 1, 1);
         verify(jvmZone.getRules().getValidOffsets(dateOfLocalTimeChangeForwardAtMidnightInJvmZone.atStartOfDay()).isEmpty());
 
@@ -252,13 +252,12 @@ public class TestPostgreSqlTypeMapping
                 .addRoundTrip(dateDataType(), dateOfLocalTimeChangeForwardAtMidnightInSomeZone)
                 .addRoundTrip(dateDataType(), dateOfLocalTimeChangeBackwardAtMidnightInSomeZone);
 
-        for (String timeZoneId : ImmutableList.of(UTC_KEY.getId(), jvmZone.getId(), someZone.getId())) {
-            Session session = Session.builder(getQueryRunner().getDefaultSession())
-                    .setTimeZoneKey(TimeZoneKey.getTimeZoneKey(timeZoneId))
-                    .build();
-            testCases.execute(getQueryRunner(), session, postgresCreateAndInsert("tpch.test_date"));
-            testCases.execute(getQueryRunner(), session, prestoCreateAsSelect("test_date"));
-        }
+        ImmutableList.of(UTC_KEY.getId(), jvmZone.getId(), someZone.getId()).stream().map(timeZoneId -> Session.builder(getQueryRunner().getDefaultSession())
+		        .setTimeZoneKey(TimeZoneKey.getTimeZoneKey(timeZoneId))
+		        .build()).forEach(session -> {
+			testCases.execute(getQueryRunner(), session, postgresCreateAndInsert("tpch.test_date"));
+			testCases.execute(getQueryRunner(), session, prestoCreateAsSelect("test_date"));
+		});
     }
 
     @Test

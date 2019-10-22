@@ -281,12 +281,11 @@ public class ListSelectiveStreamReader
             return 0;
         }
 
-        if (presentStream != null) {
-            int lengthsToSkip = presentStream.countBitsSet(items);
-            return toIntExact(lengthStream.sum(lengthsToSkip));
-        }
-
-        return toIntExact(lengthStream.sum(items));
+        if (presentStream == null) {
+			return toIntExact(lengthStream.sum(items));
+		}
+		int lengthsToSkip = presentStream.countBitsSet(items);
+		return toIntExact(lengthStream.sum(lengthsToSkip));
     }
 
     private int readAllNulls(int[] positions, int positionCount)
@@ -451,18 +450,18 @@ public class ListSelectiveStreamReader
 
     private void populateOutputPositionsNoFilter(int elementPositionCount)
     {
-        if (outputRequired) {
-            elementOutputPositionCount = elementPositionCount;
-            elementOutputPositions = ensureCapacity(elementOutputPositions, elementPositionCount);
-            System.arraycopy(elementPositions, 0, elementOutputPositions, 0, elementPositionCount);
-
-            int offset = 0;
-            for (int i = 0; i < outputPositionCount; i++) {
-                offsets[i] = offset;
-                offset += elementLengths[i];
-            }
-            offsets[outputPositionCount] = offset;
-        }
+        if (!outputRequired) {
+			return;
+		}
+		elementOutputPositionCount = elementPositionCount;
+		elementOutputPositions = ensureCapacity(elementOutputPositions, elementPositionCount);
+		System.arraycopy(elementPositions, 0, elementOutputPositions, 0, elementPositionCount);
+		int offset = 0;
+		for (int i = 0; i < outputPositionCount; i++) {
+		    offsets[i] = offset;
+		    offset += elementLengths[i];
+		}
+		offsets[outputPositionCount] = offset;
     }
 
     private void populateOutputPositionsWithFilter(int elementPositionCount)
@@ -511,7 +510,7 @@ public class ListSelectiveStreamReader
     {
         checkArgument(outputPositionCount > 0, "outputPositionCount must be greater than zero");
         checkState(outputRequired, "This stream reader doesn't produce output");
-        checkState(positionCount <= outputPositionCount, "Not enough values: " + outputPositionCount + ", " + positionCount);
+        checkState(positionCount <= outputPositionCount, new StringBuilder().append("Not enough values: ").append(outputPositionCount).append(", ").append(positionCount).toString());
         checkState(!valuesInUse, "BlockLease hasn't been closed yet");
 
         if (allNulls) {

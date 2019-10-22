@@ -24,29 +24,22 @@ import static java.util.Objects.requireNonNull;
 public class QuantifiedComparisonExpression
         extends Expression
 {
-    public enum Quantifier
-    {
-        ALL,
-        ANY,
-        SOME,
-    }
-
     private final ComparisonExpression.Operator operator;
-    private final Quantifier quantifier;
-    private final Expression value;
-    private final Expression subquery;
+	private final Quantifier quantifier;
+	private final Expression value;
+	private final Expression subquery;
 
-    public QuantifiedComparisonExpression(ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
+	public QuantifiedComparisonExpression(ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
     {
         this(Optional.empty(), operator, quantifier, value, subquery);
     }
 
-    public QuantifiedComparisonExpression(NodeLocation location, ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
+	public QuantifiedComparisonExpression(NodeLocation location, ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
     {
         this(Optional.of(location), operator, quantifier, value, subquery);
     }
 
-    private QuantifiedComparisonExpression(Optional<NodeLocation> location, ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
+	private QuantifiedComparisonExpression(Optional<NodeLocation> location, ComparisonExpression.Operator operator, Quantifier quantifier, Expression value, Expression subquery)
     {
         super(location);
         this.operator = requireNonNull(operator, "comparisonType is null");
@@ -55,39 +48,39 @@ public class QuantifiedComparisonExpression
         this.subquery = requireNonNull(subquery, "subquery is null");
     }
 
-    public ComparisonExpression.Operator getOperator()
+	public ComparisonExpression.Operator getOperator()
     {
         return operator;
     }
 
-    public Quantifier getQuantifier()
+	public Quantifier getQuantifier()
     {
         return quantifier;
     }
 
-    public Expression getValue()
+	public Expression getValue()
     {
         return value;
     }
 
-    public Expression getSubquery()
+	public Expression getSubquery()
     {
         return subquery;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitQuantifiedComparisonExpression(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of(value, subquery);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -104,9 +97,16 @@ public class QuantifiedComparisonExpression
                 Objects.equals(subquery, that.subquery);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(operator, quantifier, value, subquery);
+    }
+
+	public enum Quantifier
+    {
+        ALL,
+        ANY,
+        SOME,
     }
 }

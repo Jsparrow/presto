@@ -74,7 +74,7 @@ public class BenchmarkBoxedBoolean
     public void identity(BenchmarkData data, Blackhole blackhole)
     {
         for (int i = 0; i < ARRAY_SIZE; i++) {
-            if (TRUE == data.constants[i]) {
+            if (TRUE.equals(data.constants[i])) {
                 blackhole.consume(0xDEADBEAF);
             }
             else {
@@ -122,7 +122,18 @@ public class BenchmarkBoxedBoolean
         }
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkBoxedBoolean.class.getSimpleName()).append(".*").toString())
+                .addProfiler("perfasm")
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         public boolean[] primitives = new boolean[ARRAY_SIZE];
@@ -141,19 +152,8 @@ public class BenchmarkBoxedBoolean
                 boxed[i] = value;
 
                 constants[i] = isNull ? null : value;
-                objects[i] = isNull ? null : new Boolean(value);
+                objects[i] = isNull ? null : Boolean.valueOf(value);
             }
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkBoxedBoolean.class.getSimpleName() + ".*")
-                .addProfiler("perfasm")
-                .build();
-        new Runner(options).run();
     }
 }

@@ -37,12 +37,7 @@ public class TestingTypeManager
     @Override
     public Type getType(TypeSignature signature)
     {
-        for (Type type : getTypes()) {
-            if (signature.getBase().equals(type.getTypeSignature().getBase())) {
-                return type;
-            }
-        }
-        return null;
+        return getTypes().stream().filter(type -> signature.getBase().equals(type.getTypeSignature().getBase())).findFirst().orElse(null);
     }
 
     @Override

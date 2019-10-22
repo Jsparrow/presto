@@ -167,7 +167,484 @@ public class PlanBuilder
         return outputBuilder.build();
     }
 
-    public class OutputBuilder
+    public ValuesNode values()
+    {
+        return values(idAllocator.getNextId(), ImmutableList.of(), ImmutableList.of());
+    }
+
+	public ValuesNode values(VariableReferenceExpression... columns)
+    {
+        return values(idAllocator.getNextId(), 0, columns);
+    }
+
+	public ValuesNode values(PlanNodeId id, VariableReferenceExpression... columns)
+    {
+        return values(id, 0, columns);
+    }
+
+	public ValuesNode values(int rows, VariableReferenceExpression... columns)
+    {
+        return values(idAllocator.getNextId(), rows, columns);
+    }
+
+	public ValuesNode values(PlanNodeId id, int rows, VariableReferenceExpression... columns)
+    {
+        List<VariableReferenceExpression> variables = ImmutableList.copyOf(columns);
+        return values(
+                id,
+                variables,
+                nElements(rows, row -> nElements(columns.length, cell -> constantNull(UNKNOWN))));
+    }
+
+	public ValuesNode values(List<VariableReferenceExpression> variables, List<List<RowExpression>> rows)
+    {
+        return values(idAllocator.getNextId(), variables, rows);
+    }
+
+	public ValuesNode values(PlanNodeId id, List<VariableReferenceExpression> variables, List<List<RowExpression>> rows)
+    {
+        return new ValuesNode(id, variables, rows);
+    }
+
+	public EnforceSingleRowNode enforceSingleRow(PlanNode source)
+    {
+        return new EnforceSingleRowNode(idAllocator.getNextId(), source);
+    }
+
+	public LimitNode limit(long limit, PlanNode source)
+    {
+        return new LimitNode(idAllocator.getNextId(), source, limit, FINAL);
+    }
+
+	public TopNNode topN(long count, List<VariableReferenceExpression> orderBy, PlanNode source)
+    {
+        return new TopNNode(
+                idAllocator.getNextId(),
+                source,
+                count,
+                new OrderingScheme(orderBy.stream().map(variable -> new Ordering(variable, SortOrder.ASC_NULLS_FIRST)).collect(toImmutableList())),
+                TopNNode.Step.SINGLE);
+    }
+
+	public SampleNode sample(double sampleRatio, SampleNode.Type type, PlanNode source)
+    {
+        return new SampleNode(idAllocator.getNextId(), source, sampleRatio, type);
+    }
+
+	public ProjectNode project(Assignments assignments, PlanNode source)
+    {
+        return new ProjectNode(idAllocator.getNextId(), source, assignments);
+    }
+
+	public MarkDistinctNode markDistinct(VariableReferenceExpression markerVariable, List<VariableReferenceExpression> distinctVariables, PlanNode source)
+    {
+        return new MarkDistinctNode(idAllocator.getNextId(), source, markerVariable, distinctVariables, Optional.empty());
+    }
+
+	public MarkDistinctNode markDistinct(VariableReferenceExpression markerVariable, List<VariableReferenceExpression> distinctVariables, VariableReferenceExpression hashVariable, PlanNode source)
+    {
+        return new MarkDistinctNode(idAllocator.getNextId(), source, markerVariable, distinctVariables, Optional.of(hashVariable));
+    }
+
+	public FilterNode filter(Expression predicate, PlanNode source)
+    {
+        return new FilterNode(idAllocator.getNextId(), source, OriginalExpressionUtils.castToRowExpression(predicate));
+    }
+
+	public FilterNode filter(RowExpression predicate, PlanNode source)
+    {
+        return new FilterNode(idAllocator.getNextId(), source, predicate);
+    }
+
+	public AggregationNode aggregation(Consumer<AggregationBuilder> aggregationBuilderConsumer)
+    {
+        AggregationBuilder aggregationBuilder = new AggregationBuilder(getTypes());
+        aggregationBuilderConsumer.accept(aggregationBuilder);
+        return aggregationBuilder.build();
+    }
+
+	public CallExpression binaryOperation(OperatorType operatorType, RowExpression left, RowExpression right)
+    {
+        FunctionHandle functionHandle = new FunctionResolution(metadata.getFunctionManager()).arithmeticFunction(operatorType, left.getType(), right.getType());
+        return call(operatorType.getOperator(), functionHandle, left.getType(), left, right);
+    }
+
+	public CallExpression comparison(OperatorType operatorType, RowExpression left, RowExpression right)
+    {
+        FunctionHandle functionHandle = new FunctionResolution(metadata.getFunctionManager()).comparisonFunction(operatorType, left.getType(), right.getType());
+        return call(operatorType.getOperator(), functionHandle, left.getType(), left, right);
+    }
+
+	public ApplyNode apply(Assignments subqueryAssignments, List<VariableReferenceExpression> correlation, PlanNode input, PlanNode subquery)
+    {
+        verifySubquerySupported(subqueryAssignments);
+        return new ApplyNode(idAllocator.getNextId(), input, subquery, subqueryAssignments, correlation, "");
+    }
+
+	public AssignUniqueId assignUniqueId(VariableReferenceExpression variable, PlanNode source)
+    {
+        return new AssignUniqueId(idAllocator.getNextId(), source, variable);
+    }
+
+	public LateralJoinNode lateral(List<VariableReferenceExpression> correlation, PlanNode input, PlanNode subquery)
+    {
+        return new LateralJoinNode(idAllocator.getNextId(), input, subquery, correlation, LateralJoinNode.Type.INNER, "");
+    }
+
+	public TableScanNode tableScan(String catalogName, List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
+    {
+        TableHandle tableHandle = new TableHandle(
+                new ConnectorId(catalogName),
+                new TestingTableHandle(),
+                TestingTransactionHandle.create(),
+                Optional.empty());
+        return tableScan(tableHandle, variables, assignments, TupleDomain.all(), TupleDomain.all());
+    }
+
+	public TableScanNode tableScan(List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
+    {
+        return tableScan("testConnector", variables, assignments);
+    }
+
+	public TableScanNode tableScan(TableHandle tableHandle, List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
+    {
+        return tableScan(tableHandle, variables, assignments, TupleDomain.all(), TupleDomain.all());
+    }
+
+	public TableScanNode tableScan(
+            TableHandle tableHandle,
+            List<VariableReferenceExpression> variables,
+            Map<VariableReferenceExpression, ColumnHandle> assignments,
+            TupleDomain<ColumnHandle> currentConstraint,
+            TupleDomain<ColumnHandle> enforcedConstraint)
+    {
+        return new TableScanNode(
+                idAllocator.getNextId(),
+                tableHandle,
+                variables,
+                assignments,
+                currentConstraint,
+                enforcedConstraint);
+    }
+
+	public TableFinishNode tableDelete(SchemaTableName schemaTableName, PlanNode deleteSource, VariableReferenceExpression deleteRowId)
+    {
+        TableWriterNode.DeleteHandle deleteHandle = new TableWriterNode.DeleteHandle(
+                new TableHandle(
+                        new ConnectorId("testConnector"),
+                        new TestingTableHandle(),
+                        TestingTransactionHandle.create(),
+                        Optional.empty()),
+                schemaTableName);
+        return new TableFinishNode(
+                idAllocator.getNextId(),
+                exchange(e -> e
+                        .addSource(new DeleteNode(
+                                idAllocator.getNextId(),
+                                deleteSource,
+                                deleteHandle,
+                                deleteRowId,
+                                ImmutableList.of(deleteRowId)))
+                        .addInputsSet(deleteRowId)
+                        .singleDistributionPartitioningScheme(deleteRowId)),
+                deleteHandle,
+                deleteRowId,
+                Optional.empty(),
+                Optional.empty());
+    }
+
+	public ExchangeNode gatheringExchange(ExchangeNode.Scope scope, PlanNode child)
+    {
+        return exchange(builder -> builder.type(ExchangeNode.Type.GATHER)
+                .scope(scope)
+                .singleDistributionPartitioningScheme(child.getOutputVariables())
+                .addSource(child)
+                .addInputsSet(child.getOutputVariables()));
+    }
+
+	public SemiJoinNode semiJoin(
+            VariableReferenceExpression sourceJoinVariable,
+            VariableReferenceExpression filteringSourceJoinVariable,
+            VariableReferenceExpression semiJoinOutput,
+            Optional<VariableReferenceExpression> sourceHashVariable,
+            Optional<VariableReferenceExpression> filteringSourceHashVariable,
+            PlanNode source,
+            PlanNode filteringSource)
+    {
+        return semiJoin(
+                source,
+                filteringSource,
+                sourceJoinVariable,
+                filteringSourceJoinVariable,
+                semiJoinOutput,
+                sourceHashVariable,
+                filteringSourceHashVariable,
+                Optional.empty());
+    }
+
+	public SemiJoinNode semiJoin(
+            PlanNode source,
+            PlanNode filteringSource,
+            VariableReferenceExpression sourceJoinVariable,
+            VariableReferenceExpression filteringSourceJoinVariable,
+            VariableReferenceExpression semiJoinOutput,
+            Optional<VariableReferenceExpression> sourceHashVariable,
+            Optional<VariableReferenceExpression> filteringSourceHashVariable,
+            Optional<SemiJoinNode.DistributionType> distributionType)
+    {
+        return new SemiJoinNode(
+                idAllocator.getNextId(),
+                source,
+                filteringSource,
+                sourceJoinVariable,
+                filteringSourceJoinVariable,
+                semiJoinOutput,
+                sourceHashVariable,
+                filteringSourceHashVariable,
+                distributionType);
+    }
+
+	public IndexSourceNode indexSource(
+            TableHandle tableHandle,
+            Set<VariableReferenceExpression> lookupVariables,
+            List<VariableReferenceExpression> outputVariables,
+            Map<VariableReferenceExpression, ColumnHandle> assignments,
+            TupleDomain<ColumnHandle> effectiveTupleDomain)
+    {
+        return new IndexSourceNode(
+                idAllocator.getNextId(),
+                new IndexHandle(
+                        tableHandle.getConnectorId(),
+                        TestingConnectorTransactionHandle.INSTANCE,
+                        TestingConnectorIndexHandle.INSTANCE),
+                tableHandle,
+                lookupVariables,
+                outputVariables,
+                assignments,
+                effectiveTupleDomain);
+    }
+
+	public ExchangeNode exchange(Consumer<ExchangeBuilder> exchangeBuilderConsumer)
+    {
+        ExchangeBuilder exchangeBuilder = new ExchangeBuilder();
+        exchangeBuilderConsumer.accept(exchangeBuilder);
+        return exchangeBuilder.build();
+    }
+
+	public JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, JoinNode.EquiJoinClause... criteria)
+    {
+        return join(joinType, left, right, Optional.empty(), criteria);
+    }
+
+	public JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, RowExpression filter, JoinNode.EquiJoinClause... criteria)
+    {
+        return join(joinType, left, right, Optional.of(filter), criteria);
+    }
+
+	private JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, Optional<RowExpression> filter, JoinNode.EquiJoinClause... criteria)
+    {
+        return join(
+                joinType,
+                left,
+                right,
+                ImmutableList.copyOf(criteria),
+                ImmutableList.<VariableReferenceExpression>builder()
+                        .addAll(left.getOutputVariables())
+                        .addAll(right.getOutputVariables())
+                        .build(),
+                filter,
+                Optional.empty(),
+                Optional.empty());
+    }
+
+	public JoinNode join(JoinNode.Type type, PlanNode left, PlanNode right, List<JoinNode.EquiJoinClause> criteria, List<VariableReferenceExpression> outputVariables, Optional<RowExpression> filter)
+    {
+        return join(type, left, right, criteria, outputVariables, filter, Optional.empty(), Optional.empty());
+    }
+
+	public JoinNode join(
+            JoinNode.Type type,
+            PlanNode left,
+            PlanNode right,
+            List<JoinNode.EquiJoinClause> criteria,
+            List<VariableReferenceExpression> outputVariables,
+            Optional<RowExpression> filter,
+            Optional<VariableReferenceExpression> leftHashVariable,
+            Optional<VariableReferenceExpression> rightHashVariable)
+    {
+        return join(type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, Optional.empty());
+    }
+
+	public JoinNode join(
+            JoinNode.Type type,
+            PlanNode left,
+            PlanNode right,
+            List<JoinNode.EquiJoinClause> criteria,
+            List<VariableReferenceExpression> outputVariables,
+            Optional<RowExpression> filter,
+            Optional<VariableReferenceExpression> leftHashVariable,
+            Optional<VariableReferenceExpression> rightHashVariable,
+            Optional<JoinNode.DistributionType> distributionType)
+    {
+        return new JoinNode(idAllocator.getNextId(), type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, distributionType);
+    }
+
+	public PlanNode indexJoin(IndexJoinNode.Type type, TableScanNode probe, TableScanNode index)
+    {
+        return new IndexJoinNode(
+                idAllocator.getNextId(),
+                type,
+                probe,
+                index,
+                emptyList(),
+                Optional.empty(),
+                Optional.empty());
+    }
+
+	public UnionNode union(ListMultimap<VariableReferenceExpression, VariableReferenceExpression> outputsToInputs, List<PlanNode> sources)
+    {
+        Map<VariableReferenceExpression, List<VariableReferenceExpression>> mapping = fromListMultimap(outputsToInputs);
+        return new UnionNode(idAllocator.getNextId(), sources, ImmutableList.copyOf(mapping.keySet()), mapping);
+    }
+
+	public TableWriterNode tableWriter(List<VariableReferenceExpression> columns, List<String> columnNames, PlanNode source)
+    {
+        return new TableWriterNode(
+                idAllocator.getNextId(),
+                source,
+                new TestingWriterTarget(),
+                variable("partialrows", BIGINT),
+                variable("fragment", VARBINARY),
+                variable("tablecommitcontext", VARBINARY),
+                columns,
+                columnNames,
+                Optional.empty(),
+                Optional.empty());
+    }
+
+	public VariableReferenceExpression variable(String name)
+    {
+        return variable(name, BIGINT);
+    }
+
+	public VariableReferenceExpression variable(VariableReferenceExpression variable)
+    {
+        return variable(variable.getName(), variable.getType());
+    }
+
+	public VariableReferenceExpression variable(String name, Type type)
+    {
+        Type old = variables.put(name, type);
+        if (old != null && !old.equals(type)) {
+            throw new IllegalArgumentException(format("Variable '%s' already registered with type '%s'", name, old));
+        }
+
+        if (old == null) {
+            variables.put(name, type);
+        }
+        return new VariableReferenceExpression(name, type);
+    }
+
+	public WindowNode window(WindowNode.Specification specification, Map<VariableReferenceExpression, WindowNode.Function> functions, PlanNode source)
+    {
+        return new WindowNode(
+                idAllocator.getNextId(),
+                source,
+                specification,
+                ImmutableMap.copyOf(functions),
+                Optional.empty(),
+                ImmutableSet.of(),
+                0);
+    }
+
+	public WindowNode window(WindowNode.Specification specification, Map<VariableReferenceExpression, WindowNode.Function> functions, VariableReferenceExpression hashVariable, PlanNode source)
+    {
+        return new WindowNode(
+                idAllocator.getNextId(),
+                source,
+                specification,
+                ImmutableMap.copyOf(functions),
+                Optional.of(hashVariable),
+                ImmutableSet.of(),
+                0);
+    }
+
+	public RowNumberNode rowNumber(List<VariableReferenceExpression> partitionBy, Optional<Integer> maxRowCountPerPartition, VariableReferenceExpression rownNumberVariable, PlanNode source)
+    {
+        return new RowNumberNode(
+                idAllocator.getNextId(),
+                source,
+                partitionBy,
+                rownNumberVariable,
+                maxRowCountPerPartition,
+                Optional.empty());
+    }
+
+	public UnnestNode unnest(PlanNode source, List<VariableReferenceExpression> replicateVariables, Map<VariableReferenceExpression, List<VariableReferenceExpression>> unnestVariables, Optional<VariableReferenceExpression> ordinalityVariable)
+    {
+        return new UnnestNode(
+                idAllocator.getNextId(),
+                source,
+                replicateVariables,
+                unnestVariables,
+                ordinalityVariable);
+    }
+
+	public static Expression expression(String sql)
+    {
+        return ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql));
+    }
+
+	public RowExpression rowExpression(String sql)
+    {
+        Expression expression = expression(sql);
+        Map<NodeRef<Expression>, Type> expressionTypes = getExpressionTypes(
+                session,
+                metadata,
+                new SqlParser(),
+                getTypes(),
+                expression,
+                ImmutableList.of(),
+                WarningCollector.NOOP);
+        return SqlToRowExpressionTranslator.translate(
+                expression,
+                expressionTypes,
+                ImmutableMap.of(),
+                metadata.getFunctionManager(),
+                metadata.getTypeManager(),
+                session);
+    }
+
+	public static RowExpression castToRowExpression(String sql)
+    {
+        return OriginalExpressionUtils.castToRowExpression(ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql)));
+    }
+
+	public static Expression expression(String sql, ParsingOptions options)
+    {
+        return ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql, options));
+    }
+
+	public static List<Expression> expressions(String... expressions)
+    {
+        return Stream.of(expressions)
+                .map(PlanBuilder::expression)
+                .collect(toImmutableList());
+    }
+
+	public static List<RowExpression> constantExpressions(Type type, Object... values)
+    {
+        return Stream.of(values)
+                .map(value -> constant(value, type))
+                .collect(toImmutableList());
+    }
+
+	public TypeProvider getTypes()
+    {
+        return TypeProvider.viewOf(variables);
+    }
+
+	public class OutputBuilder
     {
         private PlanNode source;
         private List<String> columnNames = new ArrayList<>();
@@ -190,114 +667,6 @@ public class PlanBuilder
         {
             return new OutputNode(idAllocator.getNextId(), source, columnNames, outputVariables);
         }
-    }
-
-    public ValuesNode values()
-    {
-        return values(idAllocator.getNextId(), ImmutableList.of(), ImmutableList.of());
-    }
-
-    public ValuesNode values(VariableReferenceExpression... columns)
-    {
-        return values(idAllocator.getNextId(), 0, columns);
-    }
-
-    public ValuesNode values(PlanNodeId id, VariableReferenceExpression... columns)
-    {
-        return values(id, 0, columns);
-    }
-
-    public ValuesNode values(int rows, VariableReferenceExpression... columns)
-    {
-        return values(idAllocator.getNextId(), rows, columns);
-    }
-
-    public ValuesNode values(PlanNodeId id, int rows, VariableReferenceExpression... columns)
-    {
-        List<VariableReferenceExpression> variables = ImmutableList.copyOf(columns);
-        return values(
-                id,
-                variables,
-                nElements(rows, row -> nElements(columns.length, cell -> constantNull(UNKNOWN))));
-    }
-
-    public ValuesNode values(List<VariableReferenceExpression> variables, List<List<RowExpression>> rows)
-    {
-        return values(idAllocator.getNextId(), variables, rows);
-    }
-
-    public ValuesNode values(PlanNodeId id, List<VariableReferenceExpression> variables, List<List<RowExpression>> rows)
-    {
-        return new ValuesNode(id, variables, rows);
-    }
-
-    public EnforceSingleRowNode enforceSingleRow(PlanNode source)
-    {
-        return new EnforceSingleRowNode(idAllocator.getNextId(), source);
-    }
-
-    public LimitNode limit(long limit, PlanNode source)
-    {
-        return new LimitNode(idAllocator.getNextId(), source, limit, FINAL);
-    }
-
-    public TopNNode topN(long count, List<VariableReferenceExpression> orderBy, PlanNode source)
-    {
-        return new TopNNode(
-                idAllocator.getNextId(),
-                source,
-                count,
-                new OrderingScheme(orderBy.stream().map(variable -> new Ordering(variable, SortOrder.ASC_NULLS_FIRST)).collect(toImmutableList())),
-                TopNNode.Step.SINGLE);
-    }
-
-    public SampleNode sample(double sampleRatio, SampleNode.Type type, PlanNode source)
-    {
-        return new SampleNode(idAllocator.getNextId(), source, sampleRatio, type);
-    }
-
-    public ProjectNode project(Assignments assignments, PlanNode source)
-    {
-        return new ProjectNode(idAllocator.getNextId(), source, assignments);
-    }
-
-    public MarkDistinctNode markDistinct(VariableReferenceExpression markerVariable, List<VariableReferenceExpression> distinctVariables, PlanNode source)
-    {
-        return new MarkDistinctNode(idAllocator.getNextId(), source, markerVariable, distinctVariables, Optional.empty());
-    }
-
-    public MarkDistinctNode markDistinct(VariableReferenceExpression markerVariable, List<VariableReferenceExpression> distinctVariables, VariableReferenceExpression hashVariable, PlanNode source)
-    {
-        return new MarkDistinctNode(idAllocator.getNextId(), source, markerVariable, distinctVariables, Optional.of(hashVariable));
-    }
-
-    public FilterNode filter(Expression predicate, PlanNode source)
-    {
-        return new FilterNode(idAllocator.getNextId(), source, OriginalExpressionUtils.castToRowExpression(predicate));
-    }
-
-    public FilterNode filter(RowExpression predicate, PlanNode source)
-    {
-        return new FilterNode(idAllocator.getNextId(), source, predicate);
-    }
-
-    public AggregationNode aggregation(Consumer<AggregationBuilder> aggregationBuilderConsumer)
-    {
-        AggregationBuilder aggregationBuilder = new AggregationBuilder(getTypes());
-        aggregationBuilderConsumer.accept(aggregationBuilder);
-        return aggregationBuilder.build();
-    }
-
-    public CallExpression binaryOperation(OperatorType operatorType, RowExpression left, RowExpression right)
-    {
-        FunctionHandle functionHandle = new FunctionResolution(metadata.getFunctionManager()).arithmeticFunction(operatorType, left.getType(), right.getType());
-        return call(operatorType.getOperator(), functionHandle, left.getType(), left, right);
-    }
-
-    public CallExpression comparison(OperatorType operatorType, RowExpression left, RowExpression right)
-    {
-        FunctionHandle functionHandle = new FunctionResolution(metadata.getFunctionManager()).comparisonFunction(operatorType, left.getType(), right.getType());
-        return call(operatorType.getOperator(), functionHandle, left.getType(), left, right);
     }
 
     public class AggregationBuilder
@@ -438,162 +807,6 @@ public class PlanBuilder
         }
     }
 
-    public ApplyNode apply(Assignments subqueryAssignments, List<VariableReferenceExpression> correlation, PlanNode input, PlanNode subquery)
-    {
-        verifySubquerySupported(subqueryAssignments);
-        return new ApplyNode(idAllocator.getNextId(), input, subquery, subqueryAssignments, correlation, "");
-    }
-
-    public AssignUniqueId assignUniqueId(VariableReferenceExpression variable, PlanNode source)
-    {
-        return new AssignUniqueId(idAllocator.getNextId(), source, variable);
-    }
-
-    public LateralJoinNode lateral(List<VariableReferenceExpression> correlation, PlanNode input, PlanNode subquery)
-    {
-        return new LateralJoinNode(idAllocator.getNextId(), input, subquery, correlation, LateralJoinNode.Type.INNER, "");
-    }
-
-    public TableScanNode tableScan(String catalogName, List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
-    {
-        TableHandle tableHandle = new TableHandle(
-                new ConnectorId(catalogName),
-                new TestingTableHandle(),
-                TestingTransactionHandle.create(),
-                Optional.empty());
-        return tableScan(tableHandle, variables, assignments, TupleDomain.all(), TupleDomain.all());
-    }
-
-    public TableScanNode tableScan(List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
-    {
-        return tableScan("testConnector", variables, assignments);
-    }
-
-    public TableScanNode tableScan(TableHandle tableHandle, List<VariableReferenceExpression> variables, Map<VariableReferenceExpression, ColumnHandle> assignments)
-    {
-        return tableScan(tableHandle, variables, assignments, TupleDomain.all(), TupleDomain.all());
-    }
-
-    public TableScanNode tableScan(
-            TableHandle tableHandle,
-            List<VariableReferenceExpression> variables,
-            Map<VariableReferenceExpression, ColumnHandle> assignments,
-            TupleDomain<ColumnHandle> currentConstraint,
-            TupleDomain<ColumnHandle> enforcedConstraint)
-    {
-        return new TableScanNode(
-                idAllocator.getNextId(),
-                tableHandle,
-                variables,
-                assignments,
-                currentConstraint,
-                enforcedConstraint);
-    }
-
-    public TableFinishNode tableDelete(SchemaTableName schemaTableName, PlanNode deleteSource, VariableReferenceExpression deleteRowId)
-    {
-        TableWriterNode.DeleteHandle deleteHandle = new TableWriterNode.DeleteHandle(
-                new TableHandle(
-                        new ConnectorId("testConnector"),
-                        new TestingTableHandle(),
-                        TestingTransactionHandle.create(),
-                        Optional.empty()),
-                schemaTableName);
-        return new TableFinishNode(
-                idAllocator.getNextId(),
-                exchange(e -> e
-                        .addSource(new DeleteNode(
-                                idAllocator.getNextId(),
-                                deleteSource,
-                                deleteHandle,
-                                deleteRowId,
-                                ImmutableList.of(deleteRowId)))
-                        .addInputsSet(deleteRowId)
-                        .singleDistributionPartitioningScheme(deleteRowId)),
-                deleteHandle,
-                deleteRowId,
-                Optional.empty(),
-                Optional.empty());
-    }
-
-    public ExchangeNode gatheringExchange(ExchangeNode.Scope scope, PlanNode child)
-    {
-        return exchange(builder -> builder.type(ExchangeNode.Type.GATHER)
-                .scope(scope)
-                .singleDistributionPartitioningScheme(child.getOutputVariables())
-                .addSource(child)
-                .addInputsSet(child.getOutputVariables()));
-    }
-
-    public SemiJoinNode semiJoin(
-            VariableReferenceExpression sourceJoinVariable,
-            VariableReferenceExpression filteringSourceJoinVariable,
-            VariableReferenceExpression semiJoinOutput,
-            Optional<VariableReferenceExpression> sourceHashVariable,
-            Optional<VariableReferenceExpression> filteringSourceHashVariable,
-            PlanNode source,
-            PlanNode filteringSource)
-    {
-        return semiJoin(
-                source,
-                filteringSource,
-                sourceJoinVariable,
-                filteringSourceJoinVariable,
-                semiJoinOutput,
-                sourceHashVariable,
-                filteringSourceHashVariable,
-                Optional.empty());
-    }
-
-    public SemiJoinNode semiJoin(
-            PlanNode source,
-            PlanNode filteringSource,
-            VariableReferenceExpression sourceJoinVariable,
-            VariableReferenceExpression filteringSourceJoinVariable,
-            VariableReferenceExpression semiJoinOutput,
-            Optional<VariableReferenceExpression> sourceHashVariable,
-            Optional<VariableReferenceExpression> filteringSourceHashVariable,
-            Optional<SemiJoinNode.DistributionType> distributionType)
-    {
-        return new SemiJoinNode(
-                idAllocator.getNextId(),
-                source,
-                filteringSource,
-                sourceJoinVariable,
-                filteringSourceJoinVariable,
-                semiJoinOutput,
-                sourceHashVariable,
-                filteringSourceHashVariable,
-                distributionType);
-    }
-
-    public IndexSourceNode indexSource(
-            TableHandle tableHandle,
-            Set<VariableReferenceExpression> lookupVariables,
-            List<VariableReferenceExpression> outputVariables,
-            Map<VariableReferenceExpression, ColumnHandle> assignments,
-            TupleDomain<ColumnHandle> effectiveTupleDomain)
-    {
-        return new IndexSourceNode(
-                idAllocator.getNextId(),
-                new IndexHandle(
-                        tableHandle.getConnectorId(),
-                        TestingConnectorTransactionHandle.INSTANCE,
-                        TestingConnectorIndexHandle.INSTANCE),
-                tableHandle,
-                lookupVariables,
-                outputVariables,
-                assignments,
-                effectiveTupleDomain);
-    }
-
-    public ExchangeNode exchange(Consumer<ExchangeBuilder> exchangeBuilderConsumer)
-    {
-        ExchangeBuilder exchangeBuilder = new ExchangeBuilder();
-        exchangeBuilderConsumer.accept(exchangeBuilder);
-        return exchangeBuilder.build();
-    }
-
     public class ExchangeBuilder
     {
         private ExchangeNode.Type type = ExchangeNode.Type.GATHER;
@@ -675,218 +888,5 @@ public class PlanBuilder
         {
             return new ExchangeNode(idAllocator.getNextId(), type, scope, partitioningScheme, sources, inputs, Optional.ofNullable(orderingScheme));
         }
-    }
-
-    public JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, JoinNode.EquiJoinClause... criteria)
-    {
-        return join(joinType, left, right, Optional.empty(), criteria);
-    }
-
-    public JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, RowExpression filter, JoinNode.EquiJoinClause... criteria)
-    {
-        return join(joinType, left, right, Optional.of(filter), criteria);
-    }
-
-    private JoinNode join(JoinNode.Type joinType, PlanNode left, PlanNode right, Optional<RowExpression> filter, JoinNode.EquiJoinClause... criteria)
-    {
-        return join(
-                joinType,
-                left,
-                right,
-                ImmutableList.copyOf(criteria),
-                ImmutableList.<VariableReferenceExpression>builder()
-                        .addAll(left.getOutputVariables())
-                        .addAll(right.getOutputVariables())
-                        .build(),
-                filter,
-                Optional.empty(),
-                Optional.empty());
-    }
-
-    public JoinNode join(JoinNode.Type type, PlanNode left, PlanNode right, List<JoinNode.EquiJoinClause> criteria, List<VariableReferenceExpression> outputVariables, Optional<RowExpression> filter)
-    {
-        return join(type, left, right, criteria, outputVariables, filter, Optional.empty(), Optional.empty());
-    }
-
-    public JoinNode join(
-            JoinNode.Type type,
-            PlanNode left,
-            PlanNode right,
-            List<JoinNode.EquiJoinClause> criteria,
-            List<VariableReferenceExpression> outputVariables,
-            Optional<RowExpression> filter,
-            Optional<VariableReferenceExpression> leftHashVariable,
-            Optional<VariableReferenceExpression> rightHashVariable)
-    {
-        return join(type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, Optional.empty());
-    }
-
-    public JoinNode join(
-            JoinNode.Type type,
-            PlanNode left,
-            PlanNode right,
-            List<JoinNode.EquiJoinClause> criteria,
-            List<VariableReferenceExpression> outputVariables,
-            Optional<RowExpression> filter,
-            Optional<VariableReferenceExpression> leftHashVariable,
-            Optional<VariableReferenceExpression> rightHashVariable,
-            Optional<JoinNode.DistributionType> distributionType)
-    {
-        return new JoinNode(idAllocator.getNextId(), type, left, right, criteria, outputVariables, filter, leftHashVariable, rightHashVariable, distributionType);
-    }
-
-    public PlanNode indexJoin(IndexJoinNode.Type type, TableScanNode probe, TableScanNode index)
-    {
-        return new IndexJoinNode(
-                idAllocator.getNextId(),
-                type,
-                probe,
-                index,
-                emptyList(),
-                Optional.empty(),
-                Optional.empty());
-    }
-
-    public UnionNode union(ListMultimap<VariableReferenceExpression, VariableReferenceExpression> outputsToInputs, List<PlanNode> sources)
-    {
-        Map<VariableReferenceExpression, List<VariableReferenceExpression>> mapping = fromListMultimap(outputsToInputs);
-        return new UnionNode(idAllocator.getNextId(), sources, ImmutableList.copyOf(mapping.keySet()), mapping);
-    }
-
-    public TableWriterNode tableWriter(List<VariableReferenceExpression> columns, List<String> columnNames, PlanNode source)
-    {
-        return new TableWriterNode(
-                idAllocator.getNextId(),
-                source,
-                new TestingWriterTarget(),
-                variable("partialrows", BIGINT),
-                variable("fragment", VARBINARY),
-                variable("tablecommitcontext", VARBINARY),
-                columns,
-                columnNames,
-                Optional.empty(),
-                Optional.empty());
-    }
-
-    public VariableReferenceExpression variable(String name)
-    {
-        return variable(name, BIGINT);
-    }
-
-    public VariableReferenceExpression variable(VariableReferenceExpression variable)
-    {
-        return variable(variable.getName(), variable.getType());
-    }
-
-    public VariableReferenceExpression variable(String name, Type type)
-    {
-        Type old = variables.put(name, type);
-        if (old != null && !old.equals(type)) {
-            throw new IllegalArgumentException(format("Variable '%s' already registered with type '%s'", name, old));
-        }
-
-        if (old == null) {
-            variables.put(name, type);
-        }
-        return new VariableReferenceExpression(name, type);
-    }
-
-    public WindowNode window(WindowNode.Specification specification, Map<VariableReferenceExpression, WindowNode.Function> functions, PlanNode source)
-    {
-        return new WindowNode(
-                idAllocator.getNextId(),
-                source,
-                specification,
-                ImmutableMap.copyOf(functions),
-                Optional.empty(),
-                ImmutableSet.of(),
-                0);
-    }
-
-    public WindowNode window(WindowNode.Specification specification, Map<VariableReferenceExpression, WindowNode.Function> functions, VariableReferenceExpression hashVariable, PlanNode source)
-    {
-        return new WindowNode(
-                idAllocator.getNextId(),
-                source,
-                specification,
-                ImmutableMap.copyOf(functions),
-                Optional.of(hashVariable),
-                ImmutableSet.of(),
-                0);
-    }
-
-    public RowNumberNode rowNumber(List<VariableReferenceExpression> partitionBy, Optional<Integer> maxRowCountPerPartition, VariableReferenceExpression rownNumberVariable, PlanNode source)
-    {
-        return new RowNumberNode(
-                idAllocator.getNextId(),
-                source,
-                partitionBy,
-                rownNumberVariable,
-                maxRowCountPerPartition,
-                Optional.empty());
-    }
-
-    public UnnestNode unnest(PlanNode source, List<VariableReferenceExpression> replicateVariables, Map<VariableReferenceExpression, List<VariableReferenceExpression>> unnestVariables, Optional<VariableReferenceExpression> ordinalityVariable)
-    {
-        return new UnnestNode(
-                idAllocator.getNextId(),
-                source,
-                replicateVariables,
-                unnestVariables,
-                ordinalityVariable);
-    }
-
-    public static Expression expression(String sql)
-    {
-        return ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql));
-    }
-
-    public RowExpression rowExpression(String sql)
-    {
-        Expression expression = expression(sql);
-        Map<NodeRef<Expression>, Type> expressionTypes = getExpressionTypes(
-                session,
-                metadata,
-                new SqlParser(),
-                getTypes(),
-                expression,
-                ImmutableList.of(),
-                WarningCollector.NOOP);
-        return SqlToRowExpressionTranslator.translate(
-                expression,
-                expressionTypes,
-                ImmutableMap.of(),
-                metadata.getFunctionManager(),
-                metadata.getTypeManager(),
-                session);
-    }
-
-    public static RowExpression castToRowExpression(String sql)
-    {
-        return OriginalExpressionUtils.castToRowExpression(ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql)));
-    }
-
-    public static Expression expression(String sql, ParsingOptions options)
-    {
-        return ExpressionUtils.rewriteIdentifiersToSymbolReferences(new SqlParser().createExpression(sql, options));
-    }
-
-    public static List<Expression> expressions(String... expressions)
-    {
-        return Stream.of(expressions)
-                .map(PlanBuilder::expression)
-                .collect(toImmutableList());
-    }
-
-    public static List<RowExpression> constantExpressions(Type type, Object... values)
-    {
-        return Stream.of(values)
-                .map(value -> constant(value, type))
-                .collect(toImmutableList());
-    }
-
-    public TypeProvider getTypes()
-    {
-        return TypeProvider.viewOf(variables);
     }
 }

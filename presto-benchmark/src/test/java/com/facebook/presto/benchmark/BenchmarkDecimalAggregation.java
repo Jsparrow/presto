@@ -46,7 +46,25 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @Measurement(iterations = 10)
 public class BenchmarkDecimalAggregation
 {
-    @State(Thread)
+    @Benchmark
+    public List<Page> benchmarkBuildHash(AggregationContext context)
+    {
+        return context.getQueryRunner()
+                .execute(String.format("SELECT %s FROM orders GROUP BY orderstatus", context.project));
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkDecimalAggregation.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class AggregationContext
     {
         @Param({"orderstatus, avg(totalprice)",
@@ -79,23 +97,5 @@ public class BenchmarkDecimalAggregation
             queryRunner.close();
             queryRunner = null;
         }
-    }
-
-    @Benchmark
-    public List<Page> benchmarkBuildHash(AggregationContext context)
-    {
-        return context.getQueryRunner()
-                .execute(String.format("SELECT %s FROM orders GROUP BY orderstatus", context.project));
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkDecimalAggregation.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

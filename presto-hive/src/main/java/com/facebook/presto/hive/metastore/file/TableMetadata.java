@@ -80,7 +80,7 @@ public class TableMetadata
         this.bucketProperty = requireNonNull(bucketProperty, "bucketProperty is null");
         this.serdeParameters = requireNonNull(serdeParameters, "serdeParameters is null");
         this.externalLocation = requireNonNull(externalLocation, "externalLocation is null");
-        if (tableType.equals(EXTERNAL_TABLE)) {
+        if (tableType == EXTERNAL_TABLE) {
             checkArgument(externalLocation.isPresent(), "External location is required for external tables");
         }
         else {
@@ -113,7 +113,7 @@ public class TableMetadata
         bucketProperty = table.getStorage().getBucketProperty();
         serdeParameters = table.getStorage().getSerdeParameters();
 
-        if (tableType.equals(EXTERNAL_TABLE)) {
+        if (tableType == EXTERNAL_TABLE) {
             externalLocation = Optional.of(table.getStorage().getLocation());
         }
         else {
@@ -156,12 +156,7 @@ public class TableMetadata
                 return Optional.of(partitionColumn);
             }
         }
-        for (Column dataColumn : dataColumns) {
-            if (dataColumn.getName().equals(name)) {
-                return Optional.of(dataColumn);
-            }
-        }
-        return Optional.empty();
+        return dataColumns.stream().filter(dataColumn -> dataColumn.getName().equals(name)).findFirst().map(Optional::of).orElse(Optional.empty());
     }
 
     @JsonProperty

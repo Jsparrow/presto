@@ -47,11 +47,10 @@ class EstimateAssertion
             // Trigger exception message that includes compared values
             assertEquals(actual, expected, comparedValue);
         }
-        if (actual.isPresent()) {
-            Object actualValue = actual.get();
+        actual.ifPresent(actualValue -> {
             Object expectedValue = expected.get();
             assertClose(actualValue, expectedValue, comparedValue);
-        }
+        });
     }
 
     private void assertClose(Object actual, Object expected, String comparedValue)

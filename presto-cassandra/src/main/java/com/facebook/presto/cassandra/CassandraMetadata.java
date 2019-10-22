@@ -62,11 +62,15 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 
 public class CassandraMetadata
         implements ConnectorMetadata
 {
-    private final String connectorId;
+    private static final Logger logger = LoggerFactory.getLogger(CassandraMetadata.class);
+	private final String connectorId;
     private final CassandraSession cassandraSession;
     private final CassandraPartitionManager partitionManager;
     private final boolean allowDropTable;
@@ -92,7 +96,7 @@ public class CassandraMetadata
     public List<String> listSchemaNames(ConnectorSession session)
     {
         return cassandraSession.getCaseSensitiveSchemaNames().stream()
-                .map(name -> name.toLowerCase(ENGLISH))
+                .map(name -> StringUtils.lowerCase(name, ENGLISH))
                 .collect(toImmutableList());
     }
 
@@ -104,7 +108,8 @@ public class CassandraMetadata
             return cassandraSession.getTable(tableName).getTableHandle();
         }
         catch (TableNotFoundException | SchemaNotFoundException e) {
-            // table was not found
+            logger.error(e.getMessage(), e);
+			// table was not found
             return null;
         }
     }
@@ -134,16 +139,17 @@ public class CassandraMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, String schemaNameOrNull)
     {
         ImmutableList.Builder<SchemaTableName> tableNames = ImmutableList.builder();
-        for (String schemaName : listSchemas(session, schemaNameOrNull)) {
+        listSchemas(session, schemaNameOrNull).forEach(schemaName -> {
             try {
-                for (String tableName : cassandraSession.getCaseSensitiveTableNames(schemaName)) {
-                    tableNames.add(new SchemaTableName(schemaName, tableName.toLowerCase(ENGLISH)));
-                }
+                cassandraSession.getCaseSensitiveTableNames(schemaName).forEach(tableName -> {
+                    tableNames.add(new SchemaTableName(schemaName, StringUtils.lowerCase(tableName, ENGLISH)));
+                });
             }
             catch (SchemaNotFoundException e) {
+				logger.error(e.getMessage(), e);
                 // schema disappeared during listing operation
             }
-        }
+        });
         return tableNames.build();
     }
 
@@ -162,9 +168,9 @@ public class CassandraMetadata
         requireNonNull(tableHandle, "tableHandle is null");
         CassandraTable table = cassandraSession.getTable(getTableName(tableHandle));
         ImmutableMap.Builder<String, ColumnHandle> columnHandles = ImmutableMap.builder();
-        for (CassandraColumnHandle columnHandle : table.getColumns()) {
-            columnHandles.put(CassandraCqlUtils.cqlNameToSqlName(columnHandle.getName()).toLowerCase(ENGLISH), columnHandle);
-        }
+        table.getColumns().forEach(columnHandle -> {
+            columnHandles.put(StringUtils.lowerCase(CassandraCqlUtils.cqlNameToSqlName(columnHandle.getName()), ENGLISH), columnHandle);
+        });
         return columnHandles.build();
     }
 
@@ -173,14 +179,15 @@ public class CassandraMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix)) {
+        listTables(session, prefix).forEach(tableName -> {
             try {
                 columns.put(tableName, getTableMetadata(tableName).getColumns());
             }
             catch (NotFoundException e) {
+				logger.error(e.getMessage(), e);
                 // table disappeared during listing operation
             }
-        }
+        });
         return columns.build();
     }
 
@@ -275,11 +282,11 @@ public class CassandraMetadata
         ImmutableList.Builder<Type> columnTypes = ImmutableList.builder();
         ImmutableList.Builder<ExtraColumnMetadata> columnExtra = ImmutableList.builder();
         columnExtra.add(new ExtraColumnMetadata("id", true));
-        for (ColumnMetadata column : tableMetadata.getColumns()) {
+        tableMetadata.getColumns().forEach(column -> {
             columnNames.add(column.getName());
             columnTypes.add(column.getType());
             columnExtra.add(new ExtraColumnMetadata(column.getName(), column.isHidden()));
-        }
+        });
 
         // get the root directory for the database
         SchemaTableName table = tableMetadata.getTable();
@@ -294,7 +301,7 @@ public class CassandraMetadata
             queryBuilder.append(", ")
                     .append(name)
                     .append(" ")
-                    .append(toCassandraType(type).name().toLowerCase(ENGLISH));
+                    .append(StringUtils.lowerCase(toCassandraType(type).name(), ENGLISH));
         }
         queryBuilder.append(") ");
 

@@ -99,9 +99,7 @@ public class TestBackupManager
             futures.add(backupManager.submit(uuids.get(i), path(file)));
         }
         futures.forEach(CompletableFuture::join);
-        for (UUID uuid : uuids) {
-            assertTrue(backupStore.shardExists(uuid));
-        }
+        uuids.forEach(uuid -> assertTrue(backupStore.shardExists(uuid)));
 
         assertBackupStats(5, 0, 0);
         assertEmptyStagingDirectory();

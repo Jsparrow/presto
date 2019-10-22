@@ -55,12 +55,12 @@ public class LongDecimalWithOverflowAndLongStateSerializer
     @Override
     public void deserialize(Block block, int index, LongDecimalWithOverflowAndLongState state)
     {
-        if (!block.isNull(index)) {
-            SliceInput slice = VARBINARY.getSlice(block, index).getInput();
-
-            state.setLong(slice.readLong());
-            state.setOverflow(slice.readLong());
-            state.setLongDecimal(Slices.copyOf(slice.readSlice(slice.available())));
-        }
+        if (block.isNull(index)) {
+			return;
+		}
+		SliceInput slice = VARBINARY.getSlice(block, index).getInput();
+		state.setLong(slice.readLong());
+		state.setOverflow(slice.readLong());
+		state.setLongDecimal(Slices.copyOf(slice.readSlice(slice.available())));
     }
 }

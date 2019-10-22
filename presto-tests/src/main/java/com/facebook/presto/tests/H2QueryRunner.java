@@ -101,77 +101,28 @@ public class H2QueryRunner
         handle = Jdbi.open("jdbc:h2:mem:test" + System.nanoTime());
         TpchMetadata tpchMetadata = new TpchMetadata("");
 
-        handle.execute("CREATE TABLE orders (\n" +
-                "  orderkey BIGINT PRIMARY KEY,\n" +
-                "  custkey BIGINT NOT NULL,\n" +
-                "  orderstatus CHAR(1) NOT NULL,\n" +
-                "  totalprice DOUBLE NOT NULL,\n" +
-                "  orderdate DATE NOT NULL,\n" +
-                "  orderpriority CHAR(15) NOT NULL,\n" +
-                "  clerk CHAR(15) NOT NULL,\n" +
-                "  shippriority INTEGER NOT NULL,\n" +
-                "  comment VARCHAR(79) NOT NULL\n" +
-                ")");
+        handle.execute(new StringBuilder().append("CREATE TABLE orders (\n").append("  orderkey BIGINT PRIMARY KEY,\n").append("  custkey BIGINT NOT NULL,\n").append("  orderstatus CHAR(1) NOT NULL,\n").append("  totalprice DOUBLE NOT NULL,\n").append("  orderdate DATE NOT NULL,\n").append("  orderpriority CHAR(15) NOT NULL,\n").append("  clerk CHAR(15) NOT NULL,\n")
+				.append("  shippriority INTEGER NOT NULL,\n").append("  comment VARCHAR(79) NOT NULL\n").append(")").toString());
         handle.execute("CREATE INDEX custkey_index ON orders (custkey)");
         insertRows(tpchMetadata, ORDERS);
 
-        handle.execute("CREATE TABLE lineitem (\n" +
-                "  orderkey BIGINT,\n" +
-                "  partkey BIGINT NOT NULL,\n" +
-                "  suppkey BIGINT NOT NULL,\n" +
-                "  linenumber INTEGER,\n" +
-                "  quantity DOUBLE NOT NULL,\n" +
-                "  extendedprice DOUBLE NOT NULL,\n" +
-                "  discount DOUBLE NOT NULL,\n" +
-                "  tax DOUBLE NOT NULL,\n" +
-                "  returnflag CHAR(1) NOT NULL,\n" +
-                "  linestatus CHAR(1) NOT NULL,\n" +
-                "  shipdate DATE NOT NULL,\n" +
-                "  commitdate DATE NOT NULL,\n" +
-                "  receiptdate DATE NOT NULL,\n" +
-                "  shipinstruct VARCHAR(25) NOT NULL,\n" +
-                "  shipmode VARCHAR(10) NOT NULL,\n" +
-                "  comment VARCHAR(44) NOT NULL,\n" +
-                "  PRIMARY KEY (orderkey, linenumber)" +
-                ")");
+        handle.execute(new StringBuilder().append("CREATE TABLE lineitem (\n").append("  orderkey BIGINT,\n").append("  partkey BIGINT NOT NULL,\n").append("  suppkey BIGINT NOT NULL,\n").append("  linenumber INTEGER,\n").append("  quantity DOUBLE NOT NULL,\n").append("  extendedprice DOUBLE NOT NULL,\n").append("  discount DOUBLE NOT NULL,\n")
+				.append("  tax DOUBLE NOT NULL,\n").append("  returnflag CHAR(1) NOT NULL,\n").append("  linestatus CHAR(1) NOT NULL,\n").append("  shipdate DATE NOT NULL,\n").append("  commitdate DATE NOT NULL,\n").append("  receiptdate DATE NOT NULL,\n").append("  shipinstruct VARCHAR(25) NOT NULL,\n").append("  shipmode VARCHAR(10) NOT NULL,\n").append("  comment VARCHAR(44) NOT NULL,\n")
+				.append("  PRIMARY KEY (orderkey, linenumber)").append(")").toString());
         insertRows(tpchMetadata, LINE_ITEM);
 
-        handle.execute(" CREATE TABLE partsupp (\n" +
-                "  partkey BIGINT NOT NULL,\n" +
-                "  suppkey BIGINT NOT NULL,\n" +
-                "  availqty INTEGER NOT NULL,\n" +
-                "  supplycost DOUBLE NOT NULL,\n" +
-                "  comment VARCHAR(199) NOT NULL,\n" +
-                "  PRIMARY KEY(partkey, suppkey)" +
-                ")");
+        handle.execute(new StringBuilder().append(" CREATE TABLE partsupp (\n").append("  partkey BIGINT NOT NULL,\n").append("  suppkey BIGINT NOT NULL,\n").append("  availqty INTEGER NOT NULL,\n").append("  supplycost DOUBLE NOT NULL,\n").append("  comment VARCHAR(199) NOT NULL,\n").append("  PRIMARY KEY(partkey, suppkey)").append(")")
+				.toString());
         insertRows(tpchMetadata, PART_SUPPLIER);
 
-        handle.execute("CREATE TABLE nation (\n" +
-                "  nationkey BIGINT PRIMARY KEY,\n" +
-                "  name VARCHAR(25) NOT NULL,\n" +
-                "  regionkey BIGINT NOT NULL,\n" +
-                "  comment VARCHAR(114) NOT NULL\n" +
-                ")");
+        handle.execute(new StringBuilder().append("CREATE TABLE nation (\n").append("  nationkey BIGINT PRIMARY KEY,\n").append("  name VARCHAR(25) NOT NULL,\n").append("  regionkey BIGINT NOT NULL,\n").append("  comment VARCHAR(114) NOT NULL\n").append(")").toString());
         insertRows(tpchMetadata, NATION);
 
-        handle.execute("CREATE TABLE region(\n" +
-                "  regionkey BIGINT PRIMARY KEY,\n" +
-                "  name VARCHAR(25) NOT NULL,\n" +
-                "  comment VARCHAR(115) NOT NULL\n" +
-                ")");
+        handle.execute(new StringBuilder().append("CREATE TABLE region(\n").append("  regionkey BIGINT PRIMARY KEY,\n").append("  name VARCHAR(25) NOT NULL,\n").append("  comment VARCHAR(115) NOT NULL\n").append(")").toString());
         insertRows(tpchMetadata, REGION);
 
-        handle.execute("CREATE TABLE part(\n" +
-                "  partkey BIGINT PRIMARY KEY,\n" +
-                "  name VARCHAR(55) NOT NULL,\n" +
-                "  mfgr VARCHAR(25) NOT NULL,\n" +
-                "  brand VARCHAR(10) NOT NULL,\n" +
-                "  type VARCHAR(25) NOT NULL,\n" +
-                "  size INTEGER NOT NULL,\n" +
-                "  container VARCHAR(10) NOT NULL,\n" +
-                "  retailprice DOUBLE NOT NULL,\n" +
-                "  comment VARCHAR(23) NOT NULL\n" +
-                ")");
+        handle.execute(new StringBuilder().append("CREATE TABLE part(\n").append("  partkey BIGINT PRIMARY KEY,\n").append("  name VARCHAR(55) NOT NULL,\n").append("  mfgr VARCHAR(25) NOT NULL,\n").append("  brand VARCHAR(10) NOT NULL,\n").append("  type VARCHAR(25) NOT NULL,\n").append("  size INTEGER NOT NULL,\n").append("  container VARCHAR(10) NOT NULL,\n")
+				.append("  retailprice DOUBLE NOT NULL,\n").append("  comment VARCHAR(23) NOT NULL\n").append(")").toString());
         insertRows(tpchMetadata, PART);
     }
 
@@ -202,200 +153,194 @@ public class H2QueryRunner
 
     private static RowMapper<MaterializedRow> rowMapper(List<? extends Type> types)
     {
-        return new RowMapper<MaterializedRow>()
-        {
-            @Override
-            public MaterializedRow map(ResultSet resultSet, StatementContext context)
-                    throws SQLException
-            {
-                int count = resultSet.getMetaData().getColumnCount();
-                checkArgument(types.size() == count, "expected types count (%s) does not match actual column count (%s)", types.size(), count);
-                List<Object> row = new ArrayList<>(count);
-                for (int i = 1; i <= count; i++) {
-                    Type type = types.get(i - 1);
-                    if (BOOLEAN.equals(type)) {
-                        boolean booleanValue = resultSet.getBoolean(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(booleanValue);
-                        }
-                    }
-                    else if (TINYINT.equals(type)) {
-                        byte byteValue = resultSet.getByte(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(byteValue);
-                        }
-                    }
-                    else if (SMALLINT.equals(type)) {
-                        short shortValue = resultSet.getShort(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(shortValue);
-                        }
-                    }
-                    else if (INTEGER.equals(type)) {
-                        int intValue = resultSet.getInt(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(intValue);
-                        }
-                    }
-                    else if (BIGINT.equals(type)) {
-                        long longValue = resultSet.getLong(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(longValue);
-                        }
-                    }
-                    else if (REAL.equals(type)) {
-                        float floatValue = resultSet.getFloat(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(floatValue);
-                        }
-                    }
-                    else if (DOUBLE.equals(type)) {
-                        double doubleValue = resultSet.getDouble(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(doubleValue);
-                        }
-                    }
-                    else if (isVarcharType(type)) {
-                        String stringValue = resultSet.getString(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(stringValue);
-                        }
-                    }
-                    else if (isCharType(type)) {
-                        String stringValue = resultSet.getString(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(padEnd(stringValue, ((CharType) type).getLength(), ' '));
-                        }
-                    }
-                    else if (VARBINARY.equals(type)) {
-                        byte[] binary = resultSet.getBytes(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(binary);
-                        }
-                    }
-                    else if (DATE.equals(type)) {
-                        // resultSet.getDate(i) doesn't work if JVM's zone skipped day being retrieved (e.g. 2011-12-30 and Pacific/Apia zone)
-                        LocalDate dateValue = resultSet.getObject(i, LocalDate.class);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(dateValue);
-                        }
-                    }
-                    else if (TIME.equals(type)) {
-                        // resultSet.getTime(i) doesn't work if JVM's zone had forward offset change during 1970-01-01 (e.g. America/Hermosillo zone)
-                        LocalTime timeValue = resultSet.getObject(i, LocalTime.class);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(timeValue);
-                        }
-                    }
-                    else if (TIME_WITH_TIME_ZONE.equals(type)) {
-                        throw new UnsupportedOperationException("H2 does not support TIME WITH TIME ZONE");
-                    }
-                    else if (TIMESTAMP.equals(type)) {
-                        // resultSet.getTimestamp(i) doesn't work if JVM's zone had forward offset at the date/time being retrieved
-                        LocalDateTime timestampValue;
-                        try {
-                            timestampValue = resultSet.getObject(i, LocalDateTime.class);
-                        }
-                        catch (SQLException first) {
-                            // H2 cannot convert DATE to LocalDateTime in their JDBC driver (even though it can convert to java.sql.Timestamp), we need to do this manually
-                            try {
-                                timestampValue = Optional.ofNullable(resultSet.getObject(i, LocalDate.class)).map(LocalDate::atStartOfDay).orElse(null);
-                            }
-                            catch (RuntimeException e) {
-                                first.addSuppressed(e);
-                                throw first;
-                            }
-                        }
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(timestampValue);
-                        }
-                    }
-                    else if (TIMESTAMP_WITH_TIME_ZONE.equals(type)) {
-                        // H2 supports TIMESTAMP WITH TIME ZONE via org.h2.api.TimestampWithTimeZone, but it represent only a fixed-offset TZ (not named)
-                        // This means H2 is unsuitable for testing TIMESTAMP WITH TIME ZONE-bearing queries. Those need to be tested manually.
-                        throw new UnsupportedOperationException();
-                    }
-                    else if (UNKNOWN.equals(type)) {
-                        Object objectValue = resultSet.getObject(i);
-                        checkState(resultSet.wasNull(), "Expected a null value, but got %s", objectValue);
-                        row.add(null);
-                    }
-                    else if (type instanceof DecimalType) {
-                        DecimalType decimalType = (DecimalType) type;
-                        BigDecimal decimalValue = resultSet.getBigDecimal(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(decimalValue
-                                    .setScale(decimalType.getScale(), BigDecimal.ROUND_HALF_UP)
-                                    .round(new MathContext(decimalType.getPrecision())));
-                        }
-                    }
-                    else if (type instanceof ArrayType) {
-                        Array array = resultSet.getArray(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(newArrayList(mapArrayValues(((ArrayType) type), (Object[]) array.getArray())));
-                        }
-                    }
-                    else if (type instanceof RowType) {
-                        Array array = resultSet.getArray(i);
-                        if (resultSet.wasNull()) {
-                            row.add(null);
-                        }
-                        else {
-                            row.add(newArrayList(mapRowValues((RowType) type, (Object[]) array.getArray())));
-                        }
-                    }
-                    else {
-                        throw new AssertionError("unhandled type: " + type);
-                    }
-                }
-                return new MaterializedRow(MaterializedResult.DEFAULT_PRECISION, row);
-            }
-        };
+        return (ResultSet resultSet, StatementContext context) -> {
+		    int count = resultSet.getMetaData().getColumnCount();
+		    checkArgument(types.size() == count, "expected types count (%s) does not match actual column count (%s)", types.size(), count);
+		    List<Object> row = new ArrayList<>(count);
+		    for (int i = 1; i <= count; i++) {
+		        Type type = types.get(i - 1);
+		        if (BOOLEAN.equals(type)) {
+		            boolean booleanValue = resultSet.getBoolean(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(booleanValue);
+		            }
+		        }
+		        else if (TINYINT.equals(type)) {
+		            byte byteValue = resultSet.getByte(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(byteValue);
+		            }
+		        }
+		        else if (SMALLINT.equals(type)) {
+		            short shortValue = resultSet.getShort(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(shortValue);
+		            }
+		        }
+		        else if (INTEGER.equals(type)) {
+		            int intValue = resultSet.getInt(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(intValue);
+		            }
+		        }
+		        else if (BIGINT.equals(type)) {
+		            long longValue = resultSet.getLong(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(longValue);
+		            }
+		        }
+		        else if (REAL.equals(type)) {
+		            float floatValue = resultSet.getFloat(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(floatValue);
+		            }
+		        }
+		        else if (DOUBLE.equals(type)) {
+		            double doubleValue = resultSet.getDouble(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(doubleValue);
+		            }
+		        }
+		        else if (isVarcharType(type)) {
+		            String stringValue = resultSet.getString(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(stringValue);
+		            }
+		        }
+		        else if (isCharType(type)) {
+		            String stringValue = resultSet.getString(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(padEnd(stringValue, ((CharType) type).getLength(), ' '));
+		            }
+		        }
+		        else if (VARBINARY.equals(type)) {
+		            byte[] binary = resultSet.getBytes(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(binary);
+		            }
+		        }
+		        else if (DATE.equals(type)) {
+		            // resultSet.getDate(i) doesn't work if JVM's zone skipped day being retrieved (e.g. 2011-12-30 and Pacific/Apia zone)
+		            LocalDate dateValue = resultSet.getObject(i, LocalDate.class);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(dateValue);
+		            }
+		        }
+		        else if (TIME.equals(type)) {
+		            // resultSet.getTime(i) doesn't work if JVM's zone had forward offset change during 1970-01-01 (e.g. America/Hermosillo zone)
+		            LocalTime timeValue = resultSet.getObject(i, LocalTime.class);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(timeValue);
+		            }
+		        }
+		        else if (TIME_WITH_TIME_ZONE.equals(type)) {
+		            throw new UnsupportedOperationException("H2 does not support TIME WITH TIME ZONE");
+		        }
+		        else if (TIMESTAMP.equals(type)) {
+		            // resultSet.getTimestamp(i) doesn't work if JVM's zone had forward offset at the date/time being retrieved
+		            LocalDateTime timestampValue;
+		            try {
+		                timestampValue = resultSet.getObject(i, LocalDateTime.class);
+		            }
+		            catch (SQLException first) {
+		                // H2 cannot convert DATE to LocalDateTime in their JDBC driver (even though it can convert to java.sql.Timestamp), we need to do this manually
+		                try {
+		                    timestampValue = Optional.ofNullable(resultSet.getObject(i, LocalDate.class)).map(LocalDate::atStartOfDay).orElse(null);
+		                }
+		                catch (RuntimeException e) {
+		                    first.addSuppressed(e);
+		                    throw first;
+		                }
+		            }
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(timestampValue);
+		            }
+		        }
+		        else if (TIMESTAMP_WITH_TIME_ZONE.equals(type)) {
+		            // H2 supports TIMESTAMP WITH TIME ZONE via org.h2.api.TimestampWithTimeZone, but it represent only a fixed-offset TZ (not named)
+		            // This means H2 is unsuitable for testing TIMESTAMP WITH TIME ZONE-bearing queries. Those need to be tested manually.
+		            throw new UnsupportedOperationException();
+		        }
+		        else if (UNKNOWN.equals(type)) {
+		            Object objectValue = resultSet.getObject(i);
+		            checkState(resultSet.wasNull(), "Expected a null value, but got %s", objectValue);
+		            row.add(null);
+		        }
+		        else if (type instanceof DecimalType) {
+		            DecimalType decimalType = (DecimalType) type;
+		            BigDecimal decimalValue = resultSet.getBigDecimal(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(decimalValue
+		                        .setScale(decimalType.getScale(), BigDecimal.ROUND_HALF_UP)
+		                        .round(new MathContext(decimalType.getPrecision())));
+		            }
+		        }
+		        else if (type instanceof ArrayType) {
+		            Array array = resultSet.getArray(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(newArrayList(mapArrayValues(((ArrayType) type), (Object[]) array.getArray())));
+		            }
+		        }
+		        else if (type instanceof RowType) {
+		            Array array = resultSet.getArray(i);
+		            if (resultSet.wasNull()) {
+		                row.add(null);
+		            }
+		            else {
+		                row.add(newArrayList(mapRowValues((RowType) type, (Object[]) array.getArray())));
+		            }
+		        }
+		        else {
+		            throw new AssertionError("unhandled type: " + type);
+		        }
+		    }
+		    return new MaterializedRow(MaterializedResult.DEFAULT_PRECISION, row);
+		};
     }
 
     private static Object[] mapArrayValues(ArrayType arrayType, Object[] values)

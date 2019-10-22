@@ -82,6 +82,7 @@ import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import org.apache.commons.lang3.StringUtils;
 
 public class NativeCassandraSession
         implements CassandraSession
@@ -114,9 +115,7 @@ public class NativeCassandraSession
         ResultSet result = executeWithSession(session -> session.execute("select release_version from system.local"));
         Row versionRow = result.one();
         if (versionRow == null) {
-            throw new PrestoException(CASSANDRA_VERSION_ERROR, "The cluster version is not available. " +
-                    "Please make sure that the Cassandra cluster is up and running, " +
-                    "and that the contact points are specified correctly.");
+            throw new PrestoException(CASSANDRA_VERSION_ERROR, new StringBuilder().append("The cluster version is not available. ").append("Please make sure that the Cassandra cluster is up and running, ").append("and that the contact points are specified correctly.").toString());
         }
         return VersionNumber.parse(versionRow.getString("release_version"));
     }
@@ -162,30 +161,22 @@ public class NativeCassandraSession
     {
         ImmutableList.Builder<String> builder = ImmutableList.builder();
         List<KeyspaceMetadata> keyspaces = executeWithSession(session -> session.getCluster().getMetadata().getKeyspaces());
-        for (KeyspaceMetadata meta : keyspaces) {
-            builder.add(meta.getName());
-        }
+        keyspaces.forEach(meta -> builder.add(meta.getName()));
         return builder.build();
     }
 
     @Override
     public List<String> getCaseSensitiveTableNames(String caseInsensitiveSchemaName)
-            throws SchemaNotFoundException
     {
         KeyspaceMetadata keyspace = getKeyspaceByCaseInsensitiveName(caseInsensitiveSchemaName);
         ImmutableList.Builder<String> builder = ImmutableList.builder();
-        for (TableMetadata table : keyspace.getTables()) {
-            builder.add(table.getName());
-        }
-        for (MaterializedViewMetadata materializedView : keyspace.getMaterializedViews()) {
-            builder.add(materializedView.getName());
-        }
+        keyspace.getTables().forEach(table -> builder.add(table.getName()));
+        keyspace.getMaterializedViews().forEach(materializedView -> builder.add(materializedView.getName()));
         return builder.build();
     }
 
     @Override
     public CassandraTable getTable(SchemaTableName schemaTableName)
-            throws TableNotFoundException
     {
         KeyspaceMetadata keyspace = getKeyspaceByCaseInsensitiveName(schemaTableName.getSchemaName());
         AbstractTableMetadata tableMeta = getTableMetadata(keyspace, schemaTableName.getTableName());
@@ -193,15 +184,13 @@ public class NativeCassandraSession
         List<String> columnNames = new ArrayList<>();
         List<ColumnMetadata> columns = tableMeta.getColumns();
         checkColumnNames(columns);
-        for (ColumnMetadata columnMetadata : columns) {
-            columnNames.add(columnMetadata.getName());
-        }
+        columns.forEach(columnMetadata -> columnNames.add(columnMetadata.getName()));
 
         // check if there is a comment to establish column ordering
         String comment = tableMeta.getOptions().getComment();
         Set<String> hiddenColumns = ImmutableSet.of();
-        if (comment != null && comment.startsWith(PRESTO_COMMENT_METADATA)) {
-            String columnOrderingString = comment.substring(PRESTO_COMMENT_METADATA.length());
+        if (comment != null && StringUtils.startsWith(comment, PRESTO_COMMENT_METADATA)) {
+            String columnOrderingString = StringUtils.substring(comment, PRESTO_COMMENT_METADATA.length());
 
             // column ordering
             List<ExtraColumnMetadata> extras = extraColumnMetadataCodec.fromJson(columnOrderingString);
@@ -219,29 +208,27 @@ public class NativeCassandraSession
 
         // add primary keys first
         Set<String> primaryKeySet = new HashSet<>();
-        for (ColumnMetadata columnMeta : tableMeta.getPartitionKey()) {
+        tableMeta.getPartitionKey().forEach(columnMeta -> {
             primaryKeySet.add(columnMeta.getName());
             boolean hidden = hiddenColumns.contains(columnMeta.getName());
             CassandraColumnHandle columnHandle = buildColumnHandle(tableMeta, columnMeta, true, false, columnNames.indexOf(columnMeta.getName()), hidden);
             columnHandles.add(columnHandle);
-        }
+        });
 
         // add clustering columns
-        for (ColumnMetadata columnMeta : tableMeta.getClusteringColumns()) {
+		tableMeta.getClusteringColumns().forEach(columnMeta -> {
             primaryKeySet.add(columnMeta.getName());
             boolean hidden = hiddenColumns.contains(columnMeta.getName());
             CassandraColumnHandle columnHandle = buildColumnHandle(tableMeta, columnMeta, false, true, columnNames.indexOf(columnMeta.getName()), hidden);
             columnHandles.add(columnHandle);
-        }
+        });
 
         // add other columns
-        for (ColumnMetadata columnMeta : columns) {
-            if (!primaryKeySet.contains(columnMeta.getName())) {
-                boolean hidden = hiddenColumns.contains(columnMeta.getName());
-                CassandraColumnHandle columnHandle = buildColumnHandle(tableMeta, columnMeta, false, false, columnNames.indexOf(columnMeta.getName()), hidden);
-                columnHandles.add(columnHandle);
-            }
-        }
+		columns.stream().filter(columnMeta -> !primaryKeySet.contains(columnMeta.getName())).forEach(columnMeta -> {
+		    boolean hidden = hiddenColumns.contains(columnMeta.getName());
+		    CassandraColumnHandle columnHandle = buildColumnHandle(tableMeta, columnMeta, false, false, columnNames.indexOf(columnMeta.getName()), hidden);
+		    columnHandles.add(columnHandle);
+		});
 
         List<CassandraColumnHandle> sortedColumnHandles = columnHandles.build().stream()
                 .sorted(comparing(CassandraColumnHandle::getOrdinalPosition))
@@ -252,14 +239,13 @@ public class NativeCassandraSession
     }
 
     private KeyspaceMetadata getKeyspaceByCaseInsensitiveName(String caseInsensitiveSchemaName)
-            throws SchemaNotFoundException
     {
         List<KeyspaceMetadata> keyspaces = executeWithSession(session -> session.getCluster().getMetadata().getKeyspaces());
         KeyspaceMetadata result = null;
         // Ensure that the error message is deterministic
         List<KeyspaceMetadata> sortedKeyspaces = Ordering.from(comparing(KeyspaceMetadata::getName)).immutableSortedCopy(keyspaces);
         for (KeyspaceMetadata keyspace : sortedKeyspaces) {
-            if (keyspace.getName().equalsIgnoreCase(caseInsensitiveSchemaName)) {
+            if (StringUtils.equalsIgnoreCase(keyspace.getName(), caseInsensitiveSchemaName)) {
                 if (result != null) {
                     throw new PrestoException(
                             NOT_SUPPORTED,
@@ -280,7 +266,7 @@ public class NativeCassandraSession
         List<AbstractTableMetadata> tables = Stream.concat(
                 keyspace.getTables().stream(),
                 keyspace.getMaterializedViews().stream())
-                .filter(table -> table.getName().equalsIgnoreCase(caseInsensitiveTableName))
+                .filter(table -> StringUtils.equalsIgnoreCase(table.getName(), caseInsensitiveTableName))
                 .collect(toImmutableList());
         if (tables.size() == 0) {
             throw new TableNotFoundException(new SchemaTableName(keyspace.getName(), caseInsensitiveTableName));
@@ -298,7 +284,8 @@ public class NativeCassandraSession
                         caseInsensitiveTableName, tableNames));
     }
 
-    public boolean isMaterializedView(SchemaTableName schemaTableName)
+    @Override
+	public boolean isMaterializedView(SchemaTableName schemaTableName)
     {
         KeyspaceMetadata keyspace = getKeyspaceByCaseInsensitiveName(schemaTableName.getSchemaName());
         return keyspace.getMaterializedView(schemaTableName.getTableName()) != null;
@@ -308,7 +295,7 @@ public class NativeCassandraSession
     {
         Map<String, ColumnMetadata> lowercaseNameToColumnMap = new HashMap<>();
         for (ColumnMetadata column : columns) {
-            String lowercaseName = column.getName().toLowerCase(ENGLISH);
+            String lowercaseName = StringUtils.lowerCase(column.getName(), ENGLISH);
             if (lowercaseNameToColumnMap.containsKey(lowercaseName)) {
                 throw new PrestoException(
                         NOT_SUPPORTED,
@@ -457,7 +444,7 @@ public class NativeCassandraSession
         Set<List<Object>> filterCombinations = Sets.cartesianProduct(filterPrefixes);
 
         ImmutableList.Builder<Row> rowList = ImmutableList.builder();
-        for (List<Object> combination : filterCombinations) {
+        filterCombinations.forEach(combination -> {
             Select partitionKeys = CassandraCqlUtils.selectDistinctFrom(tableHandle, partitionKeyColumns);
             addWhereClause(partitionKeys.where(), partitionKeyColumns, combination);
 
@@ -465,7 +452,7 @@ public class NativeCassandraSession
             if (resultRows != null && !resultRows.isEmpty()) {
                 rowList.addAll(resultRows);
             }
-        }
+        });
 
         return rowList.build();
     }
@@ -504,14 +491,11 @@ public class NativeCassandraSession
 
         ResultSet result = executeWithSession(session -> session.execute(statement));
         ImmutableList.Builder<SizeEstimate> estimates = ImmutableList.builder();
-        for (Row row : result.all()) {
-            SizeEstimate estimate = new SizeEstimate(
-                    row.getString("range_start"),
-                    row.getString("range_end"),
-                    row.getLong("mean_partition_size"),
-                    row.getLong("partitions_count"));
-            estimates.add(estimate);
-        }
+        result.all().stream().map(row -> new SizeEstimate(
+		        row.getString("range_start"),
+		        row.getString("range_end"),
+		        row.getLong("mean_partition_size"),
+		        row.getLong("partitions_count"))).forEach(estimates::add);
 
         return estimates.build();
     }

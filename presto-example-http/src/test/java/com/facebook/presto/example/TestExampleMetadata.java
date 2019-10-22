@@ -36,11 +36,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestExampleMetadata
 {
-    private static final String CONNECTOR_ID = "TEST";
+    private static final Logger logger = LoggerFactory.getLogger(TestExampleMetadata.class);
+	private static final String CONNECTOR_ID = "TEST";
     private static final ExampleTableHandle NUMBERS_TABLE_HANDLE = new ExampleTableHandle(CONNECTOR_ID, "example", "numbers");
     private ExampleMetadata metadata;
 
@@ -83,12 +86,14 @@ public class TestExampleMetadata
             fail("Expected getColumnHandle of unknown table to throw a TableNotFoundException");
         }
         catch (TableNotFoundException expected) {
+			logger.error(expected.getMessage(), expected);
         }
         try {
             metadata.getColumnHandles(SESSION, new ExampleTableHandle(CONNECTOR_ID, "example", "unknown"));
             fail("Expected getColumnHandle of unknown table to throw a TableNotFoundException");
         }
         catch (TableNotFoundException expected) {
+			logger.error(expected.getMessage(), expected);
         }
     }
 

@@ -83,7 +83,7 @@ public class SwitchCodeGenerator
 
         List<RowExpression> whenClauses;
         RowExpression last = arguments.get(arguments.size() - 1);
-        if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm().equals(WHEN)) {
+        if (last instanceof SpecialFormExpression && ((SpecialFormExpression) last).getForm() == WHEN) {
             whenClauses = arguments.subList(1, arguments.size());
             elseValue = new BytecodeBlock()
                     .append(generatorContext.wasNull().set(constantTrue()))

@@ -45,13 +45,16 @@ public class MoreByteArrays
         }
     }
 
-    public static byte getByte(byte[] bytes, int index)
+    private MoreByteArrays()
+    {}
+
+	public static byte getByte(byte[] bytes, int index)
     {
         checkValidRange(index, SIZE_OF_BYTE, bytes.length);
         return unsafe.getByte(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET);
     }
 
-    public static int fill(byte[] bytes, int index, int length, byte value)
+	public static int fill(byte[] bytes, int index, int length, byte value)
     {
         requireNonNull(bytes, "bytes is null");
         checkValidRange(index, length, bytes.length);
@@ -60,7 +63,7 @@ public class MoreByteArrays
         return index + length;
     }
 
-    public static int setBytes(byte[] bytes, int index, byte[] values, int offset, int length)
+	public static int setBytes(byte[] bytes, int index, byte[] values, int offset, int length)
     {
         requireNonNull(bytes, "bytes is null");
         requireNonNull(values, "values is null");
@@ -73,7 +76,7 @@ public class MoreByteArrays
         return index + length;
     }
 
-    public static int setInts(byte[] bytes, int index, int[] values, int offset, int length)
+	public static int setInts(byte[] bytes, int index, int[] values, int offset, int length)
     {
         requireNonNull(bytes, "bytes is null");
         requireNonNull(values, "values is null");
@@ -88,13 +91,10 @@ public class MoreByteArrays
         return index;
     }
 
-    private static void checkValidRange(int start, int length, int size)
+	private static void checkValidRange(int start, int length, int size)
     {
         if (start < 0 || length < 0 || start + length > size) {
             throw new IndexOutOfBoundsException(format("Invalid start %s and length %s with array size %s", start, length, size));
         }
     }
-
-    private MoreByteArrays()
-    {}
 }

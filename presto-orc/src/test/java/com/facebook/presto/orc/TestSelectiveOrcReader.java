@@ -613,14 +613,14 @@ public class TestSelectiveOrcReader
     {
         Random random = new Random(0);
 
-        tester.testRoundTrip(mapType(INTEGER, INTEGER), createList(NUM_ROWS, i -> createMap(i)));
+        tester.testRoundTrip(mapType(INTEGER, INTEGER), createList(NUM_ROWS, TestSelectiveOrcReader::createMap));
 
         // map column with no nulls
         tester.testRoundTripTypes(
                 ImmutableList.of(INTEGER, mapType(INTEGER, INTEGER)),
                 ImmutableList.of(
                         createList(NUM_ROWS, i -> random.nextInt()),
-                        createList(NUM_ROWS, i -> createMap(i))),
+                        createList(NUM_ROWS, TestSelectiveOrcReader::createMap)),
                 toSubfieldFilters(
                         ImmutableMap.of(0, BigintRange.of(0, Integer.MAX_VALUE, false)),
                         ImmutableMap.of(1, IS_NOT_NULL),

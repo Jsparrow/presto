@@ -85,9 +85,7 @@ public class AccumuloRecordSet
         // Save off the column handles and createa list of the Accumulo types
         this.columnHandles = requireNonNull(columnHandles, "column handles is null");
         ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (AccumuloColumnHandle column : columnHandles) {
-            types.add(column.getType());
-        }
+        columnHandles.forEach(column -> types.add(column.getType()));
         this.columnTypes = types.build();
 
         try {

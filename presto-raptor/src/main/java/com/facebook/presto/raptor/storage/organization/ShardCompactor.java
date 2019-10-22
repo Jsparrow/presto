@@ -48,6 +48,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.units.Duration.nanosSince;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ShardCompactor
 {
@@ -129,11 +131,10 @@ public final class ShardCompactor
         Queue<SortedPageSource> rowSources = new PriorityQueue<>();
         StoragePageSink outputPageSink = storageManager.createStoragePageSink(transactionId, bucketNumber, columnIds, columnTypes, false);
         try {
-            for (UUID uuid : uuids) {
-                ConnectorPageSource pageSource = storageManager.getPageSource(uuid, bucketNumber, columnIds, columnTypes, TupleDomain.all(), readerAttributes);
-                SortedPageSource rowSource = new SortedPageSource(pageSource, columnTypes, sortIndexes, sortOrders);
-                rowSources.add(rowSource);
-            }
+            uuids.stream().map(uuid -> storageManager.getPageSource(uuid, bucketNumber, columnIds, columnTypes, TupleDomain.all(), readerAttributes)).forEach(pageSource -> {
+				SortedPageSource rowSource = new SortedPageSource(pageSource, columnTypes, sortIndexes, sortOrders);
+				rowSources.add(rowSource);
+			});
             while (!rowSources.isEmpty()) {
                 SortedPageSource rowSource = rowSources.poll();
                 if (!rowSource.hasNext()) {
@@ -166,10 +167,69 @@ public final class ShardCompactor
         }
     }
 
-    private static class SortedPageSource
+    private static boolean isNullOrEmptyPage(Page nextPage)
+    {
+        return nextPage == null || nextPage.getPositionCount() == 0;
+    }
+
+	private void updateStats(int inputShardsCount, int outputShardsCount, long latency)
+    {
+        inputShards.update(inputShardsCount);
+        outputShards.update(outputShardsCount);
+
+        inputShardsPerCompaction.add(inputShardsCount);
+        outputShardsPerCompaction.add(outputShardsCount);
+
+        compactionLatencyMillis.add(latency);
+    }
+
+	@Managed
+    @Nested
+    public CounterStat getInputShards()
+    {
+        return inputShards;
+    }
+
+	@Managed
+    @Nested
+    public CounterStat getOutputShards()
+    {
+        return outputShards;
+    }
+
+	@Managed
+    @Nested
+    public DistributionStat getInputShardsPerCompaction()
+    {
+        return inputShardsPerCompaction;
+    }
+
+	@Managed
+    @Nested
+    public DistributionStat getOutputShardsPerCompaction()
+    {
+        return outputShardsPerCompaction;
+    }
+
+	@Managed
+    @Nested
+    public DistributionStat getCompactionLatencyMillis()
+    {
+        return compactionLatencyMillis;
+    }
+
+	@Managed
+    @Nested
+    public DistributionStat getSortedCompactionLatencyMillis()
+    {
+        return sortedCompactionLatencyMillis;
+    }
+
+	private static class SortedPageSource
             implements Iterator<Page>, Comparable<SortedPageSource>, Closeable
     {
-        private final ConnectorPageSource pageSource;
+        private final Logger logger = LoggerFactory.getLogger(SortedPageSource.class);
+		private final ConnectorPageSource pageSource;
         private final List<Type> columnTypes;
         private final List<Integer> sortIndexes;
         private final List<SortOrder> sortOrders;
@@ -269,6 +329,7 @@ public final class ShardCompactor
                 close();
             }
             catch (IOException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
         }
 
@@ -278,63 +339,5 @@ public final class ShardCompactor
         {
             pageSource.close();
         }
-    }
-
-    private static boolean isNullOrEmptyPage(Page nextPage)
-    {
-        return nextPage == null || nextPage.getPositionCount() == 0;
-    }
-
-    private void updateStats(int inputShardsCount, int outputShardsCount, long latency)
-    {
-        inputShards.update(inputShardsCount);
-        outputShards.update(outputShardsCount);
-
-        inputShardsPerCompaction.add(inputShardsCount);
-        outputShardsPerCompaction.add(outputShardsCount);
-
-        compactionLatencyMillis.add(latency);
-    }
-
-    @Managed
-    @Nested
-    public CounterStat getInputShards()
-    {
-        return inputShards;
-    }
-
-    @Managed
-    @Nested
-    public CounterStat getOutputShards()
-    {
-        return outputShards;
-    }
-
-    @Managed
-    @Nested
-    public DistributionStat getInputShardsPerCompaction()
-    {
-        return inputShardsPerCompaction;
-    }
-
-    @Managed
-    @Nested
-    public DistributionStat getOutputShardsPerCompaction()
-    {
-        return outputShardsPerCompaction;
-    }
-
-    @Managed
-    @Nested
-    public DistributionStat getCompactionLatencyMillis()
-    {
-        return compactionLatencyMillis;
-    }
-
-    @Managed
-    @Nested
-    public DistributionStat getSortedCompactionLatencyMillis()
-    {
-        return sortedCompactionLatencyMillis;
     }
 }

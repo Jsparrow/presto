@@ -190,7 +190,7 @@ public class OrderingCompiler
             SortOrder sortOrder = sortOrders.get(i);
 
             BytecodeBlock block = new BytecodeBlock()
-                    .setDescription("compare channel " + sortChannel + " " + sortOrder);
+                    .setDescription(new StringBuilder().append("compare channel ").append(sortChannel).append(" ").append(sortOrder).toString());
 
             Type sortType = sortTypes.get(i);
 
@@ -284,7 +284,7 @@ public class OrderingCompiler
             SortOrder sortOrder = sortOrders.get(i);
 
             BytecodeBlock block = new BytecodeBlock()
-                    .setDescription("compare channel " + sortChannel + " " + sortOrder);
+                    .setDescription(new StringBuilder().append("compare channel ").append(sortChannel).append(" ").append(sortOrder).toString());
 
             Type sortType = types.get(sortChannel);
 

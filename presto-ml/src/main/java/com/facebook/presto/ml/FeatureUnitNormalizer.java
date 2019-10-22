@@ -54,11 +54,11 @@ public class FeatureUnitNormalizer
     {
         // Serialization format is (<key:int><min:double><max:double>)*
         SliceOutput output = Slices.allocate((SizeOf.SIZE_OF_INT + 2 * SizeOf.SIZE_OF_DOUBLE) * mins.size()).getOutput();
-        for (int key : mins.keySet()) {
+        mins.keySet().stream().mapToInt(Integer::valueOf).forEach(key -> {
             output.appendInt(key);
             output.appendDouble(mins.get(key));
             output.appendDouble(maxs.get(key));
-        }
+        });
         return output.slice().getBytes();
     }
 
@@ -77,33 +77,31 @@ public class FeatureUnitNormalizer
     @Override
     public void train(Dataset dataset)
     {
-        for (FeatureVector vector : dataset.getDatapoints()) {
-            for (Map.Entry<Integer, Double> feature : vector.getFeatures().entrySet()) {
-                int key = feature.getKey();
-                double value = feature.getValue();
-                if (value < mins.get(key)) {
-                    mins.put(key, value);
-                }
-                if (value > maxs.get(key)) {
-                    maxs.put(key, value);
-                }
-            }
-        }
+        dataset.getDatapoints().forEach(vector -> vector.getFeatures().entrySet().forEach(feature -> {
+			int key = feature.getKey();
+			double value = feature.getValue();
+			if (value < mins.get(key)) {
+				mins.put(key, value);
+			}
+			if (value > maxs.get(key)) {
+				maxs.put(key, value);
+			}
+		}));
 
-        for (int key : ImmutableSet.copyOf(mins.keySet())) {
+        ImmutableSet.copyOf(mins.keySet()).stream().mapToInt(Integer::valueOf).forEach(key -> {
             // Remove any features that had a constant value
             if (mins.get(key) == maxs.get(key)) {
                 mins.remove(key);
                 maxs.remove(key);
             }
-        }
+        });
     }
 
     @Override
     public FeatureVector transform(FeatureVector features)
     {
         Map<Integer, Double> transformed = new HashMap<>();
-        for (Map.Entry<Integer, Double> entry : features.getFeatures().entrySet()) {
+        features.getFeatures().entrySet().forEach(entry -> {
             int key = entry.getKey();
             double value = entry.getValue();
             if (mins.containsKey(entry.getKey())) {
@@ -117,7 +115,7 @@ public class FeatureUnitNormalizer
             // In case value is outside of the values seen in the training data, make sure it's [0, 1]
             value = Math.min(1, Math.max(0, value));
             transformed.put(entry.getKey(), value);
-        }
+        });
         return new FeatureVector(transformed);
     }
 }

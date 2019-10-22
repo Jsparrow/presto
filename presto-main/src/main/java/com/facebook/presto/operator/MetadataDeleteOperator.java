@@ -34,6 +34,72 @@ public class MetadataDeleteOperator
         implements Operator
 {
     public static final List<Type> TYPES = ImmutableList.of(BIGINT);
+	private final OperatorContext operatorContext;
+	private final Metadata metadata;
+	private final Session session;
+	private final TableHandle tableHandle;
+	private boolean finished;
+
+	public MetadataDeleteOperator(OperatorContext operatorContext, Metadata metadata, Session session, TableHandle tableHandle)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.session = requireNonNull(session, "session is null");
+        this.tableHandle = requireNonNull(tableHandle, "tableHandle is null");
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finished;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return false;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (finished) {
+            return null;
+        }
+        finished = true;
+
+        OptionalLong rowsDeletedCount = metadata.metadataDelete(session, tableHandle);
+
+        // output page will only be constructed once,
+        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
+        PageBuilder page = new PageBuilder(1, TYPES);
+        BlockBuilder rowsBuilder = page.getBlockBuilder(0);
+        page.declarePosition();
+        if (rowsDeletedCount.isPresent()) {
+            BIGINT.writeLong(rowsBuilder, rowsDeletedCount.getAsLong());
+        }
+        else {
+            rowsBuilder.appendNull();
+        }
+        return page.build();
+    }
 
     public static class MetadataDeleteOperatorFactory
             implements OperatorFactory
@@ -73,73 +139,5 @@ public class MetadataDeleteOperator
         {
             return new MetadataDeleteOperatorFactory(operatorId, planNodeId, metadata, session, tableHandle);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final Metadata metadata;
-    private final Session session;
-    private final TableHandle tableHandle;
-
-    private boolean finished;
-
-    public MetadataDeleteOperator(OperatorContext operatorContext, Metadata metadata, Session session, TableHandle tableHandle)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.metadata = requireNonNull(metadata, "metadata is null");
-        this.session = requireNonNull(session, "session is null");
-        this.tableHandle = requireNonNull(tableHandle, "tableHandle is null");
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finished;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return false;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (finished) {
-            return null;
-        }
-        finished = true;
-
-        OptionalLong rowsDeletedCount = metadata.metadataDelete(session, tableHandle);
-
-        // output page will only be constructed once,
-        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
-        PageBuilder page = new PageBuilder(1, TYPES);
-        BlockBuilder rowsBuilder = page.getBlockBuilder(0);
-        page.declarePosition();
-        if (rowsDeletedCount.isPresent()) {
-            BIGINT.writeLong(rowsBuilder, rowsDeletedCount.getAsLong());
-        }
-        else {
-            rowsBuilder.appendNull();
-        }
-        return page.build();
     }
 }

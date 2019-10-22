@@ -58,9 +58,7 @@ public class ExampleSplitManager
         checkState(table != null, "Table %s.%s no longer exists", tableHandle.getSchemaName(), tableHandle.getTableName());
 
         List<ConnectorSplit> splits = new ArrayList<>();
-        for (URI uri : table.getSources()) {
-            splits.add(new ExampleSplit(connectorId, tableHandle.getSchemaName(), tableHandle.getTableName(), uri));
-        }
+        table.getSources().forEach(uri -> splits.add(new ExampleSplit(connectorId, tableHandle.getSchemaName(), tableHandle.getTableName(), uri)));
         Collections.shuffle(splits);
 
         return new FixedSplitSource(splits);

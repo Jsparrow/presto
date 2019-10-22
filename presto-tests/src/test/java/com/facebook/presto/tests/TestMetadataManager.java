@@ -37,6 +37,8 @@ import static com.facebook.presto.execution.QueryState.FAILED;
 import static com.facebook.presto.execution.QueryState.RUNNING;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is integration / unit test suite.
@@ -47,7 +49,8 @@ import static org.testng.Assert.fail;
 @Test(singleThreaded = true)
 public class TestMetadataManager
 {
-    private DistributedQueryRunner queryRunner;
+    private static final Logger logger = LoggerFactory.getLogger(TestMetadataManager.class);
+	private DistributedQueryRunner queryRunner;
     private MetadataManager metadataManager;
 
     @BeforeClass
@@ -103,6 +106,7 @@ public class TestMetadataManager
             fail("expected exception");
         }
         catch (Throwable t) {
+			logger.error(t.getMessage(), t);
             // query should fail
         }
 

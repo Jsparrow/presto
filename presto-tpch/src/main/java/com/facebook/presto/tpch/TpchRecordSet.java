@@ -43,29 +43,13 @@ import static java.util.Objects.requireNonNull;
 public class TpchRecordSet<E extends TpchEntity>
         implements RecordSet
 {
-    public static <E extends TpchEntity> TpchRecordSet<E> createTpchRecordSet(TpchTable<E> table, double scaleFactor)
-    {
-        return createTpchRecordSet(table, table.getColumns(), scaleFactor, 1, 1, TupleDomain.all());
-    }
-
-    public static <E extends TpchEntity> TpchRecordSet<E> createTpchRecordSet(
-            TpchTable<E> table,
-            List<TpchColumn<E>> columns,
-            double scaleFactor,
-            int part,
-            int partCount,
-            TupleDomain<ColumnHandle> predicate)
-    {
-        return new TpchRecordSet<>(table.createGenerator(scaleFactor, part, partCount), table, columns, predicate);
-    }
-
     private final Iterable<E> rows;
-    private final TpchTable<E> table;
-    private final List<TpchColumn<E>> columns;
-    private final List<Type> columnTypes;
-    private final TupleDomain<ColumnHandle> predicate;
+	private final TpchTable<E> table;
+	private final List<TpchColumn<E>> columns;
+	private final List<Type> columnTypes;
+	private final TupleDomain<ColumnHandle> predicate;
 
-    public TpchRecordSet(Iterable<E> rows, TpchTable<E> table, List<TpchColumn<E>> columns, TupleDomain<ColumnHandle> predicate)
+	public TpchRecordSet(Iterable<E> rows, TpchTable<E> table, List<TpchColumn<E>> columns, TupleDomain<ColumnHandle> predicate)
     {
         this.rows = requireNonNull(rows, "rows is null");
         this.table = requireNonNull(table, "table is null");
@@ -76,19 +60,35 @@ public class TpchRecordSet<E extends TpchEntity>
         this.predicate = requireNonNull(predicate, "predicate is null");
     }
 
-    @Override
+	public static <E extends TpchEntity> TpchRecordSet<E> createTpchRecordSet(TpchTable<E> table, double scaleFactor)
+    {
+        return createTpchRecordSet(table, table.getColumns(), scaleFactor, 1, 1, TupleDomain.all());
+    }
+
+	public static <E extends TpchEntity> TpchRecordSet<E> createTpchRecordSet(
+            TpchTable<E> table,
+            List<TpchColumn<E>> columns,
+            double scaleFactor,
+            int part,
+            int partCount,
+            TupleDomain<ColumnHandle> predicate)
+    {
+        return new TpchRecordSet<>(table.createGenerator(scaleFactor, part, partCount), table, columns, predicate);
+    }
+
+	@Override
     public List<Type> getColumnTypes()
     {
         return columnTypes;
     }
 
-    @Override
+	@Override
     public RecordCursor cursor()
     {
         return new TpchRecordCursor<>(rows.iterator(), table, columns, predicate);
     }
 
-    public static final class TpchRecordCursor<E extends TpchEntity>
+	public static final class TpchRecordCursor<E extends TpchEntity>
             implements RecordCursor
     {
         private final Iterator<E> rows;

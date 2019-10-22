@@ -106,11 +106,6 @@ public class DistributedQueryRunner
         this(defaultSession, nodeCount, extraProperties, ImmutableMap.of(), DEFAULT_SQL_PARSER_OPTIONS, ENVIRONMENT, Optional.empty());
     }
 
-    public static Builder builder(Session defaultSession)
-    {
-        return new Builder(defaultSession);
-    }
-
     private DistributedQueryRunner(
             Session defaultSession,
             int nodeCount,
@@ -166,12 +161,10 @@ public class DistributedQueryRunner
         log.info("Announced servers in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
 
         start = System.nanoTime();
-        for (TestingPrestoServer server : servers) {
-            server.getMetadata().registerBuiltInFunctions(AbstractTestQueries.CUSTOM_FUNCTIONS);
-        }
+        servers.forEach(server -> server.getMetadata().registerBuiltInFunctions(AbstractTestQueries.CUSTOM_FUNCTIONS));
         log.info("Added functions in %s", nanosSince(start).convertToMostSuccinctTimeUnit());
 
-        for (TestingPrestoServer server : servers) {
+        servers.forEach(server -> {
             // add bogus catalog for testing procedures and session properties
             Catalog bogusTestingCatalog = createBogusTestingCatalog(TESTING_CATALOG);
             server.getCatalogManager().registerCatalog(bogusTestingCatalog);
@@ -179,10 +172,15 @@ public class DistributedQueryRunner
             SessionPropertyManager sessionPropertyManager = server.getMetadata().getSessionPropertyManager();
             sessionPropertyManager.addSystemSessionProperties(TEST_SYSTEM_PROPERTIES);
             sessionPropertyManager.addConnectorSessionProperties(bogusTestingCatalog.getConnectorId(), TEST_CATALOG_PROPERTIES);
-        }
+        });
     }
 
-    private static TestingPrestoServer createTestingPrestoServer(URI discoveryUri, boolean coordinator, Map<String, String> extraProperties, SqlParserOptions parserOptions, String environment, Optional<Path> baseDataDir)
+	public static Builder builder(Session defaultSession)
+    {
+        return new Builder(defaultSession);
+    }
+
+	private static TestingPrestoServer createTestingPrestoServer(URI discoveryUri, boolean coordinator, Map<String, String> extraProperties, SqlParserOptions parserOptions, String environment, Optional<Path> baseDataDir)
             throws Exception
     {
         long start = System.nanoTime();
@@ -207,7 +205,7 @@ public class DistributedQueryRunner
         return server;
     }
 
-    private boolean allNodesGloballyVisible()
+	private boolean allNodesGloballyVisible()
     {
         for (TestingPrestoServer server : servers) {
             AllNodes allNodes = server.refreshNodes();
@@ -219,111 +217,107 @@ public class DistributedQueryRunner
         return true;
     }
 
-    public TestingPrestoClient getClient()
+	public TestingPrestoClient getClient()
     {
         return prestoClient;
     }
 
-    @Override
+	@Override
     public int getNodeCount()
     {
         return servers.size();
     }
 
-    @Override
+	@Override
     public Session getDefaultSession()
     {
         return prestoClient.getDefaultSession();
     }
 
-    @Override
+	@Override
     public TransactionManager getTransactionManager()
     {
         return coordinator.getTransactionManager();
     }
 
-    @Override
+	@Override
     public Metadata getMetadata()
     {
         return coordinator.getMetadata();
     }
 
-    @Override
+	@Override
     public SplitManager getSplitManager()
     {
         return coordinator.getSplitManager();
     }
 
-    @Override
+	@Override
     public PageSourceManager getPageSourceManager()
     {
         return coordinator.getPageSourceManager();
     }
 
-    @Override
+	@Override
     public NodePartitioningManager getNodePartitioningManager()
     {
         return coordinator.getNodePartitioningManager();
     }
 
-    @Override
+	@Override
     public ConnectorPlanOptimizerManager getPlanOptimizerManager()
     {
         return coordinator.getPlanOptimizerManager();
     }
 
-    @Override
+	@Override
     public StatsCalculator getStatsCalculator()
     {
         return coordinator.getStatsCalculator();
     }
 
-    @Override
+	@Override
     public TestingAccessControlManager getAccessControl()
     {
         return coordinator.getAccessControl();
     }
 
-    public TestingPrestoServer getCoordinator()
+	public TestingPrestoServer getCoordinator()
     {
         return coordinator;
     }
 
-    public List<TestingPrestoServer> getServers()
+	public List<TestingPrestoServer> getServers()
     {
         return ImmutableList.copyOf(servers);
     }
 
-    @Override
+	@Override
     public void installPlugin(Plugin plugin)
     {
         long start = System.nanoTime();
-        for (TestingPrestoServer server : servers) {
-            server.installPlugin(plugin);
-        }
+        servers.forEach(server -> server.installPlugin(plugin));
         log.info("Installed plugin %s in %s", plugin.getClass().getSimpleName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
-    public void createCatalog(String catalogName, String connectorName)
+	public void createCatalog(String catalogName, String connectorName)
     {
         createCatalog(catalogName, connectorName, ImmutableMap.of());
     }
 
-    @Override
+	@Override
     public void createCatalog(String catalogName, String connectorName, Map<String, String> properties)
     {
         long start = System.nanoTime();
         Set<ConnectorId> connectorIds = new HashSet<>();
-        for (TestingPrestoServer server : servers) {
-            connectorIds.add(server.createCatalog(catalogName, connectorName, properties));
-        }
+        servers.forEach(server -> connectorIds.add(server.createCatalog(catalogName, connectorName, properties)));
         ConnectorId connectorId = getOnlyElement(connectorIds);
         log.info("Created catalog %s (%s) in %s", catalogName, connectorId, nanosSince(start));
 
         // wait for all nodes to announce the new catalog
         start = System.nanoTime();
         while (!isConnectionVisibleToAllNodes(connectorId)) {
-            Assertions.assertLessThan(nanosSince(start), new Duration(100, SECONDS), "waiting for connector " + connectorId + " to be initialized in every node");
+            Assertions.assertLessThan(nanosSince(start), new Duration(100, SECONDS), new StringBuilder().append("waiting for connector ").append(connectorId).append(" to be initialized in every node").toString());
             try {
                 MILLISECONDS.sleep(10);
             }
@@ -335,7 +329,7 @@ public class DistributedQueryRunner
         log.info("Announced catalog %s (%s) in %s", catalogName, connectorId, nanosSince(start));
     }
 
-    private boolean isConnectionVisibleToAllNodes(ConnectorId connectorId)
+	private boolean isConnectionVisibleToAllNodes(ConnectorId connectorId)
     {
         for (TestingPrestoServer server : servers) {
             server.refreshNodes();
@@ -347,7 +341,7 @@ public class DistributedQueryRunner
         return true;
     }
 
-    @Override
+	@Override
     public List<QualifiedObjectName> listTables(Session session, String catalog, String schema)
     {
         lock.readLock().lock();
@@ -359,7 +353,7 @@ public class DistributedQueryRunner
         }
     }
 
-    @Override
+	@Override
     public boolean tableExists(Session session, String table)
     {
         lock.readLock().lock();
@@ -371,7 +365,7 @@ public class DistributedQueryRunner
         }
     }
 
-    @Override
+	@Override
     public MaterializedResult execute(@Language("SQL") String sql)
     {
         lock.readLock().lock();
@@ -383,7 +377,7 @@ public class DistributedQueryRunner
         }
     }
 
-    @Override
+	@Override
     public MaterializedResult execute(Session session, @Language("SQL") String sql)
     {
         lock.readLock().lock();
@@ -395,7 +389,7 @@ public class DistributedQueryRunner
         }
     }
 
-    public ResultWithQueryId<MaterializedResult> executeWithQueryId(Session session, @Language("SQL") String sql)
+	public ResultWithQueryId<MaterializedResult> executeWithQueryId(Session session, @Language("SQL") String sql)
     {
         lock.readLock().lock();
         try {
@@ -406,14 +400,14 @@ public class DistributedQueryRunner
         }
     }
 
-    @Override
+	@Override
     public MaterializedResultWithPlan executeWithPlan(Session session, String sql, WarningCollector warningCollector)
     {
         ResultWithQueryId<MaterializedResult> resultWithQueryId = executeWithQueryId(session, sql);
         return new MaterializedResultWithPlan(resultWithQueryId.getResult().toTestTypes(), getQueryPlan(resultWithQueryId.getQueryId()));
     }
 
-    @Override
+	@Override
     public Plan createPlan(Session session, String sql, WarningCollector warningCollector)
     {
         QueryId queryId = executeWithQueryId(session, sql).getQueryId();
@@ -422,28 +416,28 @@ public class DistributedQueryRunner
         return queryPlan;
     }
 
-    public List<BasicQueryInfo> getQueries()
+	public List<BasicQueryInfo> getQueries()
     {
         return coordinator.getQueryManager().getQueries();
     }
 
-    public QueryInfo getQueryInfo(QueryId queryId)
+	public QueryInfo getQueryInfo(QueryId queryId)
     {
         return coordinator.getQueryManager().getFullQueryInfo(queryId);
     }
 
-    public Plan getQueryPlan(QueryId queryId)
+	public Plan getQueryPlan(QueryId queryId)
     {
         return coordinator.getQueryPlan(queryId);
     }
 
-    @Override
+	@Override
     public Lock getExclusiveLock()
     {
         return lock.writeLock();
     }
 
-    @Override
+	@Override
     public final void close()
     {
         cancelAllQueries();
@@ -455,17 +449,13 @@ public class DistributedQueryRunner
         }
     }
 
-    private void cancelAllQueries()
+	private void cancelAllQueries()
     {
         QueryManager queryManager = coordinator.getQueryManager();
-        for (BasicQueryInfo queryInfo : queryManager.getQueries()) {
-            if (!queryInfo.getState().isDone()) {
-                queryManager.cancelQuery(queryInfo.getQueryId());
-            }
-        }
+        queryManager.getQueries().stream().filter(queryInfo -> !queryInfo.getState().isDone()).forEach(queryInfo -> queryManager.cancelQuery(queryInfo.getQueryId()));
     }
 
-    private static void closeUnchecked(AutoCloseable closeable)
+	private static void closeUnchecked(AutoCloseable closeable)
     {
         try {
             closeable.close();
@@ -476,7 +466,7 @@ public class DistributedQueryRunner
         }
     }
 
-    public static class Builder
+	public static class Builder
     {
         private Session defaultSession;
         private int nodeCount = 4;

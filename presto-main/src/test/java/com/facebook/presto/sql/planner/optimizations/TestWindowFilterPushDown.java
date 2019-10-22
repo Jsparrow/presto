@@ -61,9 +61,7 @@ public class TestWindowFilterPushDown
     @Test
     public void testFilterAboveWindow()
     {
-        @Language("SQL") String sql = "SELECT * FROM " +
-                "(SELECT row_number() OVER (PARTITION BY suppkey ORDER BY orderkey) partition_row_number FROM lineitem) " +
-                "WHERE partition_row_number < 10";
+        @Language("SQL") String sql = new StringBuilder().append("SELECT * FROM ").append("(SELECT row_number() OVER (PARTITION BY suppkey ORDER BY orderkey) partition_row_number FROM lineitem) ").append("WHERE partition_row_number < 10").toString();
 
         assertPlanWithSession(
                 sql,

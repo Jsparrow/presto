@@ -168,10 +168,10 @@ public class AccumuloRecordCursor
             if (iterator.hasNext()) {
                 serializer.reset();
                 Entry<Key, Value> row = iterator.next();
-                for (Entry<Key, Value> entry : WholeRowIterator.decodeRow(row.getKey(), row.getValue()).entrySet()) {
+                WholeRowIterator.decodeRow(row.getKey(), row.getValue()).entrySet().forEach(entry -> {
                     bytesRead += entry.getKey().getSize() + entry.getValue().getSize();
                     serializer.deserialize(entry);
-                }
+                });
                 return true;
             }
             else {

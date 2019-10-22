@@ -190,7 +190,7 @@ public class PipelineContext
 
         // merge the operator stats into the operator summary
         List<OperatorStats> operators = driverStats.getOperatorStats();
-        for (OperatorStats operator : operators) {
+        operators.forEach(operator -> {
             // TODO: replace with ConcurrentMap.compute() when we migrate to java 8
             OperatorStats updated;
             OperatorStats current;
@@ -204,7 +204,7 @@ public class PipelineContext
                 }
             }
             while (!compareAndSet(operatorSummaries, operator.getOperatorId(), current, updated));
-        }
+        });
 
         rawInputDataSize.update(driverStats.getRawInputDataSize().toBytes());
         rawInputPositions.update(driverStats.getRawInputPositions());
@@ -273,9 +273,7 @@ public class PipelineContext
     {
         CounterStat stat = new CounterStat();
         stat.merge(rawInputDataSize);
-        for (DriverContext driver : drivers) {
-            stat.merge(driver.getInputDataSize());
-        }
+        drivers.forEach(driver -> stat.merge(driver.getInputDataSize()));
         return stat;
     }
 
@@ -283,9 +281,7 @@ public class PipelineContext
     {
         CounterStat stat = new CounterStat();
         stat.merge(rawInputPositions);
-        for (DriverContext driver : drivers) {
-            stat.merge(driver.getInputPositions());
-        }
+        drivers.forEach(driver -> stat.merge(driver.getInputPositions()));
         return stat;
     }
 
@@ -293,9 +289,7 @@ public class PipelineContext
     {
         CounterStat stat = new CounterStat();
         stat.merge(outputDataSize);
-        for (DriverContext driver : drivers) {
-            stat.merge(driver.getOutputDataSize());
-        }
+        drivers.forEach(driver -> stat.merge(driver.getOutputDataSize()));
         return stat;
     }
 
@@ -303,9 +297,7 @@ public class PipelineContext
     {
         CounterStat stat = new CounterStat();
         stat.merge(outputPositions);
-        for (DriverContext driver : drivers) {
-            stat.merge(driver.getOutputPositions());
-        }
+        drivers.forEach(driver -> stat.merge(driver.getOutputPositions()));
         return stat;
     }
 
@@ -371,9 +363,7 @@ public class PipelineContext
             totalBlockedTime += driverStats.getTotalBlockedTime().roundTo(NANOSECONDS);
 
             List<OperatorStats> operators = ImmutableList.copyOf(transform(driverContext.getOperatorContexts(), OperatorContext::getOperatorStats));
-            for (OperatorStats operator : operators) {
-                runningOperators.put(operator.getOperatorId(), operator);
-            }
+            operators.forEach(operator -> runningOperators.put(operator.getOperatorId(), operator));
 
             rawInputDataSize += driverStats.getRawInputDataSize().toBytes();
             rawInputPositions += driverStats.getRawInputPositions();
@@ -389,7 +379,7 @@ public class PipelineContext
 
         // merge the running operator stats into the operator summary
         TreeMap<Integer, OperatorStats> operatorSummaries = new TreeMap<>(this.operatorSummaries);
-        for (Entry<Integer, OperatorStats> entry : runningOperators.entries()) {
+        runningOperators.entries().forEach(entry -> {
             OperatorStats current = operatorSummaries.get(entry.getKey());
             if (current == null) {
                 current = entry.getValue();
@@ -398,7 +388,7 @@ public class PipelineContext
                 current = current.add(entry.getValue());
             }
             operatorSummaries.put(entry.getKey(), current);
-        }
+        });
 
         Set<DriverStats> runningDriverStats = drivers.stream()
                 .filter(driver -> driver.getEndTime() == null && driver.getStartTime() != null)

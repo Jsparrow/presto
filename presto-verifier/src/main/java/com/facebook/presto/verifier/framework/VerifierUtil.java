@@ -20,13 +20,13 @@ import static com.facebook.presto.sql.parser.ParsingOptions.DecimalLiteralTreatm
 
 public class VerifierUtil
 {
-    private VerifierUtil()
+    public static final ParsingOptions PARSING_OPTIONS = ParsingOptions.builder().setDecimalLiteralTreatment(AS_DOUBLE).build();
+
+	private VerifierUtil()
     {
     }
 
-    public static final ParsingOptions PARSING_OPTIONS = ParsingOptions.builder().setDecimalLiteralTreatment(AS_DOUBLE).build();
-
-    public static Identifier delimitedIdentifier(String name)
+	public static Identifier delimitedIdentifier(String name)
     {
         return new Identifier(name, true);
     }

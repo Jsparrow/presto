@@ -40,17 +40,17 @@ public class TestInsert
         extends ProductTest
         implements RequirementsProvider
 {
-    @Override
+    private static final String SQLSERVER = "sqlserver";
+	private static final String MASTER = "master";
+	private static final String INSERT_TABLE_NAME = format("%s.%s", KEY_SPACE, SQLSERVER_INSERT.getName());
+
+	@Override
     public Requirement getRequirements(Configuration configuration)
     {
         return immutableTable(SQLSERVER_INSERT);
     }
 
-    private static final String SQLSERVER = "sqlserver";
-    private static final String MASTER = "master";
-    private static final String INSERT_TABLE_NAME = format("%s.%s", KEY_SPACE, SQLSERVER_INSERT.getName());
-
-    @BeforeTestWithContext
+	@BeforeTestWithContext
     @AfterTestWithContext
     public void dropTestTables()
     {
@@ -62,7 +62,7 @@ public class TestInsert
         }
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testInsertMin()
     {
         String sql = format(
@@ -83,7 +83,7 @@ public class TestInsert
                 row(Long.valueOf("-9223372036854775807"), Short.MIN_VALUE, Integer.MIN_VALUE, Double.MIN_VALUE, "a   ", "aa", Double.MIN_VALUE, Date.valueOf("1970-01-01")));
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testInsertMax()
     {
         String sql = format(
@@ -104,7 +104,7 @@ public class TestInsert
                         Date.valueOf("9999-12-31")));
     }
 
-    @Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
+	@Test(groups = {SQL_SERVER, PROFILE_SPECIFIC_TESTS})
     public void testInsertNull()
     {
         String sql = format(

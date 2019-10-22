@@ -68,12 +68,12 @@ public class TestVarbinaryFunctions
         assertInvalidFunction("CONCAT(X'')", "There must be two or more concatenation arguments");
 
         assertFunction("CAST('foo' AS VARBINARY) || CAST ('bar' AS VARBINARY)", VARBINARY, sqlVarbinary("foo" + "bar"));
-        assertFunction("CAST('foo' AS VARBINARY) || CAST ('bar' AS VARBINARY) || CAST ('baz' AS VARBINARY)", VARBINARY, sqlVarbinary("foo" + "bar" + "baz"));
-        assertFunction("CAST(' foo ' AS VARBINARY) || CAST ('  bar  ' AS VARBINARY) || CAST ('   baz   ' AS VARBINARY)", VARBINARY, sqlVarbinary(" foo " + "  bar  " + "   baz   "));
-        assertFunction("CAST('foo' AS VARBINARY) || CAST ('bar' AS VARBINARY) || CAST ('bazbaz' AS VARBINARY)", VARBINARY, sqlVarbinary("foo" + "bar" + "bazbaz"));
+        assertFunction("CAST('foo' AS VARBINARY) || CAST ('bar' AS VARBINARY) || CAST ('baz' AS VARBINARY)", VARBINARY, sqlVarbinary(new StringBuilder().append("foo").append("bar").append("baz").toString()));
+        assertFunction("CAST(' foo ' AS VARBINARY) || CAST ('  bar  ' AS VARBINARY) || CAST ('   baz   ' AS VARBINARY)", VARBINARY, sqlVarbinary(new StringBuilder().append(" foo ").append("  bar  ").append("   baz   ").toString()));
+        assertFunction("CAST('foo' AS VARBINARY) || CAST ('bar' AS VARBINARY) || CAST ('bazbaz' AS VARBINARY)", VARBINARY, sqlVarbinary(new StringBuilder().append("foo").append("bar").append("bazbaz").toString()));
 
-        assertFunction("X'000102' || X'AAABAC' || X'FDFEFF'", VARBINARY, sqlVarbinaryHex("000102" + "AAABAC" + "FDFEFF"));
-        assertFunction("X'CAFFEE' || X'F7' || X'DE58'", VARBINARY, sqlVarbinaryHex("CAFFEE" + "F7" + "DE58"));
+        assertFunction("X'000102' || X'AAABAC' || X'FDFEFF'", VARBINARY, sqlVarbinaryHex(new StringBuilder().append("000102").append("AAABAC").append("FDFEFF").toString()));
+        assertFunction("X'CAFFEE' || X'F7' || X'DE58'", VARBINARY, sqlVarbinaryHex(new StringBuilder().append("CAFFEE").append("F7").append("DE58").toString()));
 
         assertFunction("X'58' || X'F7'", VARBINARY, sqlVarbinaryHex("58F7"));
         assertFunction("X'' || X'58' || X'F7'", VARBINARY, sqlVarbinaryHex("58F7"));
@@ -83,11 +83,11 @@ public class TestVarbinaryFunctions
         assertFunction("X'' || X'' || X'' || X'' || X'' || X''", VARBINARY, sqlVarbinaryHex(""));
 
         assertFunction("CONCAT(CAST('foo' AS VARBINARY), CAST ('bar' AS VARBINARY))", VARBINARY, sqlVarbinary("foo" + "bar"));
-        assertFunction("CONCAT(CAST('foo' AS VARBINARY), CAST ('bar' AS VARBINARY), CAST ('baz' AS VARBINARY))", VARBINARY, sqlVarbinary("foo" + "bar" + "baz"));
-        assertFunction("CONCAT(CAST('foo' AS VARBINARY), CAST ('bar' AS VARBINARY), CAST ('bazbaz' AS VARBINARY))", VARBINARY, sqlVarbinary("foo" + "bar" + "bazbaz"));
+        assertFunction("CONCAT(CAST('foo' AS VARBINARY), CAST ('bar' AS VARBINARY), CAST ('baz' AS VARBINARY))", VARBINARY, sqlVarbinary(new StringBuilder().append("foo").append("bar").append("baz").toString()));
+        assertFunction("CONCAT(CAST('foo' AS VARBINARY), CAST ('bar' AS VARBINARY), CAST ('bazbaz' AS VARBINARY))", VARBINARY, sqlVarbinary(new StringBuilder().append("foo").append("bar").append("bazbaz").toString()));
 
-        assertFunction("CONCAT(X'000102', X'AAABAC', X'FDFEFF')", VARBINARY, sqlVarbinaryHex("000102" + "AAABAC" + "FDFEFF"));
-        assertFunction("CONCAT(X'CAFFEE', X'F7', X'DE58')", VARBINARY, sqlVarbinaryHex("CAFFEE" + "F7" + "DE58"));
+        assertFunction("CONCAT(X'000102', X'AAABAC', X'FDFEFF')", VARBINARY, sqlVarbinaryHex(new StringBuilder().append("000102").append("AAABAC").append("FDFEFF").toString()));
+        assertFunction("CONCAT(X'CAFFEE', X'F7', X'DE58')", VARBINARY, sqlVarbinaryHex(new StringBuilder().append("CAFFEE").append("F7").append("DE58").toString()));
 
         assertFunction("CONCAT(X'58', X'F7')", VARBINARY, sqlVarbinaryHex("58F7"));
         assertFunction("CONCAT(X'', X'58', X'F7')", VARBINARY, sqlVarbinaryHex("58F7"));
@@ -281,7 +281,7 @@ public class TestVarbinaryFunctions
         assertFunction("lpad(x'1234',3,x'4524')", VARBINARY, sqlVarbinaryHex("451234"));
         assertFunction("lpad(x'1234',0,x'4524')", VARBINARY, sqlVarbinaryHex(""));
         assertFunction("lpad(x'1234',1,x'4524')", VARBINARY, sqlVarbinaryHex("12"));
-        assertInvalidFunction("lpad(x'2312',-1,x'4524')", "Target length must be in the range [0.." + Integer.MAX_VALUE + "]");
+        assertInvalidFunction("lpad(x'2312',-1,x'4524')", new StringBuilder().append("Target length must be in the range [0..").append(Integer.MAX_VALUE).append("]").toString());
         assertInvalidFunction("lpad(x'2312',1,x'')", "Padding bytes must not be empty");
     }
 
@@ -293,7 +293,7 @@ public class TestVarbinaryFunctions
         assertFunction("rpad(x'1234',3,x'4524')", VARBINARY, sqlVarbinaryHex("123445"));
         assertFunction("rpad(x'23',0,x'4524')", VARBINARY, sqlVarbinaryHex(""));
         assertFunction("rpad(x'1234',1,x'4524')", VARBINARY, sqlVarbinaryHex("12"));
-        assertInvalidFunction("rpad(x'1234',-1,x'4524')", "Target length must be in the range [0.." + Integer.MAX_VALUE + "]");
+        assertInvalidFunction("rpad(x'1234',-1,x'4524')", new StringBuilder().append("Target length must be in the range [0..").append(Integer.MAX_VALUE).append("]").toString());
         assertInvalidFunction("rpad(x'1234',1,x'')", "Padding bytes must not be empty");
     }
 

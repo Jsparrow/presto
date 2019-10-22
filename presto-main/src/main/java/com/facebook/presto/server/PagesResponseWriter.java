@@ -76,7 +76,7 @@ public class PagesResponseWriter
             MediaType mediaType,
             MultivaluedMap<String, Object> httpHeaders,
             OutputStream output)
-            throws IOException, WebApplicationException
+            throws IOException
     {
         try {
             SliceOutput sliceOutput = new OutputStreamSliceOutput(output);

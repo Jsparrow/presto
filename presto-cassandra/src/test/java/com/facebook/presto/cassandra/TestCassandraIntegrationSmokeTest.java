@@ -96,27 +96,9 @@ public class TestCassandraIntegrationSmokeTest
     @Test
     public void testPartitionKeyPredicate()
     {
-        String sql = "SELECT *" +
-                " FROM " + TABLE_ALL_TYPES_PARTITION_KEY +
-                " WHERE key = 'key 7'" +
-                " AND typeuuid = '00000000-0000-0000-0000-000000000007'" +
-                " AND typeinteger = 7" +
-                " AND typelong = 1007" +
-                " AND typebytes = from_hex('" + toRawHexString(ByteBuffer.wrap(toByteArray(7))) + "')" +
-                " AND typetimestamp = TIMESTAMP '1969-12-31 23:04:05'" +
-                " AND typeansi = 'ansi 7'" +
-                " AND typeboolean = false" +
-                " AND typedecimal = 128.0" +
-                " AND typedouble = 16384.0" +
-                " AND typefloat = REAL '2097152.0'" +
-                " AND typeinet = '127.0.0.1'" +
-                " AND typevarchar = 'varchar 7'" +
-                " AND typevarint = '10000000'" +
-                " AND typetimeuuid = 'd2177dd0-eaa2-11de-a572-001b779c76e7'" +
-                " AND typelist = '[\"list-value-17\",\"list-value-27\"]'" +
-                " AND typemap = '{7:8,9:10}'" +
-                " AND typeset = '[false,true]'" +
-                "";
+        String sql = new StringBuilder().append("SELECT *").append(" FROM ").append(TABLE_ALL_TYPES_PARTITION_KEY).append(" WHERE key = 'key 7'").append(" AND typeuuid = '00000000-0000-0000-0000-000000000007'").append(" AND typeinteger = 7").append(" AND typelong = 1007").append(" AND typebytes = from_hex('")
+				.append(toRawHexString(ByteBuffer.wrap(toByteArray(7)))).append("')").append(" AND typetimestamp = TIMESTAMP '1969-12-31 23:04:05'").append(" AND typeansi = 'ansi 7'").append(" AND typeboolean = false").append(" AND typedecimal = 128.0").append(" AND typedouble = 16384.0").append(" AND typefloat = REAL '2097152.0'")
+				.append(" AND typeinet = '127.0.0.1'").append(" AND typevarchar = 'varchar 7'").append(" AND typevarint = '10000000'").append(" AND typetimeuuid = 'd2177dd0-eaa2-11de-a572-001b779c76e7'").append(" AND typelist = '[\"list-value-17\",\"list-value-27\"]'").append(" AND typemap = '{7:8,9:10}'").append(" AND typeset = '[false,true]'").append("").toString();
         MaterializedResult result = execute(sql);
 
         assertEquals(result.getRowCount(), 1);
@@ -141,23 +123,21 @@ public class TestCassandraIntegrationSmokeTest
     @Test
     public void testClusteringPredicates()
     {
-        String sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key='key_1' AND clust_one='clust_one'";
+        String sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key='key_1' AND clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2') AND clust_one='clust_one'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2') AND clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key='key_1' AND clust_one!='clust_one'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key='key_1' AND clust_one!='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 0);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2','key_3','key_4') AND clust_one='clust_one' AND clust_two>'clust_two_1'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2','key_3','key_4') AND clust_one='clust_one' AND clust_two>'clust_two_1'").toString();
         assertEquals(execute(sql).getRowCount(), 3);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND " +
-                "((clust_two='clust_two_1') OR (clust_two='clust_two_2'))";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND ").append("((clust_two='clust_two_1') OR (clust_two='clust_two_2'))").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND " +
-                "((clust_two='clust_two_1' AND clust_three='clust_three_1') OR (clust_two='clust_two_2' AND clust_three='clust_three_2'))";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND ").append("((clust_two='clust_two_1' AND clust_three='clust_three_1') OR (clust_two='clust_two_2' AND clust_three='clust_three_2'))").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND clust_three='clust_three_1'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND clust_three='clust_three_1'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2')";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE key IN ('key_1','key_2') AND clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2')").toString();
         assertEquals(execute(sql).getRowCount(), 2);
     }
 
@@ -165,92 +145,87 @@ public class TestCassandraIntegrationSmokeTest
     public void testMultiplePartitionClusteringPredicates()
     {
         String partitionInPredicates = " partition_one IN ('partition_one_1','partition_one_2') AND partition_two IN ('partition_two_1','partition_two_2') ";
-        String sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE partition_one='partition_one_1' AND partition_two='partition_two_1' AND clust_one='clust_one'";
+        String sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE partition_one='partition_one_1' AND partition_two='partition_two_1' AND clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " + partitionInPredicates + " AND clust_one='clust_one'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append(partitionInPredicates).append(" AND clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE partition_one='partition_one_1' AND partition_two='partition_two_1' AND clust_one!='clust_one'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE partition_one='partition_one_1' AND partition_two='partition_two_1' AND clust_one!='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 0);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " +
-                "partition_one IN ('partition_one_1','partition_one_2','partition_one_3','partition_one_4') AND " +
-                "partition_two IN ('partition_two_1','partition_two_2','partition_two_3','partition_two_4') AND " +
-                "clust_one='clust_one' AND clust_two>'clust_two_1'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append("partition_one IN ('partition_one_1','partition_one_2','partition_one_3','partition_one_4') AND ").append("partition_two IN ('partition_two_1','partition_two_2','partition_two_3','partition_two_4') AND ").append("clust_one='clust_one' AND clust_two>'clust_two_1'").toString();
         assertEquals(execute(sql).getRowCount(), 3);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " + partitionInPredicates + " AND clust_one='clust_one' AND " +
-                "((clust_two='clust_two_1') OR (clust_two='clust_two_2'))";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append(partitionInPredicates).append(" AND clust_one='clust_one' AND ").append("((clust_two='clust_two_1') OR (clust_two='clust_two_2'))").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " + partitionInPredicates + " AND clust_one='clust_one' AND " +
-                "((clust_two='clust_two_1' AND clust_three='clust_three_1') OR (clust_two='clust_two_2' AND clust_three='clust_three_2'))";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append(partitionInPredicates).append(" AND clust_one='clust_one' AND ").append("((clust_two='clust_two_1' AND clust_three='clust_three_1') OR (clust_two='clust_two_2' AND clust_three='clust_three_2'))").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " + partitionInPredicates + " AND clust_one='clust_one' AND clust_three='clust_three_1'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append(partitionInPredicates).append(" AND clust_one='clust_one' AND clust_three='clust_three_1'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_MULTI_PARTITION_CLUSTERING_KEYS + " WHERE " + partitionInPredicates + " AND clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2')";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_MULTI_PARTITION_CLUSTERING_KEYS).append(" WHERE ").append(partitionInPredicates).append(" AND clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2')").toString();
         assertEquals(execute(sql).getRowCount(), 2);
     }
 
     @Test
     public void testClusteringKeyOnlyPushdown()
     {
-        String sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE clust_one='clust_one'";
+        String sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 9);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE clust_one='clust_one' AND clust_two='clust_two_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE clust_one='clust_one' AND clust_two='clust_two_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS + " WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three='clust_three_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS).append(" WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three='clust_three_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
 
         // below test cases are needed to verify clustering key pushdown with unpartitioned table
         // for the smaller table (<200 partitions by default) connector fetches all the partitions id
         // and the partitioned patch is being followed
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two='clust_two_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two='clust_two_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three='clust_three_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three='clust_three_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three IN ('clust_three_1', 'clust_three_2', 'clust_three_3')";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two='clust_two_2' AND clust_three IN ('clust_three_1', 'clust_three_2', 'clust_three_3')").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three IN ('clust_three_1', 'clust_three_2', 'clust_three_3')";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three IN ('clust_three_1', 'clust_three_2', 'clust_three_3')").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two > 'clust_two_998'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two > 'clust_two_998'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two > 'clust_two_997' AND clust_two < 'clust_two_999'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two > 'clust_two_997' AND clust_two < 'clust_two_999'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three > 'clust_three_998'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three > 'clust_three_998'").toString();
         assertEquals(execute(sql).getRowCount(), 0);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three < 'clust_three_3'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three < 'clust_three_3'").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three > 'clust_three_1' AND clust_three < 'clust_three_3'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2') AND clust_three > 'clust_three_1' AND clust_three < 'clust_three_3'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2','clust_two_3') AND clust_two < 'clust_two_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2','clust_two_3') AND clust_two < 'clust_two_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_997','clust_two_998','clust_two_999') AND clust_two > 'clust_two_998'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_997','clust_two_998','clust_two_999') AND clust_two > 'clust_two_998'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_LARGE + " WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2','clust_two_3') AND clust_two = 'clust_two_2'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_LARGE).append(" WHERE clust_one='clust_one' AND clust_two IN ('clust_two_1','clust_two_2','clust_two_3') AND clust_two = 'clust_two_2'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
     }
 
     @Test
     public void testClusteringKeyPushdownInequality()
     {
-        String sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one'";
+        String sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one'").toString();
         assertEquals(execute(sql).getRowCount(), 4);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three = timestamp '1969-12-31 23:04:05.020'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three = timestamp '1969-12-31 23:04:05.020'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three = timestamp '1969-12-31 23:04:05.010'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three = timestamp '1969-12-31 23:04:05.010'").toString();
         assertEquals(execute(sql).getRowCount(), 0);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2)";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2)").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two > 1 AND clust_two < 3";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two > 1 AND clust_two < 3").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three >= timestamp '1969-12-31 23:04:05.010' AND clust_three <= timestamp '1969-12-31 23:04:05.020'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two=2 AND clust_three >= timestamp '1969-12-31 23:04:05.010' AND clust_three <= timestamp '1969-12-31 23:04:05.020'").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2) AND clust_three >= timestamp '1969-12-31 23:04:05.010' AND clust_three <= timestamp '1969-12-31 23:04:05.020'";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2) AND clust_three >= timestamp '1969-12-31 23:04:05.010' AND clust_three <= timestamp '1969-12-31 23:04:05.020'").toString();
         assertEquals(execute(sql).getRowCount(), 2);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two < 2";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two < 2").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two > 2";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two > 2").toString();
         assertEquals(execute(sql).getRowCount(), 1);
-        sql = "SELECT * FROM " + TABLE_CLUSTERING_KEYS_INEQUALITY + " WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two = 2";
+        sql = new StringBuilder().append("SELECT * FROM ").append(TABLE_CLUSTERING_KEYS_INEQUALITY).append(" WHERE key='key_1' AND clust_one='clust_one' AND clust_two IN (1,2,3) AND clust_two = 2").toString();
         assertEquals(execute(sql).getRowCount(), 1);
     }
 
@@ -397,53 +372,17 @@ public class TestCassandraIntegrationSmokeTest
     @Test
     public void testInsert()
     {
-        String sql = "SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, " +
-                "typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset" +
-                " FROM " + TABLE_ALL_TYPES_INSERT;
+        String sql = new StringBuilder().append("SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, ").append("typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset").append(" FROM ").append(TABLE_ALL_TYPES_INSERT).toString();
         assertEquals(execute(sql).getRowCount(), 0);
 
         // TODO Following types are not supported now. We need to change null into the value after fixing it
         // blob, frozen<set<type>>, inet, list<type>, map<type,type>, set<type>, timeuuid, decimal, uuid, varint
         // timestamp can be inserted but the expected and actual values are not same
-        execute("INSERT INTO " + TABLE_ALL_TYPES_INSERT + " (" +
-                "key," +
-                "typeuuid," +
-                "typeinteger," +
-                "typelong," +
-                "typebytes," +
-                "typetimestamp," +
-                "typeansi," +
-                "typeboolean," +
-                "typedecimal," +
-                "typedouble," +
-                "typefloat," +
-                "typeinet," +
-                "typevarchar," +
-                "typevarint," +
-                "typetimeuuid," +
-                "typelist," +
-                "typemap," +
-                "typeset" +
-                ") VALUES (" +
-                "'key1', " +
-                "null, " +
-                "1, " +
-                "1000, " +
-                "null, " +
-                "timestamp '1970-01-01 08:34:05.0', " +
-                "'ansi1', " +
-                "true, " +
-                "null, " +
-                "0.3, " +
-                "cast('0.4' as real), " +
-                "null, " +
-                "'varchar1', " +
-                "null, " +
-                "null, " +
-                "null, " +
-                "null, " +
-                "null " +
-                ")");
+        execute(new StringBuilder().append("INSERT INTO ").append(TABLE_ALL_TYPES_INSERT).append(" (").append("key,").append("typeuuid,").append("typeinteger,").append("typelong,").append("typebytes,")
+				.append("typetimestamp,").append("typeansi,").append("typeboolean,").append("typedecimal,").append("typedouble,").append("typefloat,").append("typeinet,").append("typevarchar,").append("typevarint,")
+				.append("typetimeuuid,").append("typelist,").append("typemap,").append("typeset").append(") VALUES (").append("'key1', ").append("null, ").append("1, ").append("1000, ")
+				.append("null, ").append("timestamp '1970-01-01 08:34:05.0', ").append("'ansi1', ").append("true, ").append("null, ").append("0.3, ").append("cast('0.4' as real), ").append("null, ").append("'varchar1', ")
+				.append("null, ").append("null, ").append("null, ").append("null, ").append("null ").append(")").toString());
 
         MaterializedResult result = execute(sql);
         int rowCount = result.getRowCount();
@@ -469,15 +408,9 @@ public class TestCassandraIntegrationSmokeTest
                 null));
 
         // insert null for all datatypes
-        execute("INSERT INTO " + TABLE_ALL_TYPES_INSERT + " (" +
-                "key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal," +
-                "typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset" +
-                ") VALUES (" +
-                "'key2', null, null, null, null, null, null, null, null," +
-                "null, null, null, null, null, null, null, null, null)");
-        sql = "SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, " +
-                "typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset" +
-                " FROM " + TABLE_ALL_TYPES_INSERT + " WHERE key = 'key2'";
+        execute(new StringBuilder().append("INSERT INTO ").append(TABLE_ALL_TYPES_INSERT).append(" (").append("key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal,").append("typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset").append(") VALUES (").append("'key2', null, null, null, null, null, null, null, null,").append("null, null, null, null, null, null, null, null, null)")
+				.toString());
+        sql = new StringBuilder().append("SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, ").append("typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset").append(" FROM ").append(TABLE_ALL_TYPES_INSERT).append(" WHERE key = 'key2'").toString();
         result = execute(sql);
         rowCount = result.getRowCount();
         assertEquals(rowCount, 1);
@@ -485,12 +418,8 @@ public class TestCassandraIntegrationSmokeTest
                 "key2", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
         // insert into only a subset of columns
-        execute("INSERT INTO " + TABLE_ALL_TYPES_INSERT + " (" +
-                "key, typeinteger, typeansi, typeboolean) VALUES (" +
-                "'key3', 999, 'ansi', false)");
-        sql = "SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, " +
-                "typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset" +
-                " FROM " + TABLE_ALL_TYPES_INSERT + " WHERE key = 'key3'";
+        execute(new StringBuilder().append("INSERT INTO ").append(TABLE_ALL_TYPES_INSERT).append(" (").append("key, typeinteger, typeansi, typeboolean) VALUES (").append("'key3', 999, 'ansi', false)").toString());
+        sql = new StringBuilder().append("SELECT key, typeuuid, typeinteger, typelong, typebytes, typetimestamp, typeansi, typeboolean, typedecimal, ").append("typedouble, typefloat, typeinet, typevarchar, typevarint, typetimeuuid, typelist, typemap, typeset").append(" FROM ").append(TABLE_ALL_TYPES_INSERT).append(" WHERE key = 'key3'").toString();
         result = execute(sql);
         rowCount = result.getRowCount();
         assertEquals(rowCount, 1);
@@ -503,26 +432,9 @@ public class TestCassandraIntegrationSmokeTest
         Type uuidType = createdByPresto ? createUnboundedVarcharType() : createVarcharType(36);
         Type inetType = createdByPresto ? createUnboundedVarcharType() : createVarcharType(45);
 
-        String sql = "SELECT " +
-                " key, " +
-                " typeuuid, " +
-                " typeinteger, " +
-                " typelong, " +
-                " typebytes, " +
-                " typetimestamp, " +
-                " typeansi, " +
-                " typeboolean, " +
-                " typedecimal, " +
-                " typedouble, " +
-                " typefloat, " +
-                " typeinet, " +
-                " typevarchar, " +
-                " typevarint, " +
-                " typetimeuuid, " +
-                " typelist, " +
-                " typemap, " +
-                " typeset " +
-                " FROM " + tableName;
+        String sql = new StringBuilder().append("SELECT ").append(" key, ").append(" typeuuid, ").append(" typeinteger, ").append(" typelong, ").append(" typebytes, ").append(" typetimestamp, ").append(" typeansi, ")
+				.append(" typeboolean, ").append(" typedecimal, ").append(" typedouble, ").append(" typefloat, ").append(" typeinet, ").append(" typevarchar, ").append(" typevarint, ").append(" typetimeuuid, ").append(" typelist, ")
+				.append(" typemap, ").append(" typeset ").append(" FROM ").append(tableName).toString();
 
         MaterializedResult result = execute(sql);
 

@@ -29,11 +29,11 @@ public class TestStatisticAggregationsDescriptor
     @Test
     public void testColumnStatisticMetadataKeySerializationRoundTrip()
     {
-        for (String column : COLUMNS) {
+        COLUMNS.forEach(column -> {
             for (ColumnStatisticType type : ColumnStatisticType.values()) {
                 ColumnStatisticMetadata expected = new ColumnStatisticMetadata(column, type);
                 assertEquals(deserialize(serialize(expected)), expected);
             }
-        }
+        });
     }
 }

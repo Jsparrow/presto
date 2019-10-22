@@ -146,7 +146,7 @@ public class InCodeGeneratorBenchmark
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + InCodeGeneratorBenchmark.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(InCodeGeneratorBenchmark.class.getSimpleName()).append(".*").toString())
                 .build();
 
         new Runner(options).run();

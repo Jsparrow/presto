@@ -128,7 +128,7 @@ public class PushdownSubfields
         {
             context.get().variables.addAll(node.getGroupingKeys());
 
-            for (AggregationNode.Aggregation aggregation : node.getAggregations().values()) {
+            node.getAggregations().values().forEach(aggregation -> {
                 aggregation.getArguments().forEach(expression -> subfieldExtractor.process(castToExpression(expression), context.get()));
 
                 aggregation.getFilter().ifPresent(expression -> subfieldExtractor.process(castToExpression(expression), context.get()));
@@ -138,7 +138,7 @@ public class PushdownSubfields
                         .ifPresent(context.get().variables::addAll);
 
                 aggregation.getMask().ifPresent(context.get().variables::add);
-            }
+            });
 
             return context.defaultRewrite(node, context.get());
         }
@@ -174,9 +174,7 @@ public class PushdownSubfields
         @Override
         public PlanNode visitGroupId(GroupIdNode node, RewriteContext<Context> context)
         {
-            for (Map.Entry<VariableReferenceExpression, VariableReferenceExpression> entry : node.getGroupingColumns().entrySet()) {
-                context.get().addAssignment(entry.getKey(), entry.getValue());
-            }
+            node.getGroupingColumns().entrySet().forEach(entry -> context.get().addAssignment(entry.getKey(), entry.getValue()));
 
             return context.defaultRewrite(node, context.get());
         }
@@ -346,9 +344,7 @@ public class PushdownSubfields
         @Override
         public PlanNode visitUnion(UnionNode node, RewriteContext<Context> context)
         {
-            for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : node.getVariableMapping().entrySet()) {
-                entry.getValue().forEach(variable -> context.get().addAssignment(entry.getKey(), variable));
-            }
+            node.getVariableMapping().entrySet().forEach(entry -> entry.getValue().forEach(variable -> context.get().addAssignment(entry.getKey(), variable)));
 
             return context.defaultRewrite(node, context.get());
         }
@@ -357,7 +353,7 @@ public class PushdownSubfields
         public PlanNode visitUnnest(UnnestNode node, RewriteContext<Context> context)
         {
             ImmutableList.Builder<Subfield> newSubfields = ImmutableList.builder();
-            for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : node.getUnnestVariables().entrySet()) {
+            node.getUnnestVariables().entrySet().forEach(entry -> {
                 VariableReferenceExpression container = entry.getKey();
                 boolean found = false;
 
@@ -408,7 +404,7 @@ public class PushdownSubfields
                 if (!found) {
                     context.get().variables.add(container);
                 }
-            }
+            });
             context.get().subfields.addAll(newSubfields.build());
 
             return context.defaultRewrite(node, context.get());

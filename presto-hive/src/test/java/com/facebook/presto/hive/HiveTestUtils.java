@@ -67,20 +67,16 @@ import static java.util.stream.Collectors.toList;
 
 public final class HiveTestUtils
 {
-    private HiveTestUtils()
-    {
-    }
-
     public static final ConnectorSession SESSION = new TestingConnectorSession(
             new HiveSessionProperties(new HiveClientConfig(), new OrcFileWriterConfig(), new ParquetFileWriterConfig()).getSessionProperties());
 
-    public static final TypeRegistry TYPE_MANAGER = new TypeRegistry();
+	public static final TypeRegistry TYPE_MANAGER = new TypeRegistry();
 
-    public static final MetadataManager METADATA = MetadataManager.createTestMetadataManager();
+	public static final MetadataManager METADATA = MetadataManager.createTestMetadataManager();
 
-    public static final StandardFunctionResolution FUNCTION_RESOLUTION = new FunctionResolution(METADATA.getFunctionManager());
+	public static final StandardFunctionResolution FUNCTION_RESOLUTION = new FunctionResolution(METADATA.getFunctionManager());
 
-    public static final RowExpressionService ROW_EXPRESSION_SERVICE = new RowExpressionService() {
+	public static final RowExpressionService ROW_EXPRESSION_SERVICE = new RowExpressionService() {
         @Override
         public DomainTranslator getDomainTranslator()
         {
@@ -112,18 +108,22 @@ public final class HiveTestUtils
         }
     };
 
-    static {
+	static {
         // associate TYPE_MANAGER with a function manager
         new FunctionManager(TYPE_MANAGER, new BlockEncodingManager(TYPE_MANAGER), new FeaturesConfig());
     }
 
-    public static final HiveClientConfig HIVE_CLIENT_CONFIG = new HiveClientConfig();
+	public static final HiveClientConfig HIVE_CLIENT_CONFIG = new HiveClientConfig();
 
-    public static final HdfsEnvironment HDFS_ENVIRONMENT = createTestHdfsEnvironment(HIVE_CLIENT_CONFIG);
+	public static final HdfsEnvironment HDFS_ENVIRONMENT = createTestHdfsEnvironment(HIVE_CLIENT_CONFIG);
 
-    public static final PageSorter PAGE_SORTER = new PagesIndexPageSorter(new PagesIndex.TestingFactory(false));
+	public static final PageSorter PAGE_SORTER = new PagesIndexPageSorter(new PagesIndex.TestingFactory(false));
 
-    public static Set<HiveBatchPageSourceFactory> getDefaultHiveDataStreamFactories(HiveClientConfig hiveClientConfig)
+	private HiveTestUtils()
+    {
+    }
+
+	public static Set<HiveBatchPageSourceFactory> getDefaultHiveDataStreamFactories(HiveClientConfig hiveClientConfig)
     {
         FileFormatDataSourceStats stats = new FileFormatDataSourceStats();
         HdfsEnvironment testHdfsEnvironment = createTestHdfsEnvironment(hiveClientConfig);
@@ -135,7 +135,7 @@ public final class HiveTestUtils
                 .build();
     }
 
-    public static Set<HiveRecordCursorProvider> getDefaultHiveRecordCursorProvider(HiveClientConfig hiveClientConfig)
+	public static Set<HiveRecordCursorProvider> getDefaultHiveRecordCursorProvider(HiveClientConfig hiveClientConfig)
     {
         HdfsEnvironment testHdfsEnvironment = createTestHdfsEnvironment(hiveClientConfig);
         return ImmutableSet.<HiveRecordCursorProvider>builder()
@@ -143,7 +143,7 @@ public final class HiveTestUtils
                 .build();
     }
 
-    public static Set<HiveFileWriterFactory> getDefaultHiveFileWriterFactories(HiveClientConfig hiveClientConfig)
+	public static Set<HiveFileWriterFactory> getDefaultHiveFileWriterFactories(HiveClientConfig hiveClientConfig)
     {
         HdfsEnvironment testHdfsEnvironment = createTestHdfsEnvironment(hiveClientConfig);
         return ImmutableSet.<HiveFileWriterFactory>builder()
@@ -152,7 +152,7 @@ public final class HiveTestUtils
                 .build();
     }
 
-    public static OrcFileWriterFactory getDefaultOrcFileWriterFactory(HiveClientConfig hiveClientConfig)
+	public static OrcFileWriterFactory getDefaultOrcFileWriterFactory(HiveClientConfig hiveClientConfig)
     {
         HdfsEnvironment testHdfsEnvironment = createTestHdfsEnvironment(hiveClientConfig);
         return new OrcFileWriterFactory(
@@ -164,16 +164,14 @@ public final class HiveTestUtils
                 new OrcFileWriterConfig());
     }
 
-    public static List<Type> getTypes(List<? extends ColumnHandle> columnHandles)
+	public static List<Type> getTypes(List<? extends ColumnHandle> columnHandles)
     {
         ImmutableList.Builder<Type> types = ImmutableList.builder();
-        for (ColumnHandle columnHandle : columnHandles) {
-            types.add(TYPE_MANAGER.getType(((HiveColumnHandle) columnHandle).getTypeSignature()));
-        }
+        columnHandles.forEach(columnHandle -> types.add(TYPE_MANAGER.getType(((HiveColumnHandle) columnHandle).getTypeSignature())));
         return types.build();
     }
 
-    public static HdfsEnvironment createTestHdfsEnvironment(HiveClientConfig config)
+	public static HdfsEnvironment createTestHdfsEnvironment(HiveClientConfig config)
     {
         HdfsConfiguration hdfsConfig = new HiveHdfsConfiguration(
                 new HdfsConfigurationInitializer(
@@ -184,21 +182,21 @@ public final class HiveTestUtils
         return new HdfsEnvironment(hdfsConfig, config, new NoHdfsAuthentication());
     }
 
-    public static MapType mapType(Type keyType, Type valueType)
+	public static MapType mapType(Type keyType, Type valueType)
     {
         return (MapType) TYPE_MANAGER.getParameterizedType(StandardTypes.MAP, ImmutableList.of(
                 TypeSignatureParameter.of(keyType.getTypeSignature()),
                 TypeSignatureParameter.of(valueType.getTypeSignature())));
     }
 
-    public static ArrayType arrayType(Type elementType)
+	public static ArrayType arrayType(Type elementType)
     {
         return (ArrayType) TYPE_MANAGER.getParameterizedType(
                 StandardTypes.ARRAY,
                 ImmutableList.of(TypeSignatureParameter.of(elementType.getTypeSignature())));
     }
 
-    public static RowType rowType(List<NamedTypeSignature> elementTypeSignatures)
+	public static RowType rowType(List<NamedTypeSignature> elementTypeSignatures)
     {
         return (RowType) TYPE_MANAGER.getParameterizedType(
                 StandardTypes.ROW,
@@ -207,12 +205,12 @@ public final class HiveTestUtils
                         .collect(toList())));
     }
 
-    public static Long shortDecimal(String value)
+	public static Long shortDecimal(String value)
     {
         return new BigDecimal(value).unscaledValue().longValueExact();
     }
 
-    public static Slice longDecimal(String value)
+	public static Slice longDecimal(String value)
     {
         return encodeScaledValue(new BigDecimal(value));
     }

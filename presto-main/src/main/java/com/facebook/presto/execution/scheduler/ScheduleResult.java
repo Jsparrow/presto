@@ -26,7 +26,69 @@ import static java.util.Objects.requireNonNull;
 
 public class ScheduleResult
 {
-    public enum BlockedReason
+    private final Set<RemoteTask> newTasks;
+	private final ListenableFuture<?> blocked;
+	private final Optional<BlockedReason> blockedReason;
+	private final boolean finished;
+	private final int splitsScheduled;
+
+	private ScheduleResult(boolean finished, Iterable<? extends RemoteTask> newTasks, ListenableFuture<?> blocked, Optional<BlockedReason> blockedReason, int splitsScheduled)
+    {
+        this.finished = finished;
+        this.newTasks = ImmutableSet.copyOf(requireNonNull(newTasks, "newTasks is null"));
+        this.blocked = requireNonNull(blocked, "blocked is null");
+        this.blockedReason = requireNonNull(blockedReason, "blockedReason is null");
+        this.splitsScheduled = splitsScheduled;
+    }
+
+	public static ScheduleResult nonBlocked(boolean finished, Iterable<? extends RemoteTask> newTasks, int splitsScheduled)
+    {
+        return new ScheduleResult(finished, newTasks, immediateFuture(null), Optional.empty(), splitsScheduled);
+    }
+
+	public static ScheduleResult blocked(boolean finished, Iterable<? extends RemoteTask> newTasks, ListenableFuture<?> blocked, BlockedReason blockedReason, int splitsScheduled)
+    {
+        return new ScheduleResult(finished, newTasks, blocked, Optional.of(requireNonNull(blockedReason, "blockedReason is null")), splitsScheduled);
+    }
+
+	public boolean isFinished()
+    {
+        return finished;
+    }
+
+	public Set<RemoteTask> getNewTasks()
+    {
+        return newTasks;
+    }
+
+	public ListenableFuture<?> getBlocked()
+    {
+        return blocked;
+    }
+
+	public int getSplitsScheduled()
+    {
+        return splitsScheduled;
+    }
+
+	public Optional<BlockedReason> getBlockedReason()
+    {
+        return blockedReason;
+    }
+
+	@Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("finished", finished)
+                .add("newTasks", newTasks.size())
+                .add("blocked", !blocked.isDone())
+                .add("splitsScheduled", splitsScheduled)
+                .add("blockedReason", blockedReason)
+                .toString();
+    }
+
+	public enum BlockedReason
     {
         WRITER_SCALING,
         NO_ACTIVE_DRIVER_GROUP,
@@ -52,67 +114,5 @@ public class ScheduleResult
                     throw new IllegalArgumentException("Unknown blocked reason: " + other);
             }
         }
-    }
-
-    private final Set<RemoteTask> newTasks;
-    private final ListenableFuture<?> blocked;
-    private final Optional<BlockedReason> blockedReason;
-    private final boolean finished;
-    private final int splitsScheduled;
-
-    public static ScheduleResult nonBlocked(boolean finished, Iterable<? extends RemoteTask> newTasks, int splitsScheduled)
-    {
-        return new ScheduleResult(finished, newTasks, immediateFuture(null), Optional.empty(), splitsScheduled);
-    }
-
-    public static ScheduleResult blocked(boolean finished, Iterable<? extends RemoteTask> newTasks, ListenableFuture<?> blocked, BlockedReason blockedReason, int splitsScheduled)
-    {
-        return new ScheduleResult(finished, newTasks, blocked, Optional.of(requireNonNull(blockedReason, "blockedReason is null")), splitsScheduled);
-    }
-
-    private ScheduleResult(boolean finished, Iterable<? extends RemoteTask> newTasks, ListenableFuture<?> blocked, Optional<BlockedReason> blockedReason, int splitsScheduled)
-    {
-        this.finished = finished;
-        this.newTasks = ImmutableSet.copyOf(requireNonNull(newTasks, "newTasks is null"));
-        this.blocked = requireNonNull(blocked, "blocked is null");
-        this.blockedReason = requireNonNull(blockedReason, "blockedReason is null");
-        this.splitsScheduled = splitsScheduled;
-    }
-
-    public boolean isFinished()
-    {
-        return finished;
-    }
-
-    public Set<RemoteTask> getNewTasks()
-    {
-        return newTasks;
-    }
-
-    public ListenableFuture<?> getBlocked()
-    {
-        return blocked;
-    }
-
-    public int getSplitsScheduled()
-    {
-        return splitsScheduled;
-    }
-
-    public Optional<BlockedReason> getBlockedReason()
-    {
-        return blockedReason;
-    }
-
-    @Override
-    public String toString()
-    {
-        return toStringHelper(this)
-                .add("finished", finished)
-                .add("newTasks", newTasks.size())
-                .add("blocked", !blocked.isDone())
-                .add("splitsScheduled", splitsScheduled)
-                .add("blockedReason", blockedReason)
-                .toString();
     }
 }

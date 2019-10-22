@@ -31,8 +31,6 @@ public class TimestampEncoding
         implements TextColumnEncoding
 {
     private static final DateTimeFormatter HIVE_TIMESTAMP_PARSER;
-    private final DateTimeFormatter dateTimeFormatter;
-
     static {
         @SuppressWarnings("SpellCheckingInspection")
         DateTimeParser[] timestampWithoutTimeZoneParser = {
@@ -48,18 +46,19 @@ public class TimestampEncoding
         HIVE_TIMESTAMP_PARSER = new DateTimeFormatterBuilder().append(timestampWithoutTimeZonePrinter, timestampWithoutTimeZoneParser).toFormatter().withZoneUTC();
     }
 
-    private final Type type;
-    private final Slice nullSequence;
-    private final StringBuilder buffer = new StringBuilder();
+	private final DateTimeFormatter dateTimeFormatter;
+	private final Type type;
+	private final Slice nullSequence;
+	private final StringBuilder buffer = new StringBuilder();
 
-    public TimestampEncoding(Type type, Slice nullSequence, DateTimeZone hiveStorageTimeZone)
+	public TimestampEncoding(Type type, Slice nullSequence, DateTimeZone hiveStorageTimeZone)
     {
         this.type = type;
         this.nullSequence = nullSequence;
         this.dateTimeFormatter = HIVE_TIMESTAMP_PARSER.withZone(hiveStorageTimeZone);
     }
 
-    @Override
+	@Override
     public void encodeColumn(Block block, SliceOutput output, EncodeOutput encodeOutput)
     {
         for (int position = 0; position < block.getPositionCount(); position++) {
@@ -78,7 +77,7 @@ public class TimestampEncoding
         }
     }
 
-    @Override
+	@Override
     public void encodeValueInto(int depth, Block block, int position, SliceOutput output)
     {
         long millis = type.getLong(block, position);
@@ -89,7 +88,7 @@ public class TimestampEncoding
         }
     }
 
-    @Override
+	@Override
     public Block decodeColumn(ColumnData columnData)
     {
         int size = columnData.rowCount();
@@ -109,14 +108,14 @@ public class TimestampEncoding
         return builder.build();
     }
 
-    @Override
+	@Override
     public void decodeValueInto(int depth, BlockBuilder builder, Slice slice, int offset, int length)
     {
         long millis = parseTimestamp(slice, offset, length);
         type.writeLong(builder, millis);
     }
 
-    private long parseTimestamp(Slice slice, int offset, int length)
+	private long parseTimestamp(Slice slice, int offset, int length)
     {
         //noinspection deprecation
         return dateTimeFormatter.parseMillis(new String(slice.getBytes(offset, length), 0));

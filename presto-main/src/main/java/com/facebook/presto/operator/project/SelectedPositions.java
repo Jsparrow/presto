@@ -25,16 +25,6 @@ public class SelectedPositions
     private final int offset;
     private final int size;
 
-    public static SelectedPositions positionsList(int[] positions, int offset, int size)
-    {
-        return new SelectedPositions(true, positions, offset, size);
-    }
-
-    public static SelectedPositions positionsRange(int offset, int size)
-    {
-        return new SelectedPositions(false, new int[0], offset, size);
-    }
-
     private SelectedPositions(boolean isList, int[] positions, int offset, int size)
     {
         this.isList = isList;
@@ -49,33 +39,43 @@ public class SelectedPositions
         }
     }
 
-    public boolean isList()
+	public static SelectedPositions positionsList(int[] positions, int offset, int size)
+    {
+        return new SelectedPositions(true, positions, offset, size);
+    }
+
+	public static SelectedPositions positionsRange(int offset, int size)
+    {
+        return new SelectedPositions(false, new int[0], offset, size);
+    }
+
+	public boolean isList()
     {
         return isList;
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return size == 0;
     }
 
-    public int[] getPositions()
+	public int[] getPositions()
     {
         checkState(isList, "SelectedPositions is a range");
         return positions;
     }
 
-    public int getOffset()
+	public int getOffset()
     {
         return offset;
     }
 
-    public int size()
+	public int size()
     {
         return size;
     }
 
-    public SelectedPositions subRange(int start, int end)
+	public SelectedPositions subRange(int start, int end)
     {
         checkPositionIndexes(start, end, size);
 

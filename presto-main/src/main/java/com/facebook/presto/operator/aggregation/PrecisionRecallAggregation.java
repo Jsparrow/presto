@@ -109,74 +109,11 @@ public abstract class PrecisionRecallAggregation
             state.setFalseWeights(otherState.getFalseWeights().clone());
             return;
         }
-        if (state.getTrueWeights() != null && otherState.getTrueWeights() != null) {
-            state.getTrueWeights().mergeWith(otherState.getTrueWeights());
-            state.getFalseWeights().mergeWith(otherState.getFalseWeights());
-        }
-    }
-
-    protected static class BucketResult
-    {
-        private final double threshold;
-        private final double positive;
-        private final double negative;
-        private final double truePositive;
-        private final double trueNegative;
-        private final double falsePositive;
-        private final double falseNegative;
-
-        public double getThreshold()
-        {
-            return threshold;
-        }
-
-        public double getPositive()
-        {
-            return positive;
-        }
-
-        public double getNegative()
-        {
-            return negative;
-        }
-
-        public double getTruePositive()
-        {
-            return truePositive;
-        }
-
-        public double getTrueNegative()
-        {
-            return trueNegative;
-        }
-
-        public double getFalsePositive()
-        {
-            return falsePositive;
-        }
-
-        public double getFalseNegative()
-        {
-            return falseNegative;
-        }
-
-        public BucketResult(
-                double threshold,
-                double positive,
-                double negative,
-                double truePositive,
-                double trueNegative,
-                double falsePositive,
-                double falseNegative)
-        {
-            this.threshold = threshold;
-            this.positive = positive;
-            this.negative = negative;
-            this.truePositive = truePositive;
-            this.trueNegative = trueNegative;
-            this.falsePositive = falsePositive;
-            this.falseNegative = falseNegative;
-        }
+        if (!(state.getTrueWeights() != null && otherState.getTrueWeights() != null)) {
+			return;
+		}
+		state.getTrueWeights().mergeWith(otherState.getTrueWeights());
+		state.getFalseWeights().mergeWith(otherState.getFalseWeights());
     }
 
     protected static Iterator<BucketResult> getResultsIterator(@AggregationState PrecisionRecallState state)
@@ -235,5 +172,69 @@ public abstract class PrecisionRecallAggregation
                 throw new UnsupportedOperationException();
             }
         };
+    }
+
+	protected static class BucketResult
+    {
+        private final double threshold;
+        private final double positive;
+        private final double negative;
+        private final double truePositive;
+        private final double trueNegative;
+        private final double falsePositive;
+        private final double falseNegative;
+
+        public BucketResult(
+                double threshold,
+                double positive,
+                double negative,
+                double truePositive,
+                double trueNegative,
+                double falsePositive,
+                double falseNegative)
+        {
+            this.threshold = threshold;
+            this.positive = positive;
+            this.negative = negative;
+            this.truePositive = truePositive;
+            this.trueNegative = trueNegative;
+            this.falsePositive = falsePositive;
+            this.falseNegative = falseNegative;
+        }
+
+		public double getThreshold()
+        {
+            return threshold;
+        }
+
+		public double getPositive()
+        {
+            return positive;
+        }
+
+		public double getNegative()
+        {
+            return negative;
+        }
+
+		public double getTruePositive()
+        {
+            return truePositive;
+        }
+
+		public double getTrueNegative()
+        {
+            return trueNegative;
+        }
+
+		public double getFalsePositive()
+        {
+            return falsePositive;
+        }
+
+		public double getFalseNegative()
+        {
+            return falseNegative;
+        }
     }
 }

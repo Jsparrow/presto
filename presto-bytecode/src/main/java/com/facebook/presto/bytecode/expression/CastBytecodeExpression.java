@@ -104,11 +104,10 @@ class CastBytecodeExpression
 
     private static BytecodeBlock castPrimitiveToPrimitive(BytecodeBlock block, Class<?> sourceType, Class<?> targetType)
     {
-        if (sourceType == boolean.class) {
-            if (targetType == boolean.class) {
-                return block;
-            }
-        }
+        boolean condition = sourceType == boolean.class && targetType == boolean.class;
+		if (condition) {
+		    return block;
+		}
         if (sourceType == byte.class) {
             if (targetType == byte.class) {
                 return block;
@@ -314,7 +313,7 @@ class CastBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return "((" + getType().getSimpleName() + ") " + instance + ")";
+        return new StringBuilder().append("((").append(getType().getSimpleName()).append(") ").append(instance).append(")").toString();
     }
 
     @Override

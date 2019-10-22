@@ -21,12 +21,14 @@ import jline.console.history.History;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LineReader
         extends ConsoleReader
-        implements Closeable
 {
-    private boolean interrupted;
+    private static final Logger logger = LoggerFactory.getLogger(LineReader.class);
+	private boolean interrupted;
 
     LineReader(History history, Completer... completers)
             throws IOException
@@ -51,7 +53,8 @@ public class LineReader
             line = super.readLine(prompt, mask);
         }
         catch (UserInterruptException e) {
-            interrupted = true;
+            logger.error(e.getMessage(), e);
+			interrupted = true;
             return null;
         }
 

@@ -22,10 +22,14 @@ import static org.fusesource.jansi.Ansi.Erase;
 import static org.fusesource.jansi.Ansi.ansi;
 import static org.fusesource.jansi.internal.CLibrary.STDOUT_FILENO;
 import static org.fusesource.jansi.internal.CLibrary.isatty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConsolePrinter
 {
-    public static final boolean REAL_TERMINAL = detectRealTerminal();
+    private static final Logger logger = LoggerFactory.getLogger(ConsolePrinter.class);
+
+	public static final boolean REAL_TERMINAL = detectRealTerminal();
 
     private final PrintStream out;
     private int lines;
@@ -49,30 +53,32 @@ public class ConsolePrinter
 
     public void repositionCursor()
     {
-        if (lines > 0) {
-            if (isRealTerminal()) {
-                out.print(ansi().cursorUp(lines).toString());
-            }
-            else {
-                out.print('\r');
-            }
-            out.flush();
-            lines = 0;
-        }
+        if (lines <= 0) {
+			return;
+		}
+		if (isRealTerminal()) {
+		    out.print(ansi().cursorUp(lines).toString());
+		}
+		else {
+		    out.print('\r');
+		}
+		out.flush();
+		lines = 0;
     }
 
     public void resetScreen()
     {
-        if (lines > 0) {
-            if (isRealTerminal()) {
-                out.print(ansi().cursorUp(lines).eraseScreen(Erase.FORWARD).toString());
-            }
-            else {
-                out.print('\r');
-            }
-            out.flush();
-            lines = 0;
-        }
+        if (lines <= 0) {
+			return;
+		}
+		if (isRealTerminal()) {
+		    out.print(ansi().cursorUp(lines).eraseScreen(Erase.FORWARD).toString());
+		}
+		else {
+		    out.print('\r');
+		}
+		out.flush();
+		lines = 0;
     }
 
     public int getWidth()
@@ -114,6 +120,7 @@ public class ConsolePrinter
             }
         }
         catch (NoClassDefFoundError | UnsatisfiedLinkError ignore) {
+			logger.error(ignore.getMessage(), ignore);
             // These errors happen if the JNI lib is not available for your platform.
         }
         return true;

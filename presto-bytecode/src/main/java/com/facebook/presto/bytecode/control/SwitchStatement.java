@@ -36,19 +36,14 @@ import static java.util.Objects.requireNonNull;
 public class SwitchStatement
         implements FlowControl
 {
-    public static SwitchBuilder switchBuilder()
-    {
-        return new SwitchBuilder();
-    }
-
     private final LabelNode endLabel = new LabelNode("switchEnd");
-    private final LabelNode defaultLabel = new LabelNode("switchDefault");
-    private final String comment;
-    private final BytecodeExpression expression;
-    private final SortedSet<CaseStatement> cases;
-    private final BytecodeNode defaultBody;
+	private final LabelNode defaultLabel = new LabelNode("switchDefault");
+	private final String comment;
+	private final BytecodeExpression expression;
+	private final SortedSet<CaseStatement> cases;
+	private final BytecodeNode defaultBody;
 
-    private SwitchStatement(
+	private SwitchStatement(
             String comment,
             BytecodeExpression expression,
             Iterable<CaseStatement> cases,
@@ -60,38 +55,43 @@ public class SwitchStatement
         this.defaultBody = defaultBody;
     }
 
-    @Override
+	public static SwitchBuilder switchBuilder()
+    {
+        return new SwitchBuilder();
+    }
+
+	@Override
     public String getComment()
     {
         return comment;
     }
 
-    public BytecodeExpression expression()
+	public BytecodeExpression expression()
     {
         return expression;
     }
 
-    public SortedSet<CaseStatement> cases()
+	public SortedSet<CaseStatement> cases()
     {
         return cases;
     }
 
-    public LabelNode getDefaultLabel()
+	public LabelNode getDefaultLabel()
     {
         return defaultLabel;
     }
 
-    public BytecodeNode getDefaultBody()
+	public BytecodeNode getDefaultBody()
     {
         return defaultBody;
     }
 
-    public LabelNode getEndLabel()
+	public LabelNode getEndLabel()
     {
         return endLabel;
     }
 
-    @Override
+	@Override
     public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
     {
         // build switch table
@@ -108,11 +108,7 @@ public class SwitchStatement
         // build case blocks
         BytecodeBlock block = new BytecodeBlock();
 
-        for (CaseStatement caseStatement : cases) {
-            block.visitLabel(caseStatement.getLabel())
-                    .append(caseStatement.getBody())
-                    .gotoLabel(endLabel);
-        }
+        cases.forEach(caseStatement -> block.visitLabel(caseStatement.getLabel()).append(caseStatement.getBody()).gotoLabel(endLabel));
 
         // build default block
         block.visitLabel(defaultLabel);
@@ -129,19 +125,19 @@ public class SwitchStatement
         block.accept(visitor, generationContext);
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
     {
         return visitor.visitSwitch(parent, this);
     }
 
-    public static class SwitchBuilder
+	public static class SwitchBuilder
     {
         private final Set<CaseStatement> cases = new HashSet<>();
         private String comment;

@@ -292,24 +292,24 @@ public class TestJdbcComputePushdown
         private final JdbcTableLayoutHandle jdbcTableLayoutHandle;
         private final Set<ColumnHandle> columns;
 
-        static PlanMatchPattern jdbcTableScanPattern(JdbcTableLayoutHandle jdbcTableLayoutHandle, Set<ColumnHandle> columns)
-        {
-            return node(TableScanNode.class).with(new JdbcTableScanMatcher(jdbcTableLayoutHandle, columns));
-        }
-
         private JdbcTableScanMatcher(JdbcTableLayoutHandle jdbcTableLayoutHandle, Set<ColumnHandle> columns)
         {
             this.jdbcTableLayoutHandle = jdbcTableLayoutHandle;
             this.columns = columns;
         }
 
-        @Override
+		static PlanMatchPattern jdbcTableScanPattern(JdbcTableLayoutHandle jdbcTableLayoutHandle, Set<ColumnHandle> columns)
+        {
+            return node(TableScanNode.class).with(new JdbcTableScanMatcher(jdbcTableLayoutHandle, columns));
+        }
+
+		@Override
         public boolean shapeMatches(PlanNode node)
         {
             return node instanceof TableScanNode;
         }
 
-        @Override
+		@Override
         public MatchResult detailMatches(PlanNode node, StatsProvider stats, Session session, Metadata metadata, SymbolAliases symbolAliases)
         {
             checkState(shapeMatches(node), "Plan testing framework error: shapeMatches returned false in detailMatches in %s", this.getClass().getName());

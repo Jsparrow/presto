@@ -29,24 +29,22 @@ import java.util.function.Consumer;
 
 public class SchedulingOrderVisitor
 {
-    public static List<PlanNodeId> scheduleOrder(PlanNode root)
+    private SchedulingOrderVisitor() {}
+
+	public static List<PlanNodeId> scheduleOrder(PlanNode root)
     {
         ImmutableList.Builder<PlanNodeId> schedulingOrder = ImmutableList.builder();
         root.accept(new Visitor(), schedulingOrder::add);
         return schedulingOrder.build();
     }
 
-    private SchedulingOrderVisitor() {}
-
-    private static class Visitor
+	private static class Visitor
             extends InternalPlanVisitor<Void, Consumer<PlanNodeId>>
     {
         @Override
         public Void visitPlan(PlanNode node, Consumer<PlanNodeId> schedulingOrder)
         {
-            for (PlanNode source : node.getSources()) {
-                source.accept(this, schedulingOrder);
-            }
+            node.getSources().forEach(source -> source.accept(this, schedulingOrder));
             return null;
         }
 

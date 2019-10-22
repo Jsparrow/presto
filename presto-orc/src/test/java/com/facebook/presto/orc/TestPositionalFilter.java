@@ -48,7 +48,7 @@ public class TestPositionalFilter
             1, 1, 2, 2, 3, 3, 4 // fail testBytes()
         };
         // Convert the values to byte[][].
-        byte[][] values = Arrays.stream(numbers).mapToObj(n -> toBytes(Long.valueOf(n).toString())).toArray(byte[][]::new);
+        byte[][] values = Arrays.stream(numbers).mapToObj(n -> toBytes(Long.toString(n))).toArray(byte[][]::new);
 
         boolean[] expectedResults = new boolean[] {
             true, true, true, true,
@@ -63,11 +63,11 @@ public class TestPositionalFilter
         filter.setFilters(filters, offsets);
 
         int valuesIndex = 0;
-        for (int i = 0; i < expectedResults.length; i++) {
+        for (boolean expectedResult : expectedResults) {
             boolean result = filter.testLength(values[valuesIndex].length) && filter.testBytes(values[valuesIndex], 0, values[valuesIndex].length);
-            assertEquals(expectedResults[i], result);
+            assertEquals(expectedResult, result);
             valuesIndex++;
-            if (expectedResults[i] == false) {
+            if (expectedResult == false) {
                 valuesIndex += filter.getSucceedingPositionsToFail();
             }
         }
@@ -76,7 +76,7 @@ public class TestPositionalFilter
 
     private TupleDomainFilter equals(int value)
     {
-        byte[] bytesValue = toBytes(Integer.valueOf(value).toString());
+        byte[] bytesValue = toBytes(Integer.toString(value));
         return BytesRange.of(bytesValue, false, bytesValue, false, false);
     }
 

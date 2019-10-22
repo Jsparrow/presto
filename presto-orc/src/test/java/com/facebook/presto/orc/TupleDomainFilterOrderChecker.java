@@ -38,6 +38,6 @@ public class TupleDomainFilterOrderChecker
 
     public void assertOrder()
     {
-        assertEquals(actualOrder, expectedOrder, "Actual order " + actualOrder + " doesn't match desired order " + expectedOrder);
+        assertEquals(actualOrder, expectedOrder, new StringBuilder().append("Actual order ").append(actualOrder).append(" doesn't match desired order ").append(expectedOrder).toString());
     }
 }

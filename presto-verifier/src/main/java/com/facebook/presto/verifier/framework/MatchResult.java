@@ -31,21 +31,13 @@ import static java.util.Objects.requireNonNull;
 
 public class MatchResult
 {
-    public enum MatchType
-    {
-        MATCH,
-        SCHEMA_MISMATCH,
-        ROW_COUNT_MISMATCH,
-        COLUMN_MISMATCH,
-    }
-
     private final MatchType matchType;
-    private final Optional<ChecksumResult> controlChecksum;
-    private final OptionalLong controlRowCount;
-    private final OptionalLong testRowCount;
-    private final Map<Column, ColumnMatchResult> mismatchedColumns;
+	private final Optional<ChecksumResult> controlChecksum;
+	private final OptionalLong controlRowCount;
+	private final OptionalLong testRowCount;
+	private final Map<Column, ColumnMatchResult> mismatchedColumns;
 
-    public MatchResult(
+	public MatchResult(
             MatchType matchType,
             Optional<ChecksumResult> controlChecksum,
             OptionalLong controlRowCount,
@@ -59,28 +51,28 @@ public class MatchResult
         this.mismatchedColumns = ImmutableMap.copyOf(mismatchedColumns);
     }
 
-    public boolean isMatched()
+	public boolean isMatched()
     {
         return matchType == MATCH;
     }
 
-    public MatchType getMatchType()
+	public MatchType getMatchType()
     {
         return matchType;
     }
 
-    public ChecksumResult getControlChecksum()
+	public ChecksumResult getControlChecksum()
     {
         checkState(controlChecksum.isPresent(), "controlChecksum is missing");
         return controlChecksum.get();
     }
 
-    public boolean isMismatchPossiblyCausedByNonDeterminism()
+	public boolean isMismatchPossiblyCausedByNonDeterminism()
     {
         return matchType == ROW_COUNT_MISMATCH || matchType == COLUMN_MISMATCH;
     }
 
-    public String getResultsComparison()
+	public String getResultsComparison()
     {
         StringBuilder message = new StringBuilder()
                 .append(matchType.name().replace("_", " "))
@@ -101,5 +93,13 @@ public class MatchResult
                 message.append(format("  %s (%s): %s", column.getName(), column.getType().getDisplayName(), matchResult.getMessage()))
                         .append("\n"));
         return message.toString();
+    }
+
+	public enum MatchType
+    {
+        MATCH,
+        SCHEMA_MISMATCH,
+        ROW_COUNT_MISMATCH,
+        COLUMN_MISMATCH,
     }
 }

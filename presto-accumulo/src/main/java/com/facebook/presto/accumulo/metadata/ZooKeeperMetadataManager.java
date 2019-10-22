@@ -40,6 +40,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.apache.zookeeper.KeeperException.Code.NONODE;
+import org.apache.commons.lang3.StringUtils;
 
 public class ZooKeeperMetadataManager
 {
@@ -250,7 +251,7 @@ public class ZooKeeperMetadataManager
 
     private static String getSchemaPath(String schema)
     {
-        return "/" + schema.toLowerCase(Locale.ENGLISH);
+        return "/" + StringUtils.lowerCase(schema, Locale.ENGLISH);
     }
 
     private static String getSchemaPath(SchemaTableName tableName)
@@ -260,7 +261,7 @@ public class ZooKeeperMetadataManager
 
     private static String getTablePath(SchemaTableName tableName)
     {
-        return getSchemaPath(tableName) + '/' + tableName.getTableName().toLowerCase(Locale.ENGLISH);
+        return new StringBuilder().append(getSchemaPath(tableName)).append('/').append(StringUtils.lowerCase(tableName.getTableName(), Locale.ENGLISH)).toString();
     }
 
     private boolean isAccumuloTable(SchemaTableName tableName)

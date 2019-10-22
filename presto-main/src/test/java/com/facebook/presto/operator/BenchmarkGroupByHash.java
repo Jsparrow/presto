@@ -250,7 +250,34 @@ public class BenchmarkGroupByHash
         return pages.build();
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    private static JoinCompiler getJoinCompiler(boolean groupByUsesEqual)
+    {
+        return new JoinCompiler(MetadataManager.createTestMetadataManager(), new FeaturesConfig().setGroupByUsesEqualTo(groupByUsesEqual));
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkGroupByHash().groupByHashPreCompute(data);
+        new BenchmarkGroupByHash().addPagePreCompute(data);
+
+        SingleChannelBenchmarkData singleChannelBenchmarkData = new SingleChannelBenchmarkData();
+        singleChannelBenchmarkData.setup();
+        new BenchmarkGroupByHash().bigintGroupByHash(singleChannelBenchmarkData);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGroupByHash.class.getSimpleName()).append(".*").toString())
+                .addProfiler(GCProfiler.class)
+                .jvmArgs("-Xmx10g")
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BaselinePagesData
     {
@@ -390,42 +417,15 @@ public class BenchmarkGroupByHash
 
         public boolean isGroupByUsesEqual()
         {
-            if (groupByType.equals("equalTo")) {
+            if ("equalTo".equals(groupByType)) {
                 return true;
             }
-            else if (groupByType.equals("notDistinct")) {
+            else if ("notDistinct".equals(groupByType)) {
                 return false;
             }
             else {
                 throw new UnsupportedOperationException("Unsupported groupByType");
             }
         }
-    }
-
-    private static JoinCompiler getJoinCompiler(boolean groupByUsesEqual)
-    {
-        return new JoinCompiler(MetadataManager.createTestMetadataManager(), new FeaturesConfig().setGroupByUsesEqualTo(groupByUsesEqual));
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkGroupByHash().groupByHashPreCompute(data);
-        new BenchmarkGroupByHash().addPagePreCompute(data);
-
-        SingleChannelBenchmarkData singleChannelBenchmarkData = new SingleChannelBenchmarkData();
-        singleChannelBenchmarkData.setup();
-        new BenchmarkGroupByHash().bigintGroupByHash(singleChannelBenchmarkData);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGroupByHash.class.getSimpleName() + ".*")
-                .addProfiler(GCProfiler.class)
-                .jvmArgs("-Xmx10g")
-                .build();
-        new Runner(options).run();
     }
 }

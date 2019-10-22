@@ -40,7 +40,8 @@ public final class TaskManagementExecutor
         taskManagementExecutorMBean = new ThreadPoolExecutorMBean((ThreadPoolExecutor) taskManagementExecutor);
     }
 
-    @PreDestroy
+    @Override
+	@PreDestroy
     public void close()
     {
         taskManagementExecutor.shutdownNow();

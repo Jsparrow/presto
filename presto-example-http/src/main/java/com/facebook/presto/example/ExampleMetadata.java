@@ -116,11 +116,8 @@ public class ExampleMetadata
         }
 
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (String schemaName : schemaNames) {
-            for (String tableName : exampleClient.getTableNames(schemaName)) {
-                builder.add(new SchemaTableName(schemaName, tableName));
-            }
-        }
+        schemaNames.forEach(schemaName -> exampleClient.getTableNames(schemaName)
+				.forEach(tableName -> builder.add(new SchemaTableName(schemaName, tableName))));
         return builder.build();
     }
 
@@ -149,13 +146,13 @@ public class ExampleMetadata
     {
         requireNonNull(prefix, "prefix is null");
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> columns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix)) {
+        listTables(session, prefix).forEach(tableName -> {
             ConnectorTableMetadata tableMetadata = getTableMetadata(tableName);
             // table can disappear during listing operation
             if (tableMetadata != null) {
                 columns.put(tableName, tableMetadata.getColumns());
             }
-        }
+        });
         return columns.build();
     }
 

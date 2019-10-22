@@ -25,61 +25,55 @@ import static java.util.Objects.requireNonNull;
 public class ShowCreate
         extends Statement
 {
-    public enum Type
-    {
-        TABLE,
-        VIEW
-    }
-
     private final Type type;
-    private final QualifiedName name;
+	private final QualifiedName name;
 
-    public ShowCreate(Type type, QualifiedName name)
+	public ShowCreate(Type type, QualifiedName name)
     {
         this(Optional.empty(), type, name);
     }
 
-    public ShowCreate(NodeLocation location, Type type, QualifiedName name)
+	public ShowCreate(NodeLocation location, Type type, QualifiedName name)
     {
         this(Optional.of(location), type, name);
     }
 
-    private ShowCreate(Optional<NodeLocation> location, Type type, QualifiedName name)
+	private ShowCreate(Optional<NodeLocation> location, Type type, QualifiedName name)
     {
         super(location);
         this.type = requireNonNull(type, "type is null");
         this.name = requireNonNull(name, "name is null");
     }
 
-    public QualifiedName getName()
+	public QualifiedName getName()
     {
         return name;
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitShowCreate(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, name);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -92,12 +86,18 @@ public class ShowCreate
         return Objects.equals(name, o.name) && Objects.equals(type, o.type);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .add("name", name)
                 .toString();
+    }
+
+	public enum Type
+    {
+        TABLE,
+        VIEW
     }
 }

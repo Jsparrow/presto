@@ -84,9 +84,8 @@ public class AggregationStatsRule
         }
         result.setOutputRowCount(min(rowsCount, sourceStats.getOutputRowCount()));
 
-        for (Map.Entry<VariableReferenceExpression, Aggregation> aggregationEntry : aggregations.entrySet()) {
-            result.addVariableStatistics(aggregationEntry.getKey(), estimateAggregationStats(aggregationEntry.getValue(), sourceStats));
-        }
+        aggregations.entrySet().forEach(aggregationEntry -> result.addVariableStatistics(aggregationEntry.getKey(),
+				estimateAggregationStats(aggregationEntry.getValue(), sourceStats)));
 
         return result.build();
     }

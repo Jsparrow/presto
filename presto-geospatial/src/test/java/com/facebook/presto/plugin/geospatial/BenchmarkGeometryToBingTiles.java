@@ -58,7 +58,22 @@ public class BenchmarkGeometryToBingTiles
         return BingTileFunctions.geometryToBingTiles(data.envelope, data.zoomLevel);
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws IOException, RunnerException
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkGeometryToBingTiles().geometryToBingTiles(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGeometryToBingTiles.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice geometry;
@@ -78,20 +93,5 @@ public class BenchmarkGeometryToBingTiles
             envelope = GeoFunctions.stEnvelope(geometry);
             zoomLevel = Integer.parseInt(parts[1]);
         }
-    }
-
-    public static void main(String[] args)
-            throws IOException, RunnerException
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkGeometryToBingTiles().geometryToBingTiles(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGeometryToBingTiles.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

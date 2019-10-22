@@ -51,12 +51,12 @@ public final class RowExpressionVariableInliner
     @Override
     public RowExpression rewriteVariableReference(VariableReferenceExpression node, Void context, RowExpressionTreeRewriter<Void> treeRewriter)
     {
-        if (!excludedNames.contains(node.getName())) {
-            RowExpression result = mapping.apply(node);
-            checkState(result != null, "Cannot resolve symbol %s", node.getName());
-            return result;
-        }
-        return null;
+        if (excludedNames.contains(node.getName())) {
+			return null;
+		}
+		RowExpression result = mapping.apply(node);
+		checkState(result != null, "Cannot resolve symbol %s", node.getName());
+		return result;
     }
 
     @Override

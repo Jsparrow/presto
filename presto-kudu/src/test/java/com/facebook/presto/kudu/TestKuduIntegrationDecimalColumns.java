@@ -26,8 +26,6 @@ import static org.testng.Assert.assertTrue;
 public class TestKuduIntegrationDecimalColumns
         extends AbstractTestQueryFramework
 {
-    private QueryRunner queryRunner;
-
     static final TestDec[] testDecList = {
             new TestDec(10, 0),
             new TestDec(15, 4),
@@ -39,12 +37,14 @@ public class TestKuduIntegrationDecimalColumns
             new TestDec(38, 28),
     };
 
-    public TestKuduIntegrationDecimalColumns()
+	private QueryRunner queryRunner;
+
+	public TestKuduIntegrationDecimalColumns()
     {
         super(() -> KuduQueryRunnerFactory.createKuduQueryRunner("decimal"));
     }
 
-    @Test
+	@Test
     public void testCreateTableWithDecimalColumn()
     {
         for (TestDec dec : testDecList) {
@@ -52,17 +52,14 @@ public class TestKuduIntegrationDecimalColumns
         }
     }
 
-    private void doTestCreateTableWithDecimalColumn(TestDec dec)
+	private void doTestCreateTableWithDecimalColumn(TestDec dec)
     {
         String tableName = dec.getTableName();
         String dropTable = "DROP TABLE IF EXISTS " + tableName;
-        String createTable = "CREATE TABLE " + tableName + " (\n";
+        String createTable = new StringBuilder().append("CREATE TABLE ").append(tableName).append(" (\n").toString();
         createTable += "  id INT WITH (primary_key=true),\n";
-        createTable += "  dec DECIMAL(" + dec.precision + "," + dec.scale + ")\n";
-        createTable += ") WITH (\n" +
-                " partition_by_hash_columns = ARRAY['id'],\n" +
-                " partition_by_hash_buckets = 2\n" +
-                ")";
+        createTable += new StringBuilder().append("  dec DECIMAL(").append(dec.precision).append(",").append(dec.scale).append(")\n").toString();
+        createTable += new StringBuilder().append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id'],\n").append(" partition_by_hash_buckets = 2\n").append(")").toString();
 
         queryRunner.execute(dropTable);
         queryRunner.execute(createTable);
@@ -71,32 +68,34 @@ public class TestKuduIntegrationDecimalColumns
         int maxScale = dec.precision - 10;
         int valuePrecision = dec.precision - maxScale + Math.min(maxScale, dec.scale);
         String insertValue = fullPrecisionValue.substring(0, valuePrecision + 1);
-        queryRunner.execute("INSERT INTO " + tableName + " VALUES(1, DECIMAL '" + insertValue + "')");
+        queryRunner.execute(new StringBuilder().append("INSERT INTO ").append(tableName).append(" VALUES(1, DECIMAL '").append(insertValue).append("')").toString());
 
-        MaterializedResult result = queryRunner.execute("SELECT id, CAST((dec - (DECIMAL '" + insertValue + "')) as DOUBLE) FROM " + tableName);
+        MaterializedResult result = queryRunner.execute(new StringBuilder().append("SELECT id, CAST((dec - (DECIMAL '").append(insertValue).append("')) as DOUBLE) FROM ").append(tableName).toString());
         assertEquals(result.getRowCount(), 1);
         Object obj = result.getMaterializedRows().get(0).getField(1);
         assertTrue(obj instanceof Double);
         Double actual = (Double) obj;
-        assertEquals(0, actual, 0.3 * Math.pow(0.1, dec.scale), "p=" + dec.precision + ",s=" + dec.scale + " => " + actual + ",insert = " + insertValue);
+        assertEquals(0, actual, 0.3 * Math.pow(0.1, dec.scale), new StringBuilder().append("p=").append(dec.precision).append(",s=").append(dec.scale).append(" => ")
+				.append(actual).append(",insert = ").append(insertValue).toString());
     }
 
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         queryRunner = getQueryRunner();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public final void destroy()
     {
-        if (queryRunner != null) {
-            queryRunner.close();
-            queryRunner = null;
-        }
+        if (queryRunner == null) {
+			return;
+		}
+		queryRunner.close();
+		queryRunner = null;
     }
 
-    static class TestDec
+	static class TestDec
     {
         final int precision;
         final int scale;
@@ -109,7 +108,7 @@ public class TestKuduIntegrationDecimalColumns
 
         String getTableName()
         {
-            return "test_dec_" + precision + "_" + scale;
+            return new StringBuilder().append("test_dec_").append(precision).append("_").append(scale).toString();
         }
     }
 }

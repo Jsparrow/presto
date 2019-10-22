@@ -314,9 +314,7 @@ public class MapFlatBatchStreamReader
 
         BlockBuilder blockBuilder = keyType.createBlockBuilder(null, sequenceEncodings.size());
 
-        for (DwrfSequenceEncoding sequenceEncoding : sequenceEncodings) {
-            keyType.writeLong(blockBuilder, sequenceEncoding.getKey().getIntKey());
-        }
+        sequenceEncodings.forEach(sequenceEncoding -> keyType.writeLong(blockBuilder, sequenceEncoding.getKey().getIntKey()));
 
         return blockBuilder.build();
     }
@@ -331,11 +329,10 @@ public class MapFlatBatchStreamReader
 
         VariableWidthBlockBuilder builder = new VariableWidthBlockBuilder(null, sequenceEncodings.size(), bytes);
 
-        for (DwrfSequenceEncoding sequenceEncoding : sequenceEncodings) {
-            Slice key = Slices.wrappedBuffer(sequenceEncoding.getKey().getBytesKey().toByteArray());
-            builder.writeBytes(key, 0, key.length());
-            builder.closeEntry();
-        }
+        sequenceEncodings.stream().map(sequenceEncoding -> Slices.wrappedBuffer(sequenceEncoding.getKey().getBytesKey().toByteArray())).forEach(key -> {
+			builder.writeBytes(key, 0, key.length());
+			builder.closeEntry();
+		});
 
         return builder.build();
     }

@@ -43,20 +43,20 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class KafkaQueryRunner
 {
-    private KafkaQueryRunner()
+    private static final Logger log = Logger.get("TestQueries");
+	private static final String TPCH_SCHEMA = "tpch";
+
+	private KafkaQueryRunner()
     {
     }
 
-    private static final Logger log = Logger.get("TestQueries");
-    private static final String TPCH_SCHEMA = "tpch";
-
-    public static DistributedQueryRunner createKafkaQueryRunner(EmbeddedKafka embeddedKafka, TpchTable<?>... tables)
+	public static DistributedQueryRunner createKafkaQueryRunner(EmbeddedKafka embeddedKafka, TpchTable<?>... tables)
             throws Exception
     {
         return createKafkaQueryRunner(embeddedKafka, ImmutableList.copyOf(tables));
     }
 
-    public static DistributedQueryRunner createKafkaQueryRunner(EmbeddedKafka embeddedKafka, Iterable<TpchTable<?>> tables)
+	public static DistributedQueryRunner createKafkaQueryRunner(EmbeddedKafka embeddedKafka, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         DistributedQueryRunner queryRunner = null;
@@ -93,7 +93,7 @@ public final class KafkaQueryRunner
         }
     }
 
-    private static void loadTpchTopic(EmbeddedKafka embeddedKafka, TestingPrestoClient prestoClient, TpchTable<?> table)
+	private static void loadTpchTopic(EmbeddedKafka embeddedKafka, TestingPrestoClient prestoClient, TpchTable<?> table)
     {
         long start = System.nanoTime();
         log.info("Running import for %s", table.getTableName());
@@ -101,12 +101,12 @@ public final class KafkaQueryRunner
         log.info("Imported %s in %s", 0, table.getTableName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
-    private static String kafkaTopicName(TpchTable<?> table)
+	private static String kafkaTopicName(TpchTable<?> table)
     {
-        return TPCH_SCHEMA + "." + table.getTableName().toLowerCase(ENGLISH);
+        return new StringBuilder().append(TPCH_SCHEMA).append(".").append(table.getTableName().toLowerCase(ENGLISH)).toString();
     }
 
-    private static Map<SchemaTableName, KafkaTopicDescription> createTpchTopicDescriptions(Metadata metadata, Iterable<TpchTable<?>> tables)
+	private static Map<SchemaTableName, KafkaTopicDescription> createTpchTopicDescriptions(Metadata metadata, Iterable<TpchTable<?>> tables)
             throws Exception
     {
         JsonCodec<KafkaTopicDescription> topicDescriptionJsonCodec = new CodecSupplier<>(KafkaTopicDescription.class, metadata).get();
@@ -121,7 +121,7 @@ public final class KafkaQueryRunner
         return topicDescriptions.build();
     }
 
-    public static Session createSession()
+	public static Session createSession()
     {
         return testSessionBuilder()
                 .setCatalog("kafka")
@@ -129,7 +129,7 @@ public final class KafkaQueryRunner
                 .build();
     }
 
-    public static void main(String[] args)
+	public static void main(String[] args)
             throws Exception
     {
         Logging.initialize();

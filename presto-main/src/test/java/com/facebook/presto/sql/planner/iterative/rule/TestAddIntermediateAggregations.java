@@ -223,19 +223,13 @@ public class TestAddIntermediateAggregations
         tester().assertThat(new AddIntermediateAggregations())
                 .setSystemProperty(ENABLE_INTERMEDIATE_AGGREGATIONS, "false")
                 .setSystemProperty(TASK_CONCURRENCY, "4")
-                .on(p -> p.aggregation(af -> {
-                    af.globalGrouping()
-                            .step(AggregationNode.Step.FINAL)
-                            .addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
-                            .source(
-                                    p.gatheringExchange(
-                                            ExchangeNode.Scope.REMOTE_STREAMING,
-                                            p.aggregation(ap -> ap.globalGrouping()
-                                                    .step(AggregationNode.Step.PARTIAL)
-                                                    .addAggregation(p.variable("b"), expression("count(a)"), ImmutableList.of(BIGINT))
-                                                    .source(
-                                                            p.values(p.variable("a"))))));
-                }))
+                .on(p -> p.aggregation(af -> af.globalGrouping().step(AggregationNode.Step.FINAL)
+						.addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
+						.source(p.gatheringExchange(
+								ExchangeNode.Scope.REMOTE_STREAMING, p.aggregation(ap -> ap.globalGrouping()
+										.step(AggregationNode.Step.PARTIAL).addAggregation(p.variable("b"),
+												expression("count(a)"), ImmutableList.of(BIGINT))
+										.source(p.values(p.variable("a"))))))))
                 .doesNotFire();
     }
 
@@ -247,19 +241,13 @@ public class TestAddIntermediateAggregations
         tester().assertThat(new AddIntermediateAggregations())
                 .setSystemProperty(ENABLE_INTERMEDIATE_AGGREGATIONS, "true")
                 .setSystemProperty(TASK_CONCURRENCY, "1")
-                .on(p -> p.aggregation(af -> {
-                    af.globalGrouping()
-                            .step(AggregationNode.Step.FINAL)
-                            .addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
-                            .source(
-                                    p.gatheringExchange(
-                                            ExchangeNode.Scope.REMOTE_STREAMING,
-                                            p.aggregation(ap -> ap.globalGrouping()
-                                                    .step(AggregationNode.Step.PARTIAL)
-                                                    .addAggregation(p.variable("b"), expression("count(a)"), ImmutableList.of(BIGINT))
-                                                    .source(
-                                                            p.values(p.variable("a"))))));
-                }))
+                .on(p -> p.aggregation(af -> af.globalGrouping().step(AggregationNode.Step.FINAL)
+						.addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
+						.source(p.gatheringExchange(
+								ExchangeNode.Scope.REMOTE_STREAMING, p.aggregation(ap -> ap.globalGrouping()
+										.step(AggregationNode.Step.PARTIAL).addAggregation(p.variable("b"),
+												expression("count(a)"), ImmutableList.of(BIGINT))
+										.source(p.values(p.variable("a"))))))))
                 .matches(
                         aggregation(
                                 globalAggregation(),
@@ -290,19 +278,13 @@ public class TestAddIntermediateAggregations
         tester().assertThat(new AddIntermediateAggregations())
                 .setSystemProperty(ENABLE_INTERMEDIATE_AGGREGATIONS, "true")
                 .setSystemProperty(TASK_CONCURRENCY, "4")
-                .on(p -> p.aggregation(af -> {
-                    af.singleGroupingSet(p.variable("c"))
-                            .step(AggregationNode.Step.FINAL)
-                            .addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
-                            .source(
-                                    p.gatheringExchange(
-                                            ExchangeNode.Scope.REMOTE_STREAMING,
-                                            p.aggregation(ap -> ap.singleGroupingSet(p.variable("b"))
-                                                    .step(AggregationNode.Step.PARTIAL)
-                                                    .addAggregation(p.variable("b"), expression("count(a)"), ImmutableList.of(BIGINT))
-                                                    .source(
-                                                            p.values(p.variable("a"))))));
-                }))
+                .on(p -> p.aggregation(af -> af.singleGroupingSet(p.variable("c")).step(AggregationNode.Step.FINAL)
+						.addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
+						.source(p.gatheringExchange(ExchangeNode.Scope.REMOTE_STREAMING,
+								p.aggregation(ap -> ap.singleGroupingSet(p.variable("b"))
+										.step(AggregationNode.Step.PARTIAL).addAggregation(p.variable("b"),
+												expression("count(a)"), ImmutableList.of(BIGINT))
+										.source(p.values(p.variable("a"))))))))
                 .doesNotFire();
     }
 
@@ -314,21 +296,15 @@ public class TestAddIntermediateAggregations
         tester().assertThat(new AddIntermediateAggregations())
                 .setSystemProperty(ENABLE_INTERMEDIATE_AGGREGATIONS, "true")
                 .setSystemProperty(TASK_CONCURRENCY, "4")
-                .on(p -> p.aggregation(af -> {
-                    af.globalGrouping()
-                            .step(AggregationNode.Step.FINAL)
-                            .addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
-                            .source(
-                                    p.gatheringExchange(
-                                            ExchangeNode.Scope.REMOTE_STREAMING,
-                                            p.project(
-                                                    identityAssignmentsAsSymbolReferences(p.variable("b")),
-                                                    p.aggregation(ap -> ap.globalGrouping()
-                                                            .step(AggregationNode.Step.PARTIAL)
-                                                            .addAggregation(p.variable("b"), expression("count(a)"), ImmutableList.of(BIGINT))
-                                                            .source(
-                                                                    p.values(p.variable("a")))))));
-                }))
+                .on(p -> p.aggregation(af -> af.globalGrouping().step(AggregationNode.Step.FINAL)
+						.addAggregation(p.variable("c"), expression("count(b)"), ImmutableList.of(BIGINT))
+						.source(p.gatheringExchange(ExchangeNode.Scope.REMOTE_STREAMING,
+								p.project(identityAssignmentsAsSymbolReferences(p.variable("b")),
+										p.aggregation(
+												ap -> ap.globalGrouping().step(AggregationNode.Step.PARTIAL)
+														.addAggregation(p.variable("b"), expression("count(a)"),
+																ImmutableList.of(BIGINT))
+														.source(p.values(p.variable("a")))))))))
                 .matches(
                         aggregation(
                                 globalAggregation(),

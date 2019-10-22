@@ -49,11 +49,6 @@ class ColumnInfo
     private final String schemaName;
     private final String catalogName;
 
-    public enum Nullable
-    {
-        NO_NULLS, NULLABLE, UNKNOWN
-    }
-
     public ColumnInfo(
             int columnType,
             List<Integer> columnParameterTypes,
@@ -86,13 +81,11 @@ class ColumnInfo
         this.catalogName = requireNonNull(catalogName, "catalogName is null");
     }
 
-    public static void setTypeInfo(Builder builder, TypeSignature type)
+	public static void setTypeInfo(Builder builder, TypeSignature type)
     {
         builder.setColumnType(getType(type));
         ImmutableList.Builder<Integer> parameterTypes = ImmutableList.builder();
-        for (TypeSignatureParameter parameter : type.getParameters()) {
-            parameterTypes.add(getType(parameter));
-        }
+        type.getParameters().forEach(parameter -> parameterTypes.add(getType(parameter)));
         builder.setColumnParameterTypes(parameterTypes.build());
         switch (type.getBase()) {
             case "boolean":
@@ -196,7 +189,7 @@ class ColumnInfo
         }
     }
 
-    private static int getType(TypeSignatureParameter typeParameter)
+	private static int getType(TypeSignatureParameter typeParameter)
     {
         switch (typeParameter.getKind()) {
             case TYPE:
@@ -206,7 +199,7 @@ class ColumnInfo
         }
     }
 
-    private static int getType(TypeSignature type)
+	private static int getType(TypeSignature type)
     {
         switch (type.getBase()) {
             case "array":
@@ -250,82 +243,87 @@ class ColumnInfo
         }
     }
 
-    public int getColumnType()
+	public int getColumnType()
     {
         return columnType;
     }
 
-    public List<Integer> getColumnParameterTypes()
+	public List<Integer> getColumnParameterTypes()
     {
         return columnParameterTypes;
     }
 
-    public String getColumnTypeName()
+	public String getColumnTypeName()
     {
         return columnTypeSignature.toString();
     }
 
-    public TypeSignature getColumnTypeSignature()
+	public TypeSignature getColumnTypeSignature()
     {
         return columnTypeSignature;
     }
 
-    public Nullable getNullable()
+	public Nullable getNullable()
     {
         return nullable;
     }
 
-    public boolean isCurrency()
+	public boolean isCurrency()
     {
         return currency;
     }
 
-    public boolean isSigned()
+	public boolean isSigned()
     {
         return signed;
     }
 
-    public int getPrecision()
+	public int getPrecision()
     {
         return precision;
     }
 
-    public int getScale()
+	public int getScale()
     {
         return scale;
     }
 
-    public int getColumnDisplaySize()
+	public int getColumnDisplaySize()
     {
         return columnDisplaySize;
     }
 
-    public String getColumnLabel()
+	public String getColumnLabel()
     {
         return columnLabel;
     }
 
-    public String getColumnName()
+	public String getColumnName()
     {
         return columnName;
     }
 
-    public String getTableName()
+	public String getTableName()
     {
         return tableName;
     }
 
-    public String getSchemaName()
+	public String getSchemaName()
     {
         return schemaName;
     }
 
-    public String getCatalogName()
+	public String getCatalogName()
     {
         return catalogName;
     }
 
-    static class Builder
+	public enum Nullable
+    {
+        NO_NULLS, NULLABLE, UNKNOWN
+    }
+
+	static class Builder
     {
         private int columnType;
         private List<Integer> columnParameterTypes;

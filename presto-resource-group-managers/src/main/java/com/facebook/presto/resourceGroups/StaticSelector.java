@@ -32,11 +32,14 @@ import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StaticSelector
         implements ResourceGroupSelector
 {
-    private static final Pattern NAMED_GROUPS_PATTERN = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
+    private static final Logger logger = LoggerFactory.getLogger(StaticSelector.class);
+	private static final Pattern NAMED_GROUPS_PATTERN = Pattern.compile("\\(\\?<([a-zA-Z][a-zA-Z0-9]*)>");
     private static final String USER_VARIABLE = "USER";
     private static final String SOURCE_VARIABLE = "SOURCE";
 
@@ -127,14 +130,14 @@ public class StaticSelector
         Matcher matcher = NAMED_GROUPS_PATTERN.matcher(pattern.toString());
         while (matcher.find()) {
             String name = matcher.group(1);
-            checkArgument(!variables.contains(name), "Multiple definitions found for variable ${" + name + "}");
+            checkArgument(!variables.contains(name), new StringBuilder().append("Multiple definitions found for variable ${").append(name).append("}").toString());
             variables.add(name);
         }
     }
 
     private void addVariableValues(Pattern pattern, String candidate, Map<String, String> mapping)
     {
-        for (String key : variableNames) {
+        variableNames.forEach(key -> {
             Matcher keyMatcher = pattern.matcher(candidate);
             if (keyMatcher.find()) {
                 try {
@@ -144,10 +147,11 @@ public class StaticSelector
                     }
                 }
                 catch (IllegalArgumentException ignored) {
+					logger.error(ignored.getMessage(), ignored);
                     // there was no capturing group with the specified name
                 }
             }
-        }
+        });
     }
 
     @VisibleForTesting

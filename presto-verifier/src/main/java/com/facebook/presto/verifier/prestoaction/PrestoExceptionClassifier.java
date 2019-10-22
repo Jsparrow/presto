@@ -118,7 +118,8 @@ public class PrestoExceptionClassifier
                 .build();
     }
 
-    public QueryException createException(QueryStage queryStage, Optional<QueryStats> queryStats, SQLException cause)
+    @Override
+	public QueryException createException(QueryStage queryStage, Optional<QueryStats> queryStats, SQLException cause)
     {
         Optional<Throwable> clusterConnectionExceptionCause = getClusterConnectionExceptionCause(cause);
         if (clusterConnectionExceptionCause.isPresent()) {

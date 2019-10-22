@@ -81,11 +81,14 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestRaptorMetadata
 {
-    private static final SchemaTableName DEFAULT_TEST_ORDERS = new SchemaTableName("test", "orders");
+    private static final Logger logger = LoggerFactory.getLogger(TestRaptorMetadata.class);
+	private static final SchemaTableName DEFAULT_TEST_ORDERS = new SchemaTableName("test", "orders");
     private static final SchemaTableName DEFAULT_TEST_LINEITEMS = new SchemaTableName("test", "lineitems");
     private static final ConnectorSession SESSION = new TestingConnectorSession(
             new RaptorSessionProperties(new StorageManagerConfig()).getSessionProperties());
@@ -647,7 +650,8 @@ public class TestRaptorMetadata
             metadata.createView(SESSION, test, "test", false);
         }
         catch (Exception e) {
-            fail("should have succeeded");
+            logger.error(e.getMessage(), e);
+			fail("should have succeeded");
         }
 
         metadata.createView(SESSION, test, "test", false);
@@ -861,9 +865,7 @@ public class TestRaptorMetadata
     private static ConnectorTableMetadata buildTable(Map<String, Object> properties, TableMetadataBuilder builder)
     {
         if (!properties.isEmpty()) {
-            for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                builder.property(entry.getKey(), entry.getValue());
-            }
+            properties.entrySet().forEach(entry -> builder.property(entry.getKey(), entry.getValue()));
         }
         return builder.build();
     }

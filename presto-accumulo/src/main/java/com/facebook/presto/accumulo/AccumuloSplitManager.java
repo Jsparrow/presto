@@ -81,19 +81,16 @@ public class AccumuloSplitManager
 
         // Pack the tablet split metadata into a connector split
         ImmutableList.Builder<ConnectorSplit> cSplits = ImmutableList.builder();
-        for (TabletSplitMetadata splitMetadata : tabletSplits) {
-            AccumuloSplit split = new AccumuloSplit(
-                    connectorId,
-                    schemaName,
-                    tableName,
-                    rowIdName,
-                    tableHandle.getSerializerClassName(),
-                    splitMetadata.getRanges().stream().map(WrappedRange::new).collect(Collectors.toList()),
-                    constraints,
-                    tableHandle.getScanAuthorizations(),
-                    splitMetadata.getHostPort());
-            cSplits.add(split);
-        }
+        tabletSplits.stream().map(splitMetadata -> new AccumuloSplit(
+		        connectorId,
+		        schemaName,
+		        tableName,
+		        rowIdName,
+		        tableHandle.getSerializerClassName(),
+		        splitMetadata.getRanges().stream().map(WrappedRange::new).collect(Collectors.toList()),
+		        constraints,
+		        tableHandle.getScanAuthorizations(),
+		        splitMetadata.getHostPort())).forEach(cSplits::add);
 
         return new FixedSplitSource(cSplits.build());
     }
@@ -122,7 +119,7 @@ public class AccumuloSplitManager
     private static List<AccumuloColumnConstraint> getColumnConstraints(String rowIdName, TupleDomain<ColumnHandle> constraint)
     {
         ImmutableList.Builder<AccumuloColumnConstraint> constraintBuilder = ImmutableList.builder();
-        for (ColumnDomain<ColumnHandle> columnDomain : constraint.getColumnDomains().get()) {
+        constraint.getColumnDomains().get().forEach(columnDomain -> {
             AccumuloColumnHandle columnHandle = (AccumuloColumnHandle) columnDomain.getColumn();
 
             if (!columnHandle.getName().equals(rowIdName)) {
@@ -134,7 +131,7 @@ public class AccumuloSplitManager
                         Optional.of(columnDomain.getDomain()),
                         columnHandle.isIndexed()));
             }
-        }
+        });
 
         return constraintBuilder.build();
     }

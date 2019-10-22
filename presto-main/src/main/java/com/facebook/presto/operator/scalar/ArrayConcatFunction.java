@@ -119,10 +119,10 @@ public final class ArrayConcatFunction
 
         // fast path when there is at most one non empty block
         Block nonEmptyBlock = null;
-        for (int i = 0; i < blocks.length; i++) {
-            resultPositionCount += blocks[i].getPositionCount();
-            if (blocks[i].getPositionCount() > 0) {
-                nonEmptyBlock = blocks[i];
+        for (Block block1 : blocks) {
+            resultPositionCount += block1.getPositionCount();
+            if (block1.getPositionCount() > 0) {
+                nonEmptyBlock = block1;
             }
         }
         if (nonEmptyBlock == null) {
@@ -138,8 +138,7 @@ public final class ArrayConcatFunction
         }
 
         BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(0);
-        for (int blockIndex = 0; blockIndex < blocks.length; blockIndex++) {
-            Block block = blocks[blockIndex];
+        for (Block block : blocks) {
             for (int i = 0; i < block.getPositionCount(); i++) {
                 elementType.appendTo(block, i, blockBuilder);
             }

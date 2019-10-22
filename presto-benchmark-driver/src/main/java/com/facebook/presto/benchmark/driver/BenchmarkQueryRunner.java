@@ -54,11 +54,14 @@ import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BenchmarkQueryRunner
         implements Closeable
 {
-    private final int warm;
+    private static final Logger logger = LoggerFactory.getLogger(BenchmarkQueryRunner.class);
+	private final int warm;
     private final int runs;
     private final boolean debug;
     private final int maxFailures;
@@ -84,9 +87,7 @@ public class BenchmarkQueryRunner
 
         requireNonNull(socksProxy, "socksProxy is null");
         HttpClientConfig httpClientConfig = new HttpClientConfig();
-        if (socksProxy.isPresent()) {
-            httpClientConfig.setSocksProxy(socksProxy.get());
-        }
+        socksProxy.ifPresent(httpClientConfig::setSocksProxy);
 
         this.httpClient = new JettyHttpClient(httpClientConfig.setConnectTimeout(new Duration(10, TimeUnit.SECONDS)));
 
@@ -242,7 +243,7 @@ public class BenchmarkQueryRunner
             if (e == null) {
                 e = new RuntimeException("Unknown error");
             }
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         failures++;
@@ -278,12 +279,11 @@ public class BenchmarkQueryRunner
         ServiceDescriptorsRepresentation serviceDescriptors = httpClient.execute(request, responseHandler);
 
         ImmutableList.Builder<URI> addresses = ImmutableList.builder();
-        for (ServiceDescriptor serviceDescriptor : serviceDescriptors.getServiceDescriptors()) {
-            String httpUri = serviceDescriptor.getProperties().get("http");
-            if (httpUri != null) {
+        serviceDescriptors.getServiceDescriptors().stream().map(serviceDescriptor -> serviceDescriptor.getProperties().get("http")).forEach(httpUri -> {
+			if (httpUri != null) {
                 addresses.add(URI.create(httpUri));
             }
-        }
+		});
         return addresses.build();
     }
 }

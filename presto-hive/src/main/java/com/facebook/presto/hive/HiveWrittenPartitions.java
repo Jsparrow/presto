@@ -33,7 +33,8 @@ public class HiveWrittenPartitions
         this.partitionNames = ImmutableList.copyOf(requireNonNull(partitionNames, "partitionNames is null"));
     }
 
-    @JsonProperty
+    @Override
+	@JsonProperty
     public List<String> getInfo()
     {
         return partitionNames;

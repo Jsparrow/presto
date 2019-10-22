@@ -90,13 +90,11 @@ public class GracefulShutdownHandler
             while (activeTasks.size() > 0) {
                 CountDownLatch countDownLatch = new CountDownLatch(activeTasks.size());
 
-                for (TaskInfo taskInfo : activeTasks) {
-                    sqlTaskManager.addStateChangeListener(taskInfo.getTaskStatus().getTaskId(), newState -> {
-                        if (newState.isDone()) {
-                            countDownLatch.countDown();
-                        }
-                    });
-                }
+                activeTasks.forEach(taskInfo -> sqlTaskManager.addStateChangeListener(taskInfo.getTaskStatus().getTaskId(), newState -> {
+					if (newState.isDone()) {
+						countDownLatch.countDown();
+					}
+				}));
 
                 log.info("Waiting for all tasks to finish");
 

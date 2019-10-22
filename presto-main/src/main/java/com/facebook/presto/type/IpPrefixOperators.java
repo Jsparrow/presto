@@ -51,10 +51,14 @@ import static io.airlift.slice.Slices.wrappedBuffer;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.System.arraycopy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class IpPrefixOperators
 {
-    private IpPrefixOperators()
+    private static final Logger logger = LoggerFactory.getLogger(IpPrefixOperators.class);
+
+	private IpPrefixOperators()
     {
     }
 
@@ -144,7 +148,8 @@ public final class IpPrefixOperators
             address = InetAddresses.forString(parts[0]).getAddress();
         }
         catch (IllegalArgumentException e) {
-            throw new PrestoException(INVALID_CAST_ARGUMENT, "Cannot cast value to IPPREFIX: " + slice.toStringUtf8());
+            logger.error(e.getMessage(), e);
+			throw new PrestoException(INVALID_CAST_ARGUMENT, "Cannot cast value to IPPREFIX: " + slice.toStringUtf8());
         }
         subnetSize = Integer.parseInt(parts[1]);
 
@@ -187,7 +192,7 @@ public final class IpPrefixOperators
         try {
             String addrString = InetAddresses.toAddrString(InetAddress.getByAddress(slice.getBytes(0, 2 * Long.BYTES)));
             String prefixString = Integer.toString(slice.getByte(2 * Long.BYTES) & 0xff);
-            return utf8Slice(addrString + "/" + prefixString);
+            return utf8Slice(new StringBuilder().append(addrString).append("/").append(prefixString).toString());
         }
         catch (UnknownHostException e) {
             throw new PrestoException(INVALID_CAST_ARGUMENT, "Invalid IP address binary length: " + slice.length(), e);
@@ -228,7 +233,14 @@ public final class IpPrefixOperators
         return wrappedBuffer(bytes);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.IPPREFIX) Slice value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class IpPrefixDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -262,12 +274,5 @@ public final class IpPrefixOperators
             }
             return left.compareTo(leftPosition, 0, IPPREFIX.getFixedSize(), right, rightPosition, 0, IPPREFIX.getFixedSize()) != 0;
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.IPPREFIX) Slice value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

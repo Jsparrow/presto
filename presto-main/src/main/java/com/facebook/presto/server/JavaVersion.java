@@ -32,7 +32,7 @@ public class JavaVersion
     private static final String PRE = "(?:-(?:[a-zA-Z0-9]+))?";
     private static final String BUILD = "(?:(?:\\+)(?:0|[1-9][0-9]*)?)?";
     private static final String OPT = "(?:-(?:[-a-zA-Z0-9.]+))?";
-    private static final Pattern PATTERN = Pattern.compile(VERSION_NUMBER + PRE + BUILD + OPT);
+    private static final Pattern PATTERN = Pattern.compile(new StringBuilder().append(VERSION_NUMBER).append(PRE).append(BUILD).append(OPT).toString());
 
     // For Java 8 and below
     private static final Pattern LEGACY_PATTERN = Pattern.compile("1\\.(?<MAJOR>[0-9]+)(\\.(?<MINOR>(0|[1-9][0-9]*)))?(_(?<UPDATE>[1-9][0-9]*))?" + OPT);
@@ -41,12 +41,24 @@ public class JavaVersion
     private final int minor;
     private final OptionalInt update;
 
-    public static JavaVersion current()
+    public JavaVersion(int major, int minor, OptionalInt update)
+    {
+        this.major = major;
+        this.minor = minor;
+        this.update = update;
+    }
+
+	public JavaVersion(int major, int minor)
+    {
+        this(major, minor, OptionalInt.empty());
+    }
+
+	public static JavaVersion current()
     {
         return parse(StandardSystemProperty.JAVA_VERSION.value());
     }
 
-    public static JavaVersion parse(String version)
+	public static JavaVersion parse(String version)
     {
         Matcher matcher = LEGACY_PATTERN.matcher(version);
         if (matcher.matches()) {
@@ -76,34 +88,22 @@ public class JavaVersion
         throw new IllegalArgumentException(format("Cannot parse version %s", version));
     }
 
-    public JavaVersion(int major, int minor, OptionalInt update)
-    {
-        this.major = major;
-        this.minor = minor;
-        this.update = update;
-    }
-
-    public JavaVersion(int major, int minor)
-    {
-        this(major, minor, OptionalInt.empty());
-    }
-
-    public int getMajor()
+	public int getMajor()
     {
         return major;
     }
 
-    public int getMinor()
+	public int getMinor()
     {
         return minor;
     }
 
-    public OptionalInt getUpdate()
+	public OptionalInt getUpdate()
     {
         return update;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -118,13 +118,13 @@ public class JavaVersion
                 Objects.equals(update, that.update);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(major, minor, update);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

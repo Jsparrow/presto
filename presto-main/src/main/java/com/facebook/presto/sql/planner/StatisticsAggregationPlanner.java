@@ -95,16 +95,16 @@ public class StatisticsAggregationPlanner
             descriptor.addTableStatistic(ROW_COUNT, variable);
         }
 
-        for (ColumnStatisticMetadata columnStatisticMetadata : statisticsMetadata.getColumnStatistics()) {
+        statisticsMetadata.getColumnStatistics().forEach(columnStatisticMetadata -> {
             String columnName = columnStatisticMetadata.getColumnName();
             ColumnStatisticType statisticType = columnStatisticMetadata.getStatisticType();
             VariableReferenceExpression inputVariable = columnToVariableMap.get(columnName);
             verify(inputVariable != null, "inputVariable is null");
             ColumnStatisticsAggregation aggregation = createColumnAggregation(statisticType, inputVariable);
-            VariableReferenceExpression variable = variableAllocator.newVariable(statisticType + ":" + columnName, aggregation.getOutputType());
+            VariableReferenceExpression variable = variableAllocator.newVariable(new StringBuilder().append(statisticType).append(":").append(columnName).toString(), aggregation.getOutputType());
             aggregations.put(variable, aggregation.getAggregation());
             descriptor.addColumnStatistic(columnStatisticMetadata, variable);
-        }
+        });
 
         StatisticAggregations aggregation = new StatisticAggregations(aggregations.build(), groupingVariables);
         return new TableStatisticAggregation(aggregation, descriptor.build());

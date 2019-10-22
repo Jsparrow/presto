@@ -60,7 +60,53 @@ import static org.testng.Assert.assertTrue;
 @Measurement(iterations = 10)
 public class BenchmarkSpatialJoin
 {
-    @State(Thread)
+    @Benchmark
+    public MaterializedResult benchmarkJoin(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM points, polygons WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(latitude, longitude))");
+    }
+
+	@Benchmark
+    public MaterializedResult benchmarkUserOptimizedJoin(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM (SELECT ST_Point(latitude, longitude) as point FROM points) t1, (SELECT ST_GeometryFromText(wkt) as geometry FROM polygons) t2 WHERE ST_Contains(geometry, point)");
+    }
+
+	@Test
+    public void verify()
+            throws IOException
+    {
+        Context context = new Context();
+        try {
+            context.setUp();
+            context.createPointsTable();
+
+            BenchmarkSpatialJoin benchmark = new BenchmarkSpatialJoin();
+            benchmark.benchmarkJoin(context);
+            benchmark.benchmarkUserOptimizedJoin(context);
+        }
+        finally {
+            context.queryRunner.close();
+        }
+    }
+
+	public static void main(String[] args)
+            throws Exception
+    {
+        // assure the benchmarks are valid before running
+        new BenchmarkSpatialJoin().verify();
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSpatialJoin.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class Context
     {
         private LocalQueryRunner queryRunner;
@@ -97,10 +143,7 @@ public class BenchmarkSpatialJoin
         {
             // Generate random points within the approximate bounding box of the US polygon:
             //  POLYGON ((-124 27, -65 27, -65 49, -124 49, -124 27))
-            queryRunner.execute(format("CREATE TABLE memory.default.points AS " +
-                    "SELECT 'p' || cast(elem AS VARCHAR) as name, xMin + (xMax - xMin) * random() as longitude, yMin + (yMax - yMin) * random() as latitude " +
-                    "FROM (SELECT -124 AS xMin, -65 AS xMax, 27 AS yMin, 49 AS yMax) " +
-                    "CROSS JOIN UNNEST(sequence(1, %s)) AS t(elem)", pointCount));
+            queryRunner.execute(format(new StringBuilder().append("CREATE TABLE memory.default.points AS ").append("SELECT 'p' || cast(elem AS VARCHAR) as name, xMin + (xMax - xMin) * random() as longitude, yMin + (yMax - yMin) * random() as latitude ").append("FROM (SELECT -124 AS xMin, -65 AS xMax, 27 AS yMin, 49 AS yMax) ").append("CROSS JOIN UNNEST(sequence(1, %s)) AS t(elem)").toString(), pointCount));
         }
 
         @TearDown(Level.Invocation)
@@ -121,51 +164,5 @@ public class BenchmarkSpatialJoin
             queryRunner.close();
             queryRunner = null;
         }
-    }
-
-    @Benchmark
-    public MaterializedResult benchmarkJoin(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM points, polygons WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(latitude, longitude))");
-    }
-
-    @Benchmark
-    public MaterializedResult benchmarkUserOptimizedJoin(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM (SELECT ST_Point(latitude, longitude) as point FROM points) t1, (SELECT ST_GeometryFromText(wkt) as geometry FROM polygons) t2 WHERE ST_Contains(geometry, point)");
-    }
-
-    @Test
-    public void verify()
-            throws IOException
-    {
-        Context context = new Context();
-        try {
-            context.setUp();
-            context.createPointsTable();
-
-            BenchmarkSpatialJoin benchmark = new BenchmarkSpatialJoin();
-            benchmark.benchmarkJoin(context);
-            benchmark.benchmarkUserOptimizedJoin(context);
-        }
-        finally {
-            context.queryRunner.close();
-        }
-    }
-
-    public static void main(String[] args)
-            throws Exception
-    {
-        // assure the benchmarks are valid before running
-        new BenchmarkSpatialJoin().verify();
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSpatialJoin.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

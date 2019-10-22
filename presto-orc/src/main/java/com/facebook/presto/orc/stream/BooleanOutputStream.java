@@ -107,12 +107,13 @@ public class BooleanOutputStream
         }
 
         // buffer remaining bits
-        if (count > 0) {
-            if (value) {
-                data = getLowBitMask(count) << (8 - count);
-            }
-            bitsInData = count;
-        }
+		if (count <= 0) {
+			return;
+		}
+		if (value) {
+		    data = getLowBitMask(count) << (8 - count);
+		}
+		bitsInData = count;
     }
 
     private void flushData()

@@ -29,21 +29,6 @@ public class TestingSplit
     private final boolean remotelyAccessible;
     private final List<HostAddress> addresses;
 
-    public static TestingSplit createLocalSplit()
-    {
-        return new TestingSplit(false, ImmutableList.of(localHost));
-    }
-
-    public static TestingSplit createEmptySplit()
-    {
-        return new TestingSplit(false, ImmutableList.of());
-    }
-
-    public static TestingSplit createRemoteSplit()
-    {
-        return new TestingSplit(true, ImmutableList.of());
-    }
-
     @JsonCreator
     public TestingSplit(@JsonProperty("remotelyAccessible") boolean remotelyAccessible, @JsonProperty("addresses") List<HostAddress> addresses)
     {
@@ -51,21 +36,36 @@ public class TestingSplit
         this.remotelyAccessible = remotelyAccessible;
     }
 
-    @JsonProperty
+	public static TestingSplit createLocalSplit()
+    {
+        return new TestingSplit(false, ImmutableList.of(localHost));
+    }
+
+	public static TestingSplit createEmptySplit()
+    {
+        return new TestingSplit(false, ImmutableList.of());
+    }
+
+	public static TestingSplit createRemoteSplit()
+    {
+        return new TestingSplit(true, ImmutableList.of());
+    }
+
+	@JsonProperty
     @Override
     public boolean isRemotelyAccessible()
     {
         return remotelyAccessible;
     }
 
-    @JsonProperty
+	@JsonProperty
     @Override
     public List<HostAddress> getAddresses()
     {
         return addresses;
     }
 
-    @Override
+	@Override
     public Object getInfo()
     {
         return this;

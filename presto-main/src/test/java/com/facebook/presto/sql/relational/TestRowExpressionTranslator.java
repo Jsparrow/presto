@@ -56,6 +56,8 @@ import static java.util.Objects.requireNonNull;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestRowExpressionTranslator
 {
@@ -192,7 +194,8 @@ public class TestRowExpressionTranslator
     private class TestFunctionTranslator
             extends RowExpressionTranslator<String, Map<VariableReferenceExpression, ColumnHandle>>
     {
-        private final FunctionManager functionManager;
+        private final Logger logger = LoggerFactory.getLogger(TestFunctionTranslator.class);
+		private final FunctionManager functionManager;
         private final FunctionTranslator<String> functionTranslator;
 
         TestFunctionTranslator(FunctionManager functionManager, FunctionTranslator<String> functionTranslator)
@@ -218,14 +221,15 @@ public class TestRowExpressionTranslator
                 return functionTranslator.translate(functionMetadata, callExpression, translatedExpressions);
             }
             catch (Throwable t) {
-                return untranslated(callExpression, translatedExpressions);
+                logger.error(t.getMessage(), t);
+				return untranslated(callExpression, translatedExpressions);
             }
         }
 
         @Override
         public TranslatedExpression<String> translateSpecialForm(SpecialFormExpression specialFormExpression, Map<VariableReferenceExpression, ColumnHandle> context, RowExpressionTreeTranslator<String, Map<VariableReferenceExpression, ColumnHandle>> rowExpressionTreeTranslator)
         {
-            if (!specialFormExpression.getForm().equals(SpecialFormExpression.Form.AND)) {
+            if (specialFormExpression.getForm() != SpecialFormExpression.Form.AND) {
                 return untranslated(specialFormExpression);
             }
 
@@ -236,7 +240,7 @@ public class TestRowExpressionTranslator
             assertTrue(translatedExpressions.get(0).getTranslated().isPresent());
             assertTrue(translatedExpressions.get(1).getTranslated().isPresent());
             return new TranslatedExpression<>(
-                    Optional.of(translatedExpressions.get(0).getTranslated().get() + " TEST_AND " + translatedExpressions.get(1).getTranslated().get()),
+                    Optional.of(new StringBuilder().append(translatedExpressions.get(0).getTranslated().get()).append(" TEST_AND ").append(translatedExpressions.get(1).getTranslated().get()).toString()),
                     specialFormExpression,
                     translatedExpressions);
         }
@@ -254,21 +258,21 @@ public class TestRowExpressionTranslator
         @SqlType(StandardTypes.BIGINT)
         public static String bitwiseAnd(@SqlType(StandardTypes.BIGINT) String left, @SqlType(StandardTypes.BIGINT) String right)
         {
-            return left + " BITWISE_AND " + right;
+            return new StringBuilder().append(left).append(" BITWISE_AND ").append(right).toString();
         }
 
         @ScalarFunction("ln")
         @SqlType(StandardTypes.DOUBLE)
         public static String ln(@SqlType(StandardTypes.DOUBLE) String sql)
         {
-            return "LNof(" + sql + ")";
+            return new StringBuilder().append("LNof(").append(sql).append(")").toString();
         }
 
         @ScalarFunction("ceil")
         @SqlType(StandardTypes.DOUBLE)
         public static String ceil(@SqlType(StandardTypes.BOOLEAN) String sql)
         {
-            return "CEILof(" + sql + ")";
+            return new StringBuilder().append("CEILof(").append(sql).append(")").toString();
         }
 
         @ScalarFunction("not")
@@ -282,14 +286,14 @@ public class TestRowExpressionTranslator
         @SqlType(StandardTypes.BIGINT)
         public static String plus(@SqlType(StandardTypes.BIGINT) String left, @SqlType(StandardTypes.BIGINT) String right)
         {
-            return left + " -|- " + right;
+            return new StringBuilder().append(left).append(" -|- ").append(right).toString();
         }
 
         @ScalarOperator(OperatorType.LESS_THAN)
         @SqlType(StandardTypes.BOOLEAN)
         public static String lessThan(@SqlType(StandardTypes.BIGINT) String left, @SqlType(StandardTypes.BIGINT) String right)
         {
-            return left + " LT " + right;
+            return new StringBuilder().append(left).append(" LT ").append(right).toString();
         }
     }
 }

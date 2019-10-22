@@ -68,6 +68,6 @@ public class PrestoPrincipal
     @Override
     public String toString()
     {
-        return type + " " + name;
+        return new StringBuilder().append(type).append(" ").append(name).toString();
     }
 }

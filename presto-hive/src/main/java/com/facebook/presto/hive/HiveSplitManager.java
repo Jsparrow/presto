@@ -197,13 +197,12 @@ public class HiveSplitManager
             throw new PrestoException(GENERIC_INTERNAL_ERROR, "SchedulingPolicy is bucketed, but BucketHandle is not present");
         }
 
-        if (bucketHandle.isPresent()) {
-            if (bucketHandle.get().getReadBucketCount() > bucketHandle.get().getTableBucketCount()) {
-                throw new PrestoException(
-                        GENERIC_INTERNAL_ERROR,
-                        "readBucketCount (%s) is greater than the tableBucketCount (%s) which generally points to an issue in plan generation");
-            }
-        }
+        boolean condition = bucketHandle.isPresent() && bucketHandle.get().getReadBucketCount() > bucketHandle.get().getTableBucketCount();
+		if (condition) {
+		    throw new PrestoException(
+		            GENERIC_INTERNAL_ERROR,
+		            "readBucketCount (%s) is greater than the tableBucketCount (%s) which generally points to an issue in plan generation");
+		}
 
         // sort partitions
         partitions = Ordering.natural().onResultOf(HivePartition::getPartitionId).reverse().sortedCopy(partitions);
@@ -368,11 +367,7 @@ public class HiveSplitManager
                     HiveType tableType = tableColumns.get(i).getType();
                     if (!tableType.equals(partitionColumn.getType())) {
                         if (!coercionPolicy.canCoerce(partitionColumn.getType(), tableType)) {
-                            throw new PrestoException(HIVE_PARTITION_SCHEMA_MISMATCH, format("" +
-                                            "There is a mismatch between the table and partition schemas. " +
-                                            "The types are incompatible and cannot be coerced. " +
-                                            "The column '%s' in table '%s' is declared as type '%s', " +
-                                            "but partition '%s' declared column '%s' as type '%s'.",
+                            throw new PrestoException(HIVE_PARTITION_SCHEMA_MISMATCH, format(new StringBuilder().append("").append("There is a mismatch between the table and partition schemas. ").append("The types are incompatible and cannot be coerced. ").append("The column '%s' in table '%s' is declared as type '%s', ").append("but partition '%s' declared column '%s' as type '%s'.").toString(),
                                     tableColumns.get(i).getName(),
                                     tableName,
                                     tableType,

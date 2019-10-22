@@ -108,7 +108,7 @@ public class TestAccumuloDistributedQueries
     {
         @Language("SQL") String query = "SELECT UUID() AS uuid, orderdate, orderkey FROM orders";
 
-        assertUpdate("CREATE TABLE test_insert AS " + query + " WITH NO DATA", 0);
+        assertUpdate(new StringBuilder().append("CREATE TABLE test_insert AS ").append(query).append(" WITH NO DATA").toString(), 0);
         assertQuery("SELECT count(*) FROM test_insert", "SELECT 0");
 
         assertUpdate("INSERT INTO test_insert " + query, "SELECT count(*) FROM orders");
@@ -121,19 +121,12 @@ public class TestAccumuloDistributedQueries
         assertUpdate("INSERT INTO test_insert (uuid, orderdate, orderkey) VALUES ('000003', DATE '2001-01-03', -3)", 1);
 
         assertQuery("SELECT orderdate, orderkey FROM test_insert",
-                "SELECT orderdate, orderkey FROM orders"
-                        + " UNION ALL SELECT null, -1"
-                        + " UNION ALL SELECT DATE '2001-01-01', null"
-                        + " UNION ALL SELECT DATE '2001-01-02', -2"
-                        + " UNION ALL SELECT DATE '2001-01-03', -3");
+                new StringBuilder().append("SELECT orderdate, orderkey FROM orders").append(" UNION ALL SELECT null, -1").append(" UNION ALL SELECT DATE '2001-01-01', null").append(" UNION ALL SELECT DATE '2001-01-02', -2").append(" UNION ALL SELECT DATE '2001-01-03', -3").toString());
 
         // UNION query produces columns in the opposite order
         // of how they are declared in the table schema
         assertUpdate(
-                "INSERT INTO test_insert (uuid, orderkey, orderdate) " +
-                        "SELECT UUID() AS uuid, orderkey, orderdate FROM orders " +
-                        "UNION ALL " +
-                        "SELECT UUID() AS uuid, orderkey, orderdate FROM orders",
+                new StringBuilder().append("INSERT INTO test_insert (uuid, orderkey, orderdate) ").append("SELECT UUID() AS uuid, orderkey, orderdate FROM orders ").append("UNION ALL ").append("SELECT UUID() AS uuid, orderkey, orderdate FROM orders").toString(),
                 "SELECT 2 * count(*) FROM orders");
 
         assertUpdate("DROP TABLE test_insert");
@@ -161,11 +154,7 @@ public class TestAccumuloDistributedQueries
     public void testBuildFilteredLeftJoin()
     {
         // Override because of extra UUID column in lineitem table, cannot SELECT *
-        assertQuery("SELECT "
-                + "lineitem.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, lineitem.comment "
-                + "FROM lineitem LEFT JOIN (SELECT * FROM orders WHERE orderkey % 2 = 0) a ON lineitem.orderkey = a.orderkey");
+        assertQuery(new StringBuilder().append("SELECT ").append("lineitem.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, lineitem.comment ").append("FROM lineitem LEFT JOIN (SELECT * FROM orders WHERE orderkey % 2 = 0) a ON lineitem.orderkey = a.orderkey").toString());
     }
 
     @Override
@@ -180,11 +169,7 @@ public class TestAccumuloDistributedQueries
     public void testProbeFilteredLeftJoin()
     {
         // Override because of extra UUID column in lineitem table, cannot SELECT *
-        assertQuery("SELECT "
-                + "a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment "
-                + "FROM (SELECT * FROM lineitem WHERE orderkey % 2 = 0) a LEFT JOIN orders ON a.orderkey = orders.orderkey");
+        assertQuery(new StringBuilder().append("SELECT ").append("a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append("FROM (SELECT * FROM lineitem WHERE orderkey % 2 = 0) a LEFT JOIN orders ON a.orderkey = orders.orderkey").toString());
     }
 
     @Override
@@ -192,26 +177,11 @@ public class TestAccumuloDistributedQueries
     {
         // Override because of extra UUID column in lineitem table, cannot SELECT *
         // Use orderkey = rand() to create an empty relation
-        assertQuery("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment " +
-                "FROM lineitem a LEFT JOIN(SELECT * FROM orders WHERE orderkey = rand())b ON a.orderkey = b.orderkey");
-        assertQuery("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment " +
-                "FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON a.orderkey > b.orderkey");
-        assertQuery("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment " +
-                " FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON 1 = 1");
-        assertQuery("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment " +
-                "FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON b.orderkey > 1");
-        assertQuery("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment " +
-                "FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON b.orderkey > b.totalprice");
+        assertQuery(new StringBuilder().append("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append("FROM lineitem a LEFT JOIN(SELECT * FROM orders WHERE orderkey = rand())b ON a.orderkey = b.orderkey").toString());
+        assertQuery(new StringBuilder().append("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append("FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON a.orderkey > b.orderkey").toString());
+        assertQuery(new StringBuilder().append("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append(" FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON 1 = 1").toString());
+        assertQuery(new StringBuilder().append("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append("FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON b.orderkey > 1").toString());
+        assertQuery(new StringBuilder().append("SELECT a.orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, a.comment ").append("FROM lineitem a LEFT JOIN (SELECT * FROM orders WHERE orderkey = rand()) b ON b.orderkey > b.totalprice").toString());
     }
 
     @Override
@@ -223,36 +193,14 @@ public class TestAccumuloDistributedQueries
         assertQuery("SELECT (SELECT (SELECT (SELECT 1)))");
 
         // aggregation
-        assertQuery("SELECT "
-                + "orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment "
-                + "FROM lineitem WHERE orderkey = \n"
-                + "(SELECT max(orderkey) FROM orders)");
+        assertQuery(new StringBuilder().append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment ").append("FROM lineitem WHERE orderkey = \n").append("(SELECT max(orderkey) FROM orders)").toString());
 
         // no output
-        assertQuery("SELECT "
-                + "orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment "
-                + "FROM lineitem WHERE orderkey = \n"
-                + "(SELECT orderkey FROM orders WHERE 0=1)");
+        assertQuery(new StringBuilder().append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment ").append("FROM lineitem WHERE orderkey = \n").append("(SELECT orderkey FROM orders WHERE 0=1)").toString());
 
         // no output matching with null test
-        assertQuery("SELECT "
-                + "orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment "
-                + "FROM lineitem WHERE \n"
-                + "(SELECT orderkey FROM orders WHERE 0=1) "
-                + "is null");
-        assertQuery("SELECT "
-                + "orderkey, partkey, suppkey, linenumber, quantity, "
-                + "extendedprice, discount, tax, returnflag, linestatus, "
-                + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment "
-                + "FROM lineitem WHERE \n"
-                + "(SELECT orderkey FROM orders WHERE 0=1) "
-                + "is not null");
+        assertQuery(new StringBuilder().append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment ").append("FROM lineitem WHERE \n").append("(SELECT orderkey FROM orders WHERE 0=1) ").append("is null").toString());
+        assertQuery(new StringBuilder().append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment ").append("FROM lineitem WHERE \n").append("(SELECT orderkey FROM orders WHERE 0=1) ").append("is not null").toString());
 
         // subquery results and in in-predicate
         assertQuery("SELECT (SELECT 1) IN (1, 2, 3)");
@@ -261,40 +209,21 @@ public class TestAccumuloDistributedQueries
         // multiple subqueries
         assertQuery("SELECT (SELECT 1) = (SELECT 3)");
         assertQuery("SELECT (SELECT 1) < (SELECT 3)");
-        assertQuery("SELECT COUNT(*) FROM lineitem WHERE " +
-                "(SELECT min(orderkey) FROM orders)" +
-                "<" +
-                "(SELECT max(orderkey) FROM orders)");
+        assertQuery(new StringBuilder().append("SELECT COUNT(*) FROM lineitem WHERE ").append("(SELECT min(orderkey) FROM orders)").append("<").append("(SELECT max(orderkey) FROM orders)").toString());
 
         // distinct
-        assertQuery("SELECT DISTINCT orderkey FROM lineitem " +
-                "WHERE orderkey BETWEEN" +
-                "   (SELECT avg(orderkey) FROM orders) - 10 " +
-                "   AND" +
-                "   (SELECT avg(orderkey) FROM orders) + 10");
+        assertQuery(new StringBuilder().append("SELECT DISTINCT orderkey FROM lineitem ").append("WHERE orderkey BETWEEN").append("   (SELECT avg(orderkey) FROM orders) - 10 ").append("   AND").append("   (SELECT avg(orderkey) FROM orders) + 10").toString());
 
         // subqueries with joins
-        for (String joinType : ImmutableList.of("INNER", "LEFT OUTER")) {
-            assertQuery("SELECT l.orderkey, COUNT(*) " +
-                    "FROM lineitem l " + joinType + " JOIN orders o ON l.orderkey = o.orderkey " +
-                    "WHERE l.orderkey BETWEEN" +
-                    "   (SELECT avg(orderkey) FROM orders) - 10 " +
-                    "   AND" +
-                    "   (SELECT avg(orderkey) FROM orders) + 10 " +
-                    "GROUP BY l.orderkey");
-        }
+		ImmutableList.of("INNER", "LEFT OUTER").forEach(joinType -> assertQuery(new StringBuilder().append("SELECT l.orderkey, COUNT(*) ").append("FROM lineitem l ").append(joinType).append(" JOIN orders o ON l.orderkey = o.orderkey ").append("WHERE l.orderkey BETWEEN").append("   (SELECT avg(orderkey) FROM orders) - 10 ").append("   AND").append("   (SELECT avg(orderkey) FROM orders) + 10 ")
+				.append("GROUP BY l.orderkey").toString()));
 
         // subqueries with ORDER BY
         assertQuery("SELECT orderkey, totalprice FROM orders ORDER BY (SELECT 2)");
 
         // subquery returns multiple rows
         String multipleRowsErrorMsg = "Scalar sub-query has returned multiple rows";
-        assertQueryFails("SELECT "
-                        + "orderkey, partkey, suppkey, linenumber, quantity, "
-                        + "extendedprice, discount, tax, returnflag, linestatus, "
-                        + "shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment "
-                        + "FROM lineitem WHERE orderkey = (\n"
-                        + "SELECT orderkey FROM orders ORDER BY totalprice)",
+        assertQueryFails(new StringBuilder().append("SELECT ").append("orderkey, partkey, suppkey, linenumber, quantity, ").append("extendedprice, discount, tax, returnflag, linestatus, ").append("shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment ").append("FROM lineitem WHERE orderkey = (\n").append("SELECT orderkey FROM orders ORDER BY totalprice)").toString(),
                 multipleRowsErrorMsg);
         assertQueryFails("SELECT orderkey, totalprice FROM orders ORDER BY (VALUES 1, 2)",
                 multipleRowsErrorMsg);

@@ -155,13 +155,13 @@ public class DatabaseShardManager
     {
         StringJoiner tableColumns = new StringJoiner(",\n  ", "  ", ",\n").setEmptyValue("");
 
-        for (ColumnInfo column : columns) {
+        columns.forEach(column -> {
             String columnType = sqlColumnType(column.getType());
             if (columnType != null) {
-                tableColumns.add(minColumn(column.getColumnId()) + " " + columnType);
-                tableColumns.add(maxColumn(column.getColumnId()) + " " + columnType);
+                tableColumns.add(new StringBuilder().append(minColumn(column.getColumnId())).append(" ").append(columnType).toString());
+                tableColumns.add(new StringBuilder().append(maxColumn(column.getColumnId())).append(" ").append(columnType).toString());
             }
-        }
+        });
 
         StringJoiner coveringIndexColumns = new StringJoiner(", ");
 
@@ -176,17 +176,9 @@ public class DatabaseShardManager
                     .add("shard_id")
                     .add("shard_uuid");
 
-            sql = "" +
-                    "CREATE TABLE " + shardIndexTable(tableId) + " (\n" +
-                    "  shard_id BIGINT NOT NULL,\n" +
-                    "  shard_uuid BINARY(16) NOT NULL,\n" +
-                    "  bucket_number INT NOT NULL\n," +
-                    tableColumns +
-                    "  PRIMARY KEY (bucket_number, shard_uuid),\n" +
-                    "  UNIQUE (shard_id),\n" +
-                    "  UNIQUE (shard_uuid),\n" +
-                    "  UNIQUE (" + coveringIndexColumns + ")\n" +
-                    ")";
+            sql = new StringBuilder().append("").append("CREATE TABLE ").append(shardIndexTable(tableId)).append(" (\n").append("  shard_id BIGINT NOT NULL,\n").append("  shard_uuid BINARY(16) NOT NULL,\n").append("  bucket_number INT NOT NULL\n,")
+					.append(tableColumns).append("  PRIMARY KEY (bucket_number, shard_uuid),\n").append("  UNIQUE (shard_id),\n").append("  UNIQUE (shard_uuid),\n").append("  UNIQUE (").append(coveringIndexColumns).append(")\n").append(")")
+					.toString();
         }
         else {
             coveringIndexColumns
@@ -194,17 +186,9 @@ public class DatabaseShardManager
                     .add("shard_id")
                     .add("shard_uuid");
 
-            sql = "" +
-                    "CREATE TABLE " + shardIndexTable(tableId) + " (\n" +
-                    "  shard_id BIGINT NOT NULL,\n" +
-                    "  shard_uuid BINARY(16) NOT NULL,\n" +
-                    "  node_ids VARBINARY(128) NOT NULL,\n" +
-                    tableColumns +
-                    "  PRIMARY KEY (node_ids, shard_uuid),\n" +
-                    "  UNIQUE (shard_id),\n" +
-                    "  UNIQUE (shard_uuid),\n" +
-                    "  UNIQUE (" + coveringIndexColumns + ")\n" +
-                    ")";
+            sql = new StringBuilder().append("").append("CREATE TABLE ").append(shardIndexTable(tableId)).append(" (\n").append("  shard_id BIGINT NOT NULL,\n").append("  shard_uuid BINARY(16) NOT NULL,\n").append("  node_ids VARBINARY(128) NOT NULL,\n")
+					.append(tableColumns).append("  PRIMARY KEY (node_ids, shard_uuid),\n").append("  UNIQUE (shard_id),\n").append("  UNIQUE (shard_uuid),\n").append("  UNIQUE (").append(coveringIndexColumns).append(")\n").append(")")
+					.toString();
         }
 
         try (Handle handle = dbi.open()) {
@@ -401,10 +385,7 @@ public class DatabaseShardManager
         long compressedSize = 0;
         long uncompressedSize = 0;
 
-        String selectShards = format("" +
-                "SELECT shard_id, row_count, compressed_size, uncompressed_size\n" +
-                "FROM shards\n" +
-                "WHERE shard_uuid IN (%s)", args);
+        String selectShards = format(new StringBuilder().append("").append("SELECT shard_id, row_count, compressed_size, uncompressed_size\n").append("FROM shards\n").append("WHERE shard_uuid IN (%s)").toString(), args);
 
         try (PreparedStatement statement = handle.getConnection().prepareStatement(selectShards)) {
             bindUuids(statement, shardUuids);
@@ -426,10 +407,10 @@ public class DatabaseShardManager
         ShardDao dao = shardDaoSupplier.attach(handle);
         dao.insertDeletedShards(shardUuids);
 
-        String where = " WHERE shard_id IN (" + args + ")";
+        String where = new StringBuilder().append(" WHERE shard_id IN (").append(args).append(")").toString();
         String deleteFromShardNodes = "DELETE FROM shard_nodes " + where;
         String deleteFromShards = "DELETE FROM shards " + where;
-        String deleteFromShardIndex = "DELETE FROM " + shardIndexTable(tableId) + where;
+        String deleteFromShardIndex = new StringBuilder().append("DELETE FROM ").append(shardIndexTable(tableId)).append(where).toString();
 
         try (PreparedStatement statement = handle.getConnection().prepareStatement(deleteFromShardNodes)) {
             bindLongs(statement, shardIds);
@@ -763,9 +744,7 @@ public class DatabaseShardManager
     private static List<Long> insertShards(Connection connection, long tableId, List<ShardInfo> shards)
             throws SQLException
     {
-        String sql = "" +
-                "INSERT INTO shards (shard_uuid, table_id, create_time, row_count, compressed_size, uncompressed_size, xxhash64, bucket_number)\n" +
-                "VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)";
+        String sql = new StringBuilder().append("").append("INSERT INTO shards (shard_uuid, table_id, create_time, row_count, compressed_size, uncompressed_size, xxhash64, bucket_number)\n").append("VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)").toString();
 
         try (PreparedStatement statement = connection.prepareStatement(sql, RETURN_GENERATED_KEYS)) {
             for (ShardInfo shard : shards) {

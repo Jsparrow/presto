@@ -119,7 +119,7 @@ public class HdfsParquetDataSource
             return new HdfsParquetDataSource(new ParquetDataSourceId(path.toString()), fileSize, inputStream, stats);
         }
         catch (Exception e) {
-            if (nullToEmpty(e.getMessage()).trim().equals("Filesystem closed") ||
+            if ("Filesystem closed".equals(nullToEmpty(e.getMessage()).trim()) ||
                     e instanceof FileNotFoundException) {
                 throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, e);
             }

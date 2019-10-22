@@ -152,15 +152,13 @@ public class TestShardEjector
 
         Set<UUID> remaining = uuids(shardManager.getNodeShards("node1"));
 
-        for (UUID uuid : ejectedShards) {
+        ejectedShards.forEach(uuid -> {
             assertFalse(remaining.contains(uuid));
             assertFalse(new File(storageService.getStorageFile(uuid).toString()).exists());
-        }
+        });
 
         assertEquals(remaining, keptShards);
-        for (UUID uuid : keptShards) {
-            assertTrue(new File(storageService.getStorageFile(uuid).toString()).exists());
-        }
+        keptShards.forEach(uuid -> assertTrue(new File(storageService.getStorageFile(uuid).toString()).exists()));
 
         Set<UUID> others = ImmutableSet.<UUID>builder()
                 .addAll(uuids(shardManager.getNodeShards("node2")))

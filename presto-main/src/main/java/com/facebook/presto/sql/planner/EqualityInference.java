@@ -55,18 +55,12 @@ import static java.util.Objects.requireNonNull;
 public class EqualityInference
 {
     // Ordering used to determine Expression preference when determining canonicals
-    private static final Ordering<Expression> CANONICAL_ORDERING = Ordering.from((expression1, expression2) -> {
-        // Current cost heuristic:
-        // 1) Prefer fewer input symbols
-        // 2) Prefer smaller expression trees
-        // 3) Sort the expressions alphabetically - creates a stable consistent ordering (extremely useful for unit testing)
-        // TODO: be more precise in determining the cost of an expression
-        return ComparisonChain.start()
-                .compare(VariablesExtractor.extractAllSymbols(expression1).size(), VariablesExtractor.extractAllSymbols(expression2).size())
-                .compare(SubExpressionExtractor.extract(expression1).size(), SubExpressionExtractor.extract(expression2).size())
-                .compare(expression1.toString(), expression2.toString())
-                .result();
-    });
+    private static final Ordering<Expression> CANONICAL_ORDERING = Ordering.from((expression1, expression2) -> ComparisonChain.start()
+			.compare(VariablesExtractor.extractAllSymbols(expression1).size(),
+					VariablesExtractor.extractAllSymbols(expression2).size())
+			.compare(SubExpressionExtractor.extract(expression1).size(),
+					SubExpressionExtractor.extract(expression2).size())
+			.compare(expression1.toString(), expression2.toString()).result());
 
     private final SetMultimap<Expression, Expression> equalitySets; // Indexed by canonical expression
     private final Map<Expression, Expression> canonicalMap; // Map each known expression to canonical expression
@@ -83,11 +77,11 @@ public class EqualityInference
         equalitySets = setBuilder.build();
 
         ImmutableMap.Builder<Expression, Expression> mapBuilder = ImmutableMap.builder();
-        for (Map.Entry<Expression, Expression> entry : equalitySets.entries()) {
+        equalitySets.entries().forEach(entry -> {
             Expression canonical = entry.getKey();
             Expression expression = entry.getValue();
             mapBuilder.put(expression, canonical);
-        }
+        });
         canonicalMap = mapBuilder.build();
 
         this.derivedExpressions = ImmutableSet.copyOf(derivedExpressions);
@@ -174,7 +168,7 @@ public class EqualityInference
         ImmutableSet.Builder<Expression> scopeComplementEqualities = ImmutableSet.builder();
         ImmutableSet.Builder<Expression> scopeStraddlingEqualities = ImmutableSet.builder();
 
-        for (Collection<Expression> equalitySet : equalitySets.asMap().values()) {
+        equalitySets.asMap().values().forEach(equalitySet -> {
             Set<Expression> scopeExpressions = new LinkedHashSet<>();
             Set<Expression> scopeComplementExpressions = new LinkedHashSet<>();
             Set<Expression> scopeStraddlingExpressions = new LinkedHashSet<>();
@@ -219,7 +213,7 @@ public class EqualityInference
                     scopeStraddlingEqualities.add(new ComparisonExpression(ComparisonExpression.Operator.EQUAL, connectingCanonical, expression));
                 }
             }
-        }
+        });
 
         return new EqualityPartition(scopeEqualities.build(), scopeComplementEqualities.build(), scopeStraddlingEqualities.build());
     }
@@ -383,27 +377,23 @@ public class EqualityInference
 
             // Map every expression to the set of equivalent expressions
             ImmutableMap.Builder<Expression, Set<Expression>> mapBuilder = ImmutableMap.builder();
-            for (Set<Expression> expressions : equivalentClasses) {
-                expressions.forEach(expression -> mapBuilder.put(expression, expressions));
-            }
+            equivalentClasses.forEach(expressions -> expressions.forEach(expression -> mapBuilder.put(expression, expressions)));
 
             // For every non-derived expression, extract the sub-expressions and see if they can be rewritten as other expressions. If so,
             // use this new information to update the known equalities.
             Map<Expression, Set<Expression>> map = mapBuilder.build();
-            for (Expression expression : map.keySet()) {
-                if (!derivedExpressions.contains(expression)) {
-                    for (Expression subExpression : filter(SubExpressionExtractor.extract(expression), not(equalTo(expression)))) {
-                        Set<Expression> equivalentSubExpressions = map.get(subExpression);
-                        if (equivalentSubExpressions != null) {
-                            for (Expression equivalentSubExpression : filter(equivalentSubExpressions, not(equalTo(subExpression)))) {
-                                Expression rewritten = ExpressionTreeRewriter.rewriteWith(new ExpressionNodeInliner(ImmutableMap.of(subExpression, equivalentSubExpression)), expression);
-                                equalities.findAndUnion(expression, rewritten);
-                                derivedExpressions.add(rewritten);
-                            }
-                        }
-                    }
-                }
-            }
+            map.keySet().stream().filter(expression -> !derivedExpressions.contains(expression)).forEach(expression -> {
+			    for (Expression subExpression : filter(SubExpressionExtractor.extract(expression), not(equalTo(expression)))) {
+			        Set<Expression> equivalentSubExpressions = map.get(subExpression);
+			        if (equivalentSubExpressions != null) {
+			            for (Expression equivalentSubExpression : filter(equivalentSubExpressions, not(equalTo(subExpression)))) {
+			                Expression rewritten = ExpressionTreeRewriter.rewriteWith(new ExpressionNodeInliner(ImmutableMap.of(subExpression, equivalentSubExpression)), expression);
+			                equalities.findAndUnion(expression, rewritten);
+			                derivedExpressions.add(rewritten);
+			            }
+			        }
+			    }
+			});
         }
 
         public EqualityInference build()

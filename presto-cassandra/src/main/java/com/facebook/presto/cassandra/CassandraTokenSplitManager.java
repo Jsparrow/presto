@@ -63,9 +63,7 @@ public class CassandraTokenSplitManager
         Set<TokenRange> tokenRanges = session.getTokenRanges();
 
         if (tokenRanges.isEmpty()) {
-            throw new PrestoException(CASSANDRA_METADATA_ERROR, "The cluster metadata is not available. " +
-                    "Please make sure that the Cassandra cluster is up and running, " +
-                    "and that the contact points are specified correctly.");
+            throw new PrestoException(CASSANDRA_METADATA_ERROR, new StringBuilder().append("The cluster metadata is not available. ").append("Please make sure that the Cassandra cluster is up and running, ").append("and that the contact points are specified correctly.").toString());
         }
 
         if (tokenRanges.stream().anyMatch(TokenRange::isWrappedAround)) {
@@ -112,9 +110,7 @@ public class CassandraTokenSplitManager
     private Set<TokenRange> unwrap(Set<TokenRange> tokenRanges)
     {
         ImmutableSet.Builder<TokenRange> result = ImmutableSet.builder();
-        for (TokenRange range : tokenRanges) {
-            result.addAll(range.unwrap());
-        }
+        tokenRanges.forEach(range -> result.addAll(range.unwrap()));
         return result.build();
     }
 

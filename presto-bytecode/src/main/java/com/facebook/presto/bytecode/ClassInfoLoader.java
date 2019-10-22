@@ -44,7 +44,21 @@ import static com.facebook.presto.bytecode.ParameterizedType.typeFromPathName;
 
 public class ClassInfoLoader
 {
-    public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
+    private final Map<ParameterizedType, ClassNode> classNodes;
+	private final Map<ParameterizedType, byte[]> bytecodes;
+	private final ClassLoader classLoader;
+	private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
+	private final boolean loadMethodNodes;
+
+	public ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, ClassLoader classLoader, boolean loadMethodNodes)
+    {
+        this.classNodes = ImmutableMap.copyOf(classNodes);
+        this.bytecodes = ImmutableMap.copyOf(bytecodes);
+        this.classLoader = classLoader;
+        this.loadMethodNodes = loadMethodNodes;
+    }
+
+	public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
     {
         ImmutableMap.Builder<ParameterizedType, ClassNode> classNodes = ImmutableMap.builder();
         for (ClassDefinition classDefinition : classDefinitions) {
@@ -55,21 +69,7 @@ public class ClassInfoLoader
         return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), classLoader, true);
     }
 
-    private final Map<ParameterizedType, ClassNode> classNodes;
-    private final Map<ParameterizedType, byte[]> bytecodes;
-    private final ClassLoader classLoader;
-    private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
-    private final boolean loadMethodNodes;
-
-    public ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, ClassLoader classLoader, boolean loadMethodNodes)
-    {
-        this.classNodes = ImmutableMap.copyOf(classNodes);
-        this.bytecodes = ImmutableMap.copyOf(bytecodes);
-        this.classLoader = classLoader;
-        this.loadMethodNodes = loadMethodNodes;
-    }
-
-    public ClassInfo loadClassInfo(ParameterizedType type)
+	public ClassInfo loadClassInfo(ParameterizedType type)
     {
         ClassInfo classInfo = classInfoCache.get(type);
         if (classInfo == null) {
@@ -79,7 +79,7 @@ public class ClassInfoLoader
         return classInfo;
     }
 
-    private ClassInfo readClassInfoQuick(ParameterizedType type)
+	private ClassInfo readClassInfoQuick(ParameterizedType type)
     {
         // check for user supplied class node
         ClassNode classNode = classNodes.get(type);

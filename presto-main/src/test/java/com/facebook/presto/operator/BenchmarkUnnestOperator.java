@@ -80,7 +80,68 @@ public class BenchmarkUnnestOperator
     private static final String MAP_STRING_TO_STRING = "map(varchar,varchar)";
     private static final String ARRAY_OF_ROW_THREE_STRINGS = "array(row(varchar, varchar, varchar))";
 
-    @State(Scope.Thread)
+    @Benchmark
+    public List<Page> unnest(BenchmarkContext context)
+    {
+        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
+        Operator operator = context.getOperatorFactory().createOperator(driverContext);
+
+        Iterator<Page> input = context.getPages().iterator();
+        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
+
+        boolean finishing = false;
+        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
+            if (operator.needsInput()) {
+                if (input.hasNext()) {
+                    Page inputPage = input.next();
+                    operator.addInput(inputPage);
+                }
+                else if (!finishing) {
+                    operator.finish();
+                    finishing = true;
+                }
+            }
+
+            Page outputPage = operator.getOutput();
+            if (outputPage != null) {
+                outputPages.add(outputPage);
+            }
+        }
+
+        return outputPages.build();
+    }
+
+	@Test
+    public void testBlocks()
+    {
+        InputGenerator generator = new InputGenerator(0, 50, 50);
+
+        Block block = generator.produceBlock(new ArrayType(VARCHAR), 100, 0.1, 0.1);
+        assertEquals(block.getPositionCount(), 100);
+
+        block = generator.produceBlock(mapType(VARCHAR, INTEGER), 100, 0.1, 0.1);
+        assertEquals(block.getPositionCount(), 100);
+
+        block = generator.produceBlock(RowType.anonymous(Arrays.asList(VARCHAR, VARCHAR)), 100, 0.1, 0.1);
+        assertEquals(block.getPositionCount(), 100);
+
+        block = generator.produceBlock(new ArrayType(RowType.anonymous(Arrays.asList(VARCHAR, VARCHAR, VARCHAR))), 100, 0.1, 0.1);
+        assertEquals(block.getPositionCount(), 100);
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkUnnestOperator.class.getSimpleName()).append(".*").toString())
+                .addProfiler(GCProfiler.class)
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkContext
     {
         @Param("varchar")
@@ -132,7 +193,7 @@ public class BenchmarkUnnestOperator
             typesBuilder.add(nestedTypeOne);
             channelsBuilder.add(1);
 
-            if (!nestedTypeTwo.equals("NONE")) {
+            if (!"NONE".equals(nestedTypeTwo)) {
                 Type nestedTypeTwo = getType(metadata, this.nestedTypeTwo).get();
                 typesBuilder.add(nestedTypeTwo);
                 channelsBuilder.add(2);
@@ -156,7 +217,7 @@ public class BenchmarkUnnestOperator
 
         public Optional<Type> getType(Metadata metadata, String typeString)
         {
-            if (typeString.equals("NONE")) {
+            if ("NONE".equals(typeString)) {
                 return Optional.empty();
             }
             TypeSignature signature = TypeSignature.parseTypeSignature(typeString);
@@ -202,37 +263,6 @@ public class BenchmarkUnnestOperator
 
             return pages.build();
         }
-    }
-
-    @Benchmark
-    public List<Page> unnest(BenchmarkContext context)
-    {
-        DriverContext driverContext = context.createTaskContext().addPipelineContext(0, true, true, false).addDriverContext();
-        Operator operator = context.getOperatorFactory().createOperator(driverContext);
-
-        Iterator<Page> input = context.getPages().iterator();
-        ImmutableList.Builder<Page> outputPages = ImmutableList.builder();
-
-        boolean finishing = false;
-        for (int loops = 0; !operator.isFinished() && loops < 1_000_000; loops++) {
-            if (operator.needsInput()) {
-                if (input.hasNext()) {
-                    Page inputPage = input.next();
-                    operator.addInput(inputPage);
-                }
-                else if (!finishing) {
-                    operator.finish();
-                    finishing = true;
-                }
-            }
-
-            Page outputPage = operator.getOutput();
-            if (outputPage != null) {
-                outputPages.add(outputPage);
-            }
-        }
-
-        return outputPages.build();
     }
 
     public static class InputGenerator
@@ -390,35 +420,5 @@ public class BenchmarkUnnestOperator
             }
             return new String(chars);
         }
-    }
-
-    @Test
-    public void testBlocks()
-    {
-        InputGenerator generator = new InputGenerator(0, 50, 50);
-
-        Block block = generator.produceBlock(new ArrayType(VARCHAR), 100, 0.1, 0.1);
-        assertEquals(block.getPositionCount(), 100);
-
-        block = generator.produceBlock(mapType(VARCHAR, INTEGER), 100, 0.1, 0.1);
-        assertEquals(block.getPositionCount(), 100);
-
-        block = generator.produceBlock(RowType.anonymous(Arrays.asList(VARCHAR, VARCHAR)), 100, 0.1, 0.1);
-        assertEquals(block.getPositionCount(), 100);
-
-        block = generator.produceBlock(new ArrayType(RowType.anonymous(Arrays.asList(VARCHAR, VARCHAR, VARCHAR))), 100, 0.1, 0.1);
-        assertEquals(block.getPositionCount(), 100);
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkUnnestOperator.class.getSimpleName() + ".*")
-                .addProfiler(GCProfiler.class)
-                .build();
-
-        new Runner(options).run();
     }
 }

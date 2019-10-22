@@ -122,7 +122,14 @@ public class ExpressionEquivalence
         return translate(expression, expressionTypes, variableInput, metadata.getFunctionManager(), metadata.getTypeManager(), session);
     }
 
-    private static class CanonicalizationVisitor
+    private static <T> List<T> swapPair(List<T> pair)
+    {
+        requireNonNull(pair, "pair is null");
+        checkArgument(pair.size() == 2, "Expected pair to have two elements");
+        return ImmutableList.of(pair.get(1), pair.get(0));
+    }
+
+	private static class CanonicalizationVisitor
             implements RowExpressionVisitor<RowExpression, Void>
     {
         private final FunctionManager functionManager;
@@ -154,35 +161,33 @@ public class ExpressionEquivalence
                         ROW_EXPRESSION_ORDERING.sortedCopy(call.getArguments()));
             }
 
-            if (callName.equals(GREATER_THAN.getFunctionName()) || callName.equals(GREATER_THAN_OR_EQUAL.getFunctionName())) {
-                // convert greater than to less than
-
-                FunctionHandle functionHandle = functionManager.resolveOperator(
-                        callName.equals(GREATER_THAN.getFunctionName()) ? LESS_THAN : LESS_THAN_OR_EQUAL,
-                        swapPair(fromTypes(call.getArguments().stream().map(RowExpression::getType).collect(toImmutableList()))));
-                return new CallExpression(
-                        call.getDisplayName(),
-                        functionHandle,
-                        call.getType(),
-                        swapPair(call.getArguments()));
-            }
-
-            return call;
+            // convert greater than to less than
+			if (!(callName.equals(GREATER_THAN.getFunctionName()) || callName.equals(GREATER_THAN_OR_EQUAL.getFunctionName()))) {
+				return call;
+			}
+			FunctionHandle functionHandle = functionManager.resolveOperator(
+			        callName.equals(GREATER_THAN.getFunctionName()) ? LESS_THAN : LESS_THAN_OR_EQUAL,
+			        swapPair(fromTypes(call.getArguments().stream().map(RowExpression::getType).collect(toImmutableList()))));
+			return new CallExpression(
+			        call.getDisplayName(),
+			        functionHandle,
+			        call.getType(),
+			        swapPair(call.getArguments()));
         }
 
         public static List<RowExpression> flattenNestedSpecialForms(SpecialFormExpression specialForm)
         {
             Form form = specialForm.getForm();
             ImmutableList.Builder<RowExpression> newArguments = ImmutableList.builder();
-            for (RowExpression argument : specialForm.getArguments()) {
-                if (argument instanceof SpecialFormExpression && form.equals(((SpecialFormExpression) argument).getForm())) {
+            specialForm.getArguments().forEach(argument -> {
+                if (argument instanceof SpecialFormExpression && form == ((SpecialFormExpression) argument).getForm()) {
                     // same special form type, so flatten the args
                     newArguments.addAll(flattenNestedSpecialForms((SpecialFormExpression) argument));
                 }
                 else {
                     newArguments.add(argument);
                 }
-            }
+            });
             return newArguments.build();
         }
 
@@ -220,23 +225,19 @@ public class ExpressionEquivalence
                             .map(expression -> expression.accept(this, context))
                             .collect(toImmutableList()));
 
-            if (specialForm.getForm() == AND || specialForm.getForm() == OR) {
-                // if we have nested calls (of the same type) flatten them
-                List<RowExpression> flattenedArguments = flattenNestedSpecialForms(specialForm);
-
-                // only consider distinct arguments
-                Set<RowExpression> distinctArguments = ImmutableSet.copyOf(flattenedArguments);
-                if (distinctArguments.size() == 1) {
-                    return Iterables.getOnlyElement(distinctArguments);
-                }
-
-                // canonicalize the argument order (i.e., sort them)
-                List<RowExpression> sortedArguments = ROW_EXPRESSION_ORDERING.sortedCopy(distinctArguments);
-
-                return new SpecialFormExpression(specialForm.getForm(), BOOLEAN, sortedArguments);
-            }
-
-            return specialForm;
+            if (!(specialForm.getForm() == AND || specialForm.getForm() == OR)) {
+				return specialForm;
+			}
+			// if we have nested calls (of the same type) flatten them
+			List<RowExpression> flattenedArguments = flattenNestedSpecialForms(specialForm);
+			// only consider distinct arguments
+			Set<RowExpression> distinctArguments = ImmutableSet.copyOf(flattenedArguments);
+			if (distinctArguments.size() == 1) {
+			    return Iterables.getOnlyElement(distinctArguments);
+			}
+			// canonicalize the argument order (i.e., sort them)
+			List<RowExpression> sortedArguments = ROW_EXPRESSION_ORDERING.sortedCopy(distinctArguments);
+			return new SpecialFormExpression(specialForm.getForm(), BOOLEAN, sortedArguments);
         }
     }
 
@@ -374,12 +375,5 @@ public class ExpressionEquivalence
             }
             return Integer.compare(left.size(), right.size());
         }
-    }
-
-    private static <T> List<T> swapPair(List<T> pair)
-    {
-        requireNonNull(pair, "pair is null");
-        checkArgument(pair.size() == 2, "Expected pair to have two elements");
-        return ImmutableList.of(pair.get(1), pair.get(0));
     }
 }

@@ -126,11 +126,8 @@ public abstract class AbstractTestingPrestoClient<T>
     {
         ImmutableMap.Builder<String, String> properties = ImmutableMap.builder();
         properties.putAll(session.getSystemProperties());
-        for (Entry<String, Map<String, String>> connectorProperties : session.getUnprocessedCatalogProperties().entrySet()) {
-            for (Entry<String, String> entry : connectorProperties.getValue().entrySet()) {
-                properties.put(connectorProperties.getKey() + "." + entry.getKey(), entry.getValue());
-            }
-        }
+        session.getUnprocessedCatalogProperties().entrySet().forEach(connectorProperties -> connectorProperties.getValue().entrySet()
+				.forEach(entry -> properties.put(new StringBuilder().append(connectorProperties.getKey()).append(".").append(entry.getKey()).toString(), entry.getValue())));
 
         ImmutableMap.Builder<String, String> resourceEstimates = ImmutableMap.builder();
         ResourceEstimates estimates = session.getResourceEstimates();
@@ -162,18 +159,14 @@ public abstract class AbstractTestingPrestoClient<T>
     {
         return transaction(prestoServer.getTransactionManager(), prestoServer.getAccessControl())
                 .readOnly()
-                .execute(session, transactionSession -> {
-                    return prestoServer.getMetadata().listTables(transactionSession, new QualifiedTablePrefix(catalog, schema));
-                });
+                .execute(session, transactionSession -> prestoServer.getMetadata().listTables(transactionSession, new QualifiedTablePrefix(catalog, schema)));
     }
 
     public boolean tableExists(Session session, String table)
     {
         return transaction(prestoServer.getTransactionManager(), prestoServer.getAccessControl())
                 .readOnly()
-                .execute(session, transactionSession -> {
-                    return MetadataUtil.tableExists(prestoServer.getMetadata(), transactionSession, table);
-                });
+                .execute(session, transactionSession -> MetadataUtil.tableExists(prestoServer.getMetadata(), transactionSession, table));
     }
 
     public Session getDefaultSession()

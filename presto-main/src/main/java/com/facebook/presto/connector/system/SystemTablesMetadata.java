@@ -148,12 +148,11 @@ public class SystemTablesMetadata
         }
 
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> builder = ImmutableMap.builder();
-        for (SystemTable table : tables.listSystemTables(session)) {
-            ConnectorTableMetadata tableMetadata = table.getTableMetadata();
-            if (prefix.matches(tableMetadata.getTable())) {
+        tables.listSystemTables(session).stream().map(SystemTable::getTableMetadata).forEach(tableMetadata -> {
+			if (prefix.matches(tableMetadata.getTable())) {
                 builder.put(tableMetadata.getTable(), tableMetadata.getColumns());
             }
-        }
+		});
         return builder.build();
     }
 }

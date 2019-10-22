@@ -44,11 +44,14 @@ import static com.facebook.presto.spi.predicate.TupleDomain.withColumnDomains;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SystemPageSourceProvider
         implements ConnectorPageSourceProvider
 {
-    private final SystemTablesProvider tables;
+    private static final Logger logger = LoggerFactory.getLogger(SystemPageSourceProvider.class);
+	private final SystemTablesProvider tables;
 
     public SystemPageSourceProvider(SystemTablesProvider tables)
     {
@@ -90,17 +93,18 @@ public class SystemPageSourceProvider
 
         TupleDomain<ColumnHandle> constraint = systemSplit.getConstraint();
         ImmutableMap.Builder<Integer, Domain> newConstraints = ImmutableMap.builder();
-        for (Map.Entry<ColumnHandle, Domain> entry : constraint.getDomains().get().entrySet()) {
+        constraint.getDomains().get().entrySet().forEach(entry -> {
             String columnName = ((SystemColumnHandle) entry.getKey()).getColumnName();
             newConstraints.put(columnsByName.get(columnName), entry.getValue());
-        }
+        });
         TupleDomain<Integer> newContraint = withColumnDomains(newConstraints.build());
 
         try {
             return new MappedPageSource(systemTable.pageSource(systemTransaction.getConnectorTransactionHandle(), session, newContraint), userToSystemFieldIndex.build());
         }
         catch (UnsupportedOperationException e) {
-            return new RecordPageSource(new MappedRecordSet(toRecordSet(systemTransaction.getConnectorTransactionHandle(), systemTable, session, newContraint), userToSystemFieldIndex.build()));
+            logger.error(e.getMessage(), e);
+			return new RecordPageSource(new MappedRecordSet(toRecordSet(systemTransaction.getConnectorTransactionHandle(), systemTable, session, newContraint), userToSystemFieldIndex.build()));
         }
     }
 

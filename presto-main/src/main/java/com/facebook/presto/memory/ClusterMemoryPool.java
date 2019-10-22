@@ -150,9 +150,8 @@ public class ClusterMemoryPool
         this.queryMemoryAllocations.clear();
         this.queryMemoryRevocableReservations.clear();
 
-        for (MemoryInfo info : memoryInfos) {
-            MemoryPoolInfo poolInfo = info.getPools().get(id);
-            if (poolInfo != null) {
+        memoryInfos.stream().map(info -> info.getPools().get(id)).forEach(poolInfo -> {
+			if (poolInfo != null) {
                 nodes++;
                 if (poolInfo.getFreeBytes() + poolInfo.getReservedRevocableBytes() <= 0) {
                     blockedNodes++;
@@ -160,17 +159,11 @@ public class ClusterMemoryPool
                 totalDistributedBytes += poolInfo.getMaxBytes();
                 reservedDistributedBytes += poolInfo.getReservedBytes();
                 reservedRevocableDistributedBytes += poolInfo.getReservedRevocableBytes();
-                for (Map.Entry<QueryId, Long> entry : poolInfo.getQueryMemoryReservations().entrySet()) {
-                    queryMemoryReservations.merge(entry.getKey(), entry.getValue(), Long::sum);
-                }
-                for (Map.Entry<QueryId, List<MemoryAllocation>> entry : poolInfo.getQueryMemoryAllocations().entrySet()) {
-                    queryMemoryAllocations.merge(entry.getKey(), entry.getValue(), this::mergeQueryAllocations);
-                }
-                for (Map.Entry<QueryId, Long> entry : poolInfo.getQueryMemoryRevocableReservations().entrySet()) {
-                    queryMemoryRevocableReservations.merge(entry.getKey(), entry.getValue(), Long::sum);
-                }
+                poolInfo.getQueryMemoryReservations().entrySet().forEach(entry -> queryMemoryReservations.merge(entry.getKey(), entry.getValue(), Long::sum));
+                poolInfo.getQueryMemoryAllocations().entrySet().forEach(entry -> queryMemoryAllocations.merge(entry.getKey(), entry.getValue(), this::mergeQueryAllocations));
+                poolInfo.getQueryMemoryRevocableReservations().entrySet().forEach(entry -> queryMemoryRevocableReservations.merge(entry.getKey(), entry.getValue(), Long::sum));
             }
-        }
+		});
     }
 
     private List<MemoryAllocation> mergeQueryAllocations(List<MemoryAllocation> left, List<MemoryAllocation> right)
@@ -180,16 +173,10 @@ public class ClusterMemoryPool
 
         Map<String, MemoryAllocation> mergedAllocations = new HashMap<>();
 
-        for (MemoryAllocation allocation : left) {
-            mergedAllocations.put(allocation.getTag(), allocation);
-        }
+        left.forEach(allocation -> mergedAllocations.put(allocation.getTag(), allocation));
 
-        for (MemoryAllocation allocation : right) {
-            mergedAllocations.merge(
-                    allocation.getTag(),
-                    allocation,
-                    (a, b) -> new MemoryAllocation(a.getTag(), a.getAllocation() + b.getAllocation()));
-        }
+        right.forEach(allocation -> mergedAllocations.merge(allocation.getTag(), allocation,
+				(a, b) -> new MemoryAllocation(a.getTag(), a.getAllocation() + b.getAllocation())));
 
         return new ArrayList<>(mergedAllocations.values());
     }

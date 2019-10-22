@@ -40,40 +40,38 @@ public final class ResourceGroupId
         this(append(requireNonNull(parent, "parent is null").segments, requireNonNull(name, "name is null")));
     }
 
-    private static List<String> append(List<String> list, String element)
+    @JsonCreator
+    public ResourceGroupId(List<String> segments)
+    {
+        checkArgument(!segments.isEmpty(), "Resource group id is empty");
+        segments.forEach(segment -> checkArgument(!segment.isEmpty(), "Empty segment in resource group id"));
+        this.segments = segments;
+    }
+
+	private static List<String> append(List<String> list, String element)
     {
         List<String> result = new ArrayList<>(list);
         result.add(element);
         return result;
     }
 
-    @JsonCreator
-    public ResourceGroupId(List<String> segments)
-    {
-        checkArgument(!segments.isEmpty(), "Resource group id is empty");
-        for (String segment : segments) {
-            checkArgument(!segment.isEmpty(), "Empty segment in resource group id");
-        }
-        this.segments = segments;
-    }
-
-    public String getLastSegment()
+	public String getLastSegment()
     {
         return segments.get(segments.size() - 1);
     }
 
-    @JsonValue
+	@JsonValue
     public List<String> getSegments()
     {
         return segments;
     }
 
-    public ResourceGroupId getRoot()
+	public ResourceGroupId getRoot()
     {
         return new ResourceGroupId(segments.get(0));
     }
 
-    public Optional<ResourceGroupId> getParent()
+	public Optional<ResourceGroupId> getParent()
     {
         if (segments.size() == 1) {
             return Optional.empty();
@@ -81,7 +79,7 @@ public final class ResourceGroupId
         return Optional.of(new ResourceGroupId(segments.subList(0, segments.size() - 1)));
     }
 
-    public boolean isAncestorOf(ResourceGroupId descendant)
+	public boolean isAncestorOf(ResourceGroupId descendant)
     {
         List<String> descendantSegments = descendant.getSegments();
         if (segments.size() >= descendantSegments.size()) {
@@ -90,21 +88,21 @@ public final class ResourceGroupId
         return descendantSegments.subList(0, segments.size()).equals(segments);
     }
 
-    private static void checkArgument(boolean argument, String format, Object... args)
+	private static void checkArgument(boolean argument, String format, Object... args)
     {
         if (!argument) {
             throw new IllegalArgumentException(format(format, args));
         }
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return segments.stream()
                 .collect(joining("."));
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -117,7 +115,7 @@ public final class ResourceGroupId
         return Objects.equals(segments, that.segments);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(segments);

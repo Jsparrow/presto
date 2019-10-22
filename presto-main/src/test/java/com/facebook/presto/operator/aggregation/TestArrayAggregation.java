@@ -46,6 +46,7 @@ import static com.facebook.presto.spi.type.DateType.DATE;
 import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static com.facebook.presto.sql.analyzer.TypeSignatureProvider.fromTypes;
 import static org.testng.Assert.assertTrue;
+import java.util.Collections;
 
 public class TestArrayAggregation
 {
@@ -127,7 +128,7 @@ public class TestArrayAggregation
         InternalAggregationFunction varcharAgg = getAggregation(new ArrayType(BIGINT));
         assertAggregation(
                 varcharAgg,
-                Arrays.asList(Arrays.asList(1L), Arrays.asList(1L, 2L), Arrays.asList(1L, 2L, 3L)),
+                Arrays.asList(Collections.singletonList(1L), Arrays.asList(1L, 2L), Arrays.asList(1L, 2L, 3L)),
                 createArrayBigintBlock(ImmutableList.of(ImmutableList.of(1L), ImmutableList.of(1L, 2L), ImmutableList.of(1L, 2L, 3L))));
     }
 

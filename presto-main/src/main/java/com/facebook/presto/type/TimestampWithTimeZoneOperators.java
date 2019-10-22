@@ -220,7 +220,14 @@ public final class TimestampWithTimeZoneOperators
         return XxHash64.hash(unpackMillisUtc(value));
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.TIMESTAMP_WITH_TIME_ZONE) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class TimestampWithTimeZoneDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -254,12 +261,5 @@ public final class TimestampWithTimeZoneOperators
             }
             return notEqual(TIMESTAMP_WITH_TIME_ZONE.getLong(left, leftPosition), TIMESTAMP_WITH_TIME_ZONE.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.TIMESTAMP_WITH_TIME_ZONE) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

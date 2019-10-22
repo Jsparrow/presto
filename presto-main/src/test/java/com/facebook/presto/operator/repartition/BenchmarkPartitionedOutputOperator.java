@@ -121,7 +121,22 @@ public class BenchmarkPartitionedOutputOperator
         operator.finish();
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkPartitionedOutputOperator().optimizedAddPage(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .jvmArgs("-Xmx10g")
+                .include(new StringBuilder().append(".*").append(BenchmarkPartitionedOutputOperator.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private static final int PARTITION_COUNT = 256;
@@ -358,20 +373,5 @@ public class BenchmarkPartitionedOutputOperator
             {
             }
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkPartitionedOutputOperator().optimizedAddPage(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .jvmArgs("-Xmx10g")
-                .include(".*" + BenchmarkPartitionedOutputOperator.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

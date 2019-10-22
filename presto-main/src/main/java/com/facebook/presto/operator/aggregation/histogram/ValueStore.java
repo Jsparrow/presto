@@ -117,7 +117,7 @@ public class ValueStore
         long newBucketCountLong = bucketCount * 2L;
 
         if (newBucketCountLong > Integer.MAX_VALUE) {
-            throw new PrestoException(GENERIC_INSUFFICIENT_RESOURCES, "Size of hash table cannot exceed " + Integer.MAX_VALUE + " entries (" + newBucketCountLong + ")");
+            throw new PrestoException(GENERIC_INSUFFICIENT_RESOURCES, new StringBuilder().append("Size of hash table cannot exceed ").append(Integer.MAX_VALUE).append(" entries (").append(newBucketCountLong).append(")").toString());
         }
 
         int newBucketCount = (int) newBucketCountLong;

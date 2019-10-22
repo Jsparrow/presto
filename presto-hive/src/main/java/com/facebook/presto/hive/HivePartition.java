@@ -83,6 +83,6 @@ public class HivePartition
     @Override
     public String toString()
     {
-        return tableName + ":" + partitionId;
+        return new StringBuilder().append(tableName).append(":").append(partitionId).toString();
     }
 }

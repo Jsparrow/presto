@@ -29,22 +29,15 @@ public class SqlTopNRowNumberBenchmark
                 format("sql_%s_partition_by_(%s)_top_%s", function, partitions, topN),
                 4,
                 5,
-                format("WITH t AS (" +
-                        "  SELECT *, %s() OVER (PARTITION BY %s ORDER BY shipdate DESC) AS rnk" +
-                        "  FROM lineitem" +
-                        ")" +
-                        "SELECT * FROM t WHERE rnk <= %s", function, partitions, topN));
+                format(new StringBuilder().append("WITH t AS (").append("  SELECT *, %s() OVER (PARTITION BY %s ORDER BY shipdate DESC) AS rnk").append("  FROM lineitem").append(")").append("SELECT * FROM t WHERE rnk <= %s").toString(), function, partitions, topN));
     }
 
     public static void main(String[] args)
     {
         LocalQueryRunner localQueryRunner = createLocalQueryRunner(ImmutableMap.of("resource_overcommit", "true"));
-        for (String function : ImmutableList.of("row_number", "rank")) {
-            for (String partitions : ImmutableList.of("orderkey, partkey", "partkey", "linestatus")) {
-                for (int topN : ImmutableList.of(1, 100, 10_000)) {
-                    new SqlTopNRowNumberBenchmark(localQueryRunner, function, partitions, topN).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
-                }
-            }
-        }
+        ImmutableList.of("row_number", "rank").forEach(function -> ImmutableList.of("orderkey, partkey", "partkey", "linestatus")
+				.forEach(partitions -> ImmutableList.of(1, 100, 10_000).stream().mapToInt(Integer::valueOf)
+						.forEach(topN -> new SqlTopNRowNumberBenchmark(localQueryRunner, function, partitions, topN)
+								.runBenchmark(new SimpleLineBenchmarkResultWriter(System.out)))));
     }
 }

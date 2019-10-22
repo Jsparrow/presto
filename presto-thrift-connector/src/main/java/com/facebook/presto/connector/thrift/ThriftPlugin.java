@@ -37,11 +37,6 @@ public class ThriftPlugin
         this(getPluginInfo());
     }
 
-    private ThriftPlugin(ThriftPluginInfo info)
-    {
-        this(info.getName(), info.getModule());
-    }
-
     public ThriftPlugin(String name, Module module)
     {
         checkArgument(!isNullOrEmpty(name), "name is null or empty");
@@ -49,13 +44,18 @@ public class ThriftPlugin
         this.module = requireNonNull(module, "module is null");
     }
 
-    @Override
+	private ThriftPlugin(ThriftPluginInfo info)
+    {
+        this(info.getName(), info.getModule());
+    }
+
+	@Override
     public Iterable<ConnectorFactory> getConnectorFactories()
     {
         return ImmutableList.of(new ThriftConnectorFactory(name, module));
     }
 
-    private static ThriftPluginInfo getPluginInfo()
+	private static ThriftPluginInfo getPluginInfo()
     {
         ClassLoader classLoader = ThriftPlugin.class.getClassLoader();
         ServiceLoader<ThriftPluginInfo> loader = ServiceLoader.load(ThriftPluginInfo.class, classLoader);

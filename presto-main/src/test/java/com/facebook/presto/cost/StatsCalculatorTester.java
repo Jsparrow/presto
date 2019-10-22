@@ -44,11 +44,6 @@ public class StatsCalculatorTester
         this(createQueryRunner(session));
     }
 
-    public Metadata getMetadata()
-    {
-        return metadata;
-    }
-
     private StatsCalculatorTester(LocalQueryRunner queryRunner)
     {
         this.statsCalculator = queryRunner.getStatsCalculator();
@@ -57,7 +52,12 @@ public class StatsCalculatorTester
         this.queryRunner = queryRunner;
     }
 
-    private static LocalQueryRunner createQueryRunner(Session session)
+	public Metadata getMetadata()
+    {
+        return metadata;
+    }
+
+	private static LocalQueryRunner createQueryRunner(Session session)
     {
         LocalQueryRunner queryRunner = new LocalQueryRunner(session);
         queryRunner.createCatalog(session.getCatalog().get(),
@@ -66,14 +66,14 @@ public class StatsCalculatorTester
         return queryRunner;
     }
 
-    public StatsCalculatorAssertion assertStatsFor(Function<PlanBuilder, PlanNode> planProvider)
+	public StatsCalculatorAssertion assertStatsFor(Function<PlanBuilder, PlanNode> planProvider)
     {
         PlanBuilder planBuilder = new PlanBuilder(session, new PlanNodeIdAllocator(), metadata);
         PlanNode planNode = planProvider.apply(planBuilder);
         return new StatsCalculatorAssertion(statsCalculator, session, planNode, planBuilder.getTypes());
     }
 
-    @Override
+	@Override
     public void close()
     {
         queryRunner.close();

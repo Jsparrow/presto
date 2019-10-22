@@ -105,9 +105,7 @@ public class TestDisjointSet
         // insert pair (i, i+1); assert all inserts are considered new
         List<Integer> inputs = IntStream.range(0, 96).boxed().collect(Collectors.toList());
         Collections.shuffle(inputs);
-        for (int i : inputs) {
-            assertTrue(disjoint.findAndUnion(i, i + 4));
-        }
+        inputs.stream().mapToInt(Integer::valueOf).forEach(i -> assertTrue(disjoint.findAndUnion(i, i + 4)));
         // assert every pair (i, j) is in the same set
         for (int i = 0; i < 100; i++) {
             for (int j = 0; j < 100; j++) {

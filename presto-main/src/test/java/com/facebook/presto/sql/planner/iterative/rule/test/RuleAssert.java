@@ -118,7 +118,7 @@ public class RuleAssert
 
         if (!ruleApplication.wasRuleApplied()) {
             fail(String.format(
-                    "%s did not fire for:\n%s",
+                    "%s did not fire for:%n%s",
                     rule.getClass().getName(),
                     formatPlan(plan, types)));
         }
@@ -132,7 +132,7 @@ public class RuleAssert
 
         if (ruleApplication.wasRuleApplied()) {
             fail(String.format(
-                    "Expected %s to not fire for:\n%s",
+                    "Expected %s to not fire for:%n%s",
                     rule.getClass().getName(),
                     inTransaction(session -> textLogicalPlan(plan, ruleApplication.types, metadata.getFunctionManager(), StatsAndCosts.empty(), session, 2))));
         }
@@ -145,7 +145,7 @@ public class RuleAssert
 
         if (!ruleApplication.wasRuleApplied()) {
             fail(String.format(
-                    "%s did not fire for:\n%s",
+                    "%s did not fire for:%n%s",
                     rule.getClass().getName(),
                     formatPlan(plan, types)));
         }
@@ -154,16 +154,14 @@ public class RuleAssert
 
         if (actual == plan) { // plans are not comparable, so we can only ensure they are not the same instance
             fail(String.format(
-                    "%s: rule fired but return the original plan:\n%s",
+                    "%s: rule fired but return the original plan:%n%s",
                     rule.getClass().getName(),
                     formatPlan(plan, types)));
         }
 
         if (!ImmutableSet.copyOf(plan.getOutputVariables()).equals(ImmutableSet.copyOf(actual.getOutputVariables()))) {
             fail(String.format(
-                    "%s: output schema of transformed and original plans are not equivalent\n" +
-                            "\texpected: %s\n" +
-                            "\tactual:   %s",
+                    new StringBuilder().append("%s: output schema of transformed and original plans are not equivalent\n").append("\texpected: %s\n").append("\tactual:   %s").toString(),
                     rule.getClass().getName(),
                     plan.getOutputVariables(),
                     actual.getOutputVariables()));

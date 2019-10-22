@@ -32,6 +32,8 @@ import static java.lang.Long.parseLong;
 import static java.lang.Math.multiplyExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Seconds since the epoch date format decoder.
@@ -62,7 +64,9 @@ public class SecondsSinceEpochJsonFieldDecoder
     public static class SecondsSinceEpochJsonValueProvider
             extends AbstractDateTimeJsonValueProvider
     {
-        public SecondsSinceEpochJsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
+        private final Logger logger = LoggerFactory.getLogger(SecondsSinceEpochJsonValueProvider.class);
+
+		public SecondsSinceEpochJsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
         {
             super(value, columnHandle);
         }
@@ -83,7 +87,8 @@ public class SecondsSinceEpochJsonFieldDecoder
                         format("could not parse non-value node as '%s' for column '%s'", columnHandle.getType(), columnHandle.getName()));
             }
             catch (NumberFormatException | ArithmeticException e) {
-                throw new PrestoException(
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(
                         DECODER_CONVERSION_NOT_SUPPORTED,
                         format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnHandle.getType(), columnHandle.getName()));
             }

@@ -95,7 +95,18 @@ public class BenchmarkBatchStreamReaders
         return blocks;
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws Throwable
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkBatchStreamReaders.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private final Random random = new Random(0);
@@ -222,16 +233,5 @@ public class BenchmarkBatchStreamReaders
         {
             PARTIAL, NONE, ALL;
         }
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkBatchStreamReaders.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

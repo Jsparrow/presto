@@ -59,7 +59,39 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 @BenchmarkMode(Mode.AverageTime)
 public class BenchmarkPlanner
 {
-    @SuppressWarnings("FieldMayBeFinal")
+    @Benchmark
+    public List<Plan> planQueries(BenchmarkData benchmarkData)
+    {
+        return benchmarkData.queryRunner.inTransaction(transactionSession -> {
+            LogicalPlanner.Stage stage = LogicalPlanner.Stage.valueOf(benchmarkData.stage.toUpperCase());
+            return benchmarkData.queries.stream()
+                    .map(query -> benchmarkData.queryRunner.createPlan(transactionSession, query, stage, false, WarningCollector.NOOP))
+                    .collect(toImmutableList());
+        });
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        try {
+            new BenchmarkPlanner().planQueries(data);
+        }
+        finally {
+            data.tearDown();
+        }
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.BULK)
+                .include(new StringBuilder().append(".*").append(BenchmarkPlanner.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Benchmark)
     public static class BenchmarkData
     {
@@ -111,37 +143,5 @@ public class BenchmarkPlanner
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    @Benchmark
-    public List<Plan> planQueries(BenchmarkData benchmarkData)
-    {
-        return benchmarkData.queryRunner.inTransaction(transactionSession -> {
-            LogicalPlanner.Stage stage = LogicalPlanner.Stage.valueOf(benchmarkData.stage.toUpperCase());
-            return benchmarkData.queries.stream()
-                    .map(query -> benchmarkData.queryRunner.createPlan(transactionSession, query, stage, false, WarningCollector.NOOP))
-                    .collect(toImmutableList());
-        });
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        try {
-            new BenchmarkPlanner().planQueries(data);
-        }
-        finally {
-            data.tearDown();
-        }
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.BULK)
-                .include(".*" + BenchmarkPlanner.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

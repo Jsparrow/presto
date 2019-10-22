@@ -180,7 +180,334 @@ public class ExtractSpatialJoins
                 new ExtractSpatialLeftJoin(metadata, splitManager, pageSourceManager, sqlParser));
     }
 
-    @VisibleForTesting
+    private static Result tryCreateSpatialJoin(
+            Context context,
+            JoinNode joinNode,
+            Expression filter,
+            PlanNodeId nodeId,
+            List<VariableReferenceExpression> outputVariables,
+            ComparisonExpression spatialComparison,
+            Metadata metadata,
+            SplitManager splitManager,
+            PageSourceManager pageSourceManager,
+            SqlParser sqlParser)
+    {
+        PlanNode leftNode = joinNode.getLeft();
+        PlanNode rightNode = joinNode.getRight();
+
+        List<VariableReferenceExpression> leftVariables = leftNode.getOutputVariables();
+        List<VariableReferenceExpression> rightVariables = rightNode.getOutputVariables();
+
+        Expression radius;
+        Optional<VariableReferenceExpression> newRadiusVariable;
+        ComparisonExpression newComparison;
+        if (spatialComparison.getOperator() == LESS_THAN || spatialComparison.getOperator() == LESS_THAN_OR_EQUAL) {
+            // ST_Distance(a, b) <= r
+            radius = spatialComparison.getRight();
+            Set<VariableReferenceExpression> radiusVariables = VariablesExtractor.extractUnique(radius, context.getVariableAllocator().getTypes());
+            if (radiusVariables.isEmpty() || (rightVariables.containsAll(radiusVariables) && containsNone(leftVariables, radiusVariables))) {
+                newRadiusVariable = newRadiusVariable(context, radius);
+                newComparison = new ComparisonExpression(spatialComparison.getOperator(), spatialComparison.getLeft(), toExpression(newRadiusVariable, radius));
+            }
+            else {
+                return Result.empty();
+            }
+        }
+        else {
+            // r >= ST_Distance(a, b)
+            radius = spatialComparison.getLeft();
+            Set<VariableReferenceExpression> radiusVariables = VariablesExtractor.extractUnique(radius, context.getVariableAllocator().getTypes());
+            if (radiusVariables.isEmpty() || (rightVariables.containsAll(radiusVariables) && containsNone(leftVariables, radiusVariables))) {
+                newRadiusVariable = newRadiusVariable(context, radius);
+                newComparison = new ComparisonExpression(spatialComparison.getOperator().flip(), spatialComparison.getRight(), toExpression(newRadiusVariable, radius));
+            }
+            else {
+                return Result.empty();
+            }
+        }
+
+        Expression newFilter = replaceExpression(filter, ImmutableMap.of(spatialComparison, newComparison));
+        PlanNode newRightNode = newRadiusVariable.map(variable -> addProjection(context, rightNode, variable, radius)).orElse(rightNode);
+
+        JoinNode newJoinNode = new JoinNode(
+                joinNode.getId(),
+                joinNode.getType(),
+                leftNode,
+                newRightNode,
+                joinNode.getCriteria(),
+                joinNode.getOutputVariables(),
+                Optional.of(castToRowExpression(newFilter)),
+                joinNode.getLeftHashVariable(),
+                joinNode.getRightHashVariable(),
+                joinNode.getDistributionType());
+
+        return tryCreateSpatialJoin(context, newJoinNode, newFilter, nodeId, outputVariables, (FunctionCall) newComparison.getLeft(), Optional.of(newComparison.getRight()), metadata, splitManager, pageSourceManager, sqlParser);
+    }
+
+	private static Result tryCreateSpatialJoin(
+            Context context,
+            JoinNode joinNode,
+            Expression filter,
+            PlanNodeId nodeId,
+            List<VariableReferenceExpression> outputVariables,
+            FunctionCall spatialFunction,
+            Optional<Expression> radius,
+            Metadata metadata,
+            SplitManager splitManager,
+            PageSourceManager pageSourceManager,
+            SqlParser sqlParser)
+    {
+        // TODO Add support for distributed left spatial joins
+        Optional<String> spatialPartitioningTableName = joinNode.getType() == INNER ? getSpatialPartitioningTableName(context.getSession()) : Optional.empty();
+        Optional<KdbTree> kdbTree = spatialPartitioningTableName.map(tableName -> loadKdbTree(tableName, context.getSession(), metadata, splitManager, pageSourceManager));
+
+        List<Expression> arguments = spatialFunction.getArguments();
+        verify(arguments.size() == 2);
+
+        Expression firstArgument = arguments.get(0);
+        Expression secondArgument = arguments.get(1);
+
+        Type sphericalGeographyType = metadata.getType(SPHERICAL_GEOGRAPHY_TYPE_SIGNATURE);
+        if (getExpressionType(firstArgument, context, metadata, sqlParser).equals(sphericalGeographyType)
+                || getExpressionType(secondArgument, context, metadata, sqlParser).equals(sphericalGeographyType)) {
+            return Result.empty();
+        }
+
+        Set<VariableReferenceExpression> firstVariables = VariablesExtractor.extractUnique(firstArgument, context.getVariableAllocator().getTypes());
+        Set<VariableReferenceExpression> secondVariables = VariablesExtractor.extractUnique(secondArgument, context.getVariableAllocator().getTypes());
+
+        if (firstVariables.isEmpty() || secondVariables.isEmpty()) {
+            return Result.empty();
+        }
+
+        Optional<VariableReferenceExpression> newFirstVariable = newGeometryVariable(context, firstArgument, metadata);
+        Optional<VariableReferenceExpression> newSecondVariable = newGeometryVariable(context, secondArgument, metadata);
+
+        PlanNode leftNode = joinNode.getLeft();
+        PlanNode rightNode = joinNode.getRight();
+
+        PlanNode newLeftNode;
+        PlanNode newRightNode;
+
+        // Check if the order of arguments of the spatial function matches the order of join sides
+        int alignment = checkAlignment(joinNode, firstVariables, secondVariables);
+        if (alignment > 0) {
+            newLeftNode = newFirstVariable.map(variable -> addProjection(context, leftNode, variable, firstArgument)).orElse(leftNode);
+            newRightNode = newSecondVariable.map(variable -> addProjection(context, rightNode, variable, secondArgument)).orElse(rightNode);
+        }
+        else if (alignment < 0) {
+            newLeftNode = newSecondVariable.map(variable -> addProjection(context, leftNode, variable, secondArgument)).orElse(leftNode);
+            newRightNode = newFirstVariable.map(variable -> addProjection(context, rightNode, variable, firstArgument)).orElse(rightNode);
+        }
+        else {
+            return Result.empty();
+        }
+
+        Expression newFirstArgument = toExpression(newFirstVariable, firstArgument);
+        Expression newSecondArgument = toExpression(newSecondVariable, secondArgument);
+
+        Optional<VariableReferenceExpression> leftPartitionVariable = Optional.empty();
+        Optional<VariableReferenceExpression> rightPartitionVariable = Optional.empty();
+        if (kdbTree.isPresent()) {
+            leftPartitionVariable = Optional.of(context.getVariableAllocator().newVariable("pid", INTEGER));
+            rightPartitionVariable = Optional.of(context.getVariableAllocator().newVariable("pid", INTEGER));
+
+            if (alignment > 0) {
+                newLeftNode = addPartitioningNodes(context, newLeftNode, leftPartitionVariable.get(), kdbTree.get(), newFirstArgument, Optional.empty());
+                newRightNode = addPartitioningNodes(context, newRightNode, rightPartitionVariable.get(), kdbTree.get(), newSecondArgument, radius);
+            }
+            else {
+                newLeftNode = addPartitioningNodes(context, newLeftNode, leftPartitionVariable.get(), kdbTree.get(), newSecondArgument, Optional.empty());
+                newRightNode = addPartitioningNodes(context, newRightNode, rightPartitionVariable.get(), kdbTree.get(), newFirstArgument, radius);
+            }
+        }
+
+        Expression newSpatialFunction = new FunctionCall(spatialFunction.getName(), ImmutableList.of(newFirstArgument, newSecondArgument));
+        Expression newFilter = replaceExpression(filter, ImmutableMap.of(spatialFunction, newSpatialFunction));
+
+        return Result.ofPlanNode(new SpatialJoinNode(
+                nodeId,
+                SpatialJoinNode.Type.fromJoinNodeType(joinNode.getType()),
+                newLeftNode,
+                newRightNode,
+                outputVariables,
+                castToRowExpression(newFilter),
+                leftPartitionVariable,
+                rightPartitionVariable,
+                kdbTree.map(KdbTreeUtils::toJson)));
+    }
+
+	private static Type getExpressionType(Expression expression, Context context, Metadata metadata, SqlParser sqlParser)
+    {
+        Type type = getExpressionTypes(context.getSession(), metadata, sqlParser, context.getVariableAllocator().getTypes(), expression, emptyList(), WarningCollector.NOOP)
+                .get(NodeRef.of(expression));
+        verify(type != null);
+        return type;
+    }
+
+	private static KdbTree loadKdbTree(String tableName, Session session, Metadata metadata, SplitManager splitManager, PageSourceManager pageSourceManager)
+    {
+        QualifiedObjectName name = toQualifiedObjectName(tableName, session.getCatalog().get(), session.getSchema().get());
+        TableHandle tableHandle = metadata.getTableHandle(session, name)
+                .orElseThrow(() -> new PrestoException(INVALID_SPATIAL_PARTITIONING, format("Table not found: %s", name)));
+        Map<String, ColumnHandle> columnHandles = metadata.getColumnHandles(session, tableHandle);
+        List<ColumnHandle> visibleColumnHandles = columnHandles.values().stream()
+                .filter(handle -> !metadata.getColumnMetadata(session, tableHandle, handle).isHidden())
+                .collect(toImmutableList());
+        checkSpatialPartitioningTable(visibleColumnHandles.size() == 1, "Expected single column for table %s, but found %s columns", name, columnHandles.size());
+
+        ColumnHandle kdbTreeColumn = Iterables.getOnlyElement(visibleColumnHandles);
+
+        TableLayoutResult layout = metadata.getLayout(session, tableHandle, Constraint.alwaysTrue(), Optional.of(ImmutableSet.of(kdbTreeColumn)));
+        TableHandle newTableHandle = layout.getLayout().getNewTableHandle();
+
+        Optional<KdbTree> kdbTree = Optional.empty();
+        try (SplitSource splitSource = splitManager.getSplits(session, newTableHandle, UNGROUPED_SCHEDULING)) {
+            while (!Thread.currentThread().isInterrupted()) {
+                SplitBatch splitBatch = getFutureValue(splitSource.getNextBatch(NOT_PARTITIONED, Lifespan.taskWide(), 1000));
+                List<Split> splits = splitBatch.getSplits();
+
+                for (Split split : splits) {
+                    try (ConnectorPageSource pageSource = pageSourceManager.createPageSource(session, split, newTableHandle, ImmutableList.of(kdbTreeColumn))) {
+                        do {
+                            getFutureValue(pageSource.isBlocked());
+                            Page page = pageSource.getNextPage();
+                            if (page != null && page.getPositionCount() > 0) {
+                                checkSpatialPartitioningTable(!kdbTree.isPresent(), "Expected exactly one row for table %s, but found more", name);
+                                checkSpatialPartitioningTable(page.getPositionCount() == 1, "Expected exactly one row for table %s, but found %s rows", name, page.getPositionCount());
+                                String kdbTreeJson = VARCHAR.getSlice(page.getBlock(0), 0).toStringUtf8();
+                                try {
+                                    kdbTree = Optional.of(KdbTreeUtils.fromJson(kdbTreeJson));
+                                }
+                                catch (IllegalArgumentException e) {
+                                    checkSpatialPartitioningTable(false, "Invalid JSON string for KDB tree: %s", e.getMessage());
+                                }
+                            }
+                        }
+                        while (!pageSource.isFinished());
+                    }
+                    catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
+
+                if (splitBatch.isLastBatch()) {
+                    break;
+                }
+            }
+        }
+
+        checkSpatialPartitioningTable(kdbTree.isPresent(), "Expected exactly one row for table %s, but got none", name);
+        return kdbTree.get();
+    }
+
+	private static void checkSpatialPartitioningTable(boolean condition, String message, Object... arguments)
+    {
+        if (!condition) {
+            throw new PrestoException(INVALID_SPATIAL_PARTITIONING, format(message, arguments));
+        }
+    }
+
+	private static QualifiedObjectName toQualifiedObjectName(String name, String catalog, String schema)
+    {
+        ImmutableList<String> ids = ImmutableList.copyOf(Splitter.on('.').split(name));
+        if (ids.size() == 3) {
+            return new QualifiedObjectName(ids.get(0), ids.get(1), ids.get(2));
+        }
+
+        if (ids.size() == 2) {
+            return new QualifiedObjectName(catalog, ids.get(0), ids.get(1));
+        }
+
+        if (ids.size() == 1) {
+            return new QualifiedObjectName(catalog, schema, ids.get(0));
+        }
+
+        throw new PrestoException(INVALID_SPATIAL_PARTITIONING, format("Invalid name: %s", name));
+    }
+
+	private static int checkAlignment(JoinNode joinNode, Set<VariableReferenceExpression> maybeLeftVariables, Set<VariableReferenceExpression> maybeRightVariables)
+    {
+        List<VariableReferenceExpression> leftVariables = joinNode.getLeft().getOutputVariables();
+        List<VariableReferenceExpression> rightVariables = joinNode.getRight().getOutputVariables();
+
+        if (leftVariables.containsAll(maybeLeftVariables)
+                && containsNone(leftVariables, maybeRightVariables)
+                && rightVariables.containsAll(maybeRightVariables)
+                && containsNone(rightVariables, maybeLeftVariables)) {
+            return 1;
+        }
+
+        if (leftVariables.containsAll(maybeRightVariables)
+                && containsNone(leftVariables, maybeLeftVariables)
+                && rightVariables.containsAll(maybeLeftVariables)
+                && containsNone(rightVariables, maybeRightVariables)) {
+            return -1;
+        }
+
+        return 0;
+    }
+
+	private static Expression toExpression(Optional<VariableReferenceExpression> optionalVariable, Expression defaultExpression)
+    {
+        return optionalVariable.map(variable -> (Expression) new SymbolReference(variable.getName())).orElse(defaultExpression);
+    }
+
+	private static Optional<VariableReferenceExpression> newGeometryVariable(Context context, Expression expression, Metadata metadata)
+    {
+        if (expression instanceof SymbolReference) {
+            return Optional.empty();
+        }
+
+        return Optional.of(context.getVariableAllocator().newVariable(expression, metadata.getType(GEOMETRY_TYPE_SIGNATURE)));
+    }
+
+	private static Optional<VariableReferenceExpression> newRadiusVariable(Context context, Expression expression)
+    {
+        if (expression instanceof SymbolReference) {
+            return Optional.empty();
+        }
+
+        return Optional.of(context.getVariableAllocator().newVariable(expression, DOUBLE));
+    }
+
+	private static PlanNode addProjection(Context context, PlanNode node, VariableReferenceExpression variable, Expression expression)
+    {
+        Assignments.Builder projections = Assignments.builder();
+        node.getOutputVariables().forEach(outputVariable -> projections.put(identityAsSymbolReference(outputVariable)));
+
+        projections.put(variable, castToRowExpression(expression));
+        return new ProjectNode(context.getIdAllocator().getNextId(), node, projections.build());
+    }
+
+	private static PlanNode addPartitioningNodes(Context context, PlanNode node, VariableReferenceExpression partitionVariable, KdbTree kdbTree, Expression geometry, Optional<Expression> radius)
+    {
+        Assignments.Builder projections = Assignments.builder();
+        node.getOutputVariables().forEach(outputVariable -> projections.put(identityAsSymbolReference(outputVariable)));
+
+        ImmutableList.Builder<Expression> partitioningArguments = ImmutableList.<Expression>builder()
+                .add(new Cast(new StringLiteral(KdbTreeUtils.toJson(kdbTree)), KDB_TREE_TYPENAME))
+                .add(geometry);
+        radius.map(partitioningArguments::add);
+
+        FunctionCall partitioningFunction = new FunctionCall(QualifiedName.of("spatial_partitions"), partitioningArguments.build());
+        VariableReferenceExpression partitionsVariable = context.getVariableAllocator().newVariable(partitioningFunction, new ArrayType(INTEGER));
+        projections.put(partitionsVariable, castToRowExpression(partitioningFunction));
+
+        return new UnnestNode(
+                context.getIdAllocator().getNextId(),
+                new ProjectNode(context.getIdAllocator().getNextId(), node, projections.build()),
+                node.getOutputVariables(),
+                ImmutableMap.of(partitionsVariable, ImmutableList.of(partitionVariable)),
+                Optional.empty());
+    }
+
+	private static boolean containsNone(Collection<VariableReferenceExpression> values, Collection<VariableReferenceExpression> testValues)
+    {
+        return values.stream().noneMatch(ImmutableSet.copyOf(testValues)::contains);
+    }
+
+	@VisibleForTesting
     public static final class ExtractSpatialInnerJoin
             implements Rule<FilterNode>
     {
@@ -291,336 +618,5 @@ public class ExtractSpatialJoins
 
             return Result.empty();
         }
-    }
-
-    private static Result tryCreateSpatialJoin(
-            Context context,
-            JoinNode joinNode,
-            Expression filter,
-            PlanNodeId nodeId,
-            List<VariableReferenceExpression> outputVariables,
-            ComparisonExpression spatialComparison,
-            Metadata metadata,
-            SplitManager splitManager,
-            PageSourceManager pageSourceManager,
-            SqlParser sqlParser)
-    {
-        PlanNode leftNode = joinNode.getLeft();
-        PlanNode rightNode = joinNode.getRight();
-
-        List<VariableReferenceExpression> leftVariables = leftNode.getOutputVariables();
-        List<VariableReferenceExpression> rightVariables = rightNode.getOutputVariables();
-
-        Expression radius;
-        Optional<VariableReferenceExpression> newRadiusVariable;
-        ComparisonExpression newComparison;
-        if (spatialComparison.getOperator() == LESS_THAN || spatialComparison.getOperator() == LESS_THAN_OR_EQUAL) {
-            // ST_Distance(a, b) <= r
-            radius = spatialComparison.getRight();
-            Set<VariableReferenceExpression> radiusVariables = VariablesExtractor.extractUnique(radius, context.getVariableAllocator().getTypes());
-            if (radiusVariables.isEmpty() || (rightVariables.containsAll(radiusVariables) && containsNone(leftVariables, radiusVariables))) {
-                newRadiusVariable = newRadiusVariable(context, radius);
-                newComparison = new ComparisonExpression(spatialComparison.getOperator(), spatialComparison.getLeft(), toExpression(newRadiusVariable, radius));
-            }
-            else {
-                return Result.empty();
-            }
-        }
-        else {
-            // r >= ST_Distance(a, b)
-            radius = spatialComparison.getLeft();
-            Set<VariableReferenceExpression> radiusVariables = VariablesExtractor.extractUnique(radius, context.getVariableAllocator().getTypes());
-            if (radiusVariables.isEmpty() || (rightVariables.containsAll(radiusVariables) && containsNone(leftVariables, radiusVariables))) {
-                newRadiusVariable = newRadiusVariable(context, radius);
-                newComparison = new ComparisonExpression(spatialComparison.getOperator().flip(), spatialComparison.getRight(), toExpression(newRadiusVariable, radius));
-            }
-            else {
-                return Result.empty();
-            }
-        }
-
-        Expression newFilter = replaceExpression(filter, ImmutableMap.of(spatialComparison, newComparison));
-        PlanNode newRightNode = newRadiusVariable.map(variable -> addProjection(context, rightNode, variable, radius)).orElse(rightNode);
-
-        JoinNode newJoinNode = new JoinNode(
-                joinNode.getId(),
-                joinNode.getType(),
-                leftNode,
-                newRightNode,
-                joinNode.getCriteria(),
-                joinNode.getOutputVariables(),
-                Optional.of(castToRowExpression(newFilter)),
-                joinNode.getLeftHashVariable(),
-                joinNode.getRightHashVariable(),
-                joinNode.getDistributionType());
-
-        return tryCreateSpatialJoin(context, newJoinNode, newFilter, nodeId, outputVariables, (FunctionCall) newComparison.getLeft(), Optional.of(newComparison.getRight()), metadata, splitManager, pageSourceManager, sqlParser);
-    }
-
-    private static Result tryCreateSpatialJoin(
-            Context context,
-            JoinNode joinNode,
-            Expression filter,
-            PlanNodeId nodeId,
-            List<VariableReferenceExpression> outputVariables,
-            FunctionCall spatialFunction,
-            Optional<Expression> radius,
-            Metadata metadata,
-            SplitManager splitManager,
-            PageSourceManager pageSourceManager,
-            SqlParser sqlParser)
-    {
-        // TODO Add support for distributed left spatial joins
-        Optional<String> spatialPartitioningTableName = joinNode.getType() == INNER ? getSpatialPartitioningTableName(context.getSession()) : Optional.empty();
-        Optional<KdbTree> kdbTree = spatialPartitioningTableName.map(tableName -> loadKdbTree(tableName, context.getSession(), metadata, splitManager, pageSourceManager));
-
-        List<Expression> arguments = spatialFunction.getArguments();
-        verify(arguments.size() == 2);
-
-        Expression firstArgument = arguments.get(0);
-        Expression secondArgument = arguments.get(1);
-
-        Type sphericalGeographyType = metadata.getType(SPHERICAL_GEOGRAPHY_TYPE_SIGNATURE);
-        if (getExpressionType(firstArgument, context, metadata, sqlParser).equals(sphericalGeographyType)
-                || getExpressionType(secondArgument, context, metadata, sqlParser).equals(sphericalGeographyType)) {
-            return Result.empty();
-        }
-
-        Set<VariableReferenceExpression> firstVariables = VariablesExtractor.extractUnique(firstArgument, context.getVariableAllocator().getTypes());
-        Set<VariableReferenceExpression> secondVariables = VariablesExtractor.extractUnique(secondArgument, context.getVariableAllocator().getTypes());
-
-        if (firstVariables.isEmpty() || secondVariables.isEmpty()) {
-            return Result.empty();
-        }
-
-        Optional<VariableReferenceExpression> newFirstVariable = newGeometryVariable(context, firstArgument, metadata);
-        Optional<VariableReferenceExpression> newSecondVariable = newGeometryVariable(context, secondArgument, metadata);
-
-        PlanNode leftNode = joinNode.getLeft();
-        PlanNode rightNode = joinNode.getRight();
-
-        PlanNode newLeftNode;
-        PlanNode newRightNode;
-
-        // Check if the order of arguments of the spatial function matches the order of join sides
-        int alignment = checkAlignment(joinNode, firstVariables, secondVariables);
-        if (alignment > 0) {
-            newLeftNode = newFirstVariable.map(variable -> addProjection(context, leftNode, variable, firstArgument)).orElse(leftNode);
-            newRightNode = newSecondVariable.map(variable -> addProjection(context, rightNode, variable, secondArgument)).orElse(rightNode);
-        }
-        else if (alignment < 0) {
-            newLeftNode = newSecondVariable.map(variable -> addProjection(context, leftNode, variable, secondArgument)).orElse(leftNode);
-            newRightNode = newFirstVariable.map(variable -> addProjection(context, rightNode, variable, firstArgument)).orElse(rightNode);
-        }
-        else {
-            return Result.empty();
-        }
-
-        Expression newFirstArgument = toExpression(newFirstVariable, firstArgument);
-        Expression newSecondArgument = toExpression(newSecondVariable, secondArgument);
-
-        Optional<VariableReferenceExpression> leftPartitionVariable = Optional.empty();
-        Optional<VariableReferenceExpression> rightPartitionVariable = Optional.empty();
-        if (kdbTree.isPresent()) {
-            leftPartitionVariable = Optional.of(context.getVariableAllocator().newVariable("pid", INTEGER));
-            rightPartitionVariable = Optional.of(context.getVariableAllocator().newVariable("pid", INTEGER));
-
-            if (alignment > 0) {
-                newLeftNode = addPartitioningNodes(context, newLeftNode, leftPartitionVariable.get(), kdbTree.get(), newFirstArgument, Optional.empty());
-                newRightNode = addPartitioningNodes(context, newRightNode, rightPartitionVariable.get(), kdbTree.get(), newSecondArgument, radius);
-            }
-            else {
-                newLeftNode = addPartitioningNodes(context, newLeftNode, leftPartitionVariable.get(), kdbTree.get(), newSecondArgument, Optional.empty());
-                newRightNode = addPartitioningNodes(context, newRightNode, rightPartitionVariable.get(), kdbTree.get(), newFirstArgument, radius);
-            }
-        }
-
-        Expression newSpatialFunction = new FunctionCall(spatialFunction.getName(), ImmutableList.of(newFirstArgument, newSecondArgument));
-        Expression newFilter = replaceExpression(filter, ImmutableMap.of(spatialFunction, newSpatialFunction));
-
-        return Result.ofPlanNode(new SpatialJoinNode(
-                nodeId,
-                SpatialJoinNode.Type.fromJoinNodeType(joinNode.getType()),
-                newLeftNode,
-                newRightNode,
-                outputVariables,
-                castToRowExpression(newFilter),
-                leftPartitionVariable,
-                rightPartitionVariable,
-                kdbTree.map(KdbTreeUtils::toJson)));
-    }
-
-    private static Type getExpressionType(Expression expression, Context context, Metadata metadata, SqlParser sqlParser)
-    {
-        Type type = getExpressionTypes(context.getSession(), metadata, sqlParser, context.getVariableAllocator().getTypes(), expression, emptyList(), WarningCollector.NOOP)
-                .get(NodeRef.of(expression));
-        verify(type != null);
-        return type;
-    }
-
-    private static KdbTree loadKdbTree(String tableName, Session session, Metadata metadata, SplitManager splitManager, PageSourceManager pageSourceManager)
-    {
-        QualifiedObjectName name = toQualifiedObjectName(tableName, session.getCatalog().get(), session.getSchema().get());
-        TableHandle tableHandle = metadata.getTableHandle(session, name)
-                .orElseThrow(() -> new PrestoException(INVALID_SPATIAL_PARTITIONING, format("Table not found: %s", name)));
-        Map<String, ColumnHandle> columnHandles = metadata.getColumnHandles(session, tableHandle);
-        List<ColumnHandle> visibleColumnHandles = columnHandles.values().stream()
-                .filter(handle -> !metadata.getColumnMetadata(session, tableHandle, handle).isHidden())
-                .collect(toImmutableList());
-        checkSpatialPartitioningTable(visibleColumnHandles.size() == 1, "Expected single column for table %s, but found %s columns", name, columnHandles.size());
-
-        ColumnHandle kdbTreeColumn = Iterables.getOnlyElement(visibleColumnHandles);
-
-        TableLayoutResult layout = metadata.getLayout(session, tableHandle, Constraint.alwaysTrue(), Optional.of(ImmutableSet.of(kdbTreeColumn)));
-        TableHandle newTableHandle = layout.getLayout().getNewTableHandle();
-
-        Optional<KdbTree> kdbTree = Optional.empty();
-        try (SplitSource splitSource = splitManager.getSplits(session, newTableHandle, UNGROUPED_SCHEDULING)) {
-            while (!Thread.currentThread().isInterrupted()) {
-                SplitBatch splitBatch = getFutureValue(splitSource.getNextBatch(NOT_PARTITIONED, Lifespan.taskWide(), 1000));
-                List<Split> splits = splitBatch.getSplits();
-
-                for (Split split : splits) {
-                    try (ConnectorPageSource pageSource = pageSourceManager.createPageSource(session, split, newTableHandle, ImmutableList.of(kdbTreeColumn))) {
-                        do {
-                            getFutureValue(pageSource.isBlocked());
-                            Page page = pageSource.getNextPage();
-                            if (page != null && page.getPositionCount() > 0) {
-                                checkSpatialPartitioningTable(!kdbTree.isPresent(), "Expected exactly one row for table %s, but found more", name);
-                                checkSpatialPartitioningTable(page.getPositionCount() == 1, "Expected exactly one row for table %s, but found %s rows", name, page.getPositionCount());
-                                String kdbTreeJson = VARCHAR.getSlice(page.getBlock(0), 0).toStringUtf8();
-                                try {
-                                    kdbTree = Optional.of(KdbTreeUtils.fromJson(kdbTreeJson));
-                                }
-                                catch (IllegalArgumentException e) {
-                                    checkSpatialPartitioningTable(false, "Invalid JSON string for KDB tree: %s", e.getMessage());
-                                }
-                            }
-                        }
-                        while (!pageSource.isFinished());
-                    }
-                    catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
-                }
-
-                if (splitBatch.isLastBatch()) {
-                    break;
-                }
-            }
-        }
-
-        checkSpatialPartitioningTable(kdbTree.isPresent(), "Expected exactly one row for table %s, but got none", name);
-        return kdbTree.get();
-    }
-
-    private static void checkSpatialPartitioningTable(boolean condition, String message, Object... arguments)
-    {
-        if (!condition) {
-            throw new PrestoException(INVALID_SPATIAL_PARTITIONING, format(message, arguments));
-        }
-    }
-
-    private static QualifiedObjectName toQualifiedObjectName(String name, String catalog, String schema)
-    {
-        ImmutableList<String> ids = ImmutableList.copyOf(Splitter.on('.').split(name));
-        if (ids.size() == 3) {
-            return new QualifiedObjectName(ids.get(0), ids.get(1), ids.get(2));
-        }
-
-        if (ids.size() == 2) {
-            return new QualifiedObjectName(catalog, ids.get(0), ids.get(1));
-        }
-
-        if (ids.size() == 1) {
-            return new QualifiedObjectName(catalog, schema, ids.get(0));
-        }
-
-        throw new PrestoException(INVALID_SPATIAL_PARTITIONING, format("Invalid name: %s", name));
-    }
-
-    private static int checkAlignment(JoinNode joinNode, Set<VariableReferenceExpression> maybeLeftVariables, Set<VariableReferenceExpression> maybeRightVariables)
-    {
-        List<VariableReferenceExpression> leftVariables = joinNode.getLeft().getOutputVariables();
-        List<VariableReferenceExpression> rightVariables = joinNode.getRight().getOutputVariables();
-
-        if (leftVariables.containsAll(maybeLeftVariables)
-                && containsNone(leftVariables, maybeRightVariables)
-                && rightVariables.containsAll(maybeRightVariables)
-                && containsNone(rightVariables, maybeLeftVariables)) {
-            return 1;
-        }
-
-        if (leftVariables.containsAll(maybeRightVariables)
-                && containsNone(leftVariables, maybeLeftVariables)
-                && rightVariables.containsAll(maybeLeftVariables)
-                && containsNone(rightVariables, maybeRightVariables)) {
-            return -1;
-        }
-
-        return 0;
-    }
-
-    private static Expression toExpression(Optional<VariableReferenceExpression> optionalVariable, Expression defaultExpression)
-    {
-        return optionalVariable.map(variable -> (Expression) new SymbolReference(variable.getName())).orElse(defaultExpression);
-    }
-
-    private static Optional<VariableReferenceExpression> newGeometryVariable(Context context, Expression expression, Metadata metadata)
-    {
-        if (expression instanceof SymbolReference) {
-            return Optional.empty();
-        }
-
-        return Optional.of(context.getVariableAllocator().newVariable(expression, metadata.getType(GEOMETRY_TYPE_SIGNATURE)));
-    }
-
-    private static Optional<VariableReferenceExpression> newRadiusVariable(Context context, Expression expression)
-    {
-        if (expression instanceof SymbolReference) {
-            return Optional.empty();
-        }
-
-        return Optional.of(context.getVariableAllocator().newVariable(expression, DOUBLE));
-    }
-
-    private static PlanNode addProjection(Context context, PlanNode node, VariableReferenceExpression variable, Expression expression)
-    {
-        Assignments.Builder projections = Assignments.builder();
-        for (VariableReferenceExpression outputVariable : node.getOutputVariables()) {
-            projections.put(identityAsSymbolReference(outputVariable));
-        }
-
-        projections.put(variable, castToRowExpression(expression));
-        return new ProjectNode(context.getIdAllocator().getNextId(), node, projections.build());
-    }
-
-    private static PlanNode addPartitioningNodes(Context context, PlanNode node, VariableReferenceExpression partitionVariable, KdbTree kdbTree, Expression geometry, Optional<Expression> radius)
-    {
-        Assignments.Builder projections = Assignments.builder();
-        for (VariableReferenceExpression outputVariable : node.getOutputVariables()) {
-            projections.put(identityAsSymbolReference(outputVariable));
-        }
-
-        ImmutableList.Builder<Expression> partitioningArguments = ImmutableList.<Expression>builder()
-                .add(new Cast(new StringLiteral(KdbTreeUtils.toJson(kdbTree)), KDB_TREE_TYPENAME))
-                .add(geometry);
-        radius.map(partitioningArguments::add);
-
-        FunctionCall partitioningFunction = new FunctionCall(QualifiedName.of("spatial_partitions"), partitioningArguments.build());
-        VariableReferenceExpression partitionsVariable = context.getVariableAllocator().newVariable(partitioningFunction, new ArrayType(INTEGER));
-        projections.put(partitionsVariable, castToRowExpression(partitioningFunction));
-
-        return new UnnestNode(
-                context.getIdAllocator().getNextId(),
-                new ProjectNode(context.getIdAllocator().getNextId(), node, projections.build()),
-                node.getOutputVariables(),
-                ImmutableMap.of(partitionsVariable, ImmutableList.of(partitionVariable)),
-                Optional.empty());
-    }
-
-    private static boolean containsNone(Collection<VariableReferenceExpression> values, Collection<VariableReferenceExpression> testValues)
-    {
-        return values.stream().noneMatch(ImmutableSet.copyOf(testValues)::contains);
     }
 }

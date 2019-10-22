@@ -34,43 +34,17 @@ import static org.testng.Assert.assertEquals;
 
 public class TestRetryDriver
 {
-    private static class MockOperation
-            implements RetryOperation<Integer>
-    {
-        private final int succeedWithNumCalls;
-        private final QueryException exception;
-        private int callCount;
-
-        public MockOperation(int succeedWithNumCalls, QueryException exception)
-        {
-            this.succeedWithNumCalls = succeedWithNumCalls;
-            this.exception = requireNonNull(exception, "exception is null");
-        }
-
-        @Override
-        public Integer run()
-                throws QueryException
-        {
-            callCount++;
-            if (callCount >= succeedWithNumCalls) {
-                return callCount;
-            }
-            throw exception;
-        }
-    }
-
     static {
         Logging.initialize().setLevel(RetryDriver.class.getName(), DEBUG);
     }
 
-    private static final QueryStage QUERY_STAGE = CONTROL_MAIN;
-    private static final QueryException RETRYABLE_EXCEPTION = QueryException.forClusterConnection(new SocketTimeoutException(), QUERY_STAGE);
-    private static final QueryException NON_RETRYABLE_EXCEPTION = QueryException.forPresto(new RuntimeException(), Optional.of(REMOTE_HOST_GONE), false, Optional.empty(), QUERY_STAGE);
+	private static final QueryStage QUERY_STAGE = CONTROL_MAIN;
+	private static final QueryException RETRYABLE_EXCEPTION = QueryException.forClusterConnection(new SocketTimeoutException(), QUERY_STAGE);
+	private static final QueryException NON_RETRYABLE_EXCEPTION = QueryException.forPresto(new RuntimeException(), Optional.of(REMOTE_HOST_GONE), false, Optional.empty(), QUERY_STAGE);
+	private VerificationContext verificationContext;
+	private RetryDriver<QueryException> retryDriver;
 
-    private VerificationContext verificationContext;
-    private RetryDriver<QueryException> retryDriver;
-
-    @BeforeMethod
+	@BeforeMethod
     public void setup()
     {
         verificationContext = new VerificationContext();
@@ -85,7 +59,7 @@ public class TestRetryDriver
                 verificationContext::addException);
     }
 
-    @Test
+	@Test
     public void testSuccess()
     {
         assertEquals(
@@ -93,19 +67,19 @@ public class TestRetryDriver
                 Integer.valueOf(5));
     }
 
-    @Test(expectedExceptions = QueryException.class)
+	@Test(expectedExceptions = QueryException.class)
     public void testMaxAttemptsExceeded()
     {
         retryDriver.run("test", new MockOperation(6, RETRYABLE_EXCEPTION));
     }
 
-    @Test(expectedExceptions = QueryException.class)
+	@Test(expectedExceptions = QueryException.class)
     public void testNonRetryableFailure()
     {
         retryDriver.run("test", new MockOperation(3, NON_RETRYABLE_EXCEPTION));
     }
 
-    @Test(timeOut = 5000)
+	@Test(timeOut = 5000)
     public void testBackoffTimeCapped()
     {
         verificationContext = new VerificationContext();
@@ -119,5 +93,29 @@ public class TestRetryDriver
                 QueryException.class,
                 verificationContext::addException);
         retryDriver.run("test", new MockOperation(5, RETRYABLE_EXCEPTION));
+    }
+
+	private static class MockOperation
+            implements RetryOperation<Integer>
+    {
+        private final int succeedWithNumCalls;
+        private final QueryException exception;
+        private int callCount;
+
+        public MockOperation(int succeedWithNumCalls, QueryException exception)
+        {
+            this.succeedWithNumCalls = succeedWithNumCalls;
+            this.exception = requireNonNull(exception, "exception is null");
+        }
+
+        @Override
+        public Integer run()
+        {
+            callCount++;
+            if (callCount >= succeedWithNumCalls) {
+                return callCount;
+            }
+            throw exception;
+        }
     }
 }

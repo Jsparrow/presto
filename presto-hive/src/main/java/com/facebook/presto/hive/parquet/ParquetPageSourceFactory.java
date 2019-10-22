@@ -97,11 +97,15 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category.PRIMITIVE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ParquetPageSourceFactory
         implements HiveBatchPageSourceFactory
 {
-    private static final Set<String> PARQUET_SERDE_CLASS_NAMES = ImmutableSet.<String>builder()
+    private static final Logger logger = LoggerFactory.getLogger(ParquetPageSourceFactory.class);
+
+	private static final Set<String> PARQUET_SERDE_CLASS_NAMES = ImmutableSet.<String>builder()
             .add("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")
             .add("parquet.hive.serde.ParquetHiveSerDe")
             .build();
@@ -191,12 +195,12 @@ public class ParquetPageSourceFactory
             MessageType requestedSchema = message.orElse(new MessageType(fileSchema.getName(), ImmutableList.of()));
 
             ImmutableList.Builder<BlockMetaData> footerBlocks = ImmutableList.builder();
-            for (BlockMetaData block : parquetMetadata.getBlocks()) {
+            parquetMetadata.getBlocks().forEach(block -> {
                 long firstDataPage = block.getColumns().get(0).getFirstDataPageOffset();
                 if (firstDataPage >= start && firstDataPage < start + length) {
                     footerBlocks.add(block);
                 }
-            }
+            });
 
             Map<List<String>, RichColumnDescriptor> descriptorsByPath = getDescriptors(fileSchema, requestedSchema);
             TupleDomain<ColumnDescriptor> parquetTupleDomain = getParquetTupleDomain(descriptorsByPath, effectivePredicate);
@@ -232,6 +236,7 @@ public class ParquetPageSourceFactory
                 }
             }
             catch (IOException ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
             if (e instanceof PrestoException) {
                 throw (PrestoException) e;
@@ -239,12 +244,12 @@ public class ParquetPageSourceFactory
             if (e instanceof ParquetCorruptionException) {
                 throw new PrestoException(HIVE_BAD_DATA, e);
             }
-            if (nullToEmpty(e.getMessage()).trim().equals("Filesystem closed") ||
+            if ("Filesystem closed".equals(nullToEmpty(e.getMessage()).trim()) ||
                     e instanceof FileNotFoundException) {
                 throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, e);
             }
             String message = format("Error opening Hive split %s (offset=%s, length=%s): %s", path, start, length, e.getMessage());
-            if (e.getClass().getSimpleName().equals("BlockMissingException")) {
+            if ("BlockMissingException".equals(e.getClass().getSimpleName())) {
                 throw new PrestoException(HIVE_MISSING_DATA, message, e);
             }
             throw new PrestoException(HIVE_CANNOT_OPEN_SPLIT, message, e);
@@ -261,7 +266,7 @@ public class ParquetPageSourceFactory
         for (Entry<HiveColumnHandle, Domain> entry : effectivePredicate.getDomains().get().entrySet()) {
             HiveColumnHandle columnHandle = entry.getKey();
             // skip looking up predicates for complex types as Parquet only stores stats for primitives
-            if (!columnHandle.getHiveType().getCategory().equals(PRIMITIVE)) {
+            if (columnHandle.getHiveType().getCategory() != PRIMITIVE) {
                 continue;
             }
 
@@ -388,19 +393,19 @@ public class ParquetPageSourceFactory
 
     public static Optional<org.apache.parquet.schema.Type> getColumnType(Type prestoType, MessageType messageType, boolean useParquetColumnNames, HiveColumnHandle column)
     {
-        if (useParquetColumnNames && !column.getRequiredSubfields().isEmpty()) {
-            MessageType result = null;
-            for (Subfield subfield : column.getRequiredSubfields()) {
-                MessageType type = getSubfieldType(messageType, subfield);
-                if (result == null) {
-                    result = type;
-                }
-                else {
-                    result = result.union(type);
-                }
-            }
-            return Optional.of(result);
-        }
-        return getParquetType(prestoType, messageType, useParquetColumnNames, column);
+        if (!(useParquetColumnNames && !column.getRequiredSubfields().isEmpty())) {
+			return getParquetType(prestoType, messageType, useParquetColumnNames, column);
+		}
+		MessageType result = null;
+		for (Subfield subfield : column.getRequiredSubfields()) {
+		    MessageType type = getSubfieldType(messageType, subfield);
+		    if (result == null) {
+		        result = type;
+		    }
+		    else {
+		        result = result.union(type);
+		    }
+		}
+		return Optional.of(result);
     }
 }

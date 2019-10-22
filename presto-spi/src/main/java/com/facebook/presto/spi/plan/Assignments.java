@@ -36,72 +36,72 @@ import static java.util.Objects.requireNonNull;
 
 public class Assignments
 {
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
-    public static Builder builder(Map<VariableReferenceExpression, RowExpression> assignments)
-    {
-        return new Builder().putAll(assignments);
-    }
-
-    public static Assignments copyOf(Map<VariableReferenceExpression, RowExpression> assignments)
-    {
-        return builder()
-                .putAll(assignments)
-                .build();
-    }
-
-    public static Assignments of()
-    {
-        return builder().build();
-    }
-
-    public static Assignments of(VariableReferenceExpression variable, RowExpression expression)
-    {
-        return builder().put(variable, expression).build();
-    }
-
-    public static Assignments of(VariableReferenceExpression variable1, RowExpression expression1, VariableReferenceExpression variable2, RowExpression expression2)
-    {
-        return builder().put(variable1, expression1).put(variable2, expression2).build();
-    }
-
     private final Map<VariableReferenceExpression, RowExpression> assignments;
-    private final List<VariableReferenceExpression> outputs;
+	private final List<VariableReferenceExpression> outputs;
 
-    @JsonCreator
+	@JsonCreator
     public Assignments(@JsonProperty("assignments") Map<VariableReferenceExpression, RowExpression> assignments)
     {
         this.assignments = unmodifiableMap(new LinkedHashMap<>(requireNonNull(assignments, "assignments is null")));
         this.outputs = unmodifiableList(new ArrayList<>(assignments.keySet()));
     }
 
-    public List<VariableReferenceExpression> getOutputs()
+	public static Builder builder()
+    {
+        return new Builder();
+    }
+
+	public static Builder builder(Map<VariableReferenceExpression, RowExpression> assignments)
+    {
+        return new Builder().putAll(assignments);
+    }
+
+	public static Assignments copyOf(Map<VariableReferenceExpression, RowExpression> assignments)
+    {
+        return builder()
+                .putAll(assignments)
+                .build();
+    }
+
+	public static Assignments of()
+    {
+        return builder().build();
+    }
+
+	public static Assignments of(VariableReferenceExpression variable, RowExpression expression)
+    {
+        return builder().put(variable, expression).build();
+    }
+
+	public static Assignments of(VariableReferenceExpression variable1, RowExpression expression1, VariableReferenceExpression variable2, RowExpression expression2)
+    {
+        return builder().put(variable1, expression1).put(variable2, expression2).build();
+    }
+
+	public List<VariableReferenceExpression> getOutputs()
     {
         return outputs;
     }
 
-    @JsonProperty("assignments")
+	@JsonProperty("assignments")
     public Map<VariableReferenceExpression, RowExpression> getMap()
     {
         return assignments;
     }
 
-    public Assignments filter(Collection<VariableReferenceExpression> variables)
+	public Assignments filter(Collection<VariableReferenceExpression> variables)
     {
         return filter(variables::contains);
     }
 
-    public Assignments filter(Predicate<VariableReferenceExpression> predicate)
+	public Assignments filter(Predicate<VariableReferenceExpression> predicate)
     {
         return assignments.entrySet().stream()
                 .filter(entry -> predicate.test(entry.getKey()))
                 .collect(toAssignments());
     }
 
-    private Collector<Entry<VariableReferenceExpression, RowExpression>, Builder, Assignments> toAssignments()
+	private Collector<Entry<VariableReferenceExpression, RowExpression>, Builder, Assignments> toAssignments()
     {
         return Collector.of(
                 Assignments::builder,
@@ -113,42 +113,42 @@ public class Assignments
                 Builder::build);
     }
 
-    public Collection<RowExpression> getExpressions()
+	public Collection<RowExpression> getExpressions()
     {
         return assignments.values();
     }
 
-    public Set<VariableReferenceExpression> getVariables()
+	public Set<VariableReferenceExpression> getVariables()
     {
         return assignments.keySet();
     }
 
-    public Set<Entry<VariableReferenceExpression, RowExpression>> entrySet()
+	public Set<Entry<VariableReferenceExpression, RowExpression>> entrySet()
     {
         return assignments.entrySet();
     }
 
-    public RowExpression get(VariableReferenceExpression variable)
+	public RowExpression get(VariableReferenceExpression variable)
     {
         return assignments.get(variable);
     }
 
-    public int size()
+	public int size()
     {
         return assignments.size();
     }
 
-    public boolean isEmpty()
+	public boolean isEmpty()
     {
         return size() == 0;
     }
 
-    public void forEach(BiConsumer<VariableReferenceExpression, RowExpression> consumer)
+	public void forEach(BiConsumer<VariableReferenceExpression, RowExpression> consumer)
     {
         assignments.forEach(consumer);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -163,13 +163,13 @@ public class Assignments
         return assignments.equals(that.assignments);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return assignments.hashCode();
     }
 
-    public static class Builder
+	public static class Builder
     {
         private final Map<VariableReferenceExpression, RowExpression> assignments = new LinkedHashMap<>();
 
@@ -180,9 +180,7 @@ public class Assignments
 
         public Builder putAll(Map<VariableReferenceExpression, RowExpression> assignments)
         {
-            for (Entry<VariableReferenceExpression, RowExpression> assignment : assignments.entrySet()) {
-                put(assignment.getKey(), assignment.getValue());
-            }
+            assignments.entrySet().forEach(assignment -> put(assignment.getKey(), assignment.getValue()));
             return this;
         }
 

@@ -185,9 +185,7 @@ public final class SerDeUtils
             currentBuilder = elementType.createBlockBuilder(null, list.size());
         }
 
-        for (Object element : list) {
-            serializeObject(elementType, currentBuilder, element, elementInspector);
-        }
+        list.forEach(element -> serializeObject(elementType, currentBuilder, element, elementInspector));
 
         if (builder != null) {
             builder.closeEntry();

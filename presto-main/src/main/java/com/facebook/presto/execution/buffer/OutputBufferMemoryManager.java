@@ -31,6 +31,8 @@ import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * OutputBufferMemoryManager will block when any condition below holds
@@ -40,7 +42,8 @@ import static java.util.Objects.requireNonNull;
 @ThreadSafe
 class OutputBufferMemoryManager
 {
-    private final long maxBufferedBytes;
+    private static final Logger logger = LoggerFactory.getLogger(OutputBufferMemoryManager.class);
+	private final long maxBufferedBytes;
     private final AtomicLong bufferedBytes = new AtomicLong();
     private final AtomicLong peakMemoryUsage = new AtomicLong();
 
@@ -168,6 +171,7 @@ class OutputBufferMemoryManager
             return Optional.of(systemMemoryContextSupplier.get());
         }
         catch (RuntimeException ignored) {
+			logger.error(ignored.getMessage(), ignored);
             // This is possible with races, e.g., a task is created and then immediately aborted,
             // so that the task context hasn't been created yet (as a result there's no memory context available).
         }

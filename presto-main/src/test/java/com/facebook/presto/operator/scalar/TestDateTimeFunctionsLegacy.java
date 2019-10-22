@@ -36,13 +36,13 @@ public class TestDateTimeFunctionsLegacy
     @Test
     public void testToIso8601ForTimestampWithoutTimeZone()
     {
-        assertFunction("to_iso8601(" + TIMESTAMP_LITERAL + ")", createVarcharType(35), TIMESTAMP_ISO8601_STRING);
+        assertFunction(new StringBuilder().append("to_iso8601(").append(TIMESTAMP_LITERAL).append(")").toString(), createVarcharType(35), TIMESTAMP_ISO8601_STRING);
     }
 
     @Test
     public void testFormatDateCanImplicitlyAddTimeZoneToTimestampLiteral()
     {
-        assertFunction("format_datetime(" + TIMESTAMP_LITERAL + ", 'YYYY/MM/dd HH:mm ZZZZ')", VARCHAR, "2001/08/22 03:04 " + DATE_TIME_ZONE.getID());
+        assertFunction(new StringBuilder().append("format_datetime(").append(TIMESTAMP_LITERAL).append(", 'YYYY/MM/dd HH:mm ZZZZ')").toString(), VARCHAR, "2001/08/22 03:04 " + DATE_TIME_ZONE.getID());
     }
 
     @Test

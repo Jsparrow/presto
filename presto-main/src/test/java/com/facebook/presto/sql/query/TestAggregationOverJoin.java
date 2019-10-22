@@ -24,14 +24,8 @@ public class TestAggregationOverJoin
         try (QueryAssertions queryAssertions = new QueryAssertions()) {
             queryAssertions
                     .assertQuery(
-                            "WITH " +
-                                    "    t (a, b) AS (VALUES (1, 'a'), (1, 'b')), " +
-                                    "    u (a) AS (VALUES 1) " +
-                                    "SELECT DISTINCT v.a " +
-                                    "FROM ( " +
-                                    "    SELECT DISTINCT a, b " +
-                                    "    FROM t) v " +
-                                    "LEFT JOIN u on v.a = u.a",
+                            new StringBuilder().append("WITH ").append("    t (a, b) AS (VALUES (1, 'a'), (1, 'b')), ").append("    u (a) AS (VALUES 1) ").append("SELECT DISTINCT v.a ").append("FROM ( ").append("    SELECT DISTINCT a, b ")
+									.append("    FROM t) v ").append("LEFT JOIN u on v.a = u.a").toString(),
                             "VALUES 1");
         }
     }

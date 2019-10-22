@@ -98,10 +98,10 @@ public class ResourceGroupSpec
 
         this.subGroups = ImmutableList.copyOf(requireNonNull(subGroups, "subGroups is null").orElse(ImmutableList.of()));
         Set<ResourceGroupNameTemplate> names = new HashSet<>();
-        for (ResourceGroupSpec subGroup : this.subGroups) {
+        this.subGroups.forEach(subGroup -> {
             checkArgument(!names.contains(subGroup.getName()), "Duplicated sub group: %s", subGroup.getName());
             names.add(subGroup.getName());
-        }
+        });
     }
 
     public Optional<DataSize> getSoftMemoryLimit()

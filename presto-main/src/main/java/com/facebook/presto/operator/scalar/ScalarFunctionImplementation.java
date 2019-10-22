@@ -99,7 +99,40 @@ public final class ScalarFunctionImplementation
         return choices;
     }
 
-    public static class ScalarImplementationChoice
+    public enum NullConvention
+    {
+        RETURN_NULL_ON_NULL(1),
+        USE_BOXED_TYPE(1),
+        USE_NULL_FLAG(2),
+        BLOCK_AND_POSITION(2),
+        /**/;
+
+        private final int parameterCount;
+
+        NullConvention(int parameterCount)
+        {
+            this.parameterCount = parameterCount;
+        }
+
+        public int getParameterCount()
+        {
+            return parameterCount;
+        }
+    }
+
+	public enum ArgumentType
+    {
+        VALUE_TYPE,
+        FUNCTION_TYPE
+    }
+
+	public enum ReturnPlaceConvention
+    {
+        STACK,
+        PROVIDED_BLOCKBUILDER
+    }
+
+	public static class ScalarImplementationChoice
     {
         private final boolean nullable;
         private final List<ArgumentProperty> argumentProperties;
@@ -121,11 +154,11 @@ public final class ScalarFunctionImplementation
             this.methodHandle = requireNonNull(methodHandle, "methodHandle is null");
             this.instanceFactory = requireNonNull(instanceFactory, "instanceFactory is null");
 
-            if (instanceFactory.isPresent()) {
-                Class<?> instanceType = instanceFactory.get().type().returnType();
-                checkArgument(instanceFactory.get().type().parameterList().size() == 0, "instanceFactory should have no parameter");
+            instanceFactory.ifPresent(value -> {
+                Class<?> instanceType = value.type().returnType();
+                checkArgument(value.type().parameterList().size() == 0, "instanceFactory should have no parameter");
                 checkArgument(instanceType.equals(methodHandle.type().parameterType(0)), "methodHandle is not an instance method");
-            }
+            });
 
             List<Class<?>> parameterList = methodHandle.type().parameterList();
             boolean hasSession = false;
@@ -185,16 +218,6 @@ public final class ScalarFunctionImplementation
         private final Optional<NullConvention> nullConvention;
         private final Optional<Class> lambdaInterface;
 
-        public static ArgumentProperty valueTypeArgumentProperty(NullConvention nullConvention)
-        {
-            return new ArgumentProperty(VALUE_TYPE, Optional.of(nullConvention), Optional.empty());
-        }
-
-        public static ArgumentProperty functionTypeArgumentProperty(Class lambdaInterface)
-        {
-            return new ArgumentProperty(FUNCTION_TYPE, Optional.empty(), Optional.of(lambdaInterface));
-        }
-
         public ArgumentProperty(ArgumentType argumentType, Optional<NullConvention> nullConvention, Optional<Class> lambdaInterface)
         {
             switch (argumentType) {
@@ -216,24 +239,34 @@ public final class ScalarFunctionImplementation
             this.lambdaInterface = lambdaInterface;
         }
 
-        public ArgumentType getArgumentType()
+		public static ArgumentProperty valueTypeArgumentProperty(NullConvention nullConvention)
+        {
+            return new ArgumentProperty(VALUE_TYPE, Optional.of(nullConvention), Optional.empty());
+        }
+
+		public static ArgumentProperty functionTypeArgumentProperty(Class lambdaInterface)
+        {
+            return new ArgumentProperty(FUNCTION_TYPE, Optional.empty(), Optional.of(lambdaInterface));
+        }
+
+		public ArgumentType getArgumentType()
         {
             return argumentType;
         }
 
-        public NullConvention getNullConvention()
+		public NullConvention getNullConvention()
         {
             checkState(getArgumentType() == VALUE_TYPE, "nullConvention only applies to value type argument");
             return nullConvention.get();
         }
 
-        public Class getLambdaInterface()
+		public Class getLambdaInterface()
         {
             checkState(getArgumentType() == FUNCTION_TYPE, "lambdaInterface only applies to function type argument");
             return lambdaInterface.get();
         }
 
-        @Override
+		@Override
         public boolean equals(Object obj)
         {
             if (this == obj) {
@@ -250,43 +283,10 @@ public final class ScalarFunctionImplementation
                     this.lambdaInterface.equals(other.lambdaInterface);
         }
 
-        @Override
+		@Override
         public int hashCode()
         {
             return Objects.hash(nullConvention, lambdaInterface);
         }
-    }
-
-    public enum NullConvention
-    {
-        RETURN_NULL_ON_NULL(1),
-        USE_BOXED_TYPE(1),
-        USE_NULL_FLAG(2),
-        BLOCK_AND_POSITION(2),
-        /**/;
-
-        private final int parameterCount;
-
-        NullConvention(int parameterCount)
-        {
-            this.parameterCount = parameterCount;
-        }
-
-        public int getParameterCount()
-        {
-            return parameterCount;
-        }
-    }
-
-    public enum ArgumentType
-    {
-        VALUE_TYPE,
-        FUNCTION_TYPE
-    }
-
-    public enum ReturnPlaceConvention
-    {
-        STACK,
-        PROVIDED_BLOCKBUILDER
     }
 }

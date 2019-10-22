@@ -52,11 +52,14 @@ import static com.facebook.presto.expressions.translator.TranslatedExpression.un
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JdbcFilterToSqlTranslator
         extends RowExpressionTranslator<JdbcExpression, Map<VariableReferenceExpression, ColumnHandle>>
 {
-    private final FunctionMetadataManager functionMetadataManager;
+    private static final Logger logger = LoggerFactory.getLogger(JdbcFilterToSqlTranslator.class);
+	private final FunctionMetadataManager functionMetadataManager;
     private final FunctionTranslator<JdbcExpression> functionTranslator;
     private final String quote;
 
@@ -85,7 +88,7 @@ public class JdbcFilterToSqlTranslator
         JdbcColumnHandle columnHandle = (JdbcColumnHandle) context.get(variable);
         requireNonNull(columnHandle, format("Unrecognized variable %s", variable));
         return new TranslatedExpression<>(
-                Optional.of(new JdbcExpression(quote + columnHandle.getColumnName().replace(quote, quote + quote) + quote)),
+                Optional.of(new JdbcExpression(new StringBuilder().append(quote).append(columnHandle.getColumnName().replace(quote, quote + quote)).append(quote).toString())),
                 variable,
                 ImmutableList.of());
     }
@@ -109,6 +112,7 @@ public class JdbcFilterToSqlTranslator
             return functionTranslator.translate(functionMetadata, call, translatedExpressions);
         }
         catch (Throwable t) {
+			logger.error(t.getMessage(), t);
             // no-op
         }
         return untranslated(call, translatedExpressions);
@@ -133,7 +137,7 @@ public class JdbcFilterToSqlTranslator
 
         List<String> sqlBodies = jdbcExpressions.stream()
                 .map(JdbcExpression::getExpression)
-                .map(sql -> '(' + sql + ')')
+                .map(sql -> new StringBuilder().append('(').append(sql).append(')').toString())
                 .collect(toImmutableList());
         List<ConstantExpression> variableBindings = jdbcExpressions.stream()
                 .map(JdbcExpression::getBoundConstantValues)

@@ -23,117 +23,73 @@ import java.util.Optional;
 import static com.facebook.presto.tests.utils.QueryExecutors.onHive;
 import static io.prestodb.tempto.fulfillment.table.hive.InlineDataSource.createResourceDataSource;
 import static java.lang.String.format;
+import org.apache.commons.lang3.StringUtils;
 
 public final class AllSimpleTypesTableDefinitions
 {
-    private AllSimpleTypesTableDefinitions()
-    {
-    }
-
     private static String tableNameFormat = "%s_all_types";
 
-    @TableDefinitionsRepository.RepositoryTableDefinition
+	@TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition ALL_HIVE_SIMPLE_TYPES_TEXTFILE = tableDefinitionBuilder("TEXTFILE", Optional.of("DELIMITED FIELDS TERMINATED BY '|'"))
             .setDataSource(getTextFileDataSource())
             .build();
 
-    @TableDefinitionsRepository.RepositoryTableDefinition
+	@TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition ALL_HIVE_SIMPLE_TYPES_PARQUET = parquetTableDefinitionBuilder()
             .setNoData()
             .build();
 
-    @TableDefinitionsRepository.RepositoryTableDefinition
+	@TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition ALL_HIVE_SIMPLE_TYPES_AVRO = avroTableDefinitionBuilder()
             .setNoData()
             .build();
 
-    @TableDefinitionsRepository.RepositoryTableDefinition
+	@TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition ALL_HIVE_SIMPLE_TYPES_ORC = tableDefinitionBuilder("ORC", Optional.empty())
             .setNoData()
             .build();
 
-    @TableDefinitionsRepository.RepositoryTableDefinition
+	@TableDefinitionsRepository.RepositoryTableDefinition
     public static final HiveTableDefinition ALL_HIVE_SIMPLE_TYPES_RCFILE = tableDefinitionBuilder("RCFILE", Optional.of("SERDE 'org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe'"))
             .setNoData()
             .build();
 
-    private static HiveTableDefinition.HiveTableDefinitionBuilder tableDefinitionBuilder(String fileFormat, Optional<String> rowFormat)
+	private AllSimpleTypesTableDefinitions()
     {
-        String tableName = format(tableNameFormat, fileFormat.toLowerCase(Locale.ENGLISH));
-        return HiveTableDefinition.builder(tableName)
-                .setCreateTableDDLTemplate("" +
-                        "CREATE %EXTERNAL% TABLE %NAME%(" +
-                        "   c_tinyint            TINYINT," +
-                        "   c_smallint           SMALLINT," +
-                        "   c_int                INT," +
-                        "   c_bigint             BIGINT," +
-                        "   c_float              FLOAT," +
-                        "   c_double             DOUBLE," +
-                        "   c_decimal            DECIMAL," +
-                        "   c_decimal_w_params   DECIMAL(10,5)," +
-                        "   c_timestamp          TIMESTAMP," +
-                        "   c_date               DATE," +
-                        "   c_string             STRING," +
-                        "   c_varchar            VARCHAR(10)," +
-                        "   c_char               CHAR(10)," +
-                        "   c_boolean            BOOLEAN," +
-                        "   c_binary             BINARY" +
-                        ") " +
-                        (rowFormat.isPresent() ? "ROW FORMAT " + rowFormat.get() + " " : " ") +
-                        "STORED AS " + fileFormat);
     }
 
-    private static HiveTableDefinition.HiveTableDefinitionBuilder avroTableDefinitionBuilder()
+	private static HiveTableDefinition.HiveTableDefinitionBuilder tableDefinitionBuilder(String fileFormat, Optional<String> rowFormat)
+    {
+        String tableName = format(tableNameFormat, StringUtils.lowerCase(fileFormat, Locale.ENGLISH));
+        return HiveTableDefinition.builder(tableName)
+                .setCreateTableDDLTemplate(new StringBuilder().append("").append("CREATE %EXTERNAL% TABLE %NAME%(").append("   c_tinyint            TINYINT,").append("   c_smallint           SMALLINT,").append("   c_int                INT,").append("   c_bigint             BIGINT,").append("   c_float              FLOAT,")
+						.append("   c_double             DOUBLE,").append("   c_decimal            DECIMAL,").append("   c_decimal_w_params   DECIMAL(10,5),").append("   c_timestamp          TIMESTAMP,").append("   c_date               DATE,").append("   c_string             STRING,").append("   c_varchar            VARCHAR(10),").append("   c_char               CHAR(10),")
+						.append("   c_boolean            BOOLEAN,").append("   c_binary             BINARY").append(") ").append(rowFormat.isPresent() ? "ROW FORMAT " + rowFormat.get() + " " : " ").append("STORED AS ").append(fileFormat)
+						.toString());
+    }
+
+	private static HiveTableDefinition.HiveTableDefinitionBuilder avroTableDefinitionBuilder()
     {
         return HiveTableDefinition.builder("avro_all_types")
-                .setCreateTableDDLTemplate("" +
-                        "CREATE %EXTERNAL% TABLE %NAME%(" +
-                        "   c_int                INT," +
-                        "   c_bigint             BIGINT," +
-                        "   c_float              FLOAT," +
-                        "   c_double             DOUBLE," +
-                        "   c_decimal            DECIMAL," +
-                        "   c_decimal_w_params   DECIMAL(10,5)," +
-                        "   c_timestamp          TIMESTAMP," +
-                        "   c_date               DATE," +
-                        "   c_string             STRING," +
-                        "   c_varchar            VARCHAR(10)," +
-                        "   c_char               CHAR(10)," +
-                        "   c_boolean            BOOLEAN," +
-                        "   c_binary             BINARY" +
-                        ") " +
-                        "STORED AS AVRO");
+                .setCreateTableDDLTemplate(new StringBuilder().append("").append("CREATE %EXTERNAL% TABLE %NAME%(").append("   c_int                INT,").append("   c_bigint             BIGINT,").append("   c_float              FLOAT,").append("   c_double             DOUBLE,").append("   c_decimal            DECIMAL,")
+						.append("   c_decimal_w_params   DECIMAL(10,5),").append("   c_timestamp          TIMESTAMP,").append("   c_date               DATE,").append("   c_string             STRING,").append("   c_varchar            VARCHAR(10),").append("   c_char               CHAR(10),").append("   c_boolean            BOOLEAN,").append("   c_binary             BINARY")
+						.append(") ").append("STORED AS AVRO").toString());
     }
 
-    private static HiveTableDefinition.HiveTableDefinitionBuilder parquetTableDefinitionBuilder()
+	private static HiveTableDefinition.HiveTableDefinitionBuilder parquetTableDefinitionBuilder()
     {
         return HiveTableDefinition.builder("parquet_all_types")
-                .setCreateTableDDLTemplate("" +
-                        "CREATE %EXTERNAL% TABLE %NAME%(" +
-                        "   c_tinyint            TINYINT," +
-                        "   c_smallint           SMALLINT," +
-                        "   c_int                INT," +
-                        "   c_bigint             BIGINT," +
-                        "   c_float              FLOAT," +
-                        "   c_double             DOUBLE," +
-                        "   c_decimal            DECIMAL," +
-                        "   c_decimal_w_params   DECIMAL(10,5)," +
-                        "   c_timestamp          TIMESTAMP," +
-                        "   c_string             STRING," +
-                        "   c_varchar            VARCHAR(10)," +
-                        "   c_char               CHAR(10)," +
-                        "   c_boolean            BOOLEAN," +
-                        "   c_binary             BINARY" +
-                        ") " +
-                        "STORED AS PARQUET");
+                .setCreateTableDDLTemplate(new StringBuilder().append("").append("CREATE %EXTERNAL% TABLE %NAME%(").append("   c_tinyint            TINYINT,").append("   c_smallint           SMALLINT,").append("   c_int                INT,").append("   c_bigint             BIGINT,").append("   c_float              FLOAT,")
+						.append("   c_double             DOUBLE,").append("   c_decimal            DECIMAL,").append("   c_decimal_w_params   DECIMAL(10,5),").append("   c_timestamp          TIMESTAMP,").append("   c_string             STRING,").append("   c_varchar            VARCHAR(10),").append("   c_char               CHAR(10),").append("   c_boolean            BOOLEAN,")
+						.append("   c_binary             BINARY").append(") ").append("STORED AS PARQUET").toString());
     }
 
-    private static HiveDataSource getTextFileDataSource()
+	private static HiveDataSource getTextFileDataSource()
     {
         return createResourceDataSource(format(tableNameFormat, "textfile"), "com/facebook/presto/tests/hive/data/all_types/data.textfile");
     }
 
-    public static void populateDataToHiveTable(String tableName)
+	public static void populateDataToHiveTable(String tableName)
     {
         onHive().executeQuery(format("INSERT INTO TABLE %s SELECT * FROM %s",
                 tableName,

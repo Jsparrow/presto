@@ -45,7 +45,8 @@ public class Union
         this.relations = ImmutableList.copyOf(relations);
     }
 
-    public List<Relation> getRelations()
+    @Override
+	public List<Relation> getRelations()
     {
         return relations;
     }

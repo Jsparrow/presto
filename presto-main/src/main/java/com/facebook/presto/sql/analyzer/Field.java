@@ -31,41 +31,6 @@ public class Field
     private final boolean hidden;
     private final boolean aliased;
 
-    public static Field newUnqualified(String name, Type type)
-    {
-        requireNonNull(name, "name is null");
-        requireNonNull(type, "type is null");
-
-        return new Field(Optional.empty(), Optional.of(name), type, false, Optional.empty(), Optional.empty(), false);
-    }
-
-    public static Field newUnqualified(Optional<String> name, Type type)
-    {
-        requireNonNull(name, "name is null");
-        requireNonNull(type, "type is null");
-
-        return new Field(Optional.empty(), name, type, false, Optional.empty(), Optional.empty(), false);
-    }
-
-    public static Field newUnqualified(Optional<String> name, Type type, Optional<QualifiedObjectName> originTable, Optional<String> originColumn, boolean aliased)
-    {
-        requireNonNull(name, "name is null");
-        requireNonNull(type, "type is null");
-        requireNonNull(originTable, "originTable is null");
-
-        return new Field(Optional.empty(), name, type, false, originTable, originColumn, aliased);
-    }
-
-    public static Field newQualified(QualifiedName relationAlias, Optional<String> name, Type type, boolean hidden, Optional<QualifiedObjectName> originTable, Optional<String> originColumn, boolean aliased)
-    {
-        requireNonNull(relationAlias, "relationAlias is null");
-        requireNonNull(name, "name is null");
-        requireNonNull(type, "type is null");
-        requireNonNull(originTable, "originTable is null");
-
-        return new Field(Optional.of(relationAlias), name, type, hidden, originTable, originColumn, aliased);
-    }
-
     public Field(Optional<QualifiedName> relationAlias, Optional<String> name, Type type, boolean hidden, Optional<QualifiedObjectName> originTable, Optional<String> originColumnName, boolean aliased)
     {
         requireNonNull(relationAlias, "relationAlias is null");
@@ -83,47 +48,82 @@ public class Field
         this.aliased = aliased;
     }
 
-    public Optional<QualifiedObjectName> getOriginTable()
+	public static Field newUnqualified(String name, Type type)
+    {
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+
+        return new Field(Optional.empty(), Optional.of(name), type, false, Optional.empty(), Optional.empty(), false);
+    }
+
+	public static Field newUnqualified(Optional<String> name, Type type)
+    {
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+
+        return new Field(Optional.empty(), name, type, false, Optional.empty(), Optional.empty(), false);
+    }
+
+	public static Field newUnqualified(Optional<String> name, Type type, Optional<QualifiedObjectName> originTable, Optional<String> originColumn, boolean aliased)
+    {
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+        requireNonNull(originTable, "originTable is null");
+
+        return new Field(Optional.empty(), name, type, false, originTable, originColumn, aliased);
+    }
+
+	public static Field newQualified(QualifiedName relationAlias, Optional<String> name, Type type, boolean hidden, Optional<QualifiedObjectName> originTable, Optional<String> originColumn, boolean aliased)
+    {
+        requireNonNull(relationAlias, "relationAlias is null");
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+        requireNonNull(originTable, "originTable is null");
+
+        return new Field(Optional.of(relationAlias), name, type, hidden, originTable, originColumn, aliased);
+    }
+
+	public Optional<QualifiedObjectName> getOriginTable()
     {
         return originTable;
     }
 
-    public Optional<String> getOriginColumnName()
+	public Optional<String> getOriginColumnName()
     {
         return originColumnName;
     }
 
-    public Optional<QualifiedName> getRelationAlias()
+	public Optional<QualifiedName> getRelationAlias()
     {
         return relationAlias;
     }
 
-    public Optional<String> getName()
+	public Optional<String> getName()
     {
         return name;
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public boolean isHidden()
+	public boolean isHidden()
     {
         return hidden;
     }
 
-    public boolean isAliased()
+	public boolean isAliased()
     {
         return aliased;
     }
 
-    public boolean matchesPrefix(Optional<QualifiedName> prefix)
+	public boolean matchesPrefix(Optional<QualifiedName> prefix)
     {
         return !prefix.isPresent() || relationAlias.isPresent() && relationAlias.get().hasSuffix(prefix.get());
     }
 
-    /*
+	/*
       Namespaces can have names such as "x", "x.y" or "" if there's no name
       Name to resolve can have names like "a", "x.a", "x.y.a"
 
@@ -154,14 +154,12 @@ public class Field
         return matchesPrefix(name.getPrefix()) && this.name.get().equalsIgnoreCase(name.getSuffix());
     }
 
-    @Override
+	@Override
     public String toString()
     {
         StringBuilder result = new StringBuilder();
-        if (relationAlias.isPresent()) {
-            result.append(relationAlias.get())
-                    .append(".");
-        }
+        relationAlias.ifPresent(value -> result.append(value)
+		        .append("."));
 
         result.append(name.orElse("<anonymous>"))
                 .append(":")

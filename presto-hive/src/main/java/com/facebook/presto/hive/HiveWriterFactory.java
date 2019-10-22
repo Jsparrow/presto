@@ -90,10 +90,13 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_COLUMNS;
 import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.META_TABLE_COLUMN_TYPES;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HiveWriterFactory
 {
-    private static final int MAX_BUCKET_COUNT = 100_000;
+    private static final Logger logger = LoggerFactory.getLogger(HiveWriterFactory.class);
+	private static final int MAX_BUCKET_COUNT = 100_000;
     private static final int BUCKET_NUMBER_PADDING = Integer.toString(MAX_BUCKET_COUNT - 1).length();
 
     private final Set<HiveFileWriterFactory> fileWriterFactories;
@@ -189,7 +192,7 @@ public class HiveWriterFactory
         ImmutableList.Builder<String> partitionColumnNames = ImmutableList.builder();
         ImmutableList.Builder<Type> partitionColumnTypes = ImmutableList.builder();
         ImmutableList.Builder<DataColumn> dataColumns = ImmutableList.builder();
-        for (HiveColumnHandle column : inputColumns) {
+        inputColumns.forEach(column -> {
             HiveType hiveType = column.getHiveType();
             if (column.isPartitionKey()) {
                 partitionColumnNames.add(column.getName());
@@ -198,7 +201,7 @@ public class HiveWriterFactory
             else {
                 dataColumns.add(new DataColumn(column.getName(), hiveType));
             }
-        }
+        });
         this.partitionColumnNames = partitionColumnNames.build();
         this.partitionColumnTypes = partitionColumnTypes.build();
         this.dataColumns = dataColumns.build();
@@ -340,18 +343,17 @@ public class HiveWriterFactory
                     // a new partition in a new partitioned table
                     writeInfo = locationService.getPartitionWriteInfo(locationHandle, partition, partitionName.get());
 
-                    if (!writeInfo.getWriteMode().isWritePathSameAsTargetPath()) {
-                        // When target path is different from write path,
-                        // verify that the target directory for the partition does not already exist
-                        if (HiveWriteUtils.pathExists(new HdfsContext(session, schemaName, tableName), hdfsEnvironment, writeInfo.getTargetPath())) {
-                            throw new PrestoException(HIVE_PATH_ALREADY_EXISTS, format(
-                                    "Target directory for new partition '%s' of table '%s.%s' already exists: %s",
-                                    partitionName,
-                                    schemaName,
-                                    tableName,
-                                    writeInfo.getTargetPath()));
-                        }
-                    }
+                    boolean condition = !writeInfo.getWriteMode().isWritePathSameAsTargetPath() && HiveWriteUtils.pathExists(new HdfsContext(session, schemaName, tableName), hdfsEnvironment, writeInfo.getTargetPath());
+					// When target path is different from write path,
+					// verify that the target directory for the partition does not already exist
+					if (condition) {
+					    throw new PrestoException(HIVE_PATH_ALREADY_EXISTS, format(
+					            "Target directory for new partition '%s' of table '%s.%s' already exists: %s",
+					            partitionName,
+					            schemaName,
+					            tableName,
+					            writeInfo.getTargetPath()));
+					}
                 }
             }
             else {
@@ -362,7 +364,7 @@ public class HiveWriterFactory
                     updateMode = UpdateMode.NEW;
                     writeInfo = locationService.getPartitionWriteInfo(locationHandle, partition, partitionName.get());
                 }
-                else if (table.getTableType().equals(TEMPORARY_TABLE)) {
+                else if (table.getTableType() == TEMPORARY_TABLE) {
                     // Note: temporary table is always empty at this step
                     updateMode = UpdateMode.APPEND;
                     writeInfo = locationService.getTableWriteInfo(locationHandle);
@@ -406,12 +408,7 @@ public class HiveWriterFactory
                     HiveType tableType = tableColumns.get(i).getType();
                     HiveType partitionType = existingPartitionColumns.get(i).getType();
                     if (!tableType.equals(partitionType)) {
-                        throw new PrestoException(HIVE_PARTITION_SCHEMA_MISMATCH, format("" +
-                                        "You are trying to write into an existing partition in a table. " +
-                                        "The table schema has changed since the creation of the partition. " +
-                                        "Inserting rows into such partition is not supported. " +
-                                        "The column '%s' in table '%s' is declared as type '%s', " +
-                                        "but partition '%s' declared column '%s' as type '%s'.",
+                        throw new PrestoException(HIVE_PARTITION_SCHEMA_MISMATCH, format(new StringBuilder().append("").append("You are trying to write into an existing partition in a table. ").append("The table schema has changed since the creation of the partition. ").append("Inserting rows into such partition is not supported. ").append("The column '%s' in table '%s' is declared as type '%s', ").append("but partition '%s' declared column '%s' as type '%s'.").toString(),
                                 tableColumns.get(i).getName(),
                                 tableName,
                                 tableType,
@@ -458,12 +455,12 @@ public class HiveWriterFactory
             targetFileName = computeBucketedFileName(filePrefix, bucketNumber.getAsInt()) + extension;
         }
         else {
-            targetFileName = filePrefix + "_" + randomUUID() + extension;
+            targetFileName = new StringBuilder().append(filePrefix).append("_").append(randomUUID()).append(extension).toString();
         }
 
         String writeFileName;
         if (partitionCommitRequired) {
-            writeFileName = ".tmp.presto." + filePrefix + "_" + randomUUID() + extension;
+            writeFileName = new StringBuilder().append(".tmp.presto.").append(filePrefix).append("_").append(randomUUID()).append(extension).toString();
         }
         else {
             writeFileName = targetFileName;
@@ -510,7 +507,8 @@ public class HiveWriterFactory
                 size = Optional.of(hdfsEnvironment.getFileSystem(session.getUser(), path, conf).getFileStatus(path).getLen());
             }
             catch (IOException | RuntimeException e) {
-                // Do not fail the query if file system is not available
+                logger.error(e.getMessage(), e);
+				// Do not fail the query if file system is not available
                 size = Optional.empty();
             }
 
@@ -578,10 +576,7 @@ public class HiveWriterFactory
             if (!fileColumnHiveType.equals(inputHiveType)) {
                 // todo this should be moved to a helper
                 throw new PrestoException(HIVE_PARTITION_SCHEMA_MISMATCH, format(
-                        "" +
-                                "There is a mismatch between the table and partition schemas. " +
-                                "The column '%s' in table '%s.%s' is declared as type '%s', " +
-                                "but partition '%s' declared column '%s' as type '%s'.",
+                        new StringBuilder().append("").append("There is a mismatch between the table and partition schemas. ").append("The column '%s' in table '%s.%s' is declared as type '%s', ").append("but partition '%s' declared column '%s' as type '%s'.").toString(),
                         columnName,
                         schemaName,
                         tableName,
@@ -595,7 +590,7 @@ public class HiveWriterFactory
 
     public static String computeBucketedFileName(String filePrefix, int bucket)
     {
-        return filePrefix + "_bucket-" + Strings.padStart(Integer.toString(bucket), BUCKET_NUMBER_PADDING, '0');
+        return new StringBuilder().append(filePrefix).append("_bucket-").append(Strings.padStart(Integer.toString(bucket), BUCKET_NUMBER_PADDING, '0')).toString();
     }
 
     public static String getFileExtension(StorageFormat storageFormat, HiveCompressionCodec compressionCodec)

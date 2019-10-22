@@ -60,11 +60,15 @@ import static com.facebook.presto.sql.analyzer.SemanticErrorCode.TYPE_MISMATCH;
 import static com.facebook.presto.type.UnknownType.UNKNOWN;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CreateTableTask
         implements DataDefinitionTask<CreateTable>
 {
-    @Override
+    private static final Logger logger = LoggerFactory.getLogger(CreateTableTask.class);
+
+	@Override
     public String getName()
     {
         return "CREATE TABLE";
@@ -111,7 +115,8 @@ public class CreateTableTask
                     type = metadata.getType(parseTypeSignature(column.getType()));
                 }
                 catch (IllegalArgumentException e) {
-                    throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", column.getType(), column.getName());
+                    logger.error(e.getMessage(), e);
+					throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", column.getType(), column.getName());
                 }
                 if (type.equals(UNKNOWN)) {
                     throw new SemanticException(TYPE_MISMATCH, element, "Unknown type '%s' for column '%s'", column.getType(), column.getName());
@@ -155,7 +160,7 @@ public class CreateTableTask
                 TableMetadata likeTableMetadata = metadata.getTableMetadata(session, likeTable);
 
                 Optional<LikeClause.PropertiesOption> propertiesOption = likeClause.getPropertiesOption();
-                if (propertiesOption.isPresent() && propertiesOption.get().equals(LikeClause.PropertiesOption.INCLUDING)) {
+                if (propertiesOption.isPresent() && propertiesOption.get() == LikeClause.PropertiesOption.INCLUDING) {
                     if (includingProperties) {
                         throw new SemanticException(NOT_SUPPORTED, statement, "Only one LIKE clause can specify INCLUDING PROPERTIES");
                     }
@@ -206,11 +211,7 @@ public class CreateTableTask
     private static Map<String, Object> combineProperties(Set<String> specifiedPropertyKeys, Map<String, Object> defaultProperties, Map<String, Object> inheritedProperties)
     {
         Map<String, Object> finalProperties = new HashMap<>(inheritedProperties);
-        for (Map.Entry<String, Object> entry : defaultProperties.entrySet()) {
-            if (specifiedPropertyKeys.contains(entry.getKey()) || !finalProperties.containsKey(entry.getKey())) {
-                finalProperties.put(entry.getKey(), entry.getValue());
-            }
-        }
+        defaultProperties.entrySet().stream().filter(entry -> specifiedPropertyKeys.contains(entry.getKey()) || !finalProperties.containsKey(entry.getKey())).forEach(entry -> finalProperties.put(entry.getKey(), entry.getValue()));
         return finalProperties;
     }
 }

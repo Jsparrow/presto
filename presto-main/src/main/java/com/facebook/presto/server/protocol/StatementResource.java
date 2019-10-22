@@ -238,7 +238,7 @@ public class StatementResource
 
         // add set session properties
         query.getSetSessionProperties().entrySet()
-                .forEach(entry -> response.header(PRESTO_SET_SESSION, entry.getKey() + '=' + entry.getValue()));
+                .forEach(entry -> response.header(PRESTO_SET_SESSION, new StringBuilder().append(entry.getKey()).append('=').append(entry.getValue()).toString()));
 
         // add clear session properties
         query.getResetSessionProperties()
@@ -246,19 +246,17 @@ public class StatementResource
 
         // add set roles
         query.getSetRoles().entrySet()
-                .forEach(entry -> response.header(PRESTO_SET_ROLE, entry.getKey() + '=' + urlEncode(entry.getValue().toString())));
+                .forEach(entry -> response.header(PRESTO_SET_ROLE, new StringBuilder().append(entry.getKey()).append('=').append(urlEncode(entry.getValue().toString())).toString()));
 
         // add added prepare statements
-        for (Entry<String, String> entry : query.getAddedPreparedStatements().entrySet()) {
+		query.getAddedPreparedStatements().entrySet().forEach(entry -> {
             String encodedKey = urlEncode(entry.getKey());
             String encodedValue = urlEncode(entry.getValue());
-            response.header(PRESTO_ADDED_PREPARE, encodedKey + '=' + encodedValue);
-        }
+            response.header(PRESTO_ADDED_PREPARE, new StringBuilder().append(encodedKey).append('=').append(encodedValue).toString());
+        });
 
         // add deallocated prepare statements
-        for (String name : query.getDeallocatedPreparedStatements()) {
-            response.header(PRESTO_DEALLOCATED_PREPARE, urlEncode(name));
-        }
+		query.getDeallocatedPreparedStatements().forEach(name -> response.header(PRESTO_DEALLOCATED_PREPARE, urlEncode(name)));
 
         // add new transaction ID
         query.getStartedTransactionId()

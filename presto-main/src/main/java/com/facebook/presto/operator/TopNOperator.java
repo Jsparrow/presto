@@ -35,7 +35,105 @@ import static java.util.Objects.requireNonNull;
 public class TopNOperator
         implements Operator
 {
-    public static class TopNOperatorFactory
+    private final OperatorContext operatorContext;
+	private final LocalMemoryContext localUserMemoryContext;
+	private GroupedTopNBuilder topNBuilder;
+	private boolean finishing;
+	private Iterator<Page> outputIterator;
+
+	public TopNOperator(
+            OperatorContext operatorContext,
+            List<Type> types,
+            int n,
+            List<Integer> sortChannels,
+            List<SortOrder> sortOrders)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
+        checkArgument(n >= 0, "n must be positive");
+
+        if (n == 0) {
+            finishing = true;
+            outputIterator = emptyIterator();
+        }
+        else {
+            topNBuilder = new GroupedTopNBuilder(
+                    types,
+                    new SimplePageWithPositionComparator(types, sortChannels, sortOrders),
+                    n,
+                    false,
+                    new NoChannelGroupByHash());
+        }
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        finishing = true;
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return finishing && noMoreOutput();
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return !finishing && !noMoreOutput();
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(!finishing, "Operator is already finishing");
+        boolean done = topNBuilder.processPage(requireNonNull(page, "page is null")).process();
+        // there is no grouping so work will always be done
+        verify(done);
+        updateMemoryReservation();
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (!finishing || noMoreOutput()) {
+            return null;
+        }
+
+        if (outputIterator == null) {
+            // start flushing
+            outputIterator = topNBuilder.buildResult();
+        }
+
+        Page output = null;
+        if (outputIterator.hasNext()) {
+            output = outputIterator.next();
+        }
+        else {
+            outputIterator = emptyIterator();
+        }
+        updateMemoryReservation();
+        return output;
+    }
+
+	private void updateMemoryReservation()
+    {
+        localUserMemoryContext.setBytes(topNBuilder.getEstimatedSizeInBytes());
+    }
+
+	private boolean noMoreOutput()
+    {
+        return outputIterator != null && !outputIterator.hasNext();
+    }
+
+	public static class TopNOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -86,105 +184,5 @@ public class TopNOperator
         {
             return new TopNOperatorFactory(operatorId, planNodeId, sourceTypes, n, sortChannels, sortOrders);
         }
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalMemoryContext localUserMemoryContext;
-
-    private GroupedTopNBuilder topNBuilder;
-    private boolean finishing;
-
-    private Iterator<Page> outputIterator;
-
-    public TopNOperator(
-            OperatorContext operatorContext,
-            List<Type> types,
-            int n,
-            List<Integer> sortChannels,
-            List<SortOrder> sortOrders)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.localUserMemoryContext = operatorContext.localUserMemoryContext();
-        checkArgument(n >= 0, "n must be positive");
-
-        if (n == 0) {
-            finishing = true;
-            outputIterator = emptyIterator();
-        }
-        else {
-            topNBuilder = new GroupedTopNBuilder(
-                    types,
-                    new SimplePageWithPositionComparator(types, sortChannels, sortOrders),
-                    n,
-                    false,
-                    new NoChannelGroupByHash());
-        }
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        finishing = true;
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return finishing && noMoreOutput();
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return !finishing && !noMoreOutput();
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(!finishing, "Operator is already finishing");
-        boolean done = topNBuilder.processPage(requireNonNull(page, "page is null")).process();
-        // there is no grouping so work will always be done
-        verify(done);
-        updateMemoryReservation();
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (!finishing || noMoreOutput()) {
-            return null;
-        }
-
-        if (outputIterator == null) {
-            // start flushing
-            outputIterator = topNBuilder.buildResult();
-        }
-
-        Page output = null;
-        if (outputIterator.hasNext()) {
-            output = outputIterator.next();
-        }
-        else {
-            outputIterator = emptyIterator();
-        }
-        updateMemoryReservation();
-        return output;
-    }
-
-    private void updateMemoryReservation()
-    {
-        localUserMemoryContext.setBytes(topNBuilder.getEstimatedSizeInBytes());
-    }
-
-    private boolean noMoreOutput()
-    {
-        return outputIterator != null && !outputIterator.hasNext();
     }
 }

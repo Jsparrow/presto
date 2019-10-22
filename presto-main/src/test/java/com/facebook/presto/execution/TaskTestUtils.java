@@ -77,23 +77,19 @@ import static com.facebook.presto.sql.planner.SystemPartitioningHandle.SOURCE_DI
 
 public final class TaskTestUtils
 {
-    private TaskTestUtils()
-    {
-    }
-
     private static final ConnectorTransactionHandle TRANSACTION_HANDLE = TestingTransactionHandle.create();
 
-    public static final PlanNodeId TABLE_SCAN_NODE_ID = new PlanNodeId("tableScan");
+	public static final PlanNodeId TABLE_SCAN_NODE_ID = new PlanNodeId("tableScan");
 
-    private static final ConnectorId CONNECTOR_ID = new ConnectorId("test");
+	private static final ConnectorId CONNECTOR_ID = new ConnectorId("test");
 
-    public static final ScheduledSplit SPLIT = new ScheduledSplit(0, TABLE_SCAN_NODE_ID, new Split(CONNECTOR_ID, TRANSACTION_HANDLE, TestingSplit.createLocalSplit()));
+	public static final ScheduledSplit SPLIT = new ScheduledSplit(0, TABLE_SCAN_NODE_ID, new Split(CONNECTOR_ID, TRANSACTION_HANDLE, TestingSplit.createLocalSplit()));
 
-    public static final ImmutableList<TaskSource> EMPTY_SOURCES = ImmutableList.of();
+	public static final ImmutableList<TaskSource> EMPTY_SOURCES = ImmutableList.of();
 
-    public static final VariableReferenceExpression VARIABLE = new VariableReferenceExpression("column", BIGINT);
+	public static final VariableReferenceExpression VARIABLE = new VariableReferenceExpression("column", BIGINT);
 
-    public static final PlanFragment PLAN_FRAGMENT = new PlanFragment(
+	public static final PlanFragment PLAN_FRAGMENT = new PlanFragment(
             new PlanFragmentId(0),
             new TableScanNode(
                     TABLE_SCAN_NODE_ID,
@@ -112,7 +108,11 @@ public final class TaskTestUtils
             StatsAndCosts.empty(),
             Optional.empty());
 
-    public static LocalExecutionPlanner createTestingPlanner()
+	private TaskTestUtils()
+    {
+    }
+
+	public static LocalExecutionPlanner createTestingPlanner()
     {
         MetadataManager metadata = MetadataManager.createTestMetadataManager();
 
@@ -162,12 +162,12 @@ public final class TaskTestUtils
                 jsonCodec(TableCommitContext.class));
     }
 
-    public static TaskInfo updateTask(SqlTask sqlTask, List<TaskSource> taskSources, OutputBuffers outputBuffers)
+	public static TaskInfo updateTask(SqlTask sqlTask, List<TaskSource> taskSources, OutputBuffers outputBuffers)
     {
         return sqlTask.updateTask(TEST_SESSION, Optional.of(PLAN_FRAGMENT), taskSources, outputBuffers, OptionalInt.empty());
     }
 
-    public static SplitMonitor createTestSplitMonitor()
+	public static SplitMonitor createTestSplitMonitor()
     {
         return new SplitMonitor(
                 new EventListenerManager(),

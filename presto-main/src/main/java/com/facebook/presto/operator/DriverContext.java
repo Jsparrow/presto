@@ -106,9 +106,8 @@ public class DriverContext
     {
         checkArgument(operatorId >= 0, "operatorId is negative");
 
-        for (OperatorContext operatorContext : operatorContexts) {
-            checkArgument(operatorId != operatorContext.getOperatorId(), "A context already exists for operatorId %s", operatorId);
-        }
+        operatorContexts.forEach(operatorContext -> checkArgument(operatorId != operatorContext.getOperatorId(), "A context already exists for operatorId %s",
+				operatorId));
 
         OperatorContext operatorContext = new OperatorContext(
                 operatorId,
@@ -138,10 +137,11 @@ public class DriverContext
 
     public void startProcessTimer()
     {
-        if (startNanos.compareAndSet(0, System.nanoTime())) {
-            pipelineContext.start();
-            executionStartTime.set(DateTime.now());
-        }
+        if (!startNanos.compareAndSet(0, System.nanoTime())) {
+			return;
+		}
+		pipelineContext.start();
+		executionStartTime.set(DateTime.now());
     }
 
     public void recordProcessed(OperationTimer operationTimer)
@@ -362,11 +362,7 @@ public class DriverContext
 
         ImmutableSet.Builder<BlockedReason> builder = ImmutableSet.builder();
 
-        for (OperatorStats operator : operators) {
-            if (operator.getBlockedReason().isPresent()) {
-                builder.add(operator.getBlockedReason().get());
-            }
-        }
+        operators.forEach(operator -> operator.getBlockedReason().ifPresent(builder::add));
 
         return new DriverStats(
                 lifespan,
@@ -421,7 +417,13 @@ public class DriverContext
         return max(0, end - start);
     }
 
-    private class BlockedMonitor
+    @VisibleForTesting
+    public MemoryTrackingContext getDriverMemoryContext()
+    {
+        return driverMemoryContext;
+    }
+
+	private class BlockedMonitor
             implements Runnable
     {
         private final long start = System.nanoTime();
@@ -444,11 +446,5 @@ public class DriverContext
         {
             return nanosBetween(start, System.nanoTime());
         }
-    }
-
-    @VisibleForTesting
-    public MemoryTrackingContext getDriverMemoryContext()
-    {
-        return driverMemoryContext;
     }
 }

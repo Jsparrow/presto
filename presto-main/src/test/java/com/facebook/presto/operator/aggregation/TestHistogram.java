@@ -289,7 +289,7 @@ public class TestHistogram
                 boolean distinctValue = random.nextDouble() < distinctFraction;
                 if (distinctValue) {
                     // produce a unique value for the histogram
-                    item = j + "-" + item;
+                    item = new StringBuilder().append(j).append("-").append(item).toString();
                     valueList.add(item);
                 }
                 else {

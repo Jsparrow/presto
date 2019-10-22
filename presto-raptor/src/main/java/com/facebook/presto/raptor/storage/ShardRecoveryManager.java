@@ -306,7 +306,43 @@ public class ShardRecoveryManager
         return (file.length() != size) || (xxhash64.isPresent() && (xxhash64(localFileSystem.get(), new Path(file.toURI())) != xxhash64.getAsLong()));
     }
 
-    @VisibleForTesting
+    static DataSize dataRate(DataSize size, Duration duration)
+    {
+        double rate = size.toBytes() / duration.getValue(SECONDS);
+        if (Double.isNaN(rate) || Double.isInfinite(rate)) {
+            rate = 0;
+        }
+        return succinctDataSize(rate, BYTE);
+    }
+
+	private static File temporarySuffix(File file)
+    {
+        return new File(new StringBuilder().append(file.getPath()).append(".tmp-").append(UUID.randomUUID()).toString());
+    }
+
+	@Managed
+    @Flatten
+    public ShardRecoveryStats getStats()
+    {
+        return stats;
+    }
+
+	private static <T> FutureCallback<T> failureCallback(Consumer<Throwable> callback)
+    {
+        return new FutureCallback<T>()
+        {
+            @Override
+            public void onSuccess(T result) {}
+
+            @Override
+            public void onFailure(Throwable throwable)
+            {
+                callback.accept(throwable);
+            }
+        };
+    }
+
+	@VisibleForTesting
     static class MissingShardComparator
             implements Comparator<MissingShardRunnable>
     {
@@ -450,41 +486,5 @@ public class ShardRecoveryManager
         {
             return queuedMissingShards.get(shard);
         }
-    }
-
-    static DataSize dataRate(DataSize size, Duration duration)
-    {
-        double rate = size.toBytes() / duration.getValue(SECONDS);
-        if (Double.isNaN(rate) || Double.isInfinite(rate)) {
-            rate = 0;
-        }
-        return succinctDataSize(rate, BYTE);
-    }
-
-    private static File temporarySuffix(File file)
-    {
-        return new File(file.getPath() + ".tmp-" + UUID.randomUUID());
-    }
-
-    @Managed
-    @Flatten
-    public ShardRecoveryStats getStats()
-    {
-        return stats;
-    }
-
-    private static <T> FutureCallback<T> failureCallback(Consumer<Throwable> callback)
-    {
-        return new FutureCallback<T>()
-        {
-            @Override
-            public void onSuccess(T result) {}
-
-            @Override
-            public void onFailure(Throwable throwable)
-            {
-                callback.accept(throwable);
-            }
-        };
     }
 }

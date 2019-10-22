@@ -145,12 +145,12 @@ public class TestTimeZoneKey
     @Test
     public void testZoneKeyLookup()
     {
-        for (TimeZoneKey timeZoneKey : TimeZoneKey.getTimeZoneKeys()) {
+        TimeZoneKey.getTimeZoneKeys().forEach(timeZoneKey -> {
             assertSame(TimeZoneKey.getTimeZoneKey(timeZoneKey.getKey()), timeZoneKey);
             assertSame(TimeZoneKey.getTimeZoneKey(timeZoneKey.getId()), timeZoneKey);
             assertSame(TimeZoneKey.getTimeZoneKey(timeZoneKey.getId().toUpperCase(ENGLISH)), timeZoneKey);
             assertSame(TimeZoneKey.getTimeZoneKey(timeZoneKey.getId().toLowerCase(ENGLISH)), timeZoneKey);
-        }
+        });
     }
 
     @Test
@@ -158,7 +158,7 @@ public class TestTimeZoneKey
     {
         boolean foundMax = false;
         for (TimeZoneKey timeZoneKey : TimeZoneKey.getTimeZoneKeys()) {
-            assertTrue(timeZoneKey.getKey() <= MAX_TIME_ZONE_KEY, timeZoneKey + " key is larger than max key " + MAX_TIME_ZONE_KEY);
+            assertTrue(timeZoneKey.getKey() <= MAX_TIME_ZONE_KEY, new StringBuilder().append(timeZoneKey).append(" key is larger than max key ").append(MAX_TIME_ZONE_KEY).toString());
             foundMax = foundMax || (timeZoneKey.getKey() == MAX_TIME_ZONE_KEY);
         }
         assertTrue(foundMax, "Did not find a time zone with the MAX_TIME_ZONE_KEY");
@@ -169,12 +169,12 @@ public class TestTimeZoneKey
     {
         boolean[] hasValue = new boolean[MAX_TIME_ZONE_KEY + 1];
 
-        for (TimeZoneKey timeZoneKey : TimeZoneKey.getTimeZoneKeys()) {
+        TimeZoneKey.getTimeZoneKeys().forEach(timeZoneKey -> {
             short key = timeZoneKey.getKey();
             assertTrue(key >= 0, timeZoneKey + " has a negative time zone key");
             assertFalse(hasValue[key], "Another time zone has the same zone key as " + timeZoneKey);
             hasValue[key] = true;
-        }
+        });
 
         // previous spot for Canada/East-Saskatchewan
         assertFalse(hasValue[2040]);
@@ -208,10 +208,10 @@ public class TestTimeZoneKey
             }
         }, TimeZoneKey.getTimeZoneKeys());
 
-        for (TimeZoneKey timeZoneKey : timeZoneKeysSortedByKey) {
+        timeZoneKeysSortedByKey.forEach(timeZoneKey -> {
             hasher.putShort(timeZoneKey.getKey());
             hasher.putString(timeZoneKey.getId(), StandardCharsets.UTF_8);
-        }
+        });
         // Zone file should not (normally) be changed, so let's make this more difficult
         assertEquals(hasher.hash().asLong(), -4582158485614614451L, "zone-index.properties file contents changed!");
     }

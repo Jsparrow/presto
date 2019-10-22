@@ -35,7 +35,26 @@ public final class MLFeaturesFunctions
 
     private MLFeaturesFunctions() {}
 
-    @ScalarFunction("features")
+    private static Block featuresHelper(PageBuilder pageBuilder, double... features)
+    {
+        if (pageBuilder.isFull()) {
+            pageBuilder.reset();
+        }
+
+        BlockBuilder mapBlockBuilder = pageBuilder.getBlockBuilder(0);
+        BlockBuilder blockBuilder = mapBlockBuilder.beginBlockEntry();
+
+        for (int i = 0; i < features.length; i++) {
+            BigintType.BIGINT.writeLong(blockBuilder, i);
+            DoubleType.DOUBLE.writeDouble(blockBuilder, features[i]);
+        }
+
+        mapBlockBuilder.closeEntry();
+        pageBuilder.declarePosition();
+        return mapBlockBuilder.getBlock(mapBlockBuilder.getPositionCount() - 1);
+    }
+
+	@ScalarFunction("features")
     public static class Features1
     {
         private final PageBuilder pageBuilder;
@@ -203,24 +222,5 @@ public final class MLFeaturesFunctions
         {
             return featuresHelper(pageBuilder, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10);
         }
-    }
-
-    private static Block featuresHelper(PageBuilder pageBuilder, double... features)
-    {
-        if (pageBuilder.isFull()) {
-            pageBuilder.reset();
-        }
-
-        BlockBuilder mapBlockBuilder = pageBuilder.getBlockBuilder(0);
-        BlockBuilder blockBuilder = mapBlockBuilder.beginBlockEntry();
-
-        for (int i = 0; i < features.length; i++) {
-            BigintType.BIGINT.writeLong(blockBuilder, i);
-            DoubleType.DOUBLE.writeDouble(blockBuilder, features[i]);
-        }
-
-        mapBlockBuilder.closeEntry();
-        pageBuilder.declarePosition();
-        return mapBlockBuilder.getBlock(mapBlockBuilder.getPositionCount() - 1);
     }
 }

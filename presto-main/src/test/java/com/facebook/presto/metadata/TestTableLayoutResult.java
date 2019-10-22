@@ -25,10 +25,14 @@ import static com.facebook.presto.metadata.TableLayoutResult.computeEnforced;
 import static com.facebook.presto.spi.type.BigintType.BIGINT;
 import static com.facebook.presto.testing.TestingConnectorSession.SESSION;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTableLayoutResult
 {
-    @Test
+    private static final Logger logger = LoggerFactory.getLogger(TestTableLayoutResult.class);
+
+	@Test
     public void testComputeEnforced()
     {
         assertComputeEnforced(TupleDomain.all(), TupleDomain.all(), TupleDomain.all());
@@ -104,6 +108,7 @@ public class TestTableLayoutResult
             fail(String.format("expected IllegalArgumentException but found [%s]", enforced.toString(SESSION)));
         }
         catch (IllegalArgumentException e) {
+			logger.error(e.getMessage(), e);
             // do nothing
         }
     }

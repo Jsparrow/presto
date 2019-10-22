@@ -84,32 +84,6 @@ import static java.util.Objects.requireNonNull;
 
 public final class GraphvizPrinter
 {
-    private enum NodeType
-    {
-        EXCHANGE,
-        AGGREGATE,
-        FILTER,
-        PROJECT,
-        TOPN,
-        OUTPUT,
-        LIMIT,
-        TABLESCAN,
-        VALUES,
-        JOIN,
-        SINK,
-        WINDOW,
-        UNION,
-        SORT,
-        SAMPLE,
-        MARK_DISTINCT,
-        TABLE_WRITER,
-        TABLE_WRITER_MERGE,
-        TABLE_FINISH,
-        INDEX_SOURCE,
-        UNNEST,
-        ANALYZE_FINISH,
-    }
-
     private static final Map<NodeType, String> NODE_COLORS = immutableEnumMap(ImmutableMap.<NodeType, String>builder()
             .put(NodeType.EXCHANGE, "gold")
             .put(NodeType.AGGREGATE, "chartreuse3")
@@ -135,13 +109,13 @@ public final class GraphvizPrinter
             .put(NodeType.ANALYZE_FINISH, "plum")
             .build());
 
-    static {
+	static {
         Preconditions.checkState(NODE_COLORS.size() == NodeType.values().length);
     }
 
-    private GraphvizPrinter() {}
+	private GraphvizPrinter() {}
 
-    public static String printLogical(List<PlanFragment> fragments, Session session, FunctionManager functionManager)
+	public static String printLogical(List<PlanFragment> fragments, Session session, FunctionManager functionManager)
     {
         Map<PlanFragmentId, PlanFragment> fragmentsById = Maps.uniqueIndex(fragments, PlanFragment::getId);
         PlanNodeIdGenerator idGenerator = new PlanNodeIdGenerator();
@@ -149,20 +123,16 @@ public final class GraphvizPrinter
         StringBuilder output = new StringBuilder();
         output.append("digraph logical_plan {\n");
 
-        for (PlanFragment fragment : fragments) {
-            printFragmentNodes(output, fragment, idGenerator, session, functionManager);
-        }
+        fragments.forEach(fragment -> printFragmentNodes(output, fragment, idGenerator, session, functionManager));
 
-        for (PlanFragment fragment : fragments) {
-            fragment.getRoot().accept(new EdgePrinter(output, fragmentsById, idGenerator), null);
-        }
+        fragments.forEach(fragment -> fragment.getRoot().accept(new EdgePrinter(output, fragmentsById, idGenerator), null));
 
         output.append("}\n");
 
         return output.toString();
     }
 
-    public static String printDistributed(SubPlan plan, Session session, FunctionManager functionManager)
+	public static String printDistributed(SubPlan plan, Session session, FunctionManager functionManager)
     {
         List<PlanFragment> fragments = plan.getAllFragments();
         Map<PlanFragmentId, PlanFragment> fragmentsById = Maps.uniqueIndex(fragments, PlanFragment::getId);
@@ -178,7 +148,7 @@ public final class GraphvizPrinter
         return output.toString();
     }
 
-    private static void printSubPlan(
+	private static void printSubPlan(
             SubPlan plan,
             Map<PlanFragmentId, PlanFragment> fragmentsById,
             PlanNodeIdGenerator idGenerator,
@@ -190,12 +160,10 @@ public final class GraphvizPrinter
         printFragmentNodes(output, fragment, idGenerator, session, functionManager);
         fragment.getRoot().accept(new EdgePrinter(output, fragmentsById, idGenerator), null);
 
-        for (SubPlan child : plan.getChildren()) {
-            printSubPlan(child, fragmentsById, idGenerator, output, session, functionManager);
-        }
+        plan.getChildren().forEach(child -> printSubPlan(child, fragmentsById, idGenerator, output, session, functionManager));
     }
 
-    private static void printFragmentNodes(StringBuilder output, PlanFragment fragment, PlanNodeIdGenerator idGenerator, Session session, FunctionManager functionManager)
+	private static void printFragmentNodes(StringBuilder output, PlanFragment fragment, PlanNodeIdGenerator idGenerator, Session session, FunctionManager functionManager)
     {
         String clusterId = "cluster_" + fragment.getId();
         output.append("subgraph ")
@@ -213,7 +181,33 @@ public final class GraphvizPrinter
                 .append('\n');
     }
 
-    private static class NodePrinter
+	private enum NodeType
+    {
+        EXCHANGE,
+        AGGREGATE,
+        FILTER,
+        PROJECT,
+        TOPN,
+        OUTPUT,
+        LIMIT,
+        TABLESCAN,
+        VALUES,
+        JOIN,
+        SINK,
+        WINDOW,
+        UNION,
+        SORT,
+        SAMPLE,
+        MARK_DISTINCT,
+        TABLE_WRITER,
+        TABLE_WRITER_MERGE,
+        TABLE_FINISH,
+        INDEX_SOURCE,
+        UNNEST,
+        ANALYZE_FINISH,
+    }
+
+	private static class NodePrinter
             extends InternalPlanVisitor<Void, Void>
     {
         private static final int MAX_NAME_WIDTH = 100;
@@ -241,7 +235,7 @@ public final class GraphvizPrinter
         {
             List<String> columns = new ArrayList<>();
             for (int i = 0; i < node.getColumnNames().size(); i++) {
-                columns.add(node.getColumnNames().get(i) + " := " + node.getColumns().get(i));
+                columns.add(new StringBuilder().append(node.getColumnNames().get(i)).append(" := ").append(node.getColumns().get(i)).toString());
             }
             printNode(node, format("TableWriter[%s]", Joiner.on(", ").join(columns)), NODE_COLORS.get(NodeType.TABLE_WRITER));
             return node.getSource().accept(this, context);
@@ -328,9 +322,7 @@ public final class GraphvizPrinter
         {
             printNode(node, "Union", NODE_COLORS.get(NodeType.UNION));
 
-            for (PlanNode planNode : node.getSources()) {
-                planNode.accept(this, context);
-            }
+            node.getSources().forEach(planNode -> planNode.accept(this, context));
 
             return null;
         }
@@ -353,9 +345,7 @@ public final class GraphvizPrinter
                 columns = Joiner.on(", ").join(node.getOutputVariables());
             }
             printNode(node, format("ExchangeNode[%s]", node.getType()), columns, NODE_COLORS.get(NodeType.EXCHANGE));
-            for (PlanNode planNode : node.getSources()) {
-                planNode.accept(this, context);
-            }
+            node.getSources().forEach(planNode -> planNode.accept(this, context));
             return null;
         }
 
@@ -363,9 +353,7 @@ public final class GraphvizPrinter
         public Void visitAggregation(AggregationNode node, Void context)
         {
             StringBuilder builder = new StringBuilder();
-            for (Map.Entry<VariableReferenceExpression, Aggregation> entry : node.getAggregations().entrySet()) {
-                builder.append(format("%s := %s\\n", entry.getKey(), formatAggregation(entry.getValue())));
-            }
+            node.getAggregations().entrySet().forEach(entry -> builder.append(format("%s := %s\\n", entry.getKey(), formatAggregation(entry.getValue()))));
             printNode(node, format("Aggregate[%s]", node.getStep()), builder.toString(), NODE_COLORS.get(NodeType.AGGREGATE));
             return node.getSource().accept(this, context);
         }
@@ -385,9 +373,9 @@ public final class GraphvizPrinter
         {
             // grouping sets are easier to understand in terms of inputs
             List<String> inputGroupingSetSymbols = node.getGroupingSets().stream()
-                    .map(set -> "(" + Joiner.on(", ").join(set.stream()
+                    .map(set -> new StringBuilder().append("(").append(Joiner.on(", ").join(set.stream()
                             .map(symbol -> node.getGroupingColumns().get(symbol))
-                            .collect(Collectors.toList())) + ")")
+                            .collect(Collectors.toList()))).append(")").toString())
                     .collect(Collectors.toList());
 
             printNode(node, "GroupId", Joiner.on(", ").join(inputGroupingSetSymbols), NODE_COLORS.get(NodeType.AGGREGATE));
@@ -434,7 +422,7 @@ public final class GraphvizPrinter
         @Override
         public Void visitTopN(final TopNNode node, Void context)
         {
-            Iterable<String> keys = Iterables.transform(node.getOrderingScheme().getOrderByVariables(), input -> input + " " + node.getOrderingScheme().getOrdering(input));
+            Iterable<String> keys = Iterables.transform(node.getOrderingScheme().getOrderByVariables(), input -> new StringBuilder().append(input).append(" ").append(node.getOrderingScheme().getOrdering(input)).toString());
             printNode(node, format("TopN[%s]", node.getCount()), Joiner.on(", ").join(keys), NODE_COLORS.get(NodeType.TOPN));
             return node.getSource().accept(this, context);
         }
@@ -486,9 +474,7 @@ public final class GraphvizPrinter
         public Void visitJoin(JoinNode node, Void context)
         {
             List<Expression> joinExpressions = new ArrayList<>();
-            for (JoinNode.EquiJoinClause clause : node.getCriteria()) {
-                joinExpressions.add(JoinNodeUtils.toExpression(clause));
-            }
+            node.getCriteria().forEach(clause -> joinExpressions.add(JoinNodeUtils.toExpression(clause)));
 
             String criteria = Joiner.on(" AND ").join(joinExpressions);
             printNode(node, node.getType().getJoinLabel(), criteria, NODE_COLORS.get(NodeType.JOIN));
@@ -565,11 +551,8 @@ public final class GraphvizPrinter
         public Void visitIndexJoin(IndexJoinNode node, Void context)
         {
             List<Expression> joinExpressions = new ArrayList<>();
-            for (IndexJoinNode.EquiJoinClause clause : node.getCriteria()) {
-                joinExpressions.add(new ComparisonExpression(ComparisonExpression.Operator.EQUAL,
-                        new SymbolReference(clause.getProbe().getName()),
-                        new SymbolReference(clause.getIndex().getName())));
-            }
+            node.getCriteria().forEach(clause -> joinExpressions.add(new ComparisonExpression(ComparisonExpression.Operator.EQUAL,
+					new SymbolReference(clause.getProbe().getName()), new SymbolReference(clause.getIndex().getName()))));
 
             String criteria = Joiner.on(" AND ").join(joinExpressions);
             String joinLabel = format("%sIndexJoin", node.getType().getJoinLabel());
@@ -656,11 +639,11 @@ public final class GraphvizPrinter
         @Override
         public Void visitPlan(PlanNode node, Void context)
         {
-            for (PlanNode child : node.getSources()) {
+            node.getSources().forEach(child -> {
                 printEdge(node, child);
 
                 child.accept(this, context);
-            }
+            });
 
             return null;
         }
@@ -668,10 +651,7 @@ public final class GraphvizPrinter
         @Override
         public Void visitRemoteSource(RemoteSourceNode node, Void context)
         {
-            for (PlanFragmentId planFragmentId : node.getSourceFragmentIds()) {
-                PlanFragment target = fragmentsById.get(planFragmentId);
-                printEdge(node, target.getRoot());
-            }
+            node.getSourceFragmentIds().stream().map(fragmentsById::get).forEach(target -> printEdge(node, target.getRoot()));
 
             return null;
         }

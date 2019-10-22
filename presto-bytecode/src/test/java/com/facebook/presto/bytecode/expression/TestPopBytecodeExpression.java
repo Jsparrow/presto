@@ -21,7 +21,10 @@ import static org.testng.Assert.assertEquals;
 
 public class TestPopBytecodeExpression
 {
-    @Test
+    private static int intCount;
+	private static long longCount;
+
+	@Test
     public void testGetField()
             throws Exception
     {
@@ -33,16 +36,12 @@ public class TestPopBytecodeExpression
         assertEquals(longCount, 1);
     }
 
-    private static int intCount;
-
-    public static int incrementAndGetIntCount()
+	public static int incrementAndGetIntCount()
     {
         return intCount++;
     }
 
-    private static long longCount;
-
-    public static long incrementAndGetLongCount()
+	public static long incrementAndGetLongCount()
     {
         return longCount++;
     }

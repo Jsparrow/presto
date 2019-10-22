@@ -25,11 +25,15 @@ import java.util.Enumeration;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class PluginClassLoader
         extends URLClassLoader
 {
-    private static final ClassLoader PLATFORM_CLASS_LOADER = findPlatformClassLoader();
+    private static final Logger logger = LoggerFactory.getLogger(PluginClassLoader.class);
+
+	private static final ClassLoader PLATFORM_CLASS_LOADER = findPlatformClassLoader();
 
     private final ClassLoader spiClassLoader;
     private final List<String> spiPackages;
@@ -140,7 +144,8 @@ class PluginClassLoader
             return (ClassLoader) method.invoke(null);
         }
         catch (NoSuchMethodException ignored) {
-            // use null class loader on Java 8
+            logger.error(ignored.getMessage(), ignored);
+			// use null class loader on Java 8
             return null;
         }
         catch (IllegalAccessException | InvocationTargetException e) {

@@ -49,10 +49,10 @@ public final class TeradataDateFunctions
     private static final ISOChronology[] CHRONOLOGIES = new ISOChronology[MAX_TIME_ZONE_KEY + 1];
 
     static {
-        for (TimeZoneKey timeZoneKey : getTimeZoneKeys()) {
+        getTimeZoneKeys().forEach(timeZoneKey -> {
             DateTimeZone dateTimeZone = DateTimeZone.forID(timeZoneKey.getId());
             CHRONOLOGIES[timeZoneKey.getKey()] = ISOChronology.getInstance(dateTimeZone);
-        }
+        });
     }
 
     private TeradataDateFunctions()

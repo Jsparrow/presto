@@ -29,17 +29,22 @@ import static com.facebook.presto.util.DateTimeZoneIndex.getDateTimeZone;
 import static com.facebook.presto.util.DateTimeZoneIndex.packDateTimeWithZone;
 import static com.facebook.presto.util.DateTimeZoneIndex.unpackDateTimeZone;
 import static org.testng.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestTimeZoneUtils
 {
-    @BeforeClass
+    private static final Logger logger = LoggerFactory.getLogger(TestTimeZoneUtils.class);
+
+	@BeforeClass
     protected void validateJodaZoneInfoProvider()
     {
         try {
             JdkBasedZoneInfoProvider.registerAsJodaZoneInfoProvider();
         }
         catch (RuntimeException e) {
-            throw new RuntimeException("Set the following system property to JVM running the test: -Dorg.joda.time.DateTimeZone.Provider=com.facebook.presto.tz.JdkBasedZoneInfoProvider");
+            logger.error(e.getMessage(), e);
+			throw new RuntimeException("Set the following system property to JVM running the test: -Dorg.joda.time.DateTimeZone.Provider=com.facebook.presto.tz.JdkBasedZoneInfoProvider");
         }
     }
 
@@ -58,7 +63,7 @@ public class TestTimeZoneUtils
                 continue;
             }
 
-            if (zoneId.equals("Canada/East-Saskatchewan")) {
+            if ("Canada/East-Saskatchewan".equals(zoneId)) {
                 // TODO: remove once minimum Java version is increased to 8u161 and 9.0.4, see PrestoSystemRequirement.
                 // Removed from tzdata since 2017c.
                 // Java updated to 2017c since 8u161, 9.0.4.

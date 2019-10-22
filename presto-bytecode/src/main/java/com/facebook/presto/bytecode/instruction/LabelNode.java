@@ -45,7 +45,7 @@ public class LabelNode
     public LabelNode(String name)
     {
         this.label = new Label();
-        this.name = name + "@" + label.hashCode();
+        this.name = new StringBuilder().append(name).append("@").append(label.hashCode()).toString();
     }
 
     public String getName()

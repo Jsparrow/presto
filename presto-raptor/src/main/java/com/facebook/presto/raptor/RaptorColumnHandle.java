@@ -84,7 +84,8 @@ public final class RaptorColumnHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + columnName + ":" + columnId + ":" + columnType;
+        return new StringBuilder().append(connectorId).append(":").append(columnName).append(":").append(columnId).append(":")
+				.append(columnType).toString();
     }
 
     @Override

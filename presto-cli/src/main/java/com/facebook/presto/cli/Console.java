@@ -63,11 +63,14 @@ import static java.util.Locale.ENGLISH;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static jline.internal.Configuration.getUserHome;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Command(name = "presto", description = "Presto interactive console")
 public class Console
 {
-    private static final String PROMPT_NAME = "presto";
+    private static final Logger logger = LoggerFactory.getLogger(Console.class);
+	private static final String PROMPT_NAME = "presto";
     private static final Duration EXIT_DELAY = new Duration(3, SECONDS);
 
     private static final Pattern HISTORY_INDEX_PATTERN = Pattern.compile("!\\d+");
@@ -214,11 +217,11 @@ public class Console
                         int historyIndex = parseInt(command.substring(1));
                         History history = reader.getHistory();
                         if ((historyIndex <= 0) || (historyIndex > history.index())) {
-                            System.err.println("Command does not exist");
+                            logger.error("Command does not exist");
                             continue;
                         }
                         line = history.get(historyIndex - 1).toString();
-                        System.out.println(commandPrompt + line);
+                        logger.info(commandPrompt + line);
                     }
 
                     if (command.endsWith(";")) {
@@ -231,12 +234,12 @@ public class Console
                             return;
                         case "history":
                             for (History.Entry entry : reader.getHistory()) {
-                                System.out.printf("%5d  %s%n", entry.index() + 1, entry.value());
+                                logger.info("%5d  %s%n", entry.index() + 1, entry.value());
                             }
                             continue;
                         case "help":
                             System.out.println();
-                            System.out.println(getHelpText());
+                            logger.info(getHelpText());
                             continue;
                     }
                 }
@@ -247,15 +250,15 @@ public class Console
                 // execute any complete statements
                 String sql = buffer.toString();
                 StatementSplitter splitter = new StatementSplitter(sql, ImmutableSet.of(";", "\\G"));
-                for (Statement split : splitter.getCompleteStatements()) {
+                splitter.getCompleteStatements().forEach(split -> {
                     OutputFormat outputFormat = OutputFormat.ALIGNED;
-                    if (split.terminator().equals("\\G")) {
+                    if ("\\G".equals(split.terminator())) {
                         outputFormat = OutputFormat.VERTICAL;
                     }
 
                     process(queryRunner, split.statement(), outputFormat, tableNameCompleter::populateCache, true);
                     reader.getHistory().add(squeezeStatement(split.statement()) + split.terminator());
-                }
+                });
 
                 // replace buffer with trailing partial statement
                 buffer = new StringBuilder();
@@ -266,7 +269,7 @@ public class Console
             }
         }
         catch (IOException e) {
-            System.err.println("Readline error: " + e.getMessage());
+            logger.error("Readline error: " + e.getMessage(), e);
         }
     }
 
@@ -275,20 +278,19 @@ public class Console
         boolean success = true;
         StatementSplitter splitter = new StatementSplitter(query);
         for (Statement split : splitter.getCompleteStatements()) {
-            if (!isEmptyStatement(split.statement())) {
-                if (!process(queryRunner, split.statement(), outputFormat, () -> {}, false)) {
-                    if (!ignoreErrors) {
-                        return false;
-                    }
-                    success = false;
-                }
-            }
+            boolean condition = !isEmptyStatement(split.statement()) && !process(queryRunner, split.statement(), outputFormat, () -> {}, false);
+			if (condition) {
+			    if (!ignoreErrors) {
+			        return false;
+			    }
+			    success = false;
+			}
         }
-        if (!isEmptyStatement(splitter.getPartialStatement())) {
-            System.err.println("Non-terminated statement: " + splitter.getPartialStatement());
-            return false;
-        }
-        return success;
+        if (isEmptyStatement(splitter.getPartialStatement())) {
+			return success;
+		}
+		logger.error("Non-terminated statement: " + splitter.getPartialStatement());
+		return false;
     }
 
     private static boolean process(QueryRunner queryRunner, String sql, OutputFormat outputFormat, Runnable schemaChanged, boolean interactive)
@@ -301,9 +303,9 @@ public class Console
                     sql);
         }
         catch (QueryPreprocessorException e) {
-            System.err.println(e.getMessage());
+            logger.error(e.getMessage(), e);
             if (queryRunner.isDebug()) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
             return false;
         }
@@ -362,9 +364,9 @@ public class Console
             return success;
         }
         catch (RuntimeException e) {
-            System.err.println("Error running command: " + e.getMessage());
+            logger.error("Error running command: " + e.getMessage(), e);
             if (queryRunner.isDebug()) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
             return false;
         }
@@ -396,9 +398,10 @@ public class Console
             history.setMaxSize(10000);
         }
         catch (IOException e) {
-            System.err.printf("WARNING: Failed to load history file (%s): %s. " +
-                            "History will not be available during this session.%n",
-                    historyFile, e.getMessage());
+            logger.error(String.format(
+							"WARNING: Failed to load history file (%s): %s. "
+									+ "History will not be available during this session.%n",
+							historyFile, e.getMessage()), e);
             history = new MemoryHistory();
         }
         history.setAutoTrim(true);

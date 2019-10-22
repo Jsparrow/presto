@@ -163,9 +163,7 @@ public class GenericAccumulatorFactory
                     Optional.of(0));
 
             List<Type> argumentTypes = new ArrayList<>();
-            for (int input : inputChannels) {
-                argumentTypes.add(sourceTypes.get(input));
-            }
+            inputChannels.stream().mapToInt(Integer::valueOf).forEach(input -> argumentTypes.add(sourceTypes.get(input)));
 
             accumulator = new DistinctingGroupedAccumulator(accumulator, argumentTypes, inputChannels, maskChannel, session, joinCompiler);
         }
@@ -223,7 +221,20 @@ public class GenericAccumulatorFactory
         }
     }
 
-    private static class DistinctingAccumulator
+    private static Page filter(Page page, Block mask)
+    {
+        int[] ids = new int[mask.getPositionCount()];
+        int next = 0;
+        for (int i = 0; i < page.getPositionCount(); ++i) {
+            if (BOOLEAN.getBoolean(mask, i)) {
+                ids[next++] = i;
+            }
+        }
+
+        return page.getPositions(ids, 0, next);
+    }
+
+	private static class DistinctingAccumulator
             implements Accumulator
     {
         private final Accumulator accumulator;
@@ -306,19 +317,6 @@ public class GenericAccumulatorFactory
         {
             accumulator.evaluateFinal(blockBuilder);
         }
-    }
-
-    private static Page filter(Page page, Block mask)
-    {
-        int[] ids = new int[mask.getPositionCount()];
-        int next = 0;
-        for (int i = 0; i < page.getPositionCount(); ++i) {
-            if (BOOLEAN.getBoolean(mask, i)) {
-                ids[next++] = i;
-            }
-        }
-
-        return page.getPositions(ids, 0, next);
     }
 
     private static class DistinctingGroupedAccumulator

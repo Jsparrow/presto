@@ -45,7 +45,56 @@ import static org.testng.Assert.assertNull;
 
 public class TestOrcMetadataReader
 {
-    @Test
+    private static final Slice STRING_APPLE = utf8Slice("apple");
+	private static final Slice STRING_OESTERREICH = utf8Slice("\u00D6sterreich");
+	private static final Slice STRING_DULIOE_DULIOE = utf8Slice("Duli\u00F6 duli\u00F6");
+	private static final Slice STRING_FAITH_HOPE_LOVE = utf8Slice("\u4FE1\u5FF5,\u7231,\u5E0C\u671B");
+	private static final Slice STRING_NAIVE = utf8Slice("na\u00EFve");
+	private static final Slice STRING_OO = utf8Slice("\uD801\uDC2Dend");
+	// length increase when cast to lower case, and ends with invalid character
+    private static final Slice INVALID_SEQUENCE_TO_LOWER_EXPANDS = wrappedBuffer((byte) 0xC8, (byte) 0xBA, (byte) 0xFF);
+	private static final Slice INVALID_UTF8_1 = wrappedBuffer(new byte[] {-127});
+	private static final Slice INVALID_UTF8_2 = wrappedBuffer(new byte[] {50, -127, 52, 50});
+	private static final byte CONTINUATION_BYTE = (byte) 0b1011_1111;
+	private static final Slice EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE =
+            wrappedBuffer(CONTINUATION_BYTE, (byte) 0xE2, (byte) 0x80, (byte) 0x83, CONTINUATION_BYTE);
+	private static final List<Slice> VALID_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
+            .add(STRING_OO)
+            .add(EMPTY_SLICE)
+            .add(STRING_APPLE)
+            .add(STRING_OESTERREICH)
+            .add(STRING_DULIOE_DULIOE)
+            .add(STRING_FAITH_HOPE_LOVE)
+            .add(STRING_NAIVE)
+            .add(STRING_OO)
+            .build();
+	private static final List<Slice> INVALID_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
+            .add(INVALID_SEQUENCE_TO_LOWER_EXPANDS)
+            .add(INVALID_UTF8_1)
+            .add(INVALID_UTF8_2)
+            .add(EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE)
+            .build();
+	static final List<Slice> ALL_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
+            .addAll(VALID_UTF8_SEQUENCES)
+            .addAll(INVALID_UTF8_SEQUENCES)
+            .build();
+	private static final int REPLACEMENT_CHARACTER_CODE_POINT = 0xFFFD;
+	static final List<Integer> TEST_CODE_POINTS = ImmutableList.<Integer>builder()
+            .add(0)
+            .add((int) 'a')
+            .add(0xC0)
+            .add(0xC1)
+            .add(0xEF)
+            .add(0xFE)
+            .add(0xFF)
+            .add(REPLACEMENT_CHARACTER_CODE_POINT - 1)
+            .add(REPLACEMENT_CHARACTER_CODE_POINT)
+            .add(0xFFFE)
+            .add(0xFFFF)
+            .add(0x10405)
+            .build();
+
+	@Test
     public void testGetMinSlice()
     {
         int startCodePoint = MIN_CODE_POINT;
@@ -81,7 +130,7 @@ public class TestOrcMetadataReader
         }
     }
 
-    @Test
+	@Test
     public void testGetMaxSlice()
     {
         int startCodePoint = MIN_CODE_POINT;
@@ -118,61 +167,7 @@ public class TestOrcMetadataReader
         }
     }
 
-    private static final Slice STRING_APPLE = utf8Slice("apple");
-    private static final Slice STRING_OESTERREICH = utf8Slice("\u00D6sterreich");
-    private static final Slice STRING_DULIOE_DULIOE = utf8Slice("Duli\u00F6 duli\u00F6");
-    private static final Slice STRING_FAITH_HOPE_LOVE = utf8Slice("\u4FE1\u5FF5,\u7231,\u5E0C\u671B");
-    private static final Slice STRING_NAIVE = utf8Slice("na\u00EFve");
-    private static final Slice STRING_OO = utf8Slice("\uD801\uDC2Dend");
-
-    // length increase when cast to lower case, and ends with invalid character
-    private static final Slice INVALID_SEQUENCE_TO_LOWER_EXPANDS = wrappedBuffer((byte) 0xC8, (byte) 0xBA, (byte) 0xFF);
-    private static final Slice INVALID_UTF8_1 = wrappedBuffer(new byte[] {-127});
-    private static final Slice INVALID_UTF8_2 = wrappedBuffer(new byte[] {50, -127, 52, 50});
-    private static final byte CONTINUATION_BYTE = (byte) 0b1011_1111;
-    private static final Slice EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE =
-            wrappedBuffer(CONTINUATION_BYTE, (byte) 0xE2, (byte) 0x80, (byte) 0x83, CONTINUATION_BYTE);
-
-    private static final List<Slice> VALID_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
-            .add(STRING_OO)
-            .add(EMPTY_SLICE)
-            .add(STRING_APPLE)
-            .add(STRING_OESTERREICH)
-            .add(STRING_DULIOE_DULIOE)
-            .add(STRING_FAITH_HOPE_LOVE)
-            .add(STRING_NAIVE)
-            .add(STRING_OO)
-            .build();
-
-    private static final List<Slice> INVALID_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
-            .add(INVALID_SEQUENCE_TO_LOWER_EXPANDS)
-            .add(INVALID_UTF8_1)
-            .add(INVALID_UTF8_2)
-            .add(EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE)
-            .build();
-
-    static final List<Slice> ALL_UTF8_SEQUENCES = ImmutableList.<Slice>builder()
-            .addAll(VALID_UTF8_SEQUENCES)
-            .addAll(INVALID_UTF8_SEQUENCES)
-            .build();
-
-    private static final int REPLACEMENT_CHARACTER_CODE_POINT = 0xFFFD;
-    static final List<Integer> TEST_CODE_POINTS = ImmutableList.<Integer>builder()
-            .add(0)
-            .add((int) 'a')
-            .add(0xC0)
-            .add(0xC1)
-            .add(0xEF)
-            .add(0xFE)
-            .add(0xFF)
-            .add(REPLACEMENT_CHARACTER_CODE_POINT - 1)
-            .add(REPLACEMENT_CHARACTER_CODE_POINT)
-            .add(0xFFFE)
-            .add(0xFFFF)
-            .add(0x10405)
-            .build();
-
-    @Test
+	@Test
     public void testToStringStatistics()
     {
         // ORIGINAL version only produces stats at the row group level
@@ -186,16 +181,10 @@ public class TestOrcMetadataReader
                 false));
 
         // having only sum should work for current version
-        for (boolean isRowGroup : ImmutableList.of(true, false)) {
-            assertEquals(
-                    OrcMetadataReader.toStringStatistics(
-                            ORC_HIVE_8732,
-                            OrcProto.StringStatistics.newBuilder()
-                                    .setSum(45)
-                                    .build(),
-                            isRowGroup),
-                    new StringStatistics(null, null, 45));
-        }
+		ImmutableList.of(true, false).forEach(isRowGroup -> assertEquals(
+				OrcMetadataReader.toStringStatistics(ORC_HIVE_8732,
+						OrcProto.StringStatistics.newBuilder().setSum(45).build(), isRowGroup),
+				new StringStatistics(null, null, 45)));
         // and the ORIGINAL version row group stats (but not rolled up stats)
         assertEquals(
                 OrcMetadataReader.toStringStatistics(
@@ -236,19 +225,17 @@ public class TestOrcMetadataReader
                         true),
                 new StringStatistics(utf8Slice("ant"), utf8Slice("cat"), 79));
 
-        for (Slice prefix : ALL_UTF8_SEQUENCES) {
-            for (int testCodePoint : TEST_CODE_POINTS) {
-                Slice codePoint = codePointToUtf8(testCodePoint);
-                for (Slice suffix : ALL_UTF8_SEQUENCES) {
-                    Slice testValue = concatSlice(prefix, codePoint, suffix);
-                    testStringStatisticsTruncation(testValue, ORIGINAL);
-                    testStringStatisticsTruncation(testValue, ORC_HIVE_8732);
-                }
-            }
-        }
+        ALL_UTF8_SEQUENCES.forEach(prefix -> TEST_CODE_POINTS.stream().mapToInt(Integer::valueOf).forEach(testCodePoint -> {
+			Slice codePoint = codePointToUtf8(testCodePoint);
+			ALL_UTF8_SEQUENCES.forEach(suffix -> {
+				Slice testValue = concatSlice(prefix, codePoint, suffix);
+				testStringStatisticsTruncation(testValue, ORIGINAL);
+				testStringStatisticsTruncation(testValue, ORC_HIVE_8732);
+			});
+		}));
     }
 
-    private static void testStringStatisticsTruncation(Slice testValue, HiveWriterVersion version)
+	private static void testStringStatisticsTruncation(Slice testValue, HiveWriterVersion version)
     {
         assertEquals(
                 OrcMetadataReader.toStringStatistics(
@@ -280,7 +267,7 @@ public class TestOrcMetadataReader
                 createExpectedStringStatistics(version, null, testValue, 79));
     }
 
-    private static StringStatistics createExpectedStringStatistics(HiveWriterVersion version, Slice min, Slice max, int sum)
+	private static StringStatistics createExpectedStringStatistics(HiveWriterVersion version, Slice min, Slice max, int sum)
     {
         return new StringStatistics(
                 minStringTruncateToValidRange(min, version),
@@ -288,19 +275,15 @@ public class TestOrcMetadataReader
                 sum);
     }
 
-    @Test
+	@Test
     public void testMinStringTruncateAtFirstReplacementCharacter()
     {
-        for (Slice prefix : VALID_UTF8_SEQUENCES) {
-            for (Slice suffix : VALID_UTF8_SEQUENCES) {
-                testMinStringTruncateAtFirstReplacementCharacter(prefix, suffix);
-            }
-        }
+        VALID_UTF8_SEQUENCES.forEach(prefix -> VALID_UTF8_SEQUENCES.forEach(suffix -> testMinStringTruncateAtFirstReplacementCharacter(prefix, suffix)));
     }
 
-    private static void testMinStringTruncateAtFirstReplacementCharacter(Slice prefix, Slice suffix)
+	private static void testMinStringTruncateAtFirstReplacementCharacter(Slice prefix, Slice suffix)
     {
-        for (int testCodePoint : TEST_CODE_POINTS) {
+        TEST_CODE_POINTS.stream().mapToInt(Integer::valueOf).forEach(testCodePoint -> {
             Slice codePoint = codePointToUtf8(testCodePoint);
 
             Slice value = concatSlice(prefix, codePoint, suffix);
@@ -317,22 +300,18 @@ public class TestOrcMetadataReader
                     assertEquals(minStringTruncateToValidRange(value, ORIGINAL), concatSlice(prefix, codePoint, minStringTruncateToValidRange(suffix, ORIGINAL)));
                 }
             }
-        }
+        });
     }
 
-    @Test
+	@Test
     public void testMaxStringTruncateAtFirstReplacementCharacter()
     {
-        for (Slice prefix : VALID_UTF8_SEQUENCES) {
-            for (Slice suffix : VALID_UTF8_SEQUENCES) {
-                testMaxStringTruncateAtFirstReplacementCharacter(prefix, suffix);
-            }
-        }
+        VALID_UTF8_SEQUENCES.forEach(prefix -> VALID_UTF8_SEQUENCES.forEach(suffix -> testMaxStringTruncateAtFirstReplacementCharacter(prefix, suffix)));
     }
 
-    private static void testMaxStringTruncateAtFirstReplacementCharacter(Slice prefix, Slice suffix)
+	private static void testMaxStringTruncateAtFirstReplacementCharacter(Slice prefix, Slice suffix)
     {
-        for (int testCodePoint : TEST_CODE_POINTS) {
+        TEST_CODE_POINTS.stream().mapToInt(Integer::valueOf).forEach(testCodePoint -> {
             Slice codePoint = codePointToUtf8(testCodePoint);
 
             Slice value = concatSlice(prefix, codePoint, suffix);
@@ -349,10 +328,10 @@ public class TestOrcMetadataReader
                     assertEquals(maxStringTruncateToValidRange(value, ORIGINAL), concatSlice(prefix, codePoint, maxStringTruncateToValidRange(suffix, ORIGINAL)));
                 }
             }
-        }
+        });
     }
 
-    static Slice concatSlice(Slice... slices)
+	static Slice concatSlice(Slice... slices)
     {
         int totalLength = Arrays.stream(slices)
                 .mapToInt(Slice::length)

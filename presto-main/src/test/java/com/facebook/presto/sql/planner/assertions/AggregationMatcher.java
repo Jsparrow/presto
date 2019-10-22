@@ -121,12 +121,7 @@ public class AggregationMatcher
                 .map(alias -> symbolAliases.get(alias).getName())
                 .collect(toImmutableList());
         Set<String> actualVariableNames = actualVariables.stream().map(VariableReferenceExpression::getName).collect(toImmutableSet());
-        for (String symbolName : expectedSymbolNames) {
-            if (!actualVariableNames.contains(symbolName)) {
-                return false;
-            }
-        }
-        return true;
+        return expectedSymbolNames.stream().allMatch(actualVariableNames::contains);
     }
 
     @Override

@@ -72,16 +72,22 @@ public abstract class PrimitiveColumnReader
     private int remainingValueCountInPage;
     private int readOffset;
 
-    protected abstract void readValue(BlockBuilder blockBuilder, Type type);
+    public PrimitiveColumnReader(RichColumnDescriptor columnDescriptor)
+    {
+        this.columnDescriptor = requireNonNull(columnDescriptor, "columnDescriptor");
+        pageReader = null;
+    }
 
-    protected abstract void skipValue();
+	protected abstract void readValue(BlockBuilder blockBuilder, Type type);
 
-    protected boolean isValueNull()
+	protected abstract void skipValue();
+
+	protected boolean isValueNull()
     {
         return ParquetTypeUtils.isValueNull(columnDescriptor.isRequired(), definitionLevel, columnDescriptor.getMaxDefinitionLevel());
     }
 
-    public static PrimitiveColumnReader createReader(RichColumnDescriptor descriptor)
+	public static PrimitiveColumnReader createReader(RichColumnDescriptor descriptor)
     {
         switch (descriptor.getType()) {
             case BOOLEAN:
@@ -106,28 +112,22 @@ public abstract class PrimitiveColumnReader
         }
     }
 
-    private static Optional<PrimitiveColumnReader> createDecimalColumnReader(RichColumnDescriptor descriptor)
+	private static Optional<PrimitiveColumnReader> createDecimalColumnReader(RichColumnDescriptor descriptor)
     {
         Optional<Type> type = createDecimalType(descriptor);
-        if (type.isPresent()) {
-            DecimalType decimalType = (DecimalType) type.get();
-            return Optional.of(DecimalColumnReaderFactory.createReader(descriptor, decimalType.getPrecision(), decimalType.getScale()));
-        }
-        return Optional.empty();
+        if (!type.isPresent()) {
+			return Optional.empty();
+		}
+		DecimalType decimalType = (DecimalType) type.get();
+		return Optional.of(DecimalColumnReaderFactory.createReader(descriptor, decimalType.getPrecision(), decimalType.getScale()));
     }
 
-    public PrimitiveColumnReader(RichColumnDescriptor columnDescriptor)
-    {
-        this.columnDescriptor = requireNonNull(columnDescriptor, "columnDescriptor");
-        pageReader = null;
-    }
-
-    public PageReader getPageReader()
+	public PageReader getPageReader()
     {
         return pageReader;
     }
 
-    public void setPageReader(PageReader pageReader)
+	public void setPageReader(PageReader pageReader)
     {
         this.pageReader = requireNonNull(pageReader, "pageReader");
         DictionaryPage dictionaryPage = pageReader.readDictionaryPage();
@@ -147,18 +147,18 @@ public abstract class PrimitiveColumnReader
         totalValueCount = pageReader.getTotalValueCount();
     }
 
-    public void prepareNextRead(int batchSize)
+	public void prepareNextRead(int batchSize)
     {
-        readOffset = readOffset + nextBatchSize;
+        readOffset += nextBatchSize;
         nextBatchSize = batchSize;
     }
 
-    public ColumnDescriptor getDescriptor()
+	public ColumnDescriptor getDescriptor()
     {
         return columnDescriptor;
     }
 
-    public ColumnChunk readPrimitive(Field field)
+	public ColumnChunk readPrimitive(Field field)
             throws IOException
     {
         IntList definitionLevels = new IntArrayList();
@@ -181,7 +181,7 @@ public abstract class PrimitiveColumnReader
         return new ColumnChunk(blockBuilder.build(), definitionLevels.toIntArray(), repetitionLevels.toIntArray());
     }
 
-    private void readValues(BlockBuilder blockBuilder, int valuesToRead, Type type, IntList definitionLevels, IntList repetitionLevels)
+	private void readValues(BlockBuilder blockBuilder, int valuesToRead, Type type, IntList definitionLevels, IntList repetitionLevels)
     {
         processValues(valuesToRead, ignored -> {
             readValue(blockBuilder, type);
@@ -190,12 +190,12 @@ public abstract class PrimitiveColumnReader
         });
     }
 
-    private void skipValues(int valuesToRead)
+	private void skipValues(int valuesToRead)
     {
         processValues(valuesToRead, ignored -> skipValue());
     }
 
-    private void processValues(int valuesToRead, Consumer<Void> valueConsumer)
+	private void processValues(int valuesToRead, Consumer<Void> valueConsumer)
     {
         if (definitionLevel == EMPTY_LEVEL_VALUE && repetitionLevel == EMPTY_LEVEL_VALUE) {
             definitionLevel = definitionReader.readLevel();
@@ -221,7 +221,7 @@ public abstract class PrimitiveColumnReader
         updateValueCounts(valueCount);
     }
 
-    private void seek()
+	private void seek()
     {
         checkArgument(currentValueCount <= totalValueCount, "Already read all values in column chunk");
         if (readOffset == 0) {
@@ -234,12 +234,12 @@ public abstract class PrimitiveColumnReader
             }
             int offset = Math.min(remainingValueCountInPage, readOffset - valuePosition);
             skipValues(offset);
-            valuePosition = valuePosition + offset;
+            valuePosition += offset;
         }
         checkArgument(valuePosition == readOffset, "valuePosition %s must be equal to readOffset %s", valuePosition, readOffset);
     }
 
-    private boolean readNextPage()
+	private boolean readNextPage()
     {
         verify(page == null, "readNextPage has to be called when page is null");
         page = pageReader.readPage();
@@ -257,7 +257,7 @@ public abstract class PrimitiveColumnReader
         return true;
     }
 
-    private void updateValueCounts(int valuesRead)
+	private void updateValueCounts(int valuesRead)
     {
         if (valuesRead == remainingValueCountInPage) {
             page = null;
@@ -267,7 +267,7 @@ public abstract class PrimitiveColumnReader
         currentValueCount += valuesRead;
     }
 
-    private ValuesReader readPageV1(DataPageV1 page)
+	private ValuesReader readPageV1(DataPageV1 page)
     {
         ValuesReader repetitionLevelReader = page.getRepetitionLevelEncoding().getValuesReader(columnDescriptor, REPETITION_LEVEL);
         ValuesReader definitionLevelReader = page.getDefinitionLevelEncoding().getValuesReader(columnDescriptor, DEFINITION_LEVEL);
@@ -286,11 +286,11 @@ public abstract class PrimitiveColumnReader
             return initDataReader(page.getValueEncoding(), ByteBufferInputStream.wrap(ImmutableList.of(byteBuffer)), page.getValueCount());
         }
         catch (IOException e) {
-            throw new ParquetDecodingException("Error reading parquet page " + page + " in column " + columnDescriptor, e);
+            throw new ParquetDecodingException(new StringBuilder().append("Error reading parquet page ").append(page).append(" in column ").append(columnDescriptor).toString(), e);
         }
     }
 
-    private ValuesReader readPageV2(DataPageV2 page)
+	private ValuesReader readPageV2(DataPageV2 page)
     {
         repetitionReader = buildLevelRLEReader(columnDescriptor.getMaxRepetitionLevel(), page.getRepetitionLevels());
         definitionReader = buildLevelRLEReader(columnDescriptor.getMaxDefinitionLevel(), page.getDefinitionLevels());
@@ -298,7 +298,7 @@ public abstract class PrimitiveColumnReader
         return initDataReader(page.getDataEncoding(), ByteBufferInputStream.wrap(ImmutableList.of(byteBuffer)), page.getValueCount());
     }
 
-    private LevelReader buildLevelRLEReader(int maxLevel, Slice slice)
+	private LevelReader buildLevelRLEReader(int maxLevel, Slice slice)
     {
         if (maxLevel == 0) {
             return new LevelNullReader();
@@ -307,7 +307,7 @@ public abstract class PrimitiveColumnReader
         return new LevelRLEReader(new RunLengthBitPackingHybridDecoder(BytesUtils.getWidthFromMaxInt(maxLevel), new ByteArrayInputStream(slice.getBytes())));
     }
 
-    private ValuesReader initDataReader(ParquetEncoding dataEncoding, ByteBufferInputStream inputStream, int valueCount)
+	private ValuesReader initDataReader(ParquetEncoding dataEncoding, ByteBufferInputStream inputStream, int valueCount)
     {
         ValuesReader valuesReader;
         if (dataEncoding.usesDictionary()) {

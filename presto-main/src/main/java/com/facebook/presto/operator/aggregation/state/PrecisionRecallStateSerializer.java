@@ -66,9 +66,10 @@ public class PrecisionRecallStateSerializer
         checkArgument(
                 hasHistograms == 0 || hasHistograms == 1,
                 "hasHistogram %s should be boolean-convertible", hasHistograms);
-        if (hasHistograms == 1) {
-            state.setTrueWeights(FixedDoubleHistogram.deserialize(input));
-            state.setFalseWeights(FixedDoubleHistogram.deserialize(input));
-        }
+        if (hasHistograms != 1) {
+			return;
+		}
+		state.setTrueWeights(FixedDoubleHistogram.deserialize(input));
+		state.setFalseWeights(FixedDoubleHistogram.deserialize(input));
     }
 }

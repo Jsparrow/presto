@@ -40,16 +40,6 @@ public class VariableStatsEstimate
     private final double averageRowSize;
     private final double distinctValuesCount;
 
-    public static VariableStatsEstimate unknown()
-    {
-        return UNKNOWN;
-    }
-
-    public static VariableStatsEstimate zero()
-    {
-        return ZERO;
-    }
-
     @JsonCreator
     public VariableStatsEstimate(
             @JsonProperty("lowValue") double lowValue,
@@ -81,69 +71,79 @@ public class VariableStatsEstimate
         this.distinctValuesCount = distinctValuesCount;
     }
 
-    @JsonProperty
+	public static VariableStatsEstimate unknown()
+    {
+        return UNKNOWN;
+    }
+
+	public static VariableStatsEstimate zero()
+    {
+        return ZERO;
+    }
+
+	@JsonProperty
     public double getLowValue()
     {
         return lowValue;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getHighValue()
     {
         return highValue;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getNullsFraction()
     {
         return nullsFraction;
     }
 
-    public StatisticRange statisticRange()
+	public StatisticRange statisticRange()
     {
         return new StatisticRange(lowValue, highValue, distinctValuesCount);
     }
 
-    public double getValuesFraction()
+	public double getValuesFraction()
     {
         return 1.0 - nullsFraction;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getAverageRowSize()
     {
         return averageRowSize;
     }
 
-    @JsonProperty
+	@JsonProperty
     public double getDistinctValuesCount()
     {
         return distinctValuesCount;
     }
 
-    public VariableStatsEstimate mapNullsFraction(Function<Double, Double> mappingFunction)
+	public VariableStatsEstimate mapNullsFraction(Function<Double, Double> mappingFunction)
     {
         return buildFrom(this).setNullsFraction(mappingFunction.apply(nullsFraction)).build();
     }
 
-    public VariableStatsEstimate mapDistinctValuesCount(Function<Double, Double> mappingFunction)
+	public VariableStatsEstimate mapDistinctValuesCount(Function<Double, Double> mappingFunction)
     {
         return buildFrom(this).setDistinctValuesCount(mappingFunction.apply(distinctValuesCount)).build();
     }
 
-    public boolean isUnknown()
+	public boolean isUnknown()
     {
         return this.equals(UNKNOWN);
     }
 
-    public boolean isSingleValue()
+	public boolean isSingleValue()
     {
         return distinctValuesCount == 1.0
                 && Double.compare(lowValue, highValue) == 0
                 && !isInfinite(lowValue);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -160,13 +160,13 @@ public class VariableStatsEstimate
                 Double.compare(highValue, that.highValue) == 0;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(lowValue, highValue, nullsFraction, averageRowSize, distinctValuesCount);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -177,12 +177,12 @@ public class VariableStatsEstimate
                 .toString();
     }
 
-    public static Builder builder()
+	public static Builder builder()
     {
         return new Builder();
     }
 
-    public static Builder buildFrom(VariableStatsEstimate other)
+	public static Builder buildFrom(VariableStatsEstimate other)
     {
         return builder()
                 .setLowValue(other.getLowValue())
@@ -192,7 +192,7 @@ public class VariableStatsEstimate
                 .setDistinctValuesCount(other.getDistinctValuesCount());
     }
 
-    public static final class Builder
+	public static final class Builder
     {
         private double lowValue = Double.NEGATIVE_INFINITY;
         private double highValue = Double.POSITIVE_INFINITY;

@@ -77,30 +77,27 @@ public class TaskSource
     {
         checkArgument(planNodeId.equals(source.getPlanNodeId()), "Expected source %s, but got source %s", planNodeId, source.getPlanNodeId());
 
-        if (isNewer(source)) {
-            // assure the new source is properly formed
-            // we know that either the new source one has new splits and/or it is marking the source as closed
-            checkArgument(!noMoreSplits || splits.containsAll(source.getSplits()), "Source %s has new splits, but no more splits already set", planNodeId);
-
-            Set<ScheduledSplit> newSplits = ImmutableSet.<ScheduledSplit>builder()
-                    .addAll(splits)
-                    .addAll(source.getSplits())
-                    .build();
-            Set<Lifespan> newNoMoreSplitsForDriverGroup = ImmutableSet.<Lifespan>builder()
-                    .addAll(noMoreSplitsForLifespan)
-                    .addAll(source.getNoMoreSplitsForLifespan())
-                    .build();
-
-            return new TaskSource(
-                    planNodeId,
-                    newSplits,
-                    newNoMoreSplitsForDriverGroup,
-                    source.isNoMoreSplits());
-        }
-        else {
-            // the specified source is older than this one
+        // the specified source is older than this one
+		if (!isNewer(source)) {
+			// the specified source is older than this one
             return this;
-        }
+		}
+		// assure the new source is properly formed
+		// we know that either the new source one has new splits and/or it is marking the source as closed
+		checkArgument(!noMoreSplits || splits.containsAll(source.getSplits()), "Source %s has new splits, but no more splits already set", planNodeId);
+		Set<ScheduledSplit> newSplits = ImmutableSet.<ScheduledSplit>builder()
+		        .addAll(splits)
+		        .addAll(source.getSplits())
+		        .build();
+		Set<Lifespan> newNoMoreSplitsForDriverGroup = ImmutableSet.<Lifespan>builder()
+		        .addAll(noMoreSplitsForLifespan)
+		        .addAll(source.getNoMoreSplitsForLifespan())
+		        .build();
+		return new TaskSource(
+		        planNodeId,
+		        newSplits,
+		        newNoMoreSplitsForDriverGroup,
+		        source.isNoMoreSplits());
     }
 
     private boolean isNewer(TaskSource source)

@@ -30,11 +30,14 @@ import static com.facebook.presto.hive.HiveMetadata.getSourceTableNameForPartiti
 import static com.facebook.presto.hive.HiveMetadata.isPartitionsSystemTable;
 import static com.facebook.presto.spi.security.AccessDeniedException.denySelectTable;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PartitionsAwareAccessControl
         extends ForwardingConnectorAccessControl
 {
-    private final ConnectorAccessControl delegate;
+    private static final Logger logger = LoggerFactory.getLogger(PartitionsAwareAccessControl.class);
+	private final ConnectorAccessControl delegate;
 
     public PartitionsAwareAccessControl(ConnectorAccessControl delegate)
     {
@@ -47,7 +50,8 @@ public class PartitionsAwareAccessControl
         return delegate;
     }
 
-    public void checkCanCreateSchema(ConnectorTransactionHandle transactionHandle, ConnectorIdentity identity, String schemaName)
+    @Override
+	public void checkCanCreateSchema(ConnectorTransactionHandle transactionHandle, ConnectorIdentity identity, String schemaName)
     {
         delegate.checkCanCreateSchema(transactionHandle, identity, schemaName);
     }
@@ -133,7 +137,8 @@ public class PartitionsAwareAccessControl
                 return;
             }
             catch (AccessDeniedException e) {
-                denySelectTable(tableName.toString());
+                logger.error(e.getMessage(), e);
+				denySelectTable(tableName.toString());
             }
         }
 

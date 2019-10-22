@@ -35,7 +35,114 @@ import static java.util.Objects.requireNonNull;
 public class AggregationOperator
         implements Operator
 {
-    public static class AggregationOperatorFactory
+    private final OperatorContext operatorContext;
+	private final LocalMemoryContext systemMemoryContext;
+	private final LocalMemoryContext userMemoryContext;
+	private final List<Aggregator> aggregates;
+	private final boolean useSystemMemory;
+	private State state = State.NEEDS_INPUT;
+
+	public AggregationOperator(OperatorContext operatorContext, Step step, List<AccumulatorFactory> accumulatorFactories, boolean useSystemMemory)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(AggregationOperator.class.getSimpleName());
+        this.userMemoryContext = operatorContext.localUserMemoryContext();
+        this.useSystemMemory = useSystemMemory;
+
+        requireNonNull(step, "step is null");
+
+        // wrapper each function with an aggregator
+        requireNonNull(accumulatorFactories, "accumulatorFactories is null");
+        ImmutableList.Builder<Aggregator> builder = ImmutableList.builder();
+        accumulatorFactories.forEach(accumulatorFactory -> builder.add(new Aggregator(accumulatorFactory, step)));
+        aggregates = builder.build();
+    }
+
+	@Override
+    public OperatorContext getOperatorContext()
+    {
+        return operatorContext;
+    }
+
+	@Override
+    public void finish()
+    {
+        if (state == State.NEEDS_INPUT) {
+            state = State.HAS_OUTPUT;
+        }
+    }
+
+	@Override
+    public void close()
+    {
+        userMemoryContext.setBytes(0);
+        systemMemoryContext.close();
+    }
+
+	@Override
+    public boolean isFinished()
+    {
+        return state == State.FINISHED;
+    }
+
+	@Override
+    public boolean needsInput()
+    {
+        return state == State.NEEDS_INPUT;
+    }
+
+	@Override
+    public void addInput(Page page)
+    {
+        checkState(needsInput(), "Operator is already finishing");
+        requireNonNull(page, "page is null");
+
+        long memorySize = 0;
+        for (Aggregator aggregate : aggregates) {
+            aggregate.processPage(page);
+            memorySize += aggregate.getEstimatedSize();
+        }
+        if (useSystemMemory) {
+            systemMemoryContext.setBytes(memorySize);
+        }
+        else {
+            userMemoryContext.setBytes(memorySize);
+        }
+    }
+
+	@Override
+    public Page getOutput()
+    {
+        if (state != State.HAS_OUTPUT) {
+            return null;
+        }
+
+        // project results into output blocks
+        List<Type> types = aggregates.stream().map(Aggregator::getType).collect(toImmutableList());
+
+        // output page will only be constructed once,
+        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
+        PageBuilder pageBuilder = new PageBuilder(1, types);
+
+        pageBuilder.declarePosition();
+        for (int i = 0; i < aggregates.size(); i++) {
+            Aggregator aggregator = aggregates.get(i);
+            BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(i);
+            aggregator.evaluate(blockBuilder);
+        }
+
+        state = State.FINISHED;
+        return pageBuilder.build();
+    }
+
+	private enum State
+    {
+        NEEDS_INPUT,
+        HAS_OUTPUT,
+        FINISHED
+    }
+
+	public static class AggregationOperatorFactory
             implements OperatorFactory
     {
         private final int operatorId;
@@ -73,115 +180,5 @@ public class AggregationOperator
         {
             return new AggregationOperatorFactory(operatorId, planNodeId, step, accumulatorFactories, useSystemMemory);
         }
-    }
-
-    private enum State
-    {
-        NEEDS_INPUT,
-        HAS_OUTPUT,
-        FINISHED
-    }
-
-    private final OperatorContext operatorContext;
-    private final LocalMemoryContext systemMemoryContext;
-    private final LocalMemoryContext userMemoryContext;
-    private final List<Aggregator> aggregates;
-    private final boolean useSystemMemory;
-
-    private State state = State.NEEDS_INPUT;
-
-    public AggregationOperator(OperatorContext operatorContext, Step step, List<AccumulatorFactory> accumulatorFactories, boolean useSystemMemory)
-    {
-        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-        this.systemMemoryContext = operatorContext.newLocalSystemMemoryContext(AggregationOperator.class.getSimpleName());
-        this.userMemoryContext = operatorContext.localUserMemoryContext();
-        this.useSystemMemory = useSystemMemory;
-
-        requireNonNull(step, "step is null");
-
-        // wrapper each function with an aggregator
-        requireNonNull(accumulatorFactories, "accumulatorFactories is null");
-        ImmutableList.Builder<Aggregator> builder = ImmutableList.builder();
-        for (AccumulatorFactory accumulatorFactory : accumulatorFactories) {
-            builder.add(new Aggregator(accumulatorFactory, step));
-        }
-        aggregates = builder.build();
-    }
-
-    @Override
-    public OperatorContext getOperatorContext()
-    {
-        return operatorContext;
-    }
-
-    @Override
-    public void finish()
-    {
-        if (state == State.NEEDS_INPUT) {
-            state = State.HAS_OUTPUT;
-        }
-    }
-
-    @Override
-    public void close()
-    {
-        userMemoryContext.setBytes(0);
-        systemMemoryContext.close();
-    }
-
-    @Override
-    public boolean isFinished()
-    {
-        return state == State.FINISHED;
-    }
-
-    @Override
-    public boolean needsInput()
-    {
-        return state == State.NEEDS_INPUT;
-    }
-
-    @Override
-    public void addInput(Page page)
-    {
-        checkState(needsInput(), "Operator is already finishing");
-        requireNonNull(page, "page is null");
-
-        long memorySize = 0;
-        for (Aggregator aggregate : aggregates) {
-            aggregate.processPage(page);
-            memorySize += aggregate.getEstimatedSize();
-        }
-        if (useSystemMemory) {
-            systemMemoryContext.setBytes(memorySize);
-        }
-        else {
-            userMemoryContext.setBytes(memorySize);
-        }
-    }
-
-    @Override
-    public Page getOutput()
-    {
-        if (state != State.HAS_OUTPUT) {
-            return null;
-        }
-
-        // project results into output blocks
-        List<Type> types = aggregates.stream().map(Aggregator::getType).collect(toImmutableList());
-
-        // output page will only be constructed once,
-        // so a new PageBuilder is constructed (instead of using PageBuilder.reset)
-        PageBuilder pageBuilder = new PageBuilder(1, types);
-
-        pageBuilder.declarePosition();
-        for (int i = 0; i < aggregates.size(); i++) {
-            Aggregator aggregator = aggregates.get(i);
-            BlockBuilder blockBuilder = pageBuilder.getBlockBuilder(i);
-            aggregator.evaluate(blockBuilder);
-        }
-
-        state = State.FINISHED;
-        return pageBuilder.build();
     }
 }

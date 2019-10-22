@@ -56,9 +56,7 @@ public class TpcdsRecordSet
         this.results = results;
         this.columns = ImmutableList.copyOf(columns);
         ImmutableList.Builder<Type> columnTypes = ImmutableList.builder();
-        for (Column column : columns) {
-            columnTypes.add(getPrestoType(column.getType()));
-        }
+        columns.forEach(column -> columnTypes.add(getPrestoType(column.getType())));
         this.columnTypes = columnTypes.build();
     }
 
@@ -139,11 +137,11 @@ public class TpcdsRecordSet
             if (column.getType().getBase() == ColumnType.Base.INTEGER) {
                 return parseInt(row.get(column.getPosition()));
             }
-            if (column.getType().getBase() == ColumnType.Base.DECIMAL) {
-                DecimalParseResult decimalParseResult = Decimals.parse(row.get(column.getPosition()));
-                return rescale((Long) decimalParseResult.getObject(), decimalParseResult.getType().getScale(), ((DecimalType) columnTypes.get(field)).getScale());
-            }
-            return parseLong(row.get(column.getPosition()));
+            if (column.getType().getBase() != ColumnType.Base.DECIMAL) {
+				return parseLong(row.get(column.getPosition()));
+			}
+			DecimalParseResult decimalParseResult = Decimals.parse(row.get(column.getPosition()));
+			return rescale((Long) decimalParseResult.getObject(), decimalParseResult.getType().getScale(), ((DecimalType) columnTypes.get(field)).getScale());
         }
 
         @Override

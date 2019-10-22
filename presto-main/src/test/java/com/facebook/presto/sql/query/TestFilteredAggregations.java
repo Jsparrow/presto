@@ -76,13 +76,8 @@ public class TestFilteredAggregations
                 "VALUES (BIGINT '2', BIGINT '6')");
 
         assertions.assertQuery(
-                "SELECT count(DISTINCT x) FILTER (WHERE x > 1), sum(DISTINCT y) FILTER (WHERE x < 3)" +
-                        "FROM (VALUES " +
-                        "(1, 10)," +
-                        "(1, 20)," +
-                        "(1, 20)," +
-                        "(2, 20)," +
-                        "(3, 30)) t(x, y)",
+                new StringBuilder().append("SELECT count(DISTINCT x) FILTER (WHERE x > 1), sum(DISTINCT y) FILTER (WHERE x < 3)").append("FROM (VALUES ").append("(1, 10),").append("(1, 20),").append("(1, 20),").append("(2, 20),").append("(3, 30)) t(x, y)")
+						.toString(),
                 "VALUES (BIGINT '2', BIGINT '30')");
 
         assertions.assertQuery(
@@ -95,24 +90,9 @@ public class TestFilteredAggregations
     public void testGroupingSets()
     {
         assertions.assertQuery(
-                "SELECT k, count(DISTINCT x) FILTER (WHERE y = 100), count(DISTINCT x) FILTER (WHERE y = 200) FROM " +
-                        "(VALUES " +
-                        "   (1, 1, 100)," +
-                        "   (1, 1, 200)," +
-                        "   (1, 2, 100)," +
-                        "   (1, 3, 300)," +
-                        "   (2, 1, 100)," +
-                        "   (2, 10, 100)," +
-                        "   (2, 20, 100)," +
-                        "   (2, 20, 200)," +
-                        "   (2, 30, 300)," +
-                        "   (2, 40, 100)" +
-                        ") t(k, x, y) " +
-                        "GROUP BY GROUPING SETS ((), (k))",
-                "VALUES " +
-                        "(1, BIGINT '2', BIGINT '1'), " +
-                        "(2, BIGINT '4', BIGINT '1'), " +
-                        "(CAST(NULL AS INTEGER), BIGINT '5', BIGINT '2')");
+                new StringBuilder().append("SELECT k, count(DISTINCT x) FILTER (WHERE y = 100), count(DISTINCT x) FILTER (WHERE y = 200) FROM ").append("(VALUES ").append("   (1, 1, 100),").append("   (1, 1, 200),").append("   (1, 2, 100),").append("   (1, 3, 300),").append("   (2, 1, 100),")
+						.append("   (2, 10, 100),").append("   (2, 20, 100),").append("   (2, 20, 200),").append("   (2, 30, 300),").append("   (2, 40, 100)").append(") t(k, x, y) ").append("GROUP BY GROUPING SETS ((), (k))").toString(),
+                new StringBuilder().append("VALUES ").append("(1, BIGINT '2', BIGINT '1'), ").append("(2, BIGINT '4', BIGINT '1'), ").append("(CAST(NULL AS INTEGER), BIGINT '5', BIGINT '2')").toString());
     }
 
     @Test

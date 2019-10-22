@@ -35,11 +35,14 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("/v1/resourceGroupState")
 public class ResourceGroupStateInfoResource
 {
-    private final ResourceGroupManager<?> resourceGroupManager;
+    private static final Logger logger = LoggerFactory.getLogger(ResourceGroupStateInfoResource.class);
+	private final ResourceGroupManager<?> resourceGroupManager;
 
     @Inject
     public ResourceGroupStateInfoResource(ResourceGroupManager<?> resourceGroupManager)
@@ -62,7 +65,8 @@ public class ResourceGroupStateInfoResource
                                         .collect(toImmutableList())));
             }
             catch (NoSuchElementException e) {
-                throw new WebApplicationException(NOT_FOUND);
+                logger.error(e.getMessage(), e);
+				throw new WebApplicationException(NOT_FOUND);
             }
         }
         throw new WebApplicationException(NOT_FOUND);
@@ -74,7 +78,8 @@ public class ResourceGroupStateInfoResource
             return URLDecoder.decode(value, "UTF-8");
         }
         catch (UnsupportedEncodingException e) {
-            throw new WebApplicationException(BAD_REQUEST);
+            logger.error(e.getMessage(), e);
+			throw new WebApplicationException(BAD_REQUEST);
         }
     }
 }

@@ -110,10 +110,7 @@ public class DriverFactory
         checkState(!closedLifespans.contains(driverContext.getLifespan()), "DriverFatory is already closed for driver group %s", driverContext.getLifespan());
         encounteredLifespans.add(driverContext.getLifespan());
         ImmutableList.Builder<Operator> operators = ImmutableList.builder();
-        for (OperatorFactory operatorFactory : operatorFactories) {
-            Operator operator = operatorFactory.createOperator(driverContext);
-            operators.add(operator);
-        }
+        operatorFactories.stream().map(operatorFactory -> operatorFactory.createOperator(driverContext)).forEach(operators::add);
         return Driver.createDriver(driverContext, operators.build());
     }
 
@@ -124,9 +121,7 @@ public class DriverFactory
         }
         encounteredLifespans.add(lifespan);
         closedLifespans.add(lifespan);
-        for (OperatorFactory operatorFactory : operatorFactories) {
-            operatorFactory.noMoreOperators(lifespan);
-        }
+        operatorFactories.forEach(operatorFactory -> operatorFactory.noMoreOperators(lifespan));
     }
 
     public synchronized void noMoreDrivers()
@@ -139,8 +134,6 @@ public class DriverFactory
             verify(encounteredLifespans.size() == closedLifespans.size());
         }
         closed = true;
-        for (OperatorFactory operatorFactory : operatorFactories) {
-            operatorFactory.noMoreOperators();
-        }
+        operatorFactories.forEach(OperatorFactory::noMoreOperators);
     }
 }

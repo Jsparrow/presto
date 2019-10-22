@@ -58,7 +58,55 @@ import static com.facebook.presto.sql.analyzer.TypeSignatureProvider.fromTypes;
 @Measurement(iterations = 20)
 public class BenchmarkGroupedTypedHistogram
 {
-    @State(Scope.Thread)
+    @Benchmark
+    public GroupedAccumulator testSharedGroupWithLargeBlocksRunner(Data data)
+    {
+        GroupedAccumulator groupedAccumulator = data.groupedAccumulator;
+
+        for (int i = 0; i < data.numGroups; i++) {
+            GroupByIdBlock groupByIdBlock = data.groupByIdBlocks[i];
+            Page page = data.pages[i];
+            groupedAccumulator.addInput(groupByIdBlock, page);
+        }
+
+        return groupedAccumulator;
+    }
+
+	private static InternalAggregationFunction getInternalAggregationFunctionVarChar(HistogramGroupImplementation groupMode)
+    {
+        FunctionManager functionManager = getMetadata(groupMode).getFunctionManager();
+
+        return functionManager.getAggregateFunctionImplementation(
+                functionManager.lookupFunction(NAME, fromTypes(VARCHAR)));
+    }
+
+	private static MetadataManager getMetadata(HistogramGroupImplementation groupMode)
+    {
+        MetadataManager metadata = MetadataManager.createTestMetadataManager(
+                new FeaturesConfig()
+                        .setHistogramGroupImplementation(groupMode));
+
+        return metadata;
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkGroupedTypedHistogram.class.getSimpleName()).append(".*").toString())
+                .addProfiler(GCProfiler.class)
+                .build();
+
+        new Runner(options).run();
+    }
+
+	public enum ProbeType
+    {
+        LINEAR, SUM_OF_COUNT, SUM_OF_SQUARE
+    }
+
+	@State(Scope.Thread)
     public static class Data
     {
         @Param("10000") // larger groups => worse perf for NEW as it's more costly to track a group than with LEGACY. Tweak based on what you want to measure
@@ -109,7 +157,7 @@ public class BenchmarkGroupedTypedHistogram
 
                     if (distinctValue) {
                         // produce a unique value for the histogram
-                        valueList.add(j + "-" + item);
+                        valueList.add(new StringBuilder().append(j).append("-").append(item).toString());
                     }
                     else {
                         valueList.add(item);
@@ -136,53 +184,5 @@ public class BenchmarkGroupedTypedHistogram
             return function.bind(Ints.asList(args), Optional.empty())
                     .createGroupedAccumulator();
         }
-    }
-
-    @Benchmark
-    public GroupedAccumulator testSharedGroupWithLargeBlocksRunner(Data data)
-    {
-        GroupedAccumulator groupedAccumulator = data.groupedAccumulator;
-
-        for (int i = 0; i < data.numGroups; i++) {
-            GroupByIdBlock groupByIdBlock = data.groupByIdBlocks[i];
-            Page page = data.pages[i];
-            groupedAccumulator.addInput(groupByIdBlock, page);
-        }
-
-        return groupedAccumulator;
-    }
-
-    private static InternalAggregationFunction getInternalAggregationFunctionVarChar(HistogramGroupImplementation groupMode)
-    {
-        FunctionManager functionManager = getMetadata(groupMode).getFunctionManager();
-
-        return functionManager.getAggregateFunctionImplementation(
-                functionManager.lookupFunction(NAME, fromTypes(VARCHAR)));
-    }
-
-    private static MetadataManager getMetadata(HistogramGroupImplementation groupMode)
-    {
-        MetadataManager metadata = MetadataManager.createTestMetadataManager(
-                new FeaturesConfig()
-                        .setHistogramGroupImplementation(groupMode));
-
-        return metadata;
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkGroupedTypedHistogram.class.getSimpleName() + ".*")
-                .addProfiler(GCProfiler.class)
-                .build();
-
-        new Runner(options).run();
-    }
-
-    public enum ProbeType
-    {
-        LINEAR, SUM_OF_COUNT, SUM_OF_SQUARE
     }
 }

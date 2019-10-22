@@ -61,10 +61,11 @@ public final class OutputHandler
     public void close()
             throws IOException
     {
-        if (!closed.getAndSet(true)) {
-            flush(true);
-            printer.finish();
-        }
+        if (closed.getAndSet(true)) {
+			return;
+		}
+		flush(true);
+		printer.finish();
     }
 
     public void processRows(StatementClient client)
@@ -89,9 +90,10 @@ public final class OutputHandler
     private void flush(boolean complete)
             throws IOException
     {
-        if (!rowBuffer.isEmpty()) {
-            printer.printRows(unmodifiableList(rowBuffer), complete);
-            rowBuffer.clear();
-        }
+        if (rowBuffer.isEmpty()) {
+			return;
+		}
+		printer.printRows(unmodifiableList(rowBuffer), complete);
+		rowBuffer.clear();
     }
 }

@@ -20,7 +20,13 @@ public final class ColumnarRow
     private final Block nullCheckBlock;
     private final Block[] fields;
 
-    public static ColumnarRow toColumnarRow(Block block)
+    private ColumnarRow(Block nullCheckBlock, Block[] fields)
+    {
+        this.nullCheckBlock = nullCheckBlock;
+        this.fields = fields.clone();
+    }
+
+	public static ColumnarRow toColumnarRow(Block block)
     {
         requireNonNull(block, "block is null");
 
@@ -48,7 +54,7 @@ public final class ColumnarRow
         return new ColumnarRow(block, fieldBlocks);
     }
 
-    private static ColumnarRow toColumnarRow(DictionaryBlock dictionaryBlock)
+	private static ColumnarRow toColumnarRow(DictionaryBlock dictionaryBlock)
     {
         // build a mapping from the old dictionary to a new dictionary with nulls removed
         Block dictionary = dictionaryBlock.getDictionary();
@@ -80,7 +86,7 @@ public final class ColumnarRow
         return new ColumnarRow(dictionaryBlock, fields);
     }
 
-    private static ColumnarRow toColumnarRow(RunLengthEncodedBlock rleBlock)
+	private static ColumnarRow toColumnarRow(RunLengthEncodedBlock rleBlock)
     {
         Block rleValue = rleBlock.getValue();
         ColumnarRow columnarRow = toColumnarRow(rleValue);
@@ -102,28 +108,22 @@ public final class ColumnarRow
         return new ColumnarRow(rleBlock, fields);
     }
 
-    private ColumnarRow(Block nullCheckBlock, Block[] fields)
-    {
-        this.nullCheckBlock = nullCheckBlock;
-        this.fields = fields.clone();
-    }
-
-    public int getPositionCount()
+	public int getPositionCount()
     {
         return nullCheckBlock.getPositionCount();
     }
 
-    public boolean isNull(int position)
+	public boolean isNull(int position)
     {
         return nullCheckBlock.isNull(position);
     }
 
-    public int getFieldCount()
+	public int getFieldCount()
     {
         return fields.length;
     }
 
-    /**
+	/**
      * Gets the specified field for all rows as a column.
      * <p>
      * Note: A null row will not have an entry in the block, so the block
@@ -135,21 +135,21 @@ public final class ColumnarRow
         return fields[index];
     }
 
-    public int getOffset(int position)
+	public int getOffset(int position)
     {
         return ((AbstractRowBlock) nullCheckBlock).getFieldBlockOffset(position);
     }
 
-    public Block getNullCheckBlock()
+	public Block getNullCheckBlock()
     {
         return nullCheckBlock;
     }
 
-    public long getRetainedSizeInBytes()
+	public long getRetainedSizeInBytes()
     {
         int fieldsRetainedSize = 0;
-        for (int i = 0; i < fields.length; i++) {
-            fieldsRetainedSize += fields[i].getRetainedSizeInBytes();
+        for (Block field : fields) {
+            fieldsRetainedSize += field.getRetainedSizeInBytes();
         }
         return nullCheckBlock.getRetainedSizeInBytes() + fieldsRetainedSize;
     }

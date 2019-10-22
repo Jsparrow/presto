@@ -85,21 +85,10 @@ public class TestStatementBuilder
         printStatement("select sum(distinct x) filter (where x > 4) y, sum(x) filter (where x < 2) z from t");
         printStatement("select sum(x) filter (where x > 4) over (partition by y) z from t");
 
-        printStatement("" +
-                "select depname, empno, salary\n" +
-                ", count(*) over ()\n" +
-                ", avg(salary) over (partition by depname)\n" +
-                ", rank() over (partition by depname order by salary desc)\n" +
-                ", sum(salary) over (order by salary rows unbounded preceding)\n" +
-                ", sum(salary) over (partition by depname order by salary rows between current row and 3 following)\n" +
-                ", sum(salary) over (partition by depname range unbounded preceding)\n" +
-                ", sum(salary) over (rows between 2 preceding and unbounded following)\n" +
-                "from emp");
+        printStatement(new StringBuilder().append("").append("select depname, empno, salary\n").append(", count(*) over ()\n").append(", avg(salary) over (partition by depname)\n").append(", rank() over (partition by depname order by salary desc)\n").append(", sum(salary) over (order by salary rows unbounded preceding)\n").append(", sum(salary) over (partition by depname order by salary rows between current row and 3 following)\n").append(", sum(salary) over (partition by depname range unbounded preceding)\n")
+				.append(", sum(salary) over (rows between 2 preceding and unbounded following)\n").append("from emp").toString());
 
-        printStatement("" +
-                "with a (id) as (with x as (select 123 from z) select * from x) " +
-                "   , b (id) as (select 999 from z) " +
-                "select * from a join b using (id)");
+        printStatement(new StringBuilder().append("").append("with a (id) as (with x as (select 123 from z) select * from x) ").append("   , b (id) as (select 999 from z) ").append("select * from a join b using (id)").toString());
 
         printStatement("with recursive t as (select * from x) select * from t");
 
@@ -341,7 +330,7 @@ public class TestStatementBuilder
     private static String getTpchQuery(int q)
             throws IOException
     {
-        return readResource("tpch/queries/" + q + ".sql");
+        return readResource(new StringBuilder().append("tpch/queries/").append(q).append(".sql").toString());
     }
 
     private static void printTpchQuery(int query, Object... values)

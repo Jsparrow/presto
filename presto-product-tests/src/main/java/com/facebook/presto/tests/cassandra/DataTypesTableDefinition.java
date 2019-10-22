@@ -32,22 +32,21 @@ import java.util.UUID;
 
 import static com.facebook.presto.tests.cassandra.TestConstants.CONNECTOR_NAME;
 import static com.facebook.presto.tests.cassandra.TestConstants.KEY_SPACE;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DataTypesTableDefinition
 {
-    public static final CassandraTableDefinition CASSANDRA_ALL_TYPES;
+    private static final Logger logger = LoggerFactory.getLogger(DataTypesTableDefinition.class);
 
-    private DataTypesTableDefinition() {}
+	public static final CassandraTableDefinition CASSANDRA_ALL_TYPES;
 
-    private static final String ALL_TYPES_TABLE_NAME = "all_types";
+	private static final String ALL_TYPES_TABLE_NAME = "all_types";
 
-    private static final String ALL_TYPES_DDL =
-            "CREATE TABLE %NAME% (a ascii, b bigint, bl blob, bo boolean, d decimal, do double," +
-                    "f float, fr frozen<set<int>>, i inet, integer int, l list<int>, m map<text,int>," +
-                    "s set<int>, t text, ti timestamp, tu timeuuid, u uuid, v varchar, vari varint," +
-                    "PRIMARY KEY (a))";
+	private static final String ALL_TYPES_DDL =
+            new StringBuilder().append("CREATE TABLE %NAME% (a ascii, b bigint, bl blob, bo boolean, d decimal, do double,").append("f float, fr frozen<set<int>>, i inet, integer int, l list<int>, m map<text,int>,").append("s set<int>, t text, ti timestamp, tu timeuuid, u uuid, v varchar, vari varint,").append("PRIMARY KEY (a))").toString();
 
-    static {
+	static {
         RelationalDataSource dataSource = () -> {
             try {
                 return ImmutableList.<List<Object>>of(
@@ -61,7 +60,7 @@ public class DataTypesTableDefinition
                                 "\0", BigInteger.valueOf(Long.MIN_VALUE)),
                         ImmutableList.of("the quick brown fox jumped over the lazy dog", Long.MAX_VALUE,
                                 Bytes.fromHexString("0x3031323334"), true,
-                                new BigDecimal(new Double("99999999999999999999999999999999999999")),
+                                new BigDecimal(Double.valueOf("99999999999999999999999999999999999999")),
                                 Double.MAX_VALUE, Float.MAX_VALUE, ImmutableSet.of(4, 5, 6, 7),
                                 Inet4Address.getByName("255.255.255.255"), Integer.MAX_VALUE,
                                 ImmutableList.of(4, 5, 6), ImmutableMap.of("a", 1, "b", 2), ImmutableSet.of(4, 5, 6),
@@ -74,7 +73,8 @@ public class DataTypesTableDefinition
                 ).iterator();
             }
             catch (UnknownHostException e) {
-                return null;
+                logger.error(e.getMessage(), e);
+				return null;
             }
         };
         CASSANDRA_ALL_TYPES = CassandraTableDefinition.cassandraBuilder(ALL_TYPES_TABLE_NAME)
@@ -84,4 +84,6 @@ public class DataTypesTableDefinition
                 .setDataSource(dataSource)
                 .build();
     }
+
+	private DataTypesTableDefinition() {}
 }

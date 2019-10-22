@@ -23,11 +23,15 @@ import io.airlift.airline.model.CommandMetadata;
 import javax.inject.Inject;
 
 import static io.airlift.airline.SingleCommand.singleCommand;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Command(name = "testing_presto_server", description = "Testing Presto Server Launcher")
 public class TestingPrestoServerLauncher
 {
-    @Inject
+    private static final Logger logger = LoggerFactory.getLogger(TestingPrestoServerLauncher.class);
+
+	@Inject
     CommandMetadata commandMetadata;
 
     @Inject
@@ -42,7 +46,8 @@ public class TestingPrestoServerLauncher
             Thread.currentThread().join();
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            logger.error(e.getMessage(), e);
+			Thread.currentThread().interrupt();
         }
     }
 
@@ -55,11 +60,9 @@ public class TestingPrestoServerLauncher
                 server.installPlugin(plugin);
             }
 
-            for (Catalog catalog : options.getCatalogs()) {
-                server.createCatalog(catalog.getCatalogName(), catalog.getConnectorName());
-            }
+            options.getCatalogs().forEach(catalog -> server.createCatalog(catalog.getCatalogName(), catalog.getConnectorName()));
 
-            System.out.println(server.getAddress());
+            logger.info(String.valueOf(server.getAddress()));
             waitForInterruption();
         }
     }
@@ -75,7 +78,7 @@ public class TestingPrestoServerLauncher
             launcher.validateOptions();
         }
         catch (IllegalStateException e) {
-            System.out.println("ERROR: " + e.getMessage());
+            logger.info("ERROR: " + e.getMessage(), e);
             System.out.println();
             Help.help(launcher.commandMetadata);
             return;

@@ -83,14 +83,13 @@ public class S3SelectRecordCursorProvider
         }
 
         String serdeName = getDeserializerClassName(schema);
-        if (CSV_SERDES.contains(serdeName)) {
-            IonSqlQueryBuilder queryBuilder = new IonSqlQueryBuilder(typeManager);
-            String ionSqlQuery = queryBuilder.buildSql(columns, effectivePredicate);
-            S3SelectLineRecordReader recordReader = new S3SelectCsvRecordReader(configuration, clientConfig, path, start, length, schema, ionSqlQuery, s3ClientFactory);
-            return Optional.of(new S3SelectRecordCursor(configuration, path, recordReader, length, schema, columns, hiveStorageTimeZone, typeManager));
-        }
-
-        // unsupported serdes
-        return Optional.empty();
+        if (!CSV_SERDES.contains(serdeName)) {
+			// unsupported serdes
+			return Optional.empty();
+		}
+		IonSqlQueryBuilder queryBuilder = new IonSqlQueryBuilder(typeManager);
+		String ionSqlQuery = queryBuilder.buildSql(columns, effectivePredicate);
+		S3SelectLineRecordReader recordReader = new S3SelectCsvRecordReader(configuration, clientConfig, path, start, length, schema, ionSqlQuery, s3ClientFactory);
+		return Optional.of(new S3SelectRecordCursor(configuration, path, recordReader, length, schema, columns, hiveStorageTimeZone, typeManager));
     }
 }

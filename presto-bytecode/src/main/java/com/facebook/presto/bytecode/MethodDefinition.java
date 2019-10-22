@@ -229,9 +229,7 @@ public class MethodDefinition
         }
 
         // visit method annotations
-        for (AnnotationDefinition annotation : annotations) {
-            annotation.visitMethodAnnotation(methodVisitor);
-        }
+		annotations.forEach(annotation -> annotation.visitMethodAnnotation(methodVisitor));
 
         // visit parameter annotations
         for (int parameterIndex = 0; parameterIndex < parameterAnnotations.size(); parameterIndex++) {

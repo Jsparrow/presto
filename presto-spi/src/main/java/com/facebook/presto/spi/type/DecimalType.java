@@ -29,8 +29,17 @@ public abstract class DecimalType
 {
     public static final int DEFAULT_SCALE = 0;
     public static final int DEFAULT_PRECISION = MAX_PRECISION;
+	private final int precision;
+	private final int scale;
 
-    public static DecimalType createDecimalType(int precision, int scale)
+	DecimalType(int precision, int scale, Class<?> javaType)
+    {
+        super(new TypeSignature(StandardTypes.DECIMAL, buildTypeParameters(precision, scale)), javaType);
+        this.precision = precision;
+        this.scale = scale;
+    }
+
+	public static DecimalType createDecimalType(int precision, int scale)
     {
         if (precision <= MAX_SHORT_PRECISION) {
             return new ShortDecimalType(precision, scale);
@@ -40,57 +49,47 @@ public abstract class DecimalType
         }
     }
 
-    public static DecimalType createDecimalType(int precision)
+	public static DecimalType createDecimalType(int precision)
     {
         return createDecimalType(precision, DEFAULT_SCALE);
     }
 
-    public static DecimalType createDecimalType()
+	public static DecimalType createDecimalType()
     {
         return createDecimalType(DEFAULT_PRECISION, DEFAULT_SCALE);
     }
 
-    private final int precision;
-    private final int scale;
-
-    DecimalType(int precision, int scale, Class<?> javaType)
-    {
-        super(new TypeSignature(StandardTypes.DECIMAL, buildTypeParameters(precision, scale)), javaType);
-        this.precision = precision;
-        this.scale = scale;
-    }
-
-    @Override
+	@Override
     public final boolean isComparable()
     {
         return true;
     }
 
-    @Override
+	@Override
     public final boolean isOrderable()
     {
         return true;
     }
 
-    public int getPrecision()
+	public int getPrecision()
     {
         return precision;
     }
 
-    public int getScale()
+	public int getScale()
     {
         return scale;
     }
 
-    public boolean isShort()
+	public boolean isShort()
     {
         return precision <= MAX_SHORT_PRECISION;
     }
 
-    void validatePrecisionScale(int precision, int scale, int maxPrecision)
+	void validatePrecisionScale(int precision, int scale, int maxPrecision)
     {
         if (precision <= 0 || precision > maxPrecision) {
-            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, "DECIMAL precision must be in range [1, " + MAX_PRECISION + "]");
+            throw new PrestoException(INVALID_FUNCTION_ARGUMENT, new StringBuilder().append("DECIMAL precision must be in range [1, ").append(MAX_PRECISION).append("]").toString());
         }
 
         if (scale < 0 || scale > precision) {
@@ -98,7 +97,7 @@ public abstract class DecimalType
         }
     }
 
-    private static List<TypeSignatureParameter> buildTypeParameters(int precision, int scale)
+	private static List<TypeSignatureParameter> buildTypeParameters(int precision, int scale)
     {
         List<TypeSignatureParameter> typeParameters = new ArrayList<>();
         typeParameters.add(TypeSignatureParameter.of(precision));

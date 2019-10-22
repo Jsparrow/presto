@@ -37,12 +37,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestHttpQueryStatsClient
 {
     private static final URI BASE_URL = URI.create("http://presto.host");
-    private Response httpResponse;
-    private HttpQueryStatsClient queryStatsClient;
+	private static final String SINGLE_QUERY_INFO = resourceAsString("com/facebook/presto/tests/querystats/single_query_info_response.json");
+	private Response httpResponse;
+	private HttpQueryStatsClient queryStatsClient;
 
-    private static final String SINGLE_QUERY_INFO = resourceAsString("com/facebook/presto/tests/querystats/single_query_info_response.json");
-
-    private static String resourceAsString(String resourcePath)
+	private static String resourceAsString(String resourcePath)
     {
         try {
             URL resourceUrl = Resources.getResource(resourcePath);
@@ -53,7 +52,7 @@ public class TestHttpQueryStatsClient
         }
     }
 
-    @BeforeMethod
+	@BeforeMethod
     public void setUp()
     {
         ObjectMapper objectMapper = new ObjectMapperProvider().get();
@@ -61,7 +60,7 @@ public class TestHttpQueryStatsClient
         this.queryStatsClient = new HttpQueryStatsClient(httpClient, objectMapper, BASE_URL);
     }
 
-    @Test
+	@Test
     public void testGetInfoForQuery()
     {
         mockHttpResponse(SINGLE_QUERY_INFO);
@@ -70,7 +69,7 @@ public class TestHttpQueryStatsClient
         assertThat(infoForQuery.get().getTotalCpuTime().getValue()).isEqualTo(1.19);
     }
 
-    @Test
+	@Test
     public void testGetInfoForUnknownQuery()
     {
         mockErrorHttpResponse(HttpStatus.GONE);
@@ -78,12 +77,12 @@ public class TestHttpQueryStatsClient
         assertThat(infoForQuery).isEmpty();
     }
 
-    private void mockHttpResponse(String answerJson)
+	private void mockHttpResponse(String answerJson)
     {
         httpResponse = new TestingResponse(HttpStatus.OK, ImmutableListMultimap.of(), answerJson.getBytes());
     }
 
-    private void mockErrorHttpResponse(HttpStatus statusCode)
+	private void mockErrorHttpResponse(HttpStatus statusCode)
     {
         httpResponse = new TestingResponse(statusCode, ImmutableListMultimap.of(), new byte[0]);
     }

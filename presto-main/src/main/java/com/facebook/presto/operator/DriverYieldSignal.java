@@ -79,7 +79,8 @@ public class DriverYieldSignal
         return yield.get();
     }
 
-    public synchronized String toString()
+    @Override
+	public synchronized String toString()
     {
         return toStringHelper(this)
                 .add("yieldScheduled", yieldFuture != null)

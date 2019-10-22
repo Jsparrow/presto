@@ -552,7 +552,85 @@ public class LocalExecutionPlanner
         }
     }
 
-    private static class LocalExecutionPlanContext
+    private static TableFinisher createTableFinisher(Session session, TableFinishNode node, Metadata metadata)
+    {
+        WriterTarget target = node.getTarget();
+        return (fragments, statistics) -> {
+            if (target instanceof CreateHandle) {
+                return metadata.finishCreateTable(session, ((CreateHandle) target).getHandle(), fragments, statistics);
+            }
+            else if (target instanceof InsertHandle) {
+                return metadata.finishInsert(session, ((InsertHandle) target).getHandle(), fragments, statistics);
+            }
+            else if (target instanceof DeleteHandle) {
+                metadata.finishDelete(session, ((DeleteHandle) target).getHandle(), fragments);
+                return Optional.empty();
+            }
+            else {
+                throw new AssertionError("Unhandled target type: " + target.getClass().getName());
+            }
+        };
+    }
+
+	private static LifespanCommitter createLifespanCommitter(Session session, TableFinishNode node, Metadata metadata)
+    {
+        WriterTarget target = node.getTarget();
+        return fragments -> {
+            if (target instanceof CreateHandle) {
+                metadata.commitPartition(session, ((CreateHandle) target).getHandle(), fragments);
+            }
+            else if (target instanceof InsertHandle) {
+                metadata.commitPartition(session, ((InsertHandle) target).getHandle(), fragments);
+            }
+            else {
+                throw new AssertionError("Unhandled target type: " + target.getClass().getName());
+            }
+        };
+    }
+
+	private static Function<Page, Page> enforceLayoutProcessor(List<VariableReferenceExpression> expectedLayout, Map<VariableReferenceExpression, Integer> inputLayout)
+    {
+        int[] channels = expectedLayout.stream()
+                .peek(variable -> checkArgument(inputLayout.containsKey(variable), "channel not found for variable: %s", variable))
+                .mapToInt(inputLayout::get)
+                .toArray();
+
+        if (Arrays.equals(channels, range(0, inputLayout.size()).toArray())) {
+            // this is an identity mapping
+            return Function.identity();
+        }
+
+        return new PageChannelSelector(channels);
+    }
+
+	private static List<Integer> getChannelsForVariables(Collection<VariableReferenceExpression> variables, Map<VariableReferenceExpression, Integer> layout)
+    {
+        ImmutableList.Builder<Integer> builder = ImmutableList.builder();
+        variables.forEach(variable -> {
+            checkArgument(layout.containsKey(variable));
+            builder.add(layout.get(variable));
+        });
+        return builder.build();
+    }
+
+	private static Function<VariableReferenceExpression, Integer> variableChannelGetter(PhysicalOperation source)
+    {
+        return input -> {
+            checkArgument(source.getLayout().containsKey(input));
+            return source.getLayout().get(input);
+        };
+    }
+
+	/**
+     * List of sort orders in the same order as the list of variables returned from `getOrderByVariables()`. This means for
+     * index i, variable `getOrderByVariables().get(i)` has order `getOrderingList().get(i)`.
+     */
+    private static List<SortOrder> getOrderingList(OrderingScheme orderingScheme)
+    {
+        return orderingScheme.getOrderByVariables().stream().map(orderingScheme.getOrderingsMap()::get).collect(toImmutableList());
+    }
+
+	private static class LocalExecutionPlanContext
     {
         private final TaskContext taskContext;
         private final TypeProvider types;
@@ -756,7 +834,7 @@ public class LocalExecutionPlanner
             List<Integer> sortChannels = getChannelsForVariables(orderingScheme.getOrderByVariables(), layout);
             List<SortOrder> sortOrder = getOrderingList(orderingScheme);
 
-            List<Type> types = getSourceOperatorTypes(node, context.getTypes());
+            List<Type> types = getSourceOperatorTypes(node);
             ImmutableList<Integer> outputChannels = IntStream.range(0, types.size())
                     .boxed()
                     .collect(toImmutableList());
@@ -924,7 +1002,7 @@ public class LocalExecutionPlanner
 
             ImmutableList.Builder<WindowFunctionDefinition> windowFunctionsBuilder = ImmutableList.builder();
             ImmutableList.Builder<VariableReferenceExpression> windowFunctionOutputVariablesBuilder = ImmutableList.builder();
-            for (Map.Entry<VariableReferenceExpression, WindowNode.Function> entry : node.getWindowFunctions().entrySet()) {
+            node.getWindowFunctions().entrySet().forEach(entry -> {
                 Optional<Integer> frameStartChannel = Optional.empty();
                 Optional<Integer> frameEndChannel = Optional.empty();
 
@@ -941,25 +1019,23 @@ public class LocalExecutionPlanner
                 CallExpression call = entry.getValue().getFunctionCall();
                 FunctionHandle functionHandle = entry.getValue().getFunctionHandle();
                 ImmutableList.Builder<Integer> arguments = ImmutableList.builder();
-                for (RowExpression argument : call.getArguments()) {
+                call.getArguments().forEach(argument -> {
                     checkState(argument instanceof VariableReferenceExpression);
                     arguments.add(source.getLayout().get(argument));
-                }
+                });
                 VariableReferenceExpression variable = entry.getKey();
                 FunctionManager functionManager = metadata.getFunctionManager();
                 WindowFunctionSupplier windowFunctionSupplier = functionManager.getWindowFunctionImplementation(functionHandle);
                 Type type = metadata.getType(functionManager.getFunctionMetadata(functionHandle).getReturnType());
                 windowFunctionsBuilder.add(window(windowFunctionSupplier, type, frameInfo, arguments.build()));
                 windowFunctionOutputVariablesBuilder.add(variable);
-            }
+            });
 
             List<VariableReferenceExpression> windowFunctionOutputVariables = windowFunctionOutputVariablesBuilder.build();
 
             // compute the layout of the output from the window operator
             ImmutableMap.Builder<VariableReferenceExpression, Integer> outputMappings = ImmutableMap.builder();
-            for (VariableReferenceExpression variable : node.getSource().getOutputVariables()) {
-                outputMappings.put(variable, source.getLayout().get(variable));
-            }
+            node.getSource().getOutputVariables().forEach(variable -> outputMappings.put(variable, source.getLayout().get(variable)));
 
             // window functions go in remaining channels starting after the last channel from the source operator, one per channel
             int channel = source.getTypes().size();
@@ -994,10 +1070,10 @@ public class LocalExecutionPlanner
 
             List<Integer> sortChannels = new ArrayList<>();
             List<SortOrder> sortOrders = new ArrayList<>();
-            for (VariableReferenceExpression variable : orderByVariables) {
+            orderByVariables.forEach(variable -> {
                 sortChannels.add(source.getLayout().get(variable));
                 sortOrders.add(node.getOrderingScheme().getOrdering(variable));
-            }
+            });
 
             OperatorFactory operator = new TopNOperatorFactory(
                     context.getNextOperatorId(),
@@ -1020,9 +1096,7 @@ public class LocalExecutionPlanner
             List<Integer> orderByChannels = getChannelsForVariables(orderByVariables, source.getLayout());
 
             ImmutableList.Builder<SortOrder> sortOrder = ImmutableList.builder();
-            for (VariableReferenceExpression variable : orderByVariables) {
-                sortOrder.add(node.getOrderingScheme().getOrdering(variable));
-            }
+            orderByVariables.forEach(variable -> sortOrder.add(node.getOrderingScheme().getOrdering(variable)));
 
             ImmutableList.Builder<Integer> outputChannels = ImmutableList.builder();
             for (int i = 0; i < source.getTypes().size(); i++) {
@@ -1095,19 +1169,15 @@ public class LocalExecutionPlanner
 
             // for every grouping set, create a mapping of all output to input channels (including arguments)
             ImmutableList.Builder<Map<Integer, Integer>> mappings = ImmutableList.builder();
-            for (List<VariableReferenceExpression> groupingSet : node.getGroupingSets()) {
+            node.getGroupingSets().forEach(groupingSet -> {
                 ImmutableMap.Builder<Integer, Integer> setMapping = ImmutableMap.builder();
 
-                for (VariableReferenceExpression output : groupingSet) {
-                    setMapping.put(newLayout.get(output), source.getLayout().get(node.getGroupingColumns().get(output)));
-                }
+                groupingSet.forEach(output -> setMapping.put(newLayout.get(output), source.getLayout().get(node.getGroupingColumns().get(output))));
 
-                for (VariableReferenceExpression output : argumentMappings.keySet()) {
-                    setMapping.put(newLayout.get(output), argumentMappings.get(output));
-                }
+                argumentMappings.keySet().forEach(output -> setMapping.put(newLayout.get(output), argumentMappings.get(output)));
 
                 mappings.add(setMapping.build());
-            }
+            });
 
             newLayout.put(node.getGroupIdVariable(), outputChannel);
             outputTypes.add(BIGINT);
@@ -1246,7 +1316,7 @@ public class LocalExecutionPlanner
             try {
                 if (columns != null) {
                     Supplier<CursorProcessor> cursorProcessor = expressionCompiler.compileCursorProcessor(filterExpression, projections, sourceNode.getId());
-                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(filterExpression, projections, Optional.of(context.getStageExecutionId() + "_" + planNodeId));
+                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(filterExpression, projections, Optional.of(new StringBuilder().append(context.getStageExecutionId()).append("_").append(planNodeId).toString()));
 
                     SourceOperatorFactory operatorFactory = new ScanFilterAndProjectOperatorFactory(
                             context.getNextOperatorId(),
@@ -1264,7 +1334,7 @@ public class LocalExecutionPlanner
                     return new PhysicalOperation(operatorFactory, outputMappings, context, stageExecutionDescriptor.isScanGroupedExecution(sourceNode.getId()) ? GROUPED_EXECUTION : UNGROUPED_EXECUTION);
                 }
                 else {
-                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(filterExpression, projections, Optional.of(context.getStageExecutionId() + "_" + planNodeId));
+                    Supplier<PageProcessor> pageProcessor = expressionCompiler.compilePageProcessor(filterExpression, projections, Optional.of(new StringBuilder().append(context.getStageExecutionId()).append("_").append(planNodeId).toString()));
 
                     OperatorFactory operatorFactory = new FilterAndProjectOperator.FilterAndProjectOperatorFactory(
                             context.getNextOperatorId(),
@@ -1304,9 +1374,7 @@ public class LocalExecutionPlanner
         public PhysicalOperation visitTableScan(TableScanNode node, LocalExecutionPlanContext context)
         {
             List<ColumnHandle> columns = new ArrayList<>();
-            for (VariableReferenceExpression variable : node.getOutputVariables()) {
-                columns.add(node.getAssignments().get(variable));
-            }
+            node.getOutputVariables().forEach(variable -> columns.add(node.getAssignments().get(variable)));
 
             OperatorFactory operatorFactory = new TableScanOperatorFactory(context.getNextOperatorId(), node.getId(), pageSourceProvider, node.getTable(), columns);
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, stageExecutionDescriptor.isScanGroupedExecution(node.getId()) ? GROUPED_EXECUTION : UNGROUPED_EXECUTION);
@@ -1325,14 +1393,14 @@ public class LocalExecutionPlanner
 
             List<Type> outputTypes = node.getOutputVariables().stream().map(VariableReferenceExpression::getType).collect(toImmutableList());
             PageBuilder pageBuilder = new PageBuilder(node.getRows().size(), outputTypes);
-            for (List<RowExpression> row : node.getRows()) {
+            node.getRows().forEach(row -> {
                 pageBuilder.declarePosition();
                 for (int i = 0; i < row.size(); i++) {
                     // evaluate the literal value
                     Object result = rowExpressionInterpreter(row.get(i), metadata, context.getSession().toConnectorSession()).evaluate();
                     writeNativeValue(outputTypes.get(i), pageBuilder.getBlockBuilder(i), result);
                 }
-            }
+            });
 
             OperatorFactory operatorFactory = new ValuesOperatorFactory(context.getNextOperatorId(), node.getId(), ImmutableList.of(pageBuilder.build()));
             return new PhysicalOperation(operatorFactory, makeLayout(node), context, UNGROUPED_EXECUTION);
@@ -1344,14 +1412,10 @@ public class LocalExecutionPlanner
             PhysicalOperation source = node.getSource().accept(this, context);
 
             ImmutableList.Builder<Type> replicateTypes = ImmutableList.builder();
-            for (VariableReferenceExpression variable : node.getReplicateVariables()) {
-                replicateTypes.add(variable.getType());
-            }
+            node.getReplicateVariables().forEach(variable -> replicateTypes.add(variable.getType()));
             List<VariableReferenceExpression> unnestVariables = ImmutableList.copyOf(node.getUnnestVariables().keySet());
             ImmutableList.Builder<Type> unnestTypes = ImmutableList.builder();
-            for (VariableReferenceExpression variable : unnestVariables) {
-                unnestTypes.add(variable.getType());
-            }
+            unnestVariables.forEach(variable -> unnestTypes.add(variable.getType()));
             Optional<VariableReferenceExpression> ordinalityVariable = node.getOrdinalityVariable();
             Optional<Type> ordinalityType = ordinalityVariable.map(VariableReferenceExpression::getType);
             ordinalityType.ifPresent(type -> checkState(type.equals(BIGINT), "Type of ordinalityVariable must always be BIGINT."));
@@ -1420,14 +1484,13 @@ public class LocalExecutionPlanner
             // Identify overlapping fields that can produce the same lookup variable.
             // We will filter incoming keys to ensure that overlapping fields will have the same value.
             ImmutableList.Builder<Set<Integer>> overlappingFieldSetsBuilder = ImmutableList.builder();
-            for (VariableReferenceExpression lookupVariable : node.getLookupVariables()) {
-                Set<Integer> potentialProbeInputs = indexLookupToProbeInput.get(lookupVariable);
-                checkState(!potentialProbeInputs.isEmpty(), "Must have at least one source from the probe input");
-                if (potentialProbeInputs.size() > 1) {
+            node.getLookupVariables().stream().map(indexLookupToProbeInput::get).forEach(potentialProbeInputs -> {
+				checkState(!potentialProbeInputs.isEmpty(), "Must have at least one source from the probe input");
+				if (potentialProbeInputs.size() > 1) {
                     overlappingFieldSetsBuilder.add(potentialProbeInputs.stream().collect(toImmutableSet()));
                 }
-                remappedProbeKeyChannelsBuilder.add(Iterables.getFirst(potentialProbeInputs, null));
-            }
+				remappedProbeKeyChannelsBuilder.add(Iterables.getFirst(potentialProbeInputs, null));
+			});
             List<Set<Integer>> overlappingFieldSets = overlappingFieldSetsBuilder.build();
             List<Integer> remappedProbeKeyChannels = remappedProbeKeyChannelsBuilder.build();
             Function<RecordSet, RecordSet> probeKeyNormalizer = recordSet -> {
@@ -1466,17 +1529,15 @@ public class LocalExecutionPlanner
 
             // Map the index join variables to the probe key Input
             Multimap<VariableReferenceExpression, Integer> indexToProbeKeyInput = HashMultimap.create();
-            for (IndexJoinNode.EquiJoinClause clause : node.getCriteria()) {
-                indexToProbeKeyInput.put(clause.getIndex(), probeKeyLayout.get(clause.getProbe()));
-            }
+            node.getCriteria().forEach(clause -> indexToProbeKeyInput.put(clause.getIndex(), probeKeyLayout.get(clause.getProbe())));
 
             // Create the mapping from index source look up variable to probe key Input
             ImmutableSetMultimap.Builder<VariableReferenceExpression, Integer> builder = ImmutableSetMultimap.builder();
-            for (Map.Entry<VariableReferenceExpression, VariableReferenceExpression> entry : indexKeyTrace.entrySet()) {
+            indexKeyTrace.entrySet().forEach(entry -> {
                 VariableReferenceExpression indexJoinVariable = entry.getKey();
                 VariableReferenceExpression indexLookupVariable = entry.getValue();
                 builder.putAll(indexJoinVariable, indexToProbeKeyInput.get(indexLookupVariable));
-            }
+            });
             return builder.build();
         }
 
@@ -1579,10 +1640,10 @@ public class LocalExecutionPlanner
             // inputs from index side of the join are laid out following the input from the probe side,
             // so adjust the channel ids but keep the field layouts intact
             int offset = probeSource.getTypes().size();
-            for (Map.Entry<VariableReferenceExpression, Integer> entry : indexSource.getLayout().entrySet()) {
+            indexSource.getLayout().entrySet().forEach(entry -> {
                 Integer input = entry.getValue();
                 outputMappings.put(entry.getKey(), offset + input);
-            }
+            });
 
             OperatorFactory lookupJoinOperatorFactory;
             OptionalInt totalOperatorsCount = getJoinOperatorsCountForSpill(context, session);
@@ -1809,9 +1870,7 @@ public class LocalExecutionPlanner
             // inputs from build side of the join are laid out following the input from the probe side,
             // so adjust the channel ids but keep the field layouts intact
             int offset = probeSource.getTypes().size();
-            for (Map.Entry<VariableReferenceExpression, Integer> entry : buildSource.getLayout().entrySet()) {
-                outputMappings.put(entry.getKey(), offset + entry.getValue());
-            }
+            buildSource.getLayout().entrySet().forEach(entry -> outputMappings.put(entry.getKey(), offset + entry.getValue()));
 
             OperatorFactory operatorFactory = new NestedLoopJoinOperatorFactory(context.getNextOperatorId(), node.getId(), nestedLoopJoinBridgeManager);
             return new PhysicalOperation(operatorFactory, outputMappings.build(), context, probeSource);
@@ -2127,9 +2186,7 @@ public class LocalExecutionPlanner
         {
             Builder<VariableReferenceExpression, Integer> joinSourcesLayout = ImmutableMap.builder();
             joinSourcesLayout.putAll(lookupSourceLayout);
-            for (Map.Entry<VariableReferenceExpression, Integer> probeLayoutEntry : probeSourceLayout.entrySet()) {
-                joinSourcesLayout.put(probeLayoutEntry.getKey(), probeLayoutEntry.getValue() + lookupSourceLayout.size());
-            }
+            probeSourceLayout.entrySet().forEach(probeLayoutEntry -> joinSourcesLayout.put(probeLayoutEntry.getKey(), probeLayoutEntry.getValue() + lookupSourceLayout.size()));
             return joinSourcesLayout.build();
         }
 
@@ -2462,7 +2519,7 @@ public class LocalExecutionPlanner
             PhysicalOperation source = sourceNode.accept(this, subContext);
 
             int operatorsCount = subContext.getDriverInstanceCount().orElse(1);
-            List<Type> types = getSourceOperatorTypes(node, context.getTypes());
+            List<Type> types = getSourceOperatorTypes(node);
             LocalExchangeFactory exchangeFactory = new LocalExchangeFactory(
                     partitioningProviderManager,
                     session,
@@ -2517,7 +2574,7 @@ public class LocalExecutionPlanner
                 context.setDriverInstanceCount(driverInstanceCount);
             }
 
-            List<Type> types = getSourceOperatorTypes(node, context.getTypes());
+            List<Type> types = getSourceOperatorTypes(node);
             List<Integer> channels = node.getPartitioningScheme().getPartitioning().getArguments().stream()
                     .map(argument -> {
                         checkArgument(argument instanceof VariableReferenceExpression, format("Expect VariableReferenceExpression but get %s", argument));
@@ -2590,7 +2647,7 @@ public class LocalExecutionPlanner
             throw new UnsupportedOperationException("not yet implemented");
         }
 
-        private List<Type> getSourceOperatorTypes(PlanNode node, TypeProvider types)
+        private List<Type> getSourceOperatorTypes(PlanNode node)
         {
             return getVariableTypes(node.getOutputVariables());
         }
@@ -2604,19 +2661,16 @@ public class LocalExecutionPlanner
 
         private AccumulatorFactory buildAccumulatorFactory(
                 PhysicalOperation source,
-                Aggregation aggregation,
-                TypeProvider types)
+                Aggregation aggregation)
         {
             FunctionManager functionManager = metadata.getFunctionManager();
             InternalAggregationFunction internalAggregationFunction = functionManager.getAggregateFunctionImplementation(aggregation.getFunctionHandle());
 
             List<Integer> valueChannels = new ArrayList<>();
-            for (RowExpression argument : aggregation.getArguments()) {
-                if (!(argument instanceof LambdaDefinitionExpression)) {
-                    checkArgument(argument instanceof VariableReferenceExpression, "argument must be variable reference");
-                    valueChannels.add(source.getLayout().get(argument));
-                }
-            }
+            aggregation.getArguments().stream().filter(argument -> !(argument instanceof LambdaDefinitionExpression)).forEach(argument -> {
+			    checkArgument(argument instanceof VariableReferenceExpression, "argument must be variable reference");
+			    valueChannels.add(source.getLayout().get(argument));
+			});
 
             List<LambdaProvider> lambdaProviders = new ArrayList<>();
             List<LambdaDefinitionExpression> lambdas = aggregation.getArguments().stream()
@@ -2686,7 +2740,7 @@ public class LocalExecutionPlanner
             for (Map.Entry<VariableReferenceExpression, Aggregation> entry : aggregations.entrySet()) {
                 VariableReferenceExpression variable = entry.getKey();
                 Aggregation aggregation = entry.getValue();
-                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation, context.getTypes()));
+                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
                 outputMappings.put(variable, outputChannel); // one aggregation per channel
                 outputChannel++;
             }
@@ -2745,13 +2799,13 @@ public class LocalExecutionPlanner
         {
             List<VariableReferenceExpression> aggregationOutputVariables = new ArrayList<>();
             List<AccumulatorFactory> accumulatorFactories = new ArrayList<>();
-            for (Map.Entry<VariableReferenceExpression, Aggregation> entry : aggregations.entrySet()) {
+            aggregations.entrySet().forEach(entry -> {
                 VariableReferenceExpression variable = entry.getKey();
                 Aggregation aggregation = entry.getValue();
 
-                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation, context.getTypes()));
+                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
                 aggregationOutputVariables.add(variable);
-            }
+            });
 
             // add group-by key fields each in a separate channel
             int channel = startOutputChannel;
@@ -2813,84 +2867,6 @@ public class LocalExecutionPlanner
                         useSystemMemory);
             }
         }
-    }
-
-    private static TableFinisher createTableFinisher(Session session, TableFinishNode node, Metadata metadata)
-    {
-        WriterTarget target = node.getTarget();
-        return (fragments, statistics) -> {
-            if (target instanceof CreateHandle) {
-                return metadata.finishCreateTable(session, ((CreateHandle) target).getHandle(), fragments, statistics);
-            }
-            else if (target instanceof InsertHandle) {
-                return metadata.finishInsert(session, ((InsertHandle) target).getHandle(), fragments, statistics);
-            }
-            else if (target instanceof DeleteHandle) {
-                metadata.finishDelete(session, ((DeleteHandle) target).getHandle(), fragments);
-                return Optional.empty();
-            }
-            else {
-                throw new AssertionError("Unhandled target type: " + target.getClass().getName());
-            }
-        };
-    }
-
-    private static LifespanCommitter createLifespanCommitter(Session session, TableFinishNode node, Metadata metadata)
-    {
-        WriterTarget target = node.getTarget();
-        return fragments -> {
-            if (target instanceof CreateHandle) {
-                metadata.commitPartition(session, ((CreateHandle) target).getHandle(), fragments);
-            }
-            else if (target instanceof InsertHandle) {
-                metadata.commitPartition(session, ((InsertHandle) target).getHandle(), fragments);
-            }
-            else {
-                throw new AssertionError("Unhandled target type: " + target.getClass().getName());
-            }
-        };
-    }
-
-    private static Function<Page, Page> enforceLayoutProcessor(List<VariableReferenceExpression> expectedLayout, Map<VariableReferenceExpression, Integer> inputLayout)
-    {
-        int[] channels = expectedLayout.stream()
-                .peek(variable -> checkArgument(inputLayout.containsKey(variable), "channel not found for variable: %s", variable))
-                .mapToInt(inputLayout::get)
-                .toArray();
-
-        if (Arrays.equals(channels, range(0, inputLayout.size()).toArray())) {
-            // this is an identity mapping
-            return Function.identity();
-        }
-
-        return new PageChannelSelector(channels);
-    }
-
-    private static List<Integer> getChannelsForVariables(Collection<VariableReferenceExpression> variables, Map<VariableReferenceExpression, Integer> layout)
-    {
-        ImmutableList.Builder<Integer> builder = ImmutableList.builder();
-        for (VariableReferenceExpression variable : variables) {
-            checkArgument(layout.containsKey(variable));
-            builder.add(layout.get(variable));
-        }
-        return builder.build();
-    }
-
-    private static Function<VariableReferenceExpression, Integer> variableChannelGetter(PhysicalOperation source)
-    {
-        return input -> {
-            checkArgument(source.getLayout().containsKey(input));
-            return source.getLayout().get(input);
-        };
-    }
-
-    /**
-     * List of sort orders in the same order as the list of variables returned from `getOrderByVariables()`. This means for
-     * index i, variable `getOrderByVariables().get(i)` has order `getOrderingList().get(i)`.
-     */
-    private static List<SortOrder> getOrderingList(OrderingScheme orderingScheme)
-    {
-        return orderingScheme.getOrderByVariables().stream().map(orderingScheme.getOrderingsMap()::get).collect(toImmutableList());
     }
 
     /**

@@ -62,10 +62,10 @@ public class RealHistogramAggregation
         else {
             Map<Double, Double> value = state.get().getBuckets();
             BlockBuilder entryBuilder = out.beginBlockEntry();
-            for (Map.Entry<Double, Double> entry : value.entrySet()) {
+            value.entrySet().forEach(entry -> {
                 REAL.writeLong(entryBuilder, floatToRawIntBits(entry.getKey().floatValue()));
                 REAL.writeLong(entryBuilder, floatToRawIntBits(entry.getValue().floatValue()));
-            }
+            });
             out.closeEntry();
         }
     }

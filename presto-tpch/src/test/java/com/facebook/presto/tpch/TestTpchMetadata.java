@@ -177,11 +177,11 @@ public class TestTpchMetadata
             testColumnStats(schema, ORDERS, ORDER_DATE, columnStatistics(2_400, 8_035, 10_440));
 
             //varchar and double columns
-            if (schema.equals("tiny")) {
+            if ("tiny".equals(schema)) {
                 testColumnStats(schema, CUSTOMER, NAME, columnStatistics(150_000 * scaleFactor, 27000));
                 testColumnStats(schema, PART, RETAIL_PRICE, columnStatistics(1_099, 901, 1900.99));
             }
-            else if (schema.equals("sf1")) {
+            else if ("sf1".equals(schema)) {
                 testColumnStats(schema, CUSTOMER, NAME, columnStatistics(150_000 * scaleFactor, 2700000));
                 testColumnStats(schema, PART, RETAIL_PRICE, columnStatistics(20899, 901, 2089.99));
             }

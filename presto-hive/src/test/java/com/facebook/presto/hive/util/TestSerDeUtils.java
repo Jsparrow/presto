@@ -70,38 +70,6 @@ public class TestSerDeUtils
 {
     private final BlockEncodingSerde blockEncodingSerde = new BlockEncodingManager(new TypeRegistry());
 
-    private static class ListHolder
-    {
-        List<InnerStruct> array;
-    }
-
-    private static class InnerStruct
-    {
-        public InnerStruct(Integer intVal, Long longVal)
-        {
-            this.intVal = intVal;
-            this.longVal = longVal;
-        }
-
-        Integer intVal;
-        Long longVal;
-    }
-
-    private static class OuterStruct
-    {
-        Byte byteVal;
-        Short shortVal;
-        Integer intVal;
-        Long longVal;
-        Float floatVal;
-        Double doubleVal;
-        String stringVal;
-        byte[] byteArray;
-        List<InnerStruct> structArray;
-        Map<String, InnerStruct> map;
-        InnerStruct innerStruct;
-    }
-
     private static synchronized ObjectInspector getInspector(Type type)
     {
         // ObjectInspectorFactory.getReflectionObjectInspector is not thread-safe although it
@@ -114,7 +82,7 @@ public class TestSerDeUtils
         return getReflectionObjectInspector(type, ObjectInspectorOptions.JAVA);
     }
 
-    @Test
+	@Test
     public void testPrimitiveSlice()
     {
         // boolean
@@ -170,7 +138,7 @@ public class TestSerDeUtils
         assertBlockEquals(actualBinary, expectedBinary);
     }
 
-    @Test
+	@Test
     public void testListBlock()
     {
         List<InnerStruct> array = new ArrayList<>(2);
@@ -190,12 +158,7 @@ public class TestSerDeUtils
         assertBlockEquals(actual, expected);
     }
 
-    private static class MapHolder
-    {
-        Map<String, InnerStruct> map;
-    }
-
-    @Test
+	@Test
     public void testMapBlock()
     {
         MapHolder holder = new MapHolder();
@@ -217,7 +180,7 @@ public class TestSerDeUtils
         assertBlockEquals(actual, expected);
     }
 
-    @Test
+	@Test
     public void testStructBlock()
     {
         // test simple structs
@@ -277,7 +240,7 @@ public class TestSerDeUtils
         assertBlockEquals(actual, rowBlockOf(outerRowParameterTypes, outerRowValues.build().toArray()));
     }
 
-    @Test
+	@Test
     public void testReuse()
     {
         BytesWritable value = new BytesWritable();
@@ -297,12 +260,12 @@ public class TestSerDeUtils
         assertBlockEquals(actual, expected);
     }
 
-    private void assertBlockEquals(Block actual, Block expected)
+	private void assertBlockEquals(Block actual, Block expected)
     {
         assertEquals(blockToSlice(actual), blockToSlice(expected));
     }
 
-    private Slice blockToSlice(Block block)
+	private Slice blockToSlice(Block block)
     {
         // This function is strictly for testing use only
         SliceOutput sliceOutput = new DynamicSliceOutput(1000);
@@ -310,7 +273,7 @@ public class TestSerDeUtils
         return sliceOutput.slice();
     }
 
-    private static Block toBinaryBlock(com.facebook.presto.spi.type.Type type, Object object, ObjectInspector inspector)
+	private static Block toBinaryBlock(com.facebook.presto.spi.type.Type type, Object object, ObjectInspector inspector)
     {
         if (inspector.getCategory() == Category.PRIMITIVE) {
             return getPrimitiveBlock(type, object, inspector);
@@ -318,10 +281,46 @@ public class TestSerDeUtils
         return getBlockObject(type, object, inspector);
     }
 
-    private static Block getPrimitiveBlock(com.facebook.presto.spi.type.Type type, Object object, ObjectInspector inspector)
+	private static Block getPrimitiveBlock(com.facebook.presto.spi.type.Type type, Object object, ObjectInspector inspector)
     {
         BlockBuilder builder = VARBINARY.createBlockBuilder(null, 1);
         serializeObject(type, builder, object, inspector);
         return builder.build();
+    }
+
+	private static class ListHolder
+    {
+        List<InnerStruct> array;
+    }
+
+    private static class InnerStruct
+    {
+        Integer intVal;
+		Long longVal;
+		public InnerStruct(Integer intVal, Long longVal)
+        {
+            this.intVal = intVal;
+            this.longVal = longVal;
+        }
+    }
+
+    private static class OuterStruct
+    {
+        Byte byteVal;
+        Short shortVal;
+        Integer intVal;
+        Long longVal;
+        Float floatVal;
+        Double doubleVal;
+        String stringVal;
+        byte[] byteArray;
+        List<InnerStruct> structArray;
+        Map<String, InnerStruct> map;
+        InnerStruct innerStruct;
+    }
+
+    private static class MapHolder
+    {
+        Map<String, InnerStruct> map;
     }
 }

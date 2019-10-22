@@ -27,54 +27,17 @@ import static java.util.Objects.requireNonNull;
 @Immutable
 public class ParameterizedType
 {
-    public static ParameterizedType typeFromJavaClassName(String className)
-    {
-        requireNonNull(className, "type is null");
-        return new ParameterizedType(className.replace('.', '/'));
-    }
-
-    public static ParameterizedType typeFromPathName(String className)
-    {
-        requireNonNull(className, "type is null");
-        return new ParameterizedType(className);
-    }
-
-    public static ParameterizedType type(Type type)
-    {
-        requireNonNull(type, "type is null");
-        return new ParameterizedType(type.getInternalName());
-    }
-
-    public static ParameterizedType type(Class<?> type)
-    {
-        requireNonNull(type, "type is null");
-        return new ParameterizedType(type);
-    }
-
-    public static ParameterizedType type(Class<?> type, Class<?>... parameters)
-    {
-        requireNonNull(type, "type is null");
-        return new ParameterizedType(type, parameters);
-    }
-
-    public static ParameterizedType type(Class<?> type, ParameterizedType... parameters)
-    {
-        requireNonNull(type, "type is null");
-        return new ParameterizedType(type, parameters);
-    }
-
     private final String type;
-    private final String className;
-    private final String simpleName;
-    private final List<String> parameters;
-
-    private final boolean isInterface;
-    @Nullable
+	private final String className;
+	private final String simpleName;
+	private final List<String> parameters;
+	private final boolean isInterface;
+	@Nullable
     private final Class<?> primitiveType;
-    @Nullable
+	@Nullable
     private final ParameterizedType arrayComponentType;
 
-    public ParameterizedType(String className)
+	public ParameterizedType(String className)
     {
         requireNonNull(className, "className is null");
         checkArgument(!className.contains("."), "Invalid class name %s", className);
@@ -82,7 +45,7 @@ public class ParameterizedType
 
         this.className = className;
         this.simpleName = className.substring(className.lastIndexOf("/") + 1);
-        this.type = "L" + className + ";";
+        this.type = new StringBuilder().append("L").append(className).append(";").toString();
         this.parameters = ImmutableList.of();
 
         this.isInterface = false;
@@ -90,7 +53,7 @@ public class ParameterizedType
         this.arrayComponentType = null;
     }
 
-    private ParameterizedType(Class<?> type)
+	private ParameterizedType(Class<?> type)
     {
         requireNonNull(type, "type is null");
         this.type = toInternalIdentifier(type);
@@ -103,7 +66,7 @@ public class ParameterizedType
         this.arrayComponentType = type.isArray() ? type(type.getComponentType()) : null;
     }
 
-    private ParameterizedType(Class<?> type, Class<?>... parameters)
+	private ParameterizedType(Class<?> type, Class<?>... parameters)
     {
         requireNonNull(type, "type is null");
         this.type = toInternalIdentifier(type);
@@ -121,7 +84,7 @@ public class ParameterizedType
         this.arrayComponentType = type.isArray() ? type(type.getComponentType()) : null;
     }
 
-    private ParameterizedType(Class<?> type, ParameterizedType... parameters)
+	private ParameterizedType(Class<?> type, ParameterizedType... parameters)
     {
         requireNonNull(type, "type is null");
         this.type = toInternalIdentifier(type);
@@ -139,32 +102,68 @@ public class ParameterizedType
         this.arrayComponentType = type.isArray() ? type(type.getComponentType()) : null;
     }
 
-    public String getClassName()
+	public static ParameterizedType typeFromJavaClassName(String className)
+    {
+        requireNonNull(className, "type is null");
+        return new ParameterizedType(className.replace('.', '/'));
+    }
+
+	public static ParameterizedType typeFromPathName(String className)
+    {
+        requireNonNull(className, "type is null");
+        return new ParameterizedType(className);
+    }
+
+	public static ParameterizedType type(Type type)
+    {
+        requireNonNull(type, "type is null");
+        return new ParameterizedType(type.getInternalName());
+    }
+
+	public static ParameterizedType type(Class<?> type)
+    {
+        requireNonNull(type, "type is null");
+        return new ParameterizedType(type);
+    }
+
+	public static ParameterizedType type(Class<?> type, Class<?>... parameters)
+    {
+        requireNonNull(type, "type is null");
+        return new ParameterizedType(type, parameters);
+    }
+
+	public static ParameterizedType type(Class<?> type, ParameterizedType... parameters)
+    {
+        requireNonNull(type, "type is null");
+        return new ParameterizedType(type, parameters);
+    }
+
+	public String getClassName()
     {
         return className;
     }
 
-    public String getJavaClassName()
+	public String getJavaClassName()
     {
         return className.replace('/', '.');
     }
 
-    public String getSimpleName()
+	public String getSimpleName()
     {
         return simpleName;
     }
 
-    public String getType()
+	public String getType()
     {
         return type;
     }
 
-    public Type getAsmType()
+	public Type getAsmType()
     {
         return Type.getObjectType(className);
     }
 
-    public String getGenericSignature()
+	public String getGenericSignature()
     {
         StringBuilder sb = new StringBuilder();
         if (primitiveType != null || arrayComponentType != null) {
@@ -173,43 +172,41 @@ public class ParameterizedType
         sb.append('L').append(className);
         if (!parameters.isEmpty()) {
             sb.append("<");
-            for (String parameterType : parameters) {
-                sb.append(parameterType);
-            }
+            parameters.forEach(sb::append);
             sb.append(">");
         }
         sb.append(";");
         return sb.toString();
     }
 
-    public boolean isGeneric()
+	public boolean isGeneric()
     {
         return !parameters.isEmpty();
     }
 
-    public boolean isInterface()
+	public boolean isInterface()
     {
         return isInterface;
     }
 
-    @Nullable
+	@Nullable
     public Class<?> getPrimitiveType()
     {
         return primitiveType;
     }
 
-    public boolean isPrimitive()
+	public boolean isPrimitive()
     {
         return primitiveType != null;
     }
 
-    @Nullable
+	@Nullable
     public ParameterizedType getArrayComponentType()
     {
         return arrayComponentType;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -228,24 +225,24 @@ public class ParameterizedType
         return true;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return type.hashCode();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return getGenericSignature();
     }
 
-    public static String getPathName(Class<?> n)
+	public static String getPathName(Class<?> n)
     {
         return n.getName().replace('.', '/');
     }
 
-    private static String toInternalIdentifier(Class<?> n)
+	private static String toInternalIdentifier(Class<?> n)
     {
         if (n.isArray()) {
             n = n.getComponentType();
@@ -316,7 +313,7 @@ public class ParameterizedType
                 }
             }
             else {
-                return "L" + getPathName(n) + ";";
+                return new StringBuilder().append("L").append(getPathName(n)).append(";").toString();
             }
         }
     }

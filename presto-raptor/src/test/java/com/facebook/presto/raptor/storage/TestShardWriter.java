@@ -82,30 +82,30 @@ import static org.testng.Assert.fail;
 
 public class TestShardWriter
 {
-    private File directory;
-
     private static final JsonCodec<OrcFileMetadata> METADATA_CODEC = jsonCodec(OrcFileMetadata.class);
 
-    @DataProvider(name = "useOptimizedOrcWriter")
+	private File directory;
+
+	@DataProvider(name = "useOptimizedOrcWriter")
     public static Object[][] useOptimizedOrcWriter()
     {
         return new Object[][] {{true}, {false}};
     }
 
-    @BeforeClass
+	@BeforeClass
     public void setup()
     {
         directory = createTempDir();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
             throws Exception
     {
         deleteRecursively(directory.toPath(), ALLOW_INSECURE);
     }
 
-    @Test(dataProvider = "useOptimizedOrcWriter")
+	@Test(dataProvider = "useOptimizedOrcWriter")
     public void testWriter(boolean useOptimizedOrcWriter)
             throws Exception
     {
@@ -240,7 +240,7 @@ public class TestShardWriter
                     .build()));
         }
 
-        File crcFile = new File(file.getParentFile(), "." + file.getName() + ".crc");
+        File crcFile = new File(file.getParentFile(), new StringBuilder().append(".").append(file.getName()).append(".crc").toString());
         assertFalse(crcFile.exists());
 
         // Test unsupported types
@@ -255,7 +255,7 @@ public class TestShardWriter
         }
     }
 
-    @SuppressWarnings("EmptyTryBlock")
+	@SuppressWarnings("EmptyTryBlock")
     @Test
     public void testWriterZeroRows()
             throws Exception
@@ -279,7 +279,7 @@ public class TestShardWriter
         }
     }
 
-    @SuppressWarnings("EmptyClass")
+	@SuppressWarnings("EmptyClass")
     private static class EmptyClassLoader
             extends ClassLoader
     {

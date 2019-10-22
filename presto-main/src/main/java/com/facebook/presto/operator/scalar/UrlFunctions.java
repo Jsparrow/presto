@@ -39,10 +39,13 @@ import static com.facebook.presto.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMEN
 import static com.google.common.base.Strings.nullToEmpty;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class UrlFunctions
 {
-    private static final Splitter QUERY_SPLITTER = Splitter.on('&');
+    private static final Logger logger = LoggerFactory.getLogger(UrlFunctions.class);
+	private static final Splitter QUERY_SPLITTER = Splitter.on('&');
     private static final Splitter ARG_SPLITTER = Splitter.on('=').limit(2);
 
     private UrlFunctions() {}
@@ -187,7 +190,8 @@ public final class UrlFunctions
             return new URI(url.toStringUtf8());
         }
         catch (URISyntaxException e) {
-            return null;
+            logger.error(e.getMessage(), e);
+			return null;
         }
     }
 }

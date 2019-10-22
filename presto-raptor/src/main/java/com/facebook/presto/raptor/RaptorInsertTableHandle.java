@@ -141,6 +141,6 @@ public class RaptorInsertTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + tableId;
+        return new StringBuilder().append(connectorId).append(":").append(tableId).toString();
     }
 }

@@ -94,23 +94,18 @@ import static java.util.function.Function.identity;
 
 public class OrcWriteValidation
 {
-    public enum OrcWriteValidationMode
-    {
-        HASHED, DETAILED, BOTH
-    }
-
     private final List<Integer> version;
-    private final CompressionKind compression;
-    private final int rowGroupMaxRowCount;
-    private final List<String> columnNames;
-    private final Map<String, Slice> metadata;
-    private final WriteChecksum checksum;
-    private final Map<Long, List<RowGroupStatistics>> rowGroupStatistics;
-    private final Map<Long, StripeStatistics> stripeStatistics;
-    private final List<ColumnStatistics> fileStatistics;
-    private final int stringStatisticsLimitInBytes;
+	private final CompressionKind compression;
+	private final int rowGroupMaxRowCount;
+	private final List<String> columnNames;
+	private final Map<String, Slice> metadata;
+	private final WriteChecksum checksum;
+	private final Map<Long, List<RowGroupStatistics>> rowGroupStatistics;
+	private final Map<Long, StripeStatistics> stripeStatistics;
+	private final List<ColumnStatistics> fileStatistics;
+	private final int stringStatisticsLimitInBytes;
 
-    private OrcWriteValidation(
+	private OrcWriteValidation(
             List<Integer> version,
             CompressionKind compression,
             int rowGroupMaxRowCount,
@@ -134,32 +129,32 @@ public class OrcWriteValidation
         this.stringStatisticsLimitInBytes = stringStatisticsLimitInBytes;
     }
 
-    public List<Integer> getVersion()
+	public List<Integer> getVersion()
     {
         return version;
     }
 
-    public CompressionKind getCompression()
+	public CompressionKind getCompression()
     {
         return compression;
     }
 
-    public int getRowGroupMaxRowCount()
+	public int getRowGroupMaxRowCount()
     {
         return rowGroupMaxRowCount;
     }
 
-    public List<String> getColumnNames()
+	public List<String> getColumnNames()
     {
         return columnNames;
     }
 
-    public Map<String, Slice> getMetadata()
+	public Map<String, Slice> getMetadata()
     {
         return metadata;
     }
 
-    public void validateMetadata(OrcDataSourceId orcDataSourceId, Map<String, Slice> actualMetadata)
+	public void validateMetadata(OrcDataSourceId orcDataSourceId, Map<String, Slice> actualMetadata)
             throws OrcCorruptionException
     {
         // Filter out metadata value statically added by the DWRF writer
@@ -172,12 +167,12 @@ public class OrcWriteValidation
         }
     }
 
-    public WriteChecksum getChecksum()
+	public WriteChecksum getChecksum()
     {
         return checksum;
     }
 
-    public void validateFileStatistics(OrcDataSourceId orcDataSourceId, List<ColumnStatistics> actualFileStatistics)
+	public void validateFileStatistics(OrcDataSourceId orcDataSourceId, List<ColumnStatistics> actualFileStatistics)
             throws OrcCorruptionException
     {
         if (actualFileStatistics.isEmpty()) {
@@ -187,7 +182,7 @@ public class OrcWriteValidation
         validateColumnStatisticsEquivalent(orcDataSourceId, "file", actualFileStatistics, fileStatistics);
     }
 
-    public void validateStripeStatistics(OrcDataSourceId orcDataSourceId, List<StripeInformation> actualStripes, List<StripeStatistics> actualStripeStatistics)
+	public void validateStripeStatistics(OrcDataSourceId orcDataSourceId, List<StripeInformation> actualStripes, List<StripeStatistics> actualStripeStatistics)
             throws OrcCorruptionException
     {
         requireNonNull(actualStripes, "actualStripes is null");
@@ -209,7 +204,7 @@ public class OrcWriteValidation
         }
     }
 
-    public void validateStripeStatistics(OrcDataSourceId orcDataSourceId, long stripeOffset, List<ColumnStatistics> actual)
+	public void validateStripeStatistics(OrcDataSourceId orcDataSourceId, long stripeOffset, List<ColumnStatistics> actual)
             throws OrcCorruptionException
     {
         StripeStatistics expected = stripeStatistics.get(stripeOffset);
@@ -219,7 +214,7 @@ public class OrcWriteValidation
         validateColumnStatisticsEquivalent(orcDataSourceId, "Stripe at " + stripeOffset, actual, expected.getColumnStatistics());
     }
 
-    public void validateRowGroupStatistics(OrcDataSourceId orcDataSourceId, long stripeOffset, Map<StreamId, List<RowGroupIndex>> actualRowGroupStatistics)
+	public void validateRowGroupStatistics(OrcDataSourceId orcDataSourceId, long stripeOffset, Map<StreamId, List<RowGroupIndex>> actualRowGroupStatistics)
             throws OrcCorruptionException
     {
         requireNonNull(actualRowGroupStatistics, "actualRowGroupStatistics is null");
@@ -252,7 +247,7 @@ public class OrcWriteValidation
                 for (Entry<StreamId, List<RowGroupIndex>> entry : actualRowGroupStatistics.entrySet()) {
                     ColumnStatistics actual = entry.getValue().get(rowGroupIndex).getColumnStatistics();
                     ColumnStatistics expected = expectedStatistics.get(entry.getKey().getColumn());
-                    validateColumnStatisticsEquivalent(orcDataSourceId, "Row group " + rowGroupIndex + " in stripe at offset " + stripeOffset, actual, expected);
+                    validateColumnStatisticsEquivalent(orcDataSourceId, new StringBuilder().append("Row group ").append(rowGroupIndex).append(" in stripe at offset ").append(stripeOffset).toString(), actual, expected);
                 }
             }
 
@@ -265,7 +260,7 @@ public class OrcWriteValidation
         }
     }
 
-    private static RowGroupStatistics buildActualRowGroupStatistics(int rowGroupIndex, Map<StreamId, List<RowGroupIndex>> actualRowGroupStatistics)
+	private static RowGroupStatistics buildActualRowGroupStatistics(int rowGroupIndex, Map<StreamId, List<RowGroupIndex>> actualRowGroupStatistics)
     {
         return new RowGroupStatistics(
                 BOTH,
@@ -274,7 +269,7 @@ public class OrcWriteValidation
                         .collect(Collectors.toMap(entry -> entry.getKey().getColumn(), entry -> entry.getValue().get(rowGroupIndex).getColumnStatistics())));
     }
 
-    public void validateRowGroupStatistics(
+	public void validateRowGroupStatistics(
             OrcDataSourceId orcDataSourceId,
             long stripeOffset,
             int rowGroupIndex,
@@ -301,17 +296,16 @@ public class OrcWriteValidation
                     .collect(toImmutableList());
             actual = actual.subList(1, actual.size());
 
-            validateColumnStatisticsEquivalent(orcDataSourceId, "Row group " + rowGroupIndex + " in stripe at offset " + stripeOffset, actual, expected);
+            validateColumnStatisticsEquivalent(orcDataSourceId, new StringBuilder().append("Row group ").append(rowGroupIndex).append(" in stripe at offset ").append(stripeOffset).toString(), actual, expected);
         }
 
-        if (expectedRowGroup.getValidationMode() != DETAILED) {
-            if (expectedRowGroup.getHash() != actualRowGroup.getHash()) {
-                throw new OrcCorruptionException(orcDataSourceId, "Checksum mismatch for row group %s in stripe at offset %s", rowGroupIndex, stripeOffset);
-            }
-        }
+        boolean condition = expectedRowGroup.getValidationMode() != DETAILED && expectedRowGroup.getHash() != actualRowGroup.getHash();
+		if (condition) {
+		    throw new OrcCorruptionException(orcDataSourceId, "Checksum mismatch for row group %s in stripe at offset %s", rowGroupIndex, stripeOffset);
+		}
     }
 
-    public StatisticsValidation createWriteStatisticsBuilder(Map<Integer, Type> readColumns)
+	public StatisticsValidation createWriteStatisticsBuilder(Map<Integer, Type> readColumns)
     {
         requireNonNull(readColumns, "readColumns is null");
         checkArgument(!readColumns.isEmpty(), "readColumns is empty");
@@ -329,7 +323,7 @@ public class OrcWriteValidation
         return new StatisticsValidation(types.build());
     }
 
-    private static void validateColumnStatisticsEquivalent(
+	private static void validateColumnStatisticsEquivalent(
             OrcDataSourceId orcDataSourceId,
             String name,
             List<ColumnStatistics> actualColumnStatistics,
@@ -345,11 +339,11 @@ public class OrcWriteValidation
         for (int i = 0; i < actualColumnStatistics.size(); i++) {
             ColumnStatistics actual = actualColumnStatistics.get(i);
             ColumnStatistics expected = expectedColumnStatistics.get(i);
-            validateColumnStatisticsEquivalent(orcDataSourceId, name + " column " + i, actual, expected);
+            validateColumnStatisticsEquivalent(orcDataSourceId, new StringBuilder().append(name).append(" column ").append(i).toString(), actual, expected);
         }
     }
 
-    private static void validateColumnStatisticsEquivalent(
+	private static void validateColumnStatisticsEquivalent(
             OrcDataSourceId orcDataSourceId,
             String name,
             ColumnStatistics actualColumnStatistics,
@@ -393,17 +387,16 @@ public class OrcWriteValidation
                     expectedStringStatistics.getSum());
         }
         StringStatistics actualStringStatistics = actualColumnStatistics.getStringStatistics();
-        if (!Objects.equals(actualColumnStatistics.getStringStatistics(), expectedStringStatistics) && expectedStringStatistics != null) {
-            // expectedStringStatistics (or the min/max of it) could be null while the actual one might not because
-            // expectedStringStatistics is calculated by merging all row group stats in the stripe but the actual one is by scanning each row in the stripe on disk.
-            // Merging row group stats can produce nulls given we have string stats limit.
-            if (actualStringStatistics == null ||
-                    actualStringStatistics.getSum() != expectedStringStatistics.getSum() ||
-                    (expectedStringStatistics.getMax() != null && !Objects.equals(actualStringStatistics.getMax(), expectedStringStatistics.getMax())) ||
-                    (expectedStringStatistics.getMin() != null && !Objects.equals(actualStringStatistics.getMin(), expectedStringStatistics.getMin()))) {
-                throw new OrcCorruptionException(orcDataSourceId, "Write validation failed: unexpected string range in %s statistics", name);
-            }
-        }
+        boolean condition = !Objects.equals(actualColumnStatistics.getStringStatistics(), expectedStringStatistics) && expectedStringStatistics != null && (actualStringStatistics == null ||
+		        actualStringStatistics.getSum() != expectedStringStatistics.getSum() ||
+		        (expectedStringStatistics.getMax() != null && !Objects.equals(actualStringStatistics.getMax(), expectedStringStatistics.getMax())) ||
+		        (expectedStringStatistics.getMin() != null && !Objects.equals(actualStringStatistics.getMin(), expectedStringStatistics.getMin())));
+		// expectedStringStatistics (or the min/max of it) could be null while the actual one might not because
+		// expectedStringStatistics is calculated by merging all row group stats in the stripe but the actual one is by scanning each row in the stripe on disk.
+		// Merging row group stats can produce nulls given we have string stats limit.
+		if (condition) {
+            throw new OrcCorruptionException(orcDataSourceId, "Write validation failed: unexpected string range in %s statistics", name);
+         }
         if (!Objects.equals(actualColumnStatistics.getDateStatistics(), expectedColumnStatistics.getDateStatistics())) {
             throw new OrcCorruptionException(orcDataSourceId, "Write validation failed: unexpected date range in %s statistics", name);
         }
@@ -415,7 +408,12 @@ public class OrcWriteValidation
         }
     }
 
-    public static class WriteChecksum
+	public enum OrcWriteValidationMode
+    {
+        HASHED, DETAILED, BOTH
+    }
+
+	public static class WriteChecksum
     {
         private final long totalRowCount;
         private final long stripeHash;
@@ -461,9 +459,7 @@ public class OrcWriteValidation
             this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
 
             ImmutableList.Builder<XxHash64> columnHashes = ImmutableList.builder();
-            for (Type ignored : types) {
-                columnHashes.add(new XxHash64());
-            }
+            types.forEach(ignored -> columnHashes.add(new XxHash64()));
             this.columnHashes = columnHashes.build();
         }
 
@@ -804,10 +800,7 @@ public class OrcWriteValidation
         {
             StatisticsHasher statisticsHasher = new StatisticsHasher();
             statisticsHasher.putInt(columnStatistics.size());
-            for (Entry<Integer, ColumnStatistics> entry : columnStatistics.entrySet()) {
-                statisticsHasher.putInt(entry.getKey())
-                        .putOptionalHashable(entry.getValue());
-            }
+            columnStatistics.entrySet().forEach(entry -> statisticsHasher.putInt(entry.getKey()).putOptionalHashable(entry.getValue()));
             return statisticsHasher.hash();
         }
 
@@ -911,9 +904,7 @@ public class OrcWriteValidation
 
             retainedSize += RowGroupStatistics.INSTANCE_SIZE;
             if (validationMode != HASHED) {
-                for (ColumnStatistics statistics : rowGroupStatistics.getColumnStatistics().values()) {
-                    retainedSize += Integer.BYTES + statistics.getRetainedSizeInBytes();
-                }
+                rowGroupStatistics.getColumnStatistics().values().forEach(statistics -> retainedSize += Integer.BYTES + statistics.getRetainedSizeInBytes());
             }
         }
 

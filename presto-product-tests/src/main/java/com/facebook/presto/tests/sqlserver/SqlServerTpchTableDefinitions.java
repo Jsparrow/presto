@@ -20,7 +20,7 @@ import static com.facebook.presto.tests.sqlserver.TestConstants.CONNECTOR_NAME;
 
 public class SqlServerTpchTableDefinitions
 {
-    private SqlServerTpchTableDefinitions() {}
-
     public static final RelationalTableDefinition NATION = RelationalTableDefinition.like(JdbcTpchTableDefinitions.NATION).withDatabase(CONNECTOR_NAME).build();
+
+	private SqlServerTpchTableDefinitions() {}
 }

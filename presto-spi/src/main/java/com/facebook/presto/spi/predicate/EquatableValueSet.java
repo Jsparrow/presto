@@ -240,9 +240,9 @@ public class EquatableValueSet
     @Override
     public String toString(ConnectorSession session)
     {
-        return (whiteList ? "[ " : "EXCLUDES[ ") + entries.stream()
+        return new StringBuilder().append(whiteList ? "[ " : "EXCLUDES[ ").append(entries.stream()
                 .map(entry -> type.getObjectValue(session, entry.getBlock(), 0).toString())
-                .collect(Collectors.joining(", ")) + " ]";
+                .collect(Collectors.joining(", "))).append(" ]").toString();
     }
 
     private static <T> Set<T> intersect(Set<T> set1, Set<T> set2)

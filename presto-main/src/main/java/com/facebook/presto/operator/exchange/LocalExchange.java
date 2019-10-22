@@ -321,7 +321,36 @@ public class LocalExchange
         checkState(!Thread.holdsLock(lock), "Can not execute this method while holding a lock");
     }
 
-    @ThreadSafe
+    private static int computeBufferCount(PartitioningHandle partitioning, int defaultConcurrency, List<Integer> partitionChannels)
+    {
+        int bufferCount;
+        if (partitioning.equals(SINGLE_DISTRIBUTION)) {
+            bufferCount = 1;
+            checkArgument(partitionChannels.isEmpty(), "Gather exchange must not have partition channels");
+        }
+        else if (partitioning.equals(FIXED_BROADCAST_DISTRIBUTION)) {
+            bufferCount = defaultConcurrency;
+            checkArgument(partitionChannels.isEmpty(), "Broadcast exchange must not have partition channels");
+        }
+        else if (partitioning.equals(FIXED_ARBITRARY_DISTRIBUTION)) {
+            bufferCount = defaultConcurrency;
+            checkArgument(partitionChannels.isEmpty(), "Arbitrary exchange must not have partition channels");
+        }
+        else if (partitioning.equals(FIXED_PASSTHROUGH_DISTRIBUTION)) {
+            bufferCount = defaultConcurrency;
+            checkArgument(partitionChannels.isEmpty(), "Passthrough exchange must not have partition channels");
+        }
+        else if (partitioning.equals(FIXED_HASH_DISTRIBUTION) || partitioning.getConnectorId().isPresent()) {
+            // partitioned exchange
+            bufferCount = defaultConcurrency;
+        }
+        else {
+            throw new IllegalArgumentException("Unsupported local exchange partitioning " + partitioning);
+        }
+        return bufferCount;
+    }
+
+	@ThreadSafe
     public static class LocalExchangeFactory
     {
         private final PartitioningProviderManager partitioningProviderManager;
@@ -409,9 +438,7 @@ public class LocalExchange
                         partitioningChannelTypes,
                         partitionHashChannel,
                         maxBufferedBytes);
-                for (LocalExchangeSinkFactoryId closedSinkFactoryId : closedSinkFactories) {
-                    localExchange.getSinkFactory(closedSinkFactoryId).close();
-                }
+                closedSinkFactories.forEach(closedSinkFactoryId -> localExchange.getSinkFactory(closedSinkFactoryId).close());
                 return localExchange;
             });
         }
@@ -419,39 +446,8 @@ public class LocalExchange
         public synchronized void closeSinks(LocalExchangeSinkFactoryId sinkFactoryId)
         {
             closedSinkFactories.add(sinkFactoryId);
-            for (LocalExchange localExchange : localExchangeMap.values()) {
-                localExchange.getSinkFactory(sinkFactoryId).close();
-            }
+            localExchangeMap.values().forEach(localExchange -> localExchange.getSinkFactory(sinkFactoryId).close());
         }
-    }
-
-    private static int computeBufferCount(PartitioningHandle partitioning, int defaultConcurrency, List<Integer> partitionChannels)
-    {
-        int bufferCount;
-        if (partitioning.equals(SINGLE_DISTRIBUTION)) {
-            bufferCount = 1;
-            checkArgument(partitionChannels.isEmpty(), "Gather exchange must not have partition channels");
-        }
-        else if (partitioning.equals(FIXED_BROADCAST_DISTRIBUTION)) {
-            bufferCount = defaultConcurrency;
-            checkArgument(partitionChannels.isEmpty(), "Broadcast exchange must not have partition channels");
-        }
-        else if (partitioning.equals(FIXED_ARBITRARY_DISTRIBUTION)) {
-            bufferCount = defaultConcurrency;
-            checkArgument(partitionChannels.isEmpty(), "Arbitrary exchange must not have partition channels");
-        }
-        else if (partitioning.equals(FIXED_PASSTHROUGH_DISTRIBUTION)) {
-            bufferCount = defaultConcurrency;
-            checkArgument(partitionChannels.isEmpty(), "Passthrough exchange must not have partition channels");
-        }
-        else if (partitioning.equals(FIXED_HASH_DISTRIBUTION) || partitioning.getConnectorId().isPresent()) {
-            // partitioned exchange
-            bufferCount = defaultConcurrency;
-        }
-        else {
-            throw new IllegalArgumentException("Unsupported local exchange partitioning " + partitioning);
-        }
-        return bufferCount;
     }
 
     public static class LocalExchangeSinkFactoryId

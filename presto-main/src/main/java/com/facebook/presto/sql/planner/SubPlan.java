@@ -59,9 +59,7 @@ public class SubPlan
         ImmutableList.Builder<PlanFragment> fragments = ImmutableList.builder();
 
         fragments.add(getFragment());
-        for (SubPlan child : getChildren()) {
-            fragments.addAll(child.getAllFragments());
-        }
+        getChildren().forEach(child -> fragments.addAll(child.getAllFragments()));
 
         return fragments.build();
     }
@@ -80,8 +78,6 @@ public class SubPlan
 
         checkState(childrenIds.containsAll(remoteSourceIds), "child fragments must include all remote source fragments (%s vs %s)", remoteSourceIds, childrenIds);
 
-        for (SubPlan child : children) {
-            child.sanityCheck();
-        }
+        children.forEach(SubPlan::sanityCheck);
     }
 }

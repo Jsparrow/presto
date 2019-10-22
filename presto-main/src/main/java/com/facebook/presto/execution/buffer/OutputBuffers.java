@@ -40,13 +40,31 @@ public final class OutputBuffers
 {
     public static final int BROADCAST_PARTITION_ID = 0;
     private static final OutputBuffers DISCARDING_OUTPUT_BUFFERS = createInitialEmptyOutputBuffers(DISCARDING).withNoMoreBufferIds();
+	private final BufferType type;
+	private final long version;
+	private final boolean noMoreBufferIds;
+	private final Map<OutputBufferId, Integer> buffers;
 
-    public static OutputBuffers createInitialEmptyOutputBuffers(BufferType type)
+	// Visible only for Jackson... Use the "with" methods instead
+    @JsonCreator
+    public OutputBuffers(
+            @JsonProperty("type") BufferType type,
+            @JsonProperty("version") long version,
+            @JsonProperty("noMoreBufferIds") boolean noMoreBufferIds,
+            @JsonProperty("buffers") Map<OutputBufferId, Integer> buffers)
+    {
+        this.type = type;
+        this.version = version;
+        this.buffers = ImmutableMap.copyOf(requireNonNull(buffers, "buffers is null"));
+        this.noMoreBufferIds = noMoreBufferIds;
+    }
+
+	public static OutputBuffers createInitialEmptyOutputBuffers(BufferType type)
     {
         return new OutputBuffers(type, 0, false, ImmutableMap.of());
     }
 
-    public static OutputBuffers createInitialEmptyOutputBuffers(PartitioningHandle partitioningHandle)
+	public static OutputBuffers createInitialEmptyOutputBuffers(PartitioningHandle partitioningHandle)
     {
         BufferType type;
         if (partitioningHandle.equals(FIXED_BROADCAST_DISTRIBUTION)) {
@@ -61,63 +79,36 @@ public final class OutputBuffers
         return new OutputBuffers(type, 0, false, ImmutableMap.of());
     }
 
-    public static OutputBuffers createDiscardingOutputBuffers()
+	public static OutputBuffers createDiscardingOutputBuffers()
     {
         return DISCARDING_OUTPUT_BUFFERS;
     }
 
-    public enum BufferType
-    {
-        PARTITIONED,
-        BROADCAST,
-        ARBITRARY,
-        DISCARDING,
-    }
-
-    private final BufferType type;
-    private final long version;
-    private final boolean noMoreBufferIds;
-    private final Map<OutputBufferId, Integer> buffers;
-
-    // Visible only for Jackson... Use the "with" methods instead
-    @JsonCreator
-    public OutputBuffers(
-            @JsonProperty("type") BufferType type,
-            @JsonProperty("version") long version,
-            @JsonProperty("noMoreBufferIds") boolean noMoreBufferIds,
-            @JsonProperty("buffers") Map<OutputBufferId, Integer> buffers)
-    {
-        this.type = type;
-        this.version = version;
-        this.buffers = ImmutableMap.copyOf(requireNonNull(buffers, "buffers is null"));
-        this.noMoreBufferIds = noMoreBufferIds;
-    }
-
-    @JsonProperty
+	@JsonProperty
     public BufferType getType()
     {
         return type;
     }
 
-    @JsonProperty
+	@JsonProperty
     public long getVersion()
     {
         return version;
     }
 
-    @JsonProperty
+	@JsonProperty
     public boolean isNoMoreBufferIds()
     {
         return noMoreBufferIds;
     }
 
-    @JsonProperty
+	@JsonProperty
     public Map<OutputBufferId, Integer> getBuffers()
     {
         return buffers;
     }
 
-    public void checkValidTransition(OutputBuffers newOutputBuffers)
+	public void checkValidTransition(OutputBuffers newOutputBuffers)
     {
         requireNonNull(newOutputBuffers, "newOutputBuffers is null");
         checkState(type == newOutputBuffers.getType(), "newOutputBuffers has a different type");
@@ -143,13 +134,13 @@ public final class OutputBuffers
         }
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(version, noMoreBufferIds, buffers);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -164,7 +155,7 @@ public final class OutputBuffers
                 Objects.equals(this.buffers, other.buffers);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -175,7 +166,7 @@ public final class OutputBuffers
                 .toString();
     }
 
-    public OutputBuffers withBuffer(OutputBufferId bufferId, int partition)
+	public OutputBuffers withBuffer(OutputBufferId bufferId, int partition)
     {
         requireNonNull(bufferId, "bufferId is null");
 
@@ -197,7 +188,7 @@ public final class OutputBuffers
                         .build());
     }
 
-    public OutputBuffers withBuffers(Map<OutputBufferId, Integer> buffers)
+	public OutputBuffers withBuffers(Map<OutputBufferId, Integer> buffers)
     {
         requireNonNull(buffers, "buffers is null");
 
@@ -229,7 +220,7 @@ public final class OutputBuffers
         return new OutputBuffers(type, version + 1, false, newBuffers);
     }
 
-    public OutputBuffers withNoMoreBufferIds()
+	public OutputBuffers withNoMoreBufferIds()
     {
         if (noMoreBufferIds) {
             return this;
@@ -238,7 +229,7 @@ public final class OutputBuffers
         return new OutputBuffers(type, version + 1, true, buffers);
     }
 
-    private void checkHasBuffer(OutputBufferId bufferId, int partition)
+	private void checkHasBuffer(OutputBufferId bufferId, int partition)
     {
         checkArgument(
                 Objects.equals(buffers.get(bufferId), partition),
@@ -248,24 +239,32 @@ public final class OutputBuffers
                 partition);
     }
 
+	public enum BufferType
+    {
+        PARTITIONED,
+        BROADCAST,
+        ARBITRARY,
+        DISCARDING,
+    }
+
     public static class OutputBufferId
     {
-        // this is needed by JAX-RS
-        public static OutputBufferId fromString(String id)
-        {
-            return new OutputBufferId(parseInt(id));
-        }
-
         private final int id;
 
-        @JsonCreator
+		@JsonCreator
         public OutputBufferId(int id)
         {
             checkArgument(id >= 0, "id is negative");
             this.id = id;
         }
 
-        @Override
+		// this is needed by JAX-RS
+        public static OutputBufferId fromString(String id)
+        {
+            return new OutputBufferId(parseInt(id));
+        }
+
+		@Override
         public boolean equals(Object o)
         {
             if (this == o) {
@@ -278,19 +277,19 @@ public final class OutputBuffers
             return id == that.id;
         }
 
-        @JsonValue
+		@JsonValue
         public int getId()
         {
             return id;
         }
 
-        @Override
+		@Override
         public int hashCode()
         {
             return id;
         }
 
-        @Override
+		@Override
         public String toString()
         {
             return String.valueOf(id);

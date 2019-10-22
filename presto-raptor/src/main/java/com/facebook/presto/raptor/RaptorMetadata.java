@@ -220,13 +220,13 @@ public class RaptorMetadata
         SortedMap<Integer, String> bucketing = new TreeMap<>();
         SortedMap<Integer, String> ordering = new TreeMap<>();
 
-        for (TableColumn column : tableColumns) {
+        tableColumns.forEach(column -> {
             if (column.isTemporal()) {
                 properties.put(TEMPORAL_COLUMN_PROPERTY, column.getColumnName());
             }
             column.getBucketOrdinal().ifPresent(bucketOrdinal -> bucketing.put(bucketOrdinal, column.getColumnName()));
             column.getSortOrdinal().ifPresent(sortOrdinal -> ordering.put(sortOrdinal, column.getColumnName()));
-        }
+        });
 
         if (!bucketing.isEmpty()) {
             properties.put(BUCKETED_ON_PROPERTY, ImmutableList.copyOf(bucketing.values()));
@@ -266,9 +266,7 @@ public class RaptorMetadata
     {
         RaptorTableHandle raptorTableHandle = (RaptorTableHandle) tableHandle;
         ImmutableMap.Builder<String, ColumnHandle> builder = ImmutableMap.builder();
-        for (TableColumn tableColumn : dao.listTableColumns(raptorTableHandle.getTableId())) {
-            builder.put(tableColumn.getColumnName(), getRaptorColumnHandle(tableColumn));
-        }
+        dao.listTableColumns(raptorTableHandle.getTableId()).forEach(tableColumn -> builder.put(tableColumn.getColumnName(), getRaptorColumnHandle(tableColumn)));
 
         RaptorColumnHandle uuidColumn = shardUuidColumnHandle(connectorId);
         builder.put(uuidColumn.getColumnName(), uuidColumn);
@@ -299,10 +297,10 @@ public class RaptorMetadata
         requireNonNull(prefix, "prefix is null");
 
         ImmutableListMultimap.Builder<SchemaTableName, ColumnMetadata> columns = ImmutableListMultimap.builder();
-        for (TableColumn tableColumn : dao.listTableColumns(prefix.getSchemaName(), prefix.getTableName())) {
+        dao.listTableColumns(prefix.getSchemaName(), prefix.getTableName()).forEach(tableColumn -> {
             ColumnMetadata columnMetadata = new ColumnMetadata(tableColumn.getColumnName(), tableColumn.getDataType());
             columns.put(tableColumn.getTable(), columnMetadata);
-        }
+        });
         return Multimaps.asMap(columns.build());
     }
 
@@ -387,10 +385,10 @@ public class RaptorMetadata
             throw new PrestoException(INVALID_TABLE_PROPERTY, format("Must specify '%s' along with '%s'", BUCKET_COUNT_PROPERTY, BUCKETED_ON_PROPERTY));
         }
         ImmutableList.Builder<Type> bucketColumnTypes = ImmutableList.builder();
-        for (RaptorColumnHandle column : bucketColumnHandles) {
+        bucketColumnHandles.forEach(column -> {
             validateBucketType(column.getColumnType());
             bucketColumnTypes.add(column.getColumnType());
-        }
+        });
 
         long distributionId;
         String distributionName = getDistributionName(properties);
@@ -705,10 +703,10 @@ public class RaptorMetadata
 
         ImmutableList.Builder<RaptorColumnHandle> columnHandles = ImmutableList.builder();
         ImmutableList.Builder<Type> columnTypes = ImmutableList.builder();
-        for (TableColumn column : dao.listTableColumns(tableId)) {
+        dao.listTableColumns(tableId).forEach(column -> {
             columnHandles.add(new RaptorColumnHandle(connectorId, column.getColumnName(), column.getColumnId(), column.getDataType()));
             columnTypes.add(column.getDataType());
-        }
+        });
 
         long transactionId = shardManager.beginTransaction();
 
@@ -887,9 +885,7 @@ public class RaptorMetadata
     public Map<SchemaTableName, ConnectorViewDefinition> getViews(ConnectorSession session, SchemaTablePrefix prefix)
     {
         ImmutableMap.Builder<SchemaTableName, ConnectorViewDefinition> map = ImmutableMap.builder();
-        for (ViewResult view : dao.getViews(prefix.getSchemaName(), prefix.getTableName())) {
-            map.put(view.getName(), new ConnectorViewDefinition(view.getName(), Optional.empty(), view.getData()));
-        }
+        dao.getViews(prefix.getSchemaName(), prefix.getTableName()).forEach(view -> map.put(view.getName(), new ConnectorViewDefinition(view.getName(), Optional.empty(), view.getData())));
         return map.build();
     }
 

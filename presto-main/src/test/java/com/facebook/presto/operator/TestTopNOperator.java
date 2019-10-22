@@ -44,11 +44,14 @@ import static io.airlift.units.DataSize.Unit.BYTE;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestTopNOperator
 {
-    private ExecutorService executor;
+    private static final Logger logger = LoggerFactory.getLogger(TestTopNOperator.class);
+	private ExecutorService executor;
     private ScheduledExecutorService scheduledExecutor;
     private DriverContext driverContext;
 
@@ -210,6 +213,7 @@ public class TestTopNOperator
             fail("must fail because of exceeding local memory limit");
         }
         catch (ExceededMemoryLimitException ignore) {
+			logger.error(ignore.getMessage(), ignore);
         }
     }
 }

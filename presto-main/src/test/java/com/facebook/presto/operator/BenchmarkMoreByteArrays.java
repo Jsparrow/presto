@@ -120,7 +120,17 @@ public class BenchmarkMoreByteArrays
         }
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkMoreByteArrays.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private static final int POSITIONS_PER_PAGE = 10000;
@@ -140,15 +150,5 @@ public class BenchmarkMoreByteArrays
         {
             random.nextBytes(byteValues);
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkMoreByteArrays.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

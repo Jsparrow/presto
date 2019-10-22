@@ -54,7 +54,18 @@ public class BenchmarkSortedRangeSet
         return build;
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSortedRangeSet.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class Data
     {
         public List<Range> ranges;
@@ -73,16 +84,5 @@ public class BenchmarkSortedRangeSet
                 ranges.add(new Range(Marker.above(BIGINT, from), Marker.below(BIGINT, to)));
             }
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSortedRangeSet.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

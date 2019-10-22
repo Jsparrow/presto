@@ -180,9 +180,7 @@ public final class FormatUtils
             lower = range - lower;
         }
 
-        return repeat(" ", lower) +
-                "<" + repeat("=", markerWidth - 2) + ">" +
-                repeat(" ", width - (lower + markerWidth));
+        return new StringBuilder().append(repeat(" ", lower)).append("<").append(repeat("=", markerWidth - 2)).append(">").append(repeat(" ", width - (lower + markerWidth))).toString();
     }
 
     public static String formatProgressBar(int width, int complete, int running, int total)
@@ -219,7 +217,7 @@ public final class FormatUtils
                 "Expected completeLength (%s) + runningLength (%s) + pendingLength (%s) == width (%s), was %s for complete = %s, running = %s, total = %s",
                 completeLength, runningLength, pendingLength, width, completeLength + runningLength + pendingLength, complete, running, total);
 
-        return repeat("=", completeLength) + repeat(">", runningLength) + repeat(" ", pendingLength);
+        return new StringBuilder().append(repeat("=", completeLength)).append(repeat(">", runningLength)).append(repeat(" ", pendingLength)).toString();
     }
 
     /**

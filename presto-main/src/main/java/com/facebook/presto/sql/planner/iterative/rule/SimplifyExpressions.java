@@ -41,7 +41,12 @@ import static java.util.Objects.requireNonNull;
 public class SimplifyExpressions
         extends ExpressionRewriteRuleSet
 {
-    @VisibleForTesting
+    public SimplifyExpressions(Metadata metadata, SqlParser sqlParser)
+    {
+        super(createRewrite(metadata, sqlParser));
+    }
+
+	@VisibleForTesting
     static Expression rewrite(Expression expression, Session session, PlanVariableAllocator variableAllocator, Metadata metadata, LiteralEncoder literalEncoder, SqlParser sqlParser)
     {
         requireNonNull(metadata, "metadata is null");
@@ -56,12 +61,7 @@ public class SimplifyExpressions
         return literalEncoder.toExpression(interpreter.optimize(NoOpSymbolResolver.INSTANCE), expressionTypes.get(NodeRef.of(expression)));
     }
 
-    public SimplifyExpressions(Metadata metadata, SqlParser sqlParser)
-    {
-        super(createRewrite(metadata, sqlParser));
-    }
-
-    @Override
+	@Override
     public Set<Rule<?>> rules()
     {
         return ImmutableSet.of(
@@ -71,7 +71,7 @@ public class SimplifyExpressions
                 valuesExpressionRewrite()); // ApplyNode and AggregationNode are not supported, because ExpressionInterpreter doesn't support them
     }
 
-    private static ExpressionRewriter createRewrite(Metadata metadata, SqlParser sqlParser)
+	private static ExpressionRewriter createRewrite(Metadata metadata, SqlParser sqlParser)
     {
         requireNonNull(metadata, "metadata is null");
         requireNonNull(sqlParser, "sqlParser is null");

@@ -72,7 +72,7 @@ public class StatisticAggregations
     {
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> finalOrIntermediateAggregations = ImmutableMap.builder();
         ImmutableMap.Builder<VariableReferenceExpression, Aggregation> partialAggregations = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, Aggregation> entry : aggregations.entrySet()) {
+        aggregations.entrySet().forEach(entry -> {
             Aggregation originalAggregation = entry.getValue();
             FunctionHandle functionHandle = originalAggregation.getFunctionHandle();
             InternalAggregationFunction function = functionManager.getAggregateFunctionImplementation(functionHandle);
@@ -102,7 +102,7 @@ public class StatisticAggregations
                             Optional.empty(),
                             false,
                             Optional.empty()));
-        }
+        });
 
         StatisticAggregations finalOrIntermediateAggregation = new StatisticAggregations(finalOrIntermediateAggregations.build(), groupingVariables);
         return new Parts(

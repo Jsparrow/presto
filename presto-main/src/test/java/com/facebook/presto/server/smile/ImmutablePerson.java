@@ -36,7 +36,16 @@ public class ImmutablePerson
     private final boolean rocks;
     private final String notWritable = null;
 
-    public static void validatePersonJsonCodec(JsonCodec<ImmutablePerson> jsonCodec)
+    @JsonCreator
+    public ImmutablePerson(
+            @JsonProperty("name") String name,
+            @JsonProperty("rocks") boolean rocks)
+    {
+        this.name = name;
+        this.rocks = rocks;
+    }
+
+	public static void validatePersonJsonCodec(JsonCodec<ImmutablePerson> jsonCodec)
     {
         ImmutablePerson expected = new ImmutablePerson("dain", true);
 
@@ -47,7 +56,7 @@ public class ImmutablePerson
         assertEquals(jsonCodec.fromJson(bytes), expected);
     }
 
-    public static void validatePersonListJsonCodec(JsonCodec<List<ImmutablePerson>> jsonCodec)
+	public static void validatePersonListJsonCodec(JsonCodec<List<ImmutablePerson>> jsonCodec)
     {
         ImmutableList<ImmutablePerson> expected = ImmutableList.of(
                 new ImmutablePerson("dain", true),
@@ -61,7 +70,7 @@ public class ImmutablePerson
         assertEquals(jsonCodec.fromJson(bytes), expected);
     }
 
-    public static void validatePersonMapJsonCodec(JsonCodec<Map<String, ImmutablePerson>> jsonCodec)
+	public static void validatePersonMapJsonCodec(JsonCodec<Map<String, ImmutablePerson>> jsonCodec)
     {
         ImmutableMap<String, ImmutablePerson> expected = ImmutableMap.<String, ImmutablePerson>builder()
                 .put("dain", new ImmutablePerson("dain", true))
@@ -76,34 +85,25 @@ public class ImmutablePerson
         assertEquals(jsonCodec.fromJson(bytes), expected);
     }
 
-    @JsonCreator
-    public ImmutablePerson(
-            @JsonProperty("name") String name,
-            @JsonProperty("rocks") boolean rocks)
-    {
-        this.name = name;
-        this.rocks = rocks;
-    }
-
-    @JsonProperty
+	@JsonProperty
     public String getName()
     {
         return name;
     }
 
-    @JsonProperty
+	@JsonProperty
     public boolean isRocks()
     {
         return rocks;
     }
 
-    @JsonProperty
+	@JsonProperty
     public String getNotWritable()
     {
         return notWritable;
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -118,13 +118,13 @@ public class ImmutablePerson
                 Objects.equals(this.notWritable, o.notWritable);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(name, rocks, notWritable);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)

@@ -27,12 +27,8 @@ public class HiveTableDefinitions
     public static final HiveTableDefinition NATION_PARTITIONED_BY_BIGINT_REGIONKEY =
             HiveTableDefinition.builder(NATION_PARTITIONED_BY_REGIONKEY_TABLE_NAME)
                     .setCreateTableDDLTemplate(
-                            "CREATE %EXTERNAL% TABLE %NAME%(" +
-                                    "   p_nationkey     BIGINT," +
-                                    "   p_name          VARCHAR(25)," +
-                                    "   p_comment       VARCHAR(152)) " +
-                                    "PARTITIONED BY (p_regionkey BIGINT)" +
-                                    "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' ")
+                            new StringBuilder().append("CREATE %EXTERNAL% TABLE %NAME%(").append("   p_nationkey     BIGINT,").append("   p_name          VARCHAR(25),").append("   p_comment       VARCHAR(152)) ").append("PARTITIONED BY (p_regionkey BIGINT)").append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' ")
+									.toString())
                     .addPartition(
                             "p_regionkey=1",
                             createResourceDataSource(
@@ -53,12 +49,8 @@ public class HiveTableDefinitions
     public static final HiveTableDefinition NATION_PARTITIONED_BY_VARCHAR_REGIONKEY =
             HiveTableDefinition.builder(NATION_PARTITIONED_BY_REGIONKEY_TABLE_NAME)
                     .setCreateTableDDLTemplate(
-                            "CREATE %EXTERNAL% TABLE %NAME%(" +
-                                    "   p_nationkey     BIGINT," +
-                                    "   p_name          VARCHAR(25)," +
-                                    "   p_comment       VARCHAR(152)) " +
-                                    "PARTITIONED BY (p_regionkey VARCHAR(20))" +
-                                    "ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' ")
+                            new StringBuilder().append("CREATE %EXTERNAL% TABLE %NAME%(").append("   p_nationkey     BIGINT,").append("   p_name          VARCHAR(25),").append("   p_comment       VARCHAR(152)) ").append("PARTITIONED BY (p_regionkey VARCHAR(20))").append("ROW FORMAT DELIMITED FIELDS TERMINATED BY '|' ")
+									.toString())
                     .addPartition(
                             "p_regionkey='AMERICA'",
                             createResourceDataSource(
@@ -76,12 +68,12 @@ public class HiveTableDefinitions
                                     partitionDataFileResource("varchar", "europe")))
                     .build();
 
-    private static String partitionDataFileResource(String key, String partition)
-    {
-        return format("com/facebook/presto/tests/hive/data/partitioned_nation_%s/nation_region_%s.textfile", key, partition);
-    }
-
     private HiveTableDefinitions()
     {
+    }
+
+	private static String partitionDataFileResource(String key, String partition)
+    {
+        return format("com/facebook/presto/tests/hive/data/partitioned_nation_%s/nation_region_%s.textfile", key, partition);
     }
 }

@@ -669,9 +669,7 @@ public class TestOrcStorageManager
 
     private static void assertNoColumnStats(List<ColumnStats> list, long columnId)
     {
-        for (ColumnStats stats : list) {
-            assertNotEquals(stats.getColumnId(), columnId);
-        }
+        list.forEach(stats -> assertNotEquals(stats.getColumnId(), columnId));
     }
 
     private static List<Type> types(Type... types)

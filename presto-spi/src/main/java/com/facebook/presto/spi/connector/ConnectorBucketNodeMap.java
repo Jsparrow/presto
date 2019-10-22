@@ -27,16 +27,6 @@ public final class ConnectorBucketNodeMap
     private final int bucketCount;
     private final Optional<List<Node>> bucketToNode;
 
-    public static ConnectorBucketNodeMap createBucketNodeMap(int bucketCount)
-    {
-        return new ConnectorBucketNodeMap(bucketCount, Optional.empty());
-    }
-
-    public static ConnectorBucketNodeMap createBucketNodeMap(List<Node> bucketToNode)
-    {
-        return new ConnectorBucketNodeMap(bucketToNode.size(), Optional.of(bucketToNode));
-    }
-
     private ConnectorBucketNodeMap(int bucketCount, Optional<List<Node>> bucketToNode)
     {
         if (bucketCount <= 0) {
@@ -49,17 +39,27 @@ public final class ConnectorBucketNodeMap
         this.bucketToNode = bucketToNode.map(ArrayList::new).map(Collections::unmodifiableList);
     }
 
-    public int getBucketCount()
+	public static ConnectorBucketNodeMap createBucketNodeMap(int bucketCount)
+    {
+        return new ConnectorBucketNodeMap(bucketCount, Optional.empty());
+    }
+
+	public static ConnectorBucketNodeMap createBucketNodeMap(List<Node> bucketToNode)
+    {
+        return new ConnectorBucketNodeMap(bucketToNode.size(), Optional.of(bucketToNode));
+    }
+
+	public int getBucketCount()
     {
         return bucketCount;
     }
 
-    public boolean hasFixedMapping()
+	public boolean hasFixedMapping()
     {
         return bucketToNode.isPresent();
     }
 
-    public List<Node> getFixedMapping()
+	public List<Node> getFixedMapping()
     {
         return bucketToNode.orElseThrow(() -> new IllegalArgumentException("No fixed bucket to node mapping"));
     }

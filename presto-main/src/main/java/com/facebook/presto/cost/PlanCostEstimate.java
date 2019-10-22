@@ -35,21 +35,6 @@ public final class PlanCostEstimate
     private final double maxMemoryWhenOutputting;
     private final double networkCost;
 
-    public static PlanCostEstimate infinite()
-    {
-        return INFINITE;
-    }
-
-    public static PlanCostEstimate unknown()
-    {
-        return UNKNOWN;
-    }
-
-    public static PlanCostEstimate zero()
-    {
-        return ZERO;
-    }
-
     @JsonCreator
     public PlanCostEstimate(
             @JsonProperty("cpuCost") double cpuCost,
@@ -68,7 +53,22 @@ public final class PlanCostEstimate
         this.networkCost = networkCost;
     }
 
-    /**
+	public static PlanCostEstimate infinite()
+    {
+        return INFINITE;
+    }
+
+	public static PlanCostEstimate unknown()
+    {
+        return UNKNOWN;
+    }
+
+	public static PlanCostEstimate zero()
+    {
+        return ZERO;
+    }
+
+	/**
      * Returns CPU component of the cost.
      * <p>
      * Unknown value is represented by {@link Double#NaN}
@@ -79,7 +79,7 @@ public final class PlanCostEstimate
         return cpuCost;
     }
 
-    /**
+	/**
      * Returns maximal memory usage of a query plan (or subplan).
      * <p>
      * Unknown value is represented by {@link Double#NaN}
@@ -90,7 +90,7 @@ public final class PlanCostEstimate
         return maxMemory;
     }
 
-    /**
+	/**
      * Returns maximal memory usage of a query plan (or subplan) after a first output row was produced.
      * When this cost represents a cost of a subplan, this information can be used to determine maximum memory
      * usage (and maximum memory usage after a first output row was produced) for plan nodes higher up in the plan tree.
@@ -103,7 +103,7 @@ public final class PlanCostEstimate
         return maxMemoryWhenOutputting;
     }
 
-    /**
+	/**
      * Returns network component of the cost.
      * <p>
      * Unknown value is represented by {@link Double#NaN}
@@ -114,7 +114,7 @@ public final class PlanCostEstimate
         return networkCost;
     }
 
-    /**
+	/**
      * Returns true if this cost has unknown components.
      */
     public boolean hasUnknownComponents()
@@ -122,7 +122,7 @@ public final class PlanCostEstimate
         return isNaN(cpuCost) || isNaN(maxMemory) || isNaN(maxMemoryWhenOutputting) || isNaN(networkCost);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -133,7 +133,7 @@ public final class PlanCostEstimate
                 .toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -149,7 +149,7 @@ public final class PlanCostEstimate
                 Double.compare(that.networkCost, networkCost) == 0;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(cpuCost, maxMemory, maxMemoryWhenOutputting, networkCost);

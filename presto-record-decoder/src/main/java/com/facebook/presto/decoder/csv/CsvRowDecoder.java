@@ -26,6 +26,8 @@ import java.util.Set;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Decode row as CSV. This is an extremely primitive CSV decoder using {@link au.com.bytecode.opencsv.CSVParser]}.
@@ -33,7 +35,9 @@ import static java.util.function.Function.identity;
 public class CsvRowDecoder
         implements RowDecoder
 {
-    public static final String NAME = "csv";
+    private static final Logger logger = LoggerFactory.getLogger(CsvRowDecoder.class);
+
+	public static final String NAME = "csv";
 
     private final Map<DecoderColumnHandle, CsvColumnDecoder> columnDecoders;
     private final CSVParser parser = new CSVParser();
@@ -61,7 +65,8 @@ public class CsvRowDecoder
             tokens = parser.parseLine(line);
         }
         catch (Exception e) {
-            return Optional.empty();
+            logger.error(e.getMessage(), e);
+			return Optional.empty();
         }
 
         return Optional.of(columnDecoders.entrySet().stream()

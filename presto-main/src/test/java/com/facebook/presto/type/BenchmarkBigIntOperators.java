@@ -403,7 +403,7 @@ public class BenchmarkBigIntOperators
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkBigIntOperators.class.getSimpleName() + ".*")
+                .include(new StringBuilder().append(".*").append(BenchmarkBigIntOperators.class.getSimpleName()).append(".*").toString())
                 .build();
         new Runner(options).run();
     }

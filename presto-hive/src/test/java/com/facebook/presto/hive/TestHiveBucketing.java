@@ -52,6 +52,7 @@ import static java.lang.Math.toIntExact;
 import static java.util.Arrays.asList;
 import static java.util.Map.Entry;
 import static org.testng.Assert.assertEquals;
+import java.util.Collections;
 
 public class TestHiveBucketing
 {
@@ -116,7 +117,7 @@ public class TestHiveBucketing
         assertBucketEquals("map<float,date>", null);
         assertBucketEquals("map<double,timestamp>", ImmutableMap.of());
         assertBucketEquals("map<string,bigint>", ImmutableMap.of("key", 123L, "key2", 123456789L, "key3", -123456L));
-        assertBucketEquals("array<array<bigint>>", ImmutableList.of(ImmutableList.of(10L, 20L), ImmutableList.of(-10L, -20L), asList((Object) null)));
+        assertBucketEquals("array<array<bigint>>", ImmutableList.of(ImmutableList.of(10L, 20L), ImmutableList.of(-10L, -20L), Collections.singletonList((Object) null)));
         assertBucketEquals("map<array<double>,map<int,timestamp>>", ImmutableMap.of(ImmutableList.of(12.3, 45.7), ImmutableMap.of(123, new Timestamp(1_234_567_890_000L))));
 
         // multiple bucketing columns
@@ -132,7 +133,7 @@ public class TestHiveBucketing
             throws HiveException
     {
         // Use asList to allow nulls
-        assertBucketEquals(ImmutableList.of(hiveTypeStrings), asList(hiveValues));
+        assertBucketEquals(ImmutableList.of(hiveTypeStrings), Collections.singletonList(hiveValues));
     }
 
     private static void assertBucketEquals(List<String> hiveTypeStrings, List<Object> hiveValues)

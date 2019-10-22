@@ -202,19 +202,13 @@ public class RowExpressionPredicateCompiler
 
     private static void declareBlockVariables(RowExpression expression, Parameter page, Scope scope, BytecodeBlock body)
     {
-        for (int channel : getInputChannels(expression)) {
-            scope.declareVariable("block_" + channel, body, page.invoke("getBlock", Block.class, constantInt(channel)));
-        }
+        getInputChannels(expression).stream().mapToInt(Integer::valueOf).forEach(channel -> scope.declareVariable("block_" + channel, body, page.invoke("getBlock", Block.class, constantInt(channel))));
     }
 
     private static List<Integer> getInputChannels(Iterable<RowExpression> expressions)
     {
         TreeSet<Integer> channels = new TreeSet<>();
-        for (RowExpression expression : Expressions.subExpressions(expressions)) {
-            if (expression instanceof InputReferenceExpression) {
-                channels.add(((InputReferenceExpression) expression).getField());
-            }
-        }
+        Expressions.subExpressions(expressions).stream().filter(expression -> expression instanceof InputReferenceExpression).forEach(expression -> channels.add(((InputReferenceExpression) expression).getField()));
         return ImmutableList.copyOf(channels);
     }
 

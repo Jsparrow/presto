@@ -25,49 +25,42 @@ import static java.util.Objects.requireNonNull;
 public class ExplainFormat
         extends ExplainOption
 {
-    public enum Type
-    {
-        TEXT,
-        GRAPHVIZ,
-        JSON
-    }
-
     private final Type type;
 
-    public ExplainFormat(Type type)
+	public ExplainFormat(Type type)
     {
         this(Optional.empty(), type);
     }
 
-    public ExplainFormat(NodeLocation location, Type type)
+	public ExplainFormat(NodeLocation location, Type type)
     {
         this(Optional.of(location), type);
     }
 
-    private ExplainFormat(Optional<NodeLocation> location, Type type)
+	private ExplainFormat(Optional<NodeLocation> location, Type type)
     {
         super(location);
         this.type = requireNonNull(type, "type is null");
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -80,11 +73,18 @@ public class ExplainFormat
         return Objects.equals(type, o.type);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .toString();
+    }
+
+	public enum Type
+    {
+        TEXT,
+        GRAPHVIZ,
+        JSON
     }
 }

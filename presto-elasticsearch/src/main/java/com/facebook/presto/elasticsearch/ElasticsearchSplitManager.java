@@ -57,7 +57,7 @@ public class ElasticsearchSplitManager
 
         List<String> indices = client.getIndices(table);
         ImmutableList.Builder<ConnectorSplit> splits = ImmutableList.builder();
-        for (String index : indices) {
+        indices.forEach(index -> {
             ClusterSearchShardsResponse response = client.getSearchShards(index, table);
             DiscoveryNode[] nodes = response.getNodes();
             for (ClusterSearchShardsGroup group : response.getGroups()) {
@@ -71,7 +71,7 @@ public class ElasticsearchSplitManager
                         layoutHandle.getTupleDomain());
                 splits.add(split);
             }
-        }
+        });
         return new FixedSplitSource(splits.build());
     }
 }

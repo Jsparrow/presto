@@ -431,9 +431,7 @@ Spilled: 20GB
                 stage.getCompletedSplits());
         reprintLine(stageSummary);
 
-        for (StageStats subStage : stage.getSubStages()) {
-            printStageTree(subStage, indent + "  ", stageNumberCounter);
-        }
+        stage.getSubStages().forEach(subStage -> printStageTree(subStage, indent + "  ", stageNumberCounter));
     }
 
     private void reprintLine(String line)

@@ -372,9 +372,7 @@ public class SplitSourceFactory
         private Map<PlanNodeId, SplitSource> processSources(List<PlanNode> sources, Void context)
         {
             ImmutableMap.Builder<PlanNodeId, SplitSource> result = ImmutableMap.builder();
-            for (PlanNode child : sources) {
-                result.putAll(child.accept(this, context));
-            }
+            sources.forEach(child -> result.putAll(child.accept(this, context)));
 
             return result.build();
         }

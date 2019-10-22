@@ -144,13 +144,9 @@ public class ExecutionFailureInfo
             return null;
         }
         Failure failure = new Failure(executionFailureInfo.getType(), executionFailureInfo.getMessage(), executionFailureInfo.getErrorCode(), toException(executionFailureInfo.getCause()));
-        for (ExecutionFailureInfo suppressed : executionFailureInfo.getSuppressed()) {
-            failure.addSuppressed(toException(suppressed));
-        }
+        executionFailureInfo.getSuppressed().forEach(suppressed -> failure.addSuppressed(toException(suppressed)));
         ImmutableList.Builder<StackTraceElement> stackTraceBuilder = ImmutableList.builder();
-        for (String stack : executionFailureInfo.getStack()) {
-            stackTraceBuilder.add(toStackTraceElement(stack));
-        }
+        executionFailureInfo.getStack().forEach(stack -> stackTraceBuilder.add(toStackTraceElement(stack)));
         ImmutableList<StackTraceElement> stackTrace = stackTraceBuilder.build();
         failure.setStackTrace(stackTrace.toArray(new StackTraceElement[stackTrace.size()]));
         return failure;
@@ -159,20 +155,20 @@ public class ExecutionFailureInfo
     public static StackTraceElement toStackTraceElement(String stack)
     {
         Matcher matcher = STACK_TRACE_PATTERN.matcher(stack);
-        if (matcher.matches()) {
-            String declaringClass = matcher.group(1);
-            String methodName = matcher.group(2);
-            String fileName = matcher.group(3);
-            int number = -1;
-            if (fileName.equals("Native Method")) {
-                fileName = null;
-                number = -2;
-            }
-            else if (matcher.group(4) != null) {
-                number = Integer.parseInt(matcher.group(4));
-            }
-            return new StackTraceElement(declaringClass, methodName, fileName, number);
-        }
-        return new StackTraceElement("Unknown", stack, null, -1);
+        if (!matcher.matches()) {
+			return new StackTraceElement("Unknown", stack, null, -1);
+		}
+		String declaringClass = matcher.group(1);
+		String methodName = matcher.group(2);
+		String fileName = matcher.group(3);
+		int number = -1;
+		if ("Native Method".equals(fileName)) {
+		    fileName = null;
+		    number = -2;
+		}
+		else if (matcher.group(4) != null) {
+		    number = Integer.parseInt(matcher.group(4));
+		}
+		return new StackTraceElement(declaringClass, methodName, fileName, number);
     }
 }

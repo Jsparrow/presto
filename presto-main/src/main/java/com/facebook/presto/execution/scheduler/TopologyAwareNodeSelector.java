@@ -146,9 +146,7 @@ public class TopologyAwareNodeSelector
             int depth = networkLocationSegmentNames.size();
             int chosenDepth = 0;
             Set<NetworkLocation> locations = new HashSet<>();
-            for (HostAddress host : split.getAddresses()) {
-                locations.add(networkLocationCache.get(host));
-            }
+            split.getAddresses().forEach(host -> locations.add(networkLocationCache.get(host)));
             if (locations.isEmpty()) {
                 // Add the root location
                 locations.add(ROOT_LOCATION);

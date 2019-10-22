@@ -62,38 +62,6 @@ public final class WorkProcessorUtils
         return new YieldingIterator<>(processor);
     }
 
-    private static class YieldingIterator<T>
-            extends AbstractIterator<Optional<T>>
-    {
-        @Nullable
-        WorkProcessor<T> processor;
-
-        YieldingIterator(WorkProcessor<T> processor)
-        {
-            this.processor = requireNonNull(processor, "processorParameter is null");
-        }
-
-        @Override
-        protected Optional<T> computeNext()
-        {
-            if (processor.process()) {
-                if (processor.isFinished()) {
-                    processor = null;
-                    return endOfData();
-                }
-
-                return Optional.of(processor.getResult());
-            }
-
-            if (processor.isBlocked()) {
-                throw new IllegalStateException("Cannot iterate over blocking WorkProcessor");
-            }
-
-            // yielded
-            return Optional.empty();
-        }
-    }
-
     static <T> WorkProcessor<T> fromIterator(Iterator<T> iterator)
     {
         requireNonNull(iterator, "iterator is null");
@@ -106,7 +74,7 @@ public final class WorkProcessorUtils
         });
     }
 
-    static <T> WorkProcessor<T> mergeSorted(Iterable<WorkProcessor<T>> processorIterable, Comparator<T> comparator)
+	static <T> WorkProcessor<T> mergeSorted(Iterable<WorkProcessor<T>> processorIterable, Comparator<T> comparator)
     {
         requireNonNull(comparator, "comparator is null");
         Iterator<WorkProcessor<T>> processorIterator = requireNonNull(processorIterable, "processorIterable is null").iterator();
@@ -150,38 +118,12 @@ public final class WorkProcessorUtils
         });
     }
 
-    static <T> WorkProcessor<T> yielding(WorkProcessor<T> processor, BooleanSupplier yieldSignal)
+	static <T> WorkProcessor<T> yielding(WorkProcessor<T> processor, BooleanSupplier yieldSignal)
     {
         return processor.transform(new YieldingTransformation<>(yieldSignal));
     }
 
-    private static class YieldingTransformation<T>
-            implements Transformation<T, T>
-    {
-        final BooleanSupplier yieldSignal;
-        boolean lastProcessYielded;
-
-        YieldingTransformation(BooleanSupplier yieldSignal)
-        {
-            this.yieldSignal = requireNonNull(yieldSignal, "yieldSignal is null");
-        }
-
-        @Override
-        public TransformationState<T> process(Optional<T> elementOptional)
-        {
-            if (!lastProcessYielded && yieldSignal.getAsBoolean()) {
-                lastProcessYielded = true;
-                return TransformationState.yield();
-            }
-            lastProcessYielded = false;
-
-            return elementOptional
-                    .map(TransformationState::ofResult)
-                    .orElseGet(TransformationState::finished);
-        }
-    }
-
-    static <T, R> WorkProcessor<R> flatMap(WorkProcessor<T> processor, Function<T, WorkProcessor<R>> mapper)
+	static <T, R> WorkProcessor<R> flatMap(WorkProcessor<T> processor, Function<T, WorkProcessor<R>> mapper)
     {
         requireNonNull(processor, "processor is null");
         requireNonNull(mapper, "mapper is null");
@@ -191,7 +133,7 @@ public final class WorkProcessorUtils
                         .orElseGet(TransformationState::finished));
     }
 
-    static <T, R> WorkProcessor<R> map(WorkProcessor<T> processor, Function<T, R> mapper)
+	static <T, R> WorkProcessor<R> map(WorkProcessor<T> processor, Function<T, R> mapper)
     {
         requireNonNull(processor, "processor is null");
         requireNonNull(mapper, "mapper is null");
@@ -201,14 +143,14 @@ public final class WorkProcessorUtils
                         .orElseGet(TransformationState::finished));
     }
 
-    static <T, R> WorkProcessor<R> flatTransform(WorkProcessor<T> processor, Transformation<T, WorkProcessor<R>> transformation)
+	static <T, R> WorkProcessor<R> flatTransform(WorkProcessor<T> processor, Transformation<T, WorkProcessor<R>> transformation)
     {
         requireNonNull(processor, "processor is null");
         requireNonNull(transformation, "transformation is null");
         return processor.transform(transformation).transformProcessor(WorkProcessorUtils::flatten);
     }
 
-    static <T> WorkProcessor<T> flatten(WorkProcessor<WorkProcessor<T>> processor)
+	static <T> WorkProcessor<T> flatten(WorkProcessor<WorkProcessor<T>> processor)
     {
         requireNonNull(processor, "processor is null");
         return processor.transform(nestedProcessorOptional -> {
@@ -233,7 +175,7 @@ public final class WorkProcessorUtils
         });
     }
 
-    static <T, R> WorkProcessor<R> transform(WorkProcessor<T> processor, Transformation<T, R> transformation)
+	static <T, R> WorkProcessor<R> transform(WorkProcessor<T> processor, Transformation<T, R> transformation)
     {
         requireNonNull(processor, "processor is null");
         requireNonNull(transformation, "transformation is null");
@@ -285,9 +227,67 @@ public final class WorkProcessorUtils
         });
     }
 
-    static <T> WorkProcessor<T> create(WorkProcessor.Process<T> process)
+	static <T> WorkProcessor<T> create(WorkProcessor.Process<T> process)
     {
         return new ProcessWorkProcessor<>(process);
+    }
+
+	private static class YieldingIterator<T>
+            extends AbstractIterator<Optional<T>>
+    {
+        @Nullable
+        WorkProcessor<T> processor;
+
+        YieldingIterator(WorkProcessor<T> processor)
+        {
+            this.processor = requireNonNull(processor, "processorParameter is null");
+        }
+
+        @Override
+        protected Optional<T> computeNext()
+        {
+            if (processor.process()) {
+                if (processor.isFinished()) {
+                    processor = null;
+                    return endOfData();
+                }
+
+                return Optional.of(processor.getResult());
+            }
+
+            if (processor.isBlocked()) {
+                throw new IllegalStateException("Cannot iterate over blocking WorkProcessor");
+            }
+
+            // yielded
+            return Optional.empty();
+        }
+    }
+
+    private static class YieldingTransformation<T>
+            implements Transformation<T, T>
+    {
+        final BooleanSupplier yieldSignal;
+        boolean lastProcessYielded;
+
+        YieldingTransformation(BooleanSupplier yieldSignal)
+        {
+            this.yieldSignal = requireNonNull(yieldSignal, "yieldSignal is null");
+        }
+
+        @Override
+        public TransformationState<T> process(Optional<T> elementOptional)
+        {
+            if (!lastProcessYielded && yieldSignal.getAsBoolean()) {
+                lastProcessYielded = true;
+                return TransformationState.yield();
+            }
+            lastProcessYielded = false;
+
+            return elementOptional
+                    .map(TransformationState::ofResult)
+                    .orElseGet(TransformationState::finished);
+        }
     }
 
     private static class ProcessWorkProcessor<T>

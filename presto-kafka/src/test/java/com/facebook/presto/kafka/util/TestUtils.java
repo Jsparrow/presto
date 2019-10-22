@@ -49,9 +49,7 @@ public final class TestUtils
     public static Properties toProperties(Map<String, String> map)
     {
         Properties properties = new Properties();
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            properties.setProperty(entry.getKey(), entry.getValue());
-        }
+        map.entrySet().forEach(entry -> properties.setProperty(entry.getKey(), entry.getValue()));
         return properties;
     }
 

@@ -30,7 +30,14 @@ public class MongoIndex
     private final List<MongodbIndexKey> keys;
     private final boolean unique;
 
-    public static List<MongoIndex> parse(ListIndexesIterable<Document> indexes)
+    public MongoIndex(String name, List<MongodbIndexKey> keys, boolean unique)
+    {
+        this.name = name;
+        this.keys = keys;
+        this.unique = unique;
+    }
+
+	public static List<MongoIndex> parse(ListIndexesIterable<Document> indexes)
     {
         ImmutableList.Builder<MongoIndex> builder = ImmutableList.builder();
         for (Document index : indexes) {
@@ -48,7 +55,7 @@ public class MongoIndex
         return builder.build();
     }
 
-    private static List<MongodbIndexKey> parseKey(Document key)
+	private static List<MongodbIndexKey> parseKey(Document key)
     {
         ImmutableList.Builder<MongodbIndexKey> builder = ImmutableList.builder();
 
@@ -70,29 +77,22 @@ public class MongoIndex
         return builder.build();
     }
 
-    public MongoIndex(String name, List<MongodbIndexKey> keys, boolean unique)
-    {
-        this.name = name;
-        this.keys = keys;
-        this.unique = unique;
-    }
-
-    public String getName()
+	public String getName()
     {
         return name;
     }
 
-    public List<MongodbIndexKey> getKeys()
+	public List<MongodbIndexKey> getKeys()
     {
         return keys;
     }
 
-    public boolean isUnique()
+	public boolean isUnique()
     {
         return unique;
     }
 
-    public static class MongodbIndexKey
+	public static class MongodbIndexKey
     {
         private final String name;
         private final Optional<SortOrder> sortOrder;

@@ -24,38 +24,21 @@ import static java.util.Objects.requireNonNull;
 public class LogicalBinaryExpression
         extends Expression
 {
-    public enum Operator
-    {
-        AND, OR;
-
-        public Operator flip()
-        {
-            switch (this) {
-                case AND:
-                    return OR;
-                case OR:
-                    return AND;
-                default:
-                    throw new IllegalArgumentException("Unsupported logical expression type: " + this);
-            }
-        }
-    }
-
     private final Operator operator;
-    private final Expression left;
-    private final Expression right;
+	private final Expression left;
+	private final Expression right;
 
-    public LogicalBinaryExpression(Operator operator, Expression left, Expression right)
+	public LogicalBinaryExpression(Operator operator, Expression left, Expression right)
     {
         this(Optional.empty(), operator, left, right);
     }
 
-    public LogicalBinaryExpression(NodeLocation location, Operator operator, Expression left, Expression right)
+	public LogicalBinaryExpression(NodeLocation location, Operator operator, Expression left, Expression right)
     {
         this(Optional.of(location), operator, left, right);
     }
 
-    private LogicalBinaryExpression(Optional<NodeLocation> location, Operator operator, Expression left, Expression right)
+	private LogicalBinaryExpression(Optional<NodeLocation> location, Operator operator, Expression left, Expression right)
     {
         super(location);
         requireNonNull(operator, "operator is null");
@@ -67,44 +50,44 @@ public class LogicalBinaryExpression
         this.right = right;
     }
 
-    public Operator getOperator()
+	public Operator getOperator()
     {
         return operator;
     }
 
-    public Expression getLeft()
+	public Expression getLeft()
     {
         return left;
     }
 
-    public Expression getRight()
+	public Expression getRight()
     {
         return right;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitLogicalBinaryExpression(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of(left, right);
     }
 
-    public static LogicalBinaryExpression and(Expression left, Expression right)
+	public static LogicalBinaryExpression and(Expression left, Expression right)
     {
         return new LogicalBinaryExpression(Optional.empty(), Operator.AND, left, right);
     }
 
-    public static LogicalBinaryExpression or(Expression left, Expression right)
+	public static LogicalBinaryExpression or(Expression left, Expression right)
     {
         return new LogicalBinaryExpression(Optional.empty(), Operator.OR, left, right);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -120,9 +103,26 @@ public class LogicalBinaryExpression
                 Objects.equals(right, that.right);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(operator, left, right);
+    }
+
+	public enum Operator
+    {
+        AND, OR;
+
+        public Operator flip()
+        {
+            switch (this) {
+                case AND:
+                    return OR;
+                case OR:
+                    return AND;
+                default:
+                    throw new IllegalArgumentException("Unsupported logical expression type: " + this);
+            }
+        }
     }
 }

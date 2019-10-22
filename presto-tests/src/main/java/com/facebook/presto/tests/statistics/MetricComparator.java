@@ -66,11 +66,11 @@ final class MetricComparator
         Plan queryPlan = runner.createPlan(session, query, WarningCollector.NOOP);
         OutputNode outputNode = (OutputNode) queryPlan.getRoot();
         PlanNodeStatsEstimate outputNodeStats = queryPlan.getStatsAndCosts().getStats().getOrDefault(queryPlan.getRoot().getId(), PlanNodeStatsEstimate.unknown());
-        StatsContext statsContext = buildStatsContext(queryPlan, outputNode);
+        StatsContext statsContext = buildStatsContext(outputNode);
         return getEstimatedValues(metrics, outputNodeStats, statsContext);
     }
 
-    private static StatsContext buildStatsContext(Plan queryPlan, OutputNode outputNode)
+    private static StatsContext buildStatsContext(OutputNode outputNode)
     {
         ImmutableMap.Builder<String, VariableReferenceExpression> columnVariables = ImmutableMap.builder();
         for (int columnId = 0; columnId < outputNode.getColumnNames().size(); ++columnId) {
@@ -81,9 +81,7 @@ final class MetricComparator
 
     private static List<OptionalDouble> getActualValues(List<Metric> metrics, String query, QueryRunner runner)
     {
-        String statsQuery = "SELECT "
-                + metrics.stream().map(Metric::getComputingAggregationSql).collect(joining(","))
-                + " FROM (" + query + ")";
+        String statsQuery = new StringBuilder().append("SELECT ").append(metrics.stream().map(Metric::getComputingAggregationSql).collect(joining(","))).append(" FROM (").append(query).append(")").toString();
         try {
             MaterializedRow actualValuesRow = getOnlyElement(runner.execute(statsQuery).getMaterializedRows());
 

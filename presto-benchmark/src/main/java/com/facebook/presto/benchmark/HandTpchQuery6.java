@@ -92,7 +92,12 @@ public class HandTpchQuery6
         return ImmutableList.of(tableScanOperator, tpchQuery6Operator, aggregationOperator);
     }
 
-    public static class TpchQuery6Filter
+    public static void main(String[] args)
+    {
+        new HandTpchQuery6(createLocalQueryRunner()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
+    }
+
+	public static class TpchQuery6Filter
             implements PageFilter
     {
         private static final int MIN_SHIP_DATE = DateTimeUtils.parseDate("1994-01-01");
@@ -138,10 +143,5 @@ public class HandTpchQuery6
                     !discountBlock.isNull(position) && DOUBLE.getDouble(discountBlock, position) <= 0.07 &&
                     !quantityBlock.isNull(position) && BIGINT.getLong(quantityBlock, position) < 24;
         }
-    }
-
-    public static void main(String[] args)
-    {
-        new HandTpchQuery6(createLocalQueryRunner()).runBenchmark(new SimpleLineBenchmarkResultWriter(System.out));
     }
 }

@@ -60,7 +60,7 @@ public class CreateAndInsertDataSetup
 
     private TestTable createTestTable(List<DataTypeTest.Input<?>> inputs)
     {
-        String ddlTemplate = "CREATE TABLE {TABLE_NAME} (\n" + columnDefinitions(inputs) + "\n)";
+        String ddlTemplate = new StringBuilder().append("CREATE TABLE {TABLE_NAME} (\n").append(columnDefinitions(inputs)).append("\n)").toString();
         return new TestTable(sqlExecutor, tableNamePrefix, ddlTemplate);
     }
 

@@ -478,9 +478,7 @@ public class TestQueryStateMachine
         stateMachine.setColumns(OUTPUT_FIELD_NAMES, OUTPUT_FIELD_TYPES);
         stateMachine.setUpdateType(UPDATE_TYPE);
         stateMachine.setMemoryPool(MEMORY_POOL);
-        for (Entry<String, String> entry : SET_SESSION_PROPERTIES.entrySet()) {
-            stateMachine.addSetSessionProperties(entry.getKey(), entry.getValue());
-        }
+        SET_SESSION_PROPERTIES.entrySet().forEach(entry -> stateMachine.addSetSessionProperties(entry.getKey(), entry.getValue()));
         RESET_SESSION_PROPERTIES.forEach(stateMachine::addResetSessionProperties);
         return stateMachine;
     }

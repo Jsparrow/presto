@@ -55,9 +55,7 @@ public class UnnestNode
         requireNonNull(unnestVariables, "unnestVariables is null");
         checkArgument(!unnestVariables.isEmpty(), "unnestVariables is empty");
         ImmutableMap.Builder<VariableReferenceExpression, List<VariableReferenceExpression>> builder = ImmutableMap.builder();
-        for (Map.Entry<VariableReferenceExpression, List<VariableReferenceExpression>> entry : unnestVariables.entrySet()) {
-            builder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
-        }
+        unnestVariables.entrySet().forEach(entry -> builder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue())));
         this.unnestVariables = builder.build();
         this.ordinalityVariable = requireNonNull(ordinalityVariable, "ordinalityVariable is null");
     }

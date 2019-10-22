@@ -43,7 +43,7 @@ public abstract class AbstractTestDecimalAverageAggregation
     private static BigDecimal getBigDecimalForCounter(int i)
     {
         String iAsString = String.valueOf(Math.abs(i));
-        return new BigDecimal(String.valueOf(i) + "." + iAsString + iAsString).setScale(2, ROUND_DOWN);
+        return new BigDecimal(new StringBuilder().append(String.valueOf(i)).append(".").append(iAsString).append(iAsString).toString()).setScale(2, ROUND_DOWN);
     }
 
     @Override

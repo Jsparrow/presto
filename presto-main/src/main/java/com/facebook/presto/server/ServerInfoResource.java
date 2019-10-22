@@ -73,7 +73,6 @@ public class ServerInfoResource
     @Consumes(APPLICATION_JSON)
     @Produces(TEXT_PLAIN)
     public Response updateState(NodeState state)
-            throws WebApplicationException
     {
         requireNonNull(state, "state is null");
         switch (state) {

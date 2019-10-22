@@ -149,7 +149,7 @@ public class RaptorPageSink
     public void abort()
     {
         RuntimeException error = new RuntimeException("Exception during rollback");
-        for (PageBuffer pageBuffer : pageWriter.getPageBuffers()) {
+        pageWriter.getPageBuffers().forEach(pageBuffer -> {
             try {
                 pageBuffer.getStoragePageSink().rollback();
             }
@@ -159,7 +159,7 @@ public class RaptorPageSink
                     error.addSuppressed(t);
                 }
             }
-        }
+        });
         if (error.getSuppressed().length > 0) {
             throw error;
         }
@@ -258,11 +258,11 @@ public class RaptorPageSink
         public List<PageBuffer> getPageBuffers()
         {
             ImmutableList.Builder<PageBuffer> list = ImmutableList.builder();
-            for (PageStore store : pageStores.values()) {
+            pageStores.values().forEach(store -> {
                 store.flushToPageBuffer();
                 store.getPageBuffer().flush();
                 list.add(store.getPageBuffer());
-            }
+            });
             return list.build();
         }
 
@@ -329,10 +329,11 @@ public class RaptorPageSink
 
         public void flushToPageBuffer()
         {
-            if (!pageBuilder.isEmpty()) {
-                pageBuffer.add(pageBuilder.build());
-                pageBuilder.reset();
-            }
+            if (pageBuilder.isEmpty()) {
+				return;
+			}
+			pageBuffer.add(pageBuilder.build());
+			pageBuilder.reset();
         }
     }
 }

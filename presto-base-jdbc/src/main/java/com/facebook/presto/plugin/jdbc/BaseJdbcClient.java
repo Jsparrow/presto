@@ -162,7 +162,7 @@ public class BaseJdbcClient
             while (resultSet.next()) {
                 String schemaName = resultSet.getString("TABLE_SCHEM");
                 // skip internal schemas
-                if (!schemaName.equalsIgnoreCase("information_schema")) {
+                if (!"information_schema".equalsIgnoreCase(schemaName)) {
                     schemaNames.add(schemaName);
                 }
             }
@@ -359,7 +359,7 @@ public class BaseJdbcClient
             ImmutableList.Builder<String> columnNames = ImmutableList.builder();
             ImmutableList.Builder<Type> columnTypes = ImmutableList.builder();
             ImmutableList.Builder<String> columnList = ImmutableList.builder();
-            for (ColumnMetadata column : tableMetadata.getColumns()) {
+            tableMetadata.getColumns().forEach(column -> {
                 String columnName = column.getName();
                 if (uppercase) {
                     columnName = columnName.toUpperCase(ENGLISH);
@@ -367,7 +367,7 @@ public class BaseJdbcClient
                 columnNames.add(columnName);
                 columnTypes.add(column.getType());
                 columnList.add(getColumnString(column, columnName));
-            }
+            });
 
             String sql = format(
                     "CREATE TABLE %s (%s)",
@@ -717,13 +717,13 @@ public class BaseJdbcClient
             if (varcharType.isUnbounded()) {
                 return "varchar";
             }
-            return "varchar(" + varcharType.getLengthSafe() + ")";
+            return new StringBuilder().append("varchar(").append(varcharType.getLengthSafe()).append(")").toString();
         }
         if (type instanceof CharType) {
             if (((CharType) type).getLength() == CharType.MAX_LENGTH) {
                 return "char";
             }
-            return "char(" + ((CharType) type).getLength() + ")";
+            return new StringBuilder().append("char(").append(((CharType) type).getLength()).append(")").toString();
         }
         if (type instanceof DecimalType) {
             return format("decimal(%s, %s)", ((DecimalType) type).getPrecision(), ((DecimalType) type).getScale());
@@ -739,7 +739,7 @@ public class BaseJdbcClient
     protected String quoted(String name)
     {
         name = name.replace(identifierQuote, identifierQuote + identifierQuote);
-        return identifierQuote + name + identifierQuote;
+        return new StringBuilder().append(identifierQuote).append(name).append(identifierQuote).toString();
     }
 
     protected String quoted(String catalog, String schema, String table)
@@ -767,8 +767,8 @@ public class BaseJdbcClient
     {
         requireNonNull(name, "name is null");
         requireNonNull(escape, "escape is null");
-        checkArgument(!escape.equals("_"), "Escape string must not be '_'");
-        checkArgument(!escape.equals("%"), "Escape string must not be '%'");
+        checkArgument(!"_".equals(escape), "Escape string must not be '_'");
+        checkArgument(!"%".equals(escape), "Escape string must not be '%'");
         name = name.replace(escape, escape + escape);
         name = name.replace("_", escape + "_");
         name = name.replace("%", escape + "%");

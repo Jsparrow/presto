@@ -90,7 +90,18 @@ public class BenchmarkPagesIndexPageSorter
         return pages;
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkPagesIndexPageSorter.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         @Param({"2", "3", "4", "5"})
@@ -134,16 +145,5 @@ public class BenchmarkPagesIndexPageSorter
             }
             throw new IllegalArgumentException("Unsupported type: " + sortChannelType);
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkPagesIndexPageSorter.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

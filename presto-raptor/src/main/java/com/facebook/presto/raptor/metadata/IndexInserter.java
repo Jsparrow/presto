@@ -102,10 +102,8 @@ class IndexInserter
         this.indexes = indexBuilder.build();
         this.types = typeBuilder.build();
 
-        String sql = "" +
-                "INSERT INTO " + shardIndexTable(tableId) + "\n" +
-                "(" + nameJoiner + ")\n" +
-                "VALUES (" + valueJoiner + ")";
+        String sql = new StringBuilder().append("").append("INSERT INTO ").append(shardIndexTable(tableId)).append("\n").append("(").append(nameJoiner).append(")\n")
+				.append("VALUES (").append(valueJoiner).append(")").toString();
 
         this.statement = connection.prepareStatement(sql);
     }

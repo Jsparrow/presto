@@ -76,14 +76,12 @@ public class Suite
         }
 
         ImmutableList.Builder<BenchmarkSchema> benchmarkSchemas = ImmutableList.builder();
-        for (RegexTemplate schemaNameTemplate : schemaNameTemplates) {
+        schemaNameTemplates.forEach(schemaNameTemplate -> {
             for (String schema : schemas) {
                 Optional<Map<String, String>> tags = schemaNameTemplate.parse(schema);
-                if (tags.isPresent()) {
-                    benchmarkSchemas.add(new BenchmarkSchema(schema, tags.get()));
-                }
+                tags.ifPresent(value -> benchmarkSchemas.add(new BenchmarkSchema(schema, value)));
             }
-        }
+        });
         return benchmarkSchemas.build();
     }
 
@@ -118,9 +116,7 @@ public class Suite
         byte[] json = Files.readAllBytes(file.toPath());
         Map<String, OptionsJson> options = mapJsonCodec(String.class, OptionsJson.class).fromJson(json);
         ImmutableList.Builder<Suite> runOptions = ImmutableList.builder();
-        for (Entry<String, OptionsJson> entry : options.entrySet()) {
-            runOptions.add(entry.getValue().toSuite(entry.getKey()));
-        }
+        options.entrySet().forEach(entry -> runOptions.add(entry.getValue().toSuite(entry.getKey())));
         return runOptions.build();
     }
 
@@ -144,13 +140,9 @@ public class Suite
         public Suite toSuite(String name)
         {
             ImmutableList.Builder<Pattern> queryNameTemplates = ImmutableList.builder();
-            for (String q : query) {
-                queryNameTemplates.add(Pattern.compile(q));
-            }
+            query.forEach(q -> queryNameTemplates.add(Pattern.compile(q)));
             ImmutableList.Builder<RegexTemplate> schemaNameTemplates = ImmutableList.builder();
-            for (String s : schema) {
-                schemaNameTemplates.add(new RegexTemplate(s));
-            }
+            schema.forEach(s -> schemaNameTemplates.add(new RegexTemplate(s)));
             return new Suite(name, session, schemaNameTemplates.build(), queryNameTemplates.build());
         }
     }

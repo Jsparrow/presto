@@ -125,11 +125,11 @@ public class IndexJoinOptimizer
                         idAllocator,
                         metadata,
                         session);
-                if (leftIndexCandidate.isPresent()) {
+                leftIndexCandidate.ifPresent(value -> {
                     // Sanity check that we can trace the path for the index lookup key
-                    Map<VariableReferenceExpression, VariableReferenceExpression> trace = IndexKeyTracer.trace(leftIndexCandidate.get(), ImmutableSet.copyOf(leftJoinVariables));
+                    Map<VariableReferenceExpression, VariableReferenceExpression> trace = IndexKeyTracer.trace(value, ImmutableSet.copyOf(leftJoinVariables));
                     checkState(!trace.isEmpty() && leftJoinVariables.containsAll(trace.keySet()));
-                }
+                });
 
                 Optional<PlanNode> rightIndexCandidate = IndexSourceRewriter.rewriteWithIndex(
                         rightRewritten,
@@ -138,11 +138,11 @@ public class IndexJoinOptimizer
                         idAllocator,
                         metadata,
                         session);
-                if (rightIndexCandidate.isPresent()) {
+                rightIndexCandidate.ifPresent(value -> {
                     // Sanity check that we can trace the path for the index lookup key
-                    Map<VariableReferenceExpression, VariableReferenceExpression> trace = IndexKeyTracer.trace(rightIndexCandidate.get(), ImmutableSet.copyOf(rightJoinVariables));
+                    Map<VariableReferenceExpression, VariableReferenceExpression> trace = IndexKeyTracer.trace(value, ImmutableSet.copyOf(rightJoinVariables));
                     checkState(!trace.isEmpty() && rightJoinVariables.containsAll(trace.keySet()));
-                }
+                });
 
                 switch (node.getType()) {
                     case INNER:
@@ -335,12 +335,12 @@ public class IndexJoinOptimizer
         {
             // Rewrite the lookup variables in terms of only the pre-projected variables that have direct translations
             ImmutableSet.Builder<VariableReferenceExpression> newLookupVariablesBuilder = ImmutableSet.builder();
-            for (VariableReferenceExpression variable : context.get().getLookupVariables()) {
+            context.get().getLookupVariables().forEach(variable -> {
                 RowExpression expression = node.getAssignments().get(variable);
                 if (castToExpression(expression) instanceof SymbolReference) {
                     newLookupVariablesBuilder.add(new VariableReferenceExpression(((SymbolReference) castToExpression(expression)).getName(), variable.getType()));
                 }
-            }
+            });
             ImmutableSet<VariableReferenceExpression> newLookupVariables = newLookupVariablesBuilder.build();
 
             if (newLookupVariables.isEmpty()) {
@@ -485,7 +485,27 @@ public class IndexJoinOptimizer
             return node.accept(new Visitor(), lookupVariables);
         }
 
-        private static class Visitor
+        private static VariableReferenceExpression extractVariable(VariableReferenceExpression key, RowExpression value)
+        {
+            // TODO remove isExpression once all optimization rule is using RowExpression.
+            // Handle both expression and rowExpression because ValidateDependenciesChecker used it.
+            if (value instanceof VariableReferenceExpression) {
+                return (VariableReferenceExpression) value;
+            }
+            return variable(((SymbolReference) castToExpression(value)).getName(), key.getType());
+        }
+
+		private static boolean isVariable(RowExpression expression)
+        {
+            // TODO remove isExpression once all optimization rule is using RowExpression.
+            // Handle both expression and rowExpression because ValidateDependenciesChecker used it.
+            if (isExpression(expression)) {
+                return castToExpression(expression) instanceof SymbolReference;
+            }
+            return expression instanceof VariableReferenceExpression;
+        }
+
+		private static class Visitor
                 extends InternalPlanVisitor<Map<VariableReferenceExpression, VariableReferenceExpression>, Set<VariableReferenceExpression>>
         {
             @Override
@@ -503,7 +523,7 @@ public class IndexJoinOptimizer
                         IndexKeyTracer::extractVariable);
                 Map<VariableReferenceExpression, VariableReferenceExpression> outputToSourceMap = lookupVariables.stream()
                         .filter(directVariableTranslationOutputMap.keySet()::contains)
-                        .collect(toImmutableMap(identity(), variable -> directVariableTranslationOutputMap.get(variable)));
+                        .collect(toImmutableMap(identity(), directVariableTranslationOutputMap::get));
 
                 checkState(!outputToSourceMap.isEmpty(), "No lookup variables were able to pass through the projection");
 
@@ -563,26 +583,6 @@ public class IndexJoinOptimizer
                 checkState(node.getLookupVariables().equals(lookupVariables), "lookupVariables must be the same as IndexSource lookup variables");
                 return lookupVariables.stream().collect(toImmutableMap(identity(), identity()));
             }
-        }
-
-        private static VariableReferenceExpression extractVariable(VariableReferenceExpression key, RowExpression value)
-        {
-            // TODO remove isExpression once all optimization rule is using RowExpression.
-            // Handle both expression and rowExpression because ValidateDependenciesChecker used it.
-            if (value instanceof VariableReferenceExpression) {
-                return (VariableReferenceExpression) value;
-            }
-            return variable(((SymbolReference) castToExpression(value)).getName(), key.getType());
-        }
-
-        private static boolean isVariable(RowExpression expression)
-        {
-            // TODO remove isExpression once all optimization rule is using RowExpression.
-            // Handle both expression and rowExpression because ValidateDependenciesChecker used it.
-            if (isExpression(expression)) {
-                return castToExpression(expression) instanceof SymbolReference;
-            }
-            return expression instanceof VariableReferenceExpression;
         }
     }
 }

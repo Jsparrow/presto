@@ -206,20 +206,8 @@ public class TestSqlParser
     @Test(timeOut = 2_000)
     public void testPotentialUnboundedLookahead()
     {
-        SQL_PARSER.createExpression("(\n" +
-                "      1 * -1 +\n" +
-                "      1 * -2 +\n" +
-                "      1 * -3 +\n" +
-                "      1 * -4 +\n" +
-                "      1 * -5 +\n" +
-                "      1 * -6 +\n" +
-                "      1 * -7 +\n" +
-                "      1 * -8 +\n" +
-                "      1 * -9 +\n" +
-                "      1 * -10 +\n" +
-                "      1 * -11 +\n" +
-                "      1 * -12 \n" +
-                ")\n");
+        SQL_PARSER.createExpression(new StringBuilder().append("(\n").append("      1 * -1 +\n").append("      1 * -2 +\n").append("      1 * -3 +\n").append("      1 * -4 +\n").append("      1 * -5 +\n").append("      1 * -6 +\n").append("      1 * -7 +\n")
+				.append("      1 * -8 +\n").append("      1 * -9 +\n").append("      1 * -10 +\n").append("      1 * -11 +\n").append("      1 * -12 \n").append(")\n").toString());
     }
 
     @Test
@@ -1159,11 +1147,7 @@ public class TestSqlParser
     public void testCreateTableWithNotNull()
     {
         assertStatement(
-                "CREATE TABLE foo (" +
-                        "a VARCHAR NOT NULL COMMENT 'column a', " +
-                        "b BIGINT COMMENT 'hello world', " +
-                        "c IPADDRESS, " +
-                        "d DATE NOT NULL)",
+                new StringBuilder().append("CREATE TABLE foo (").append("a VARCHAR NOT NULL COMMENT 'column a', ").append("b BIGINT COMMENT 'hello world', ").append("c IPADDRESS, ").append("d DATE NOT NULL)").toString(),
                 new CreateTable(
                         QualifiedName.of("foo"),
                         ImmutableList.of(
@@ -1213,90 +1197,37 @@ public class TestSqlParser
                         new FunctionCall(QualifiedName.of("concat"), ImmutableList.of(new StringLiteral("ban"), new StringLiteral("ana")))),
                 new Property(new Identifier("a"), new ArrayConstructor(ImmutableList.of(new StringLiteral("v1"), new StringLiteral("v2")))));
 
-        assertStatement("CREATE TABLE foo " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT * FROM t",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT * FROM t").toString(),
                 new CreateTableAsSelect(table, query, false, properties, true, Optional.empty(), Optional.empty()));
-        assertStatement("CREATE TABLE foo(x) " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a FROM t",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x) ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a FROM t").toString(),
                 new CreateTableAsSelect(table, querySelectColumn, false, properties, true, Optional.of(ImmutableList.of(new Identifier("x"))), Optional.empty()));
-        assertStatement("CREATE TABLE foo(x,y) " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a,b FROM t",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x,y) ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a,b FROM t").toString(),
                 new CreateTableAsSelect(table, querySelectColumns, false, properties, true, Optional.of(ImmutableList.of(new Identifier("x"), new Identifier("y"))), Optional.empty()));
 
-        assertStatement("CREATE TABLE foo " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT * FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT * FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, query, false, properties, false, Optional.empty(), Optional.empty()));
-        assertStatement("CREATE TABLE foo(x) " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x) ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, querySelectColumn, false, properties, false, Optional.of(ImmutableList.of(new Identifier("x"))), Optional.empty()));
-        assertStatement("CREATE TABLE foo(x,y) " +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a,b FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x,y) ").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a,b FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, querySelectColumns, false, properties, false, Optional.of(ImmutableList.of(new Identifier("x"), new Identifier("y"))), Optional.empty()));
 
-        assertStatement("CREATE TABLE foo COMMENT 'test'" +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT * FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo COMMENT 'test'").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT * FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, query, false, properties, false, Optional.empty(), Optional.of("test")));
-        assertStatement("CREATE TABLE foo(x) COMMENT 'test'" +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x) COMMENT 'test'").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, querySelectColumn, false, properties, false, Optional.of(ImmutableList.of(new Identifier("x"))), Optional.of("test")));
-        assertStatement("CREATE TABLE foo(x,y) COMMENT 'test'" +
-                        "WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a,b FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x,y) COMMENT 'test'").append("WITH ( string = 'bar', long = 42, computed = 'ban' || 'ana', a  = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a,b FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, querySelectColumns, false, properties, false, Optional.of(ImmutableList.of(new Identifier("x"), new Identifier("y"))), Optional.of("test")));
-        assertStatement("CREATE TABLE foo(x,y) COMMENT 'test'" +
-                        "WITH ( \"string\" = 'bar', \"long\" = 42, computed = 'ban' || 'ana', a = ARRAY[ 'v1', 'v2' ] ) " +
-                        "AS " +
-                        "SELECT a,b FROM t " +
-                        "WITH NO DATA",
+        assertStatement(new StringBuilder().append("CREATE TABLE foo(x,y) COMMENT 'test'").append("WITH ( \"string\" = 'bar', \"long\" = 42, computed = 'ban' || 'ana', a = ARRAY[ 'v1', 'v2' ] ) ").append("AS ").append("SELECT a,b FROM t ").append("WITH NO DATA").toString(),
                 new CreateTableAsSelect(table, querySelectColumns, false, properties, false, Optional.of(ImmutableList.of(new Identifier("x"), new Identifier("y"))), Optional.of("test")));
     }
 
     @Test
     public void testCreateTableAsWith()
     {
-        String queryParenthesizedWith = "CREATE TABLE foo " +
-                "AS " +
-                "( WITH t(x) AS (VALUES 1) " +
-                "TABLE t ) " +
-                "WITH NO DATA";
-        String queryUnparenthesizedWith = "CREATE TABLE foo " +
-                "AS " +
-                "WITH t(x) AS (VALUES 1) " +
-                "TABLE t " +
-                "WITH NO DATA";
-        String queryParenthesizedWithHasAlias = "CREATE TABLE foo(a) " +
-                "AS " +
-                "( WITH t(x) AS (VALUES 1) " +
-                "TABLE t ) " +
-                "WITH NO DATA";
-        String queryUnparenthesizedWithHasAlias = "CREATE TABLE foo(a) " +
-                "AS " +
-                "WITH t(x) AS (VALUES 1) " +
-                "TABLE t " +
-                "WITH NO DATA";
+        String queryParenthesizedWith = new StringBuilder().append("CREATE TABLE foo ").append("AS ").append("( WITH t(x) AS (VALUES 1) ").append("TABLE t ) ").append("WITH NO DATA").toString();
+        String queryUnparenthesizedWith = new StringBuilder().append("CREATE TABLE foo ").append("AS ").append("WITH t(x) AS (VALUES 1) ").append("TABLE t ").append("WITH NO DATA").toString();
+        String queryParenthesizedWithHasAlias = new StringBuilder().append("CREATE TABLE foo(a) ").append("AS ").append("( WITH t(x) AS (VALUES 1) ").append("TABLE t ) ").append("WITH NO DATA").toString();
+        String queryUnparenthesizedWithHasAlias = new StringBuilder().append("CREATE TABLE foo(a) ").append("AS ").append("WITH t(x) AS (VALUES 1) ").append("TABLE t ").append("WITH NO DATA").toString();
 
         QualifiedName table = QualifiedName.of("foo");
 
@@ -1426,13 +1357,8 @@ public class TestSqlParser
     public void testCreateFunction()
     {
         assertStatement(
-                "CREATE FUNCTION tan (x double)\n" +
-                        "RETURNS double\n" +
-                        "COMMENT 'tangent trigonometric function'\n" +
-                        "LANGUAGE SQL\n" +
-                        "DETERMINISTIC\n" +
-                        "RETURNS NULL ON NULL INPUT\n" +
-                        "RETURN sin(x) / cos(x)",
+                new StringBuilder().append("CREATE FUNCTION tan (x double)\n").append("RETURNS double\n").append("COMMENT 'tangent trigonometric function'\n").append("LANGUAGE SQL\n").append("DETERMINISTIC\n").append("RETURNS NULL ON NULL INPUT\n").append("RETURN sin(x) / cos(x)")
+						.toString(),
                 new CreateFunction(
                         QualifiedName.of("tan"),
                         false,
@@ -1454,17 +1380,10 @@ public class TestSqlParser
                 new RoutineCharacteristics(SQL, NOT_DETERMINISTIC, CALLED_ON_NULL_INPUT),
                 new FunctionCall(QualifiedName.of("rand"), ImmutableList.of()));
         assertStatement(
-                "CREATE OR REPLACE FUNCTION dev.testing.rand ()\n" +
-                        "RETURNS double\n" +
-                        "LANGUAGE SQL\n" +
-                        "NOT DETERMINISTIC\n" +
-                        "CALLED ON NULL INPUT\n" +
-                        "RETURN rand()",
+                new StringBuilder().append("CREATE OR REPLACE FUNCTION dev.testing.rand ()\n").append("RETURNS double\n").append("LANGUAGE SQL\n").append("NOT DETERMINISTIC\n").append("CALLED ON NULL INPUT\n").append("RETURN rand()").toString(),
                 createFunctionRand);
         assertStatement(
-                "CREATE OR REPLACE FUNCTION dev.testing.rand ()\n" +
-                        "RETURNS double\n" +
-                        "RETURN rand()",
+                new StringBuilder().append("CREATE OR REPLACE FUNCTION dev.testing.rand ()\n").append("RETURNS double\n").append("RETURN rand()").toString(),
                 createFunctionRand);
 
         assertInvalidStatement(
@@ -2338,7 +2257,7 @@ public class TestSqlParser
 
     private static void assertCast(String type, String expected)
     {
-        assertExpression("CAST(null AS " + type + ")", new Cast(new NullLiteral(), expected));
+        assertExpression(new StringBuilder().append("CAST(null AS ").append(type).append(")").toString(), new Cast(new NullLiteral(), expected));
     }
 
     private static void assertStatement(String query, Statement expected)
@@ -2366,7 +2285,7 @@ public class TestSqlParser
     {
         try {
             Statement result = SQL_PARSER.createStatement(expression, ParsingOptions.builder().build());
-            fail("Expected to throw ParsingException for input:[" + expression + "], but got: " + result);
+            fail(new StringBuilder().append("Expected to throw ParsingException for input:[").append(expression).append("], but got: ").append(result).toString());
         }
         catch (ParsingException e) {
             if (!e.getErrorMessage().matches(expectedErrorMessageRegex)) {
@@ -2379,7 +2298,7 @@ public class TestSqlParser
     {
         try {
             Expression result = SQL_PARSER.createExpression(expression);
-            fail("Expected to throw ParsingException for input:[" + expression + "], but got: " + result);
+            fail(new StringBuilder().append("Expected to throw ParsingException for input:[").append(expression).append("], but got: ").append(result).toString());
         }
         catch (ParsingException e) {
             if (!e.getErrorMessage().matches(expectedErrorMessageRegex)) {

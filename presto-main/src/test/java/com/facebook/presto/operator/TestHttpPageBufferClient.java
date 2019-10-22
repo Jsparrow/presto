@@ -59,35 +59,38 @@ import static com.facebook.presto.util.Failures.WORKER_NODE_ERROR;
 import static com.google.common.net.HttpHeaders.CONTENT_TYPE;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
 import static org.testng.Assert.assertEquals;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHttpPageBufferClient
 {
-    private ScheduledExecutorService scheduler;
-    private ExecutorService pageBufferClientCallbackExecutor;
+    private static final Logger logger = LoggerFactory.getLogger(TestHttpPageBufferClient.class);
+	private static final PagesSerde PAGES_SERDE = testingPagesSerde();
+	private ScheduledExecutorService scheduler;
+	private ExecutorService pageBufferClientCallbackExecutor;
 
-    private static final PagesSerde PAGES_SERDE = testingPagesSerde();
-
-    @BeforeClass
+	@BeforeClass
     public void setUp()
     {
         scheduler = newScheduledThreadPool(4, daemonThreadsNamed("test-%s"));
         pageBufferClientCallbackExecutor = Executors.newSingleThreadExecutor();
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
     {
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
-        if (pageBufferClientCallbackExecutor != null) {
-            pageBufferClientCallbackExecutor.shutdownNow();
-            pageBufferClientCallbackExecutor = null;
-        }
+        if (pageBufferClientCallbackExecutor == null) {
+			return;
+		}
+		pageBufferClientCallbackExecutor.shutdownNow();
+		pageBufferClientCallbackExecutor = null;
     }
 
-    @Test
+	@Test
     public void testHappyPath()
             throws Exception
     {
@@ -172,7 +175,7 @@ public class TestHttpPageBufferClient
         assertStatus(client, location, "closed", 3, 5, 5, 0, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testLifecycle()
             throws Exception
     {
@@ -213,7 +216,7 @@ public class TestHttpPageBufferClient
         assertStatus(client, location, "closed", 0, 1, 2, 1, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testInvalidResponses()
             throws Exception
     {
@@ -280,7 +283,7 @@ public class TestHttpPageBufferClient
         assertStatus(client, location, "closed", 0, 3, 4, 3, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testCloseDuringPendingRequest()
             throws Exception
     {
@@ -316,12 +319,14 @@ public class TestHttpPageBufferClient
             requestComplete.await(10, TimeUnit.SECONDS);
         }
         catch (BrokenBarrierException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         try {
             afterRequest.await(10, TimeUnit.SECONDS);
         }
         catch (BrokenBarrierException ignored) {
-            afterRequest.reset();
+            logger.error(ignored.getMessage(), ignored);
+			afterRequest.reset();
         }
         // client.close() triggers a DELETE request, so wait for it to finish
         beforeRequest.await(10, TimeUnit.SECONDS);
@@ -330,7 +335,7 @@ public class TestHttpPageBufferClient
         assertStatus(client, location, "closed", 0, 1, 2, 1, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testExceptionFromResponseHandler()
             throws Exception
     {
@@ -396,7 +401,7 @@ public class TestHttpPageBufferClient
         assertStatus(client, location, "queued", 0, 3, 3, 3, "not scheduled");
     }
 
-    @Test
+	@Test
     public void testErrorCodes()
     {
         assertEquals(new PageTooLargeException().getErrorCode(), PAGE_TOO_LARGE.toErrorCode());
@@ -404,7 +409,7 @@ public class TestHttpPageBufferClient
         assertEquals(new PageTransportTimeoutException(HostAddress.fromParts("127.0.0.1", 8080), "", null).getErrorCode(), PAGE_TRANSPORT_TIMEOUT.toErrorCode());
     }
 
-    private static void assertStatus(
+	private static void assertStatus(
             HttpPageBufferClient client,
             URI location, String status,
             int pagesReceived,
@@ -423,13 +428,12 @@ public class TestHttpPageBufferClient
         assertEquals(actualStatus.getHttpRequestState(), httpRequestState, "httpRequestState");
     }
 
-    private static void assertPageEquals(Page expectedPage, Page actualPage)
+	private static void assertPageEquals(Page expectedPage, Page actualPage)
     {
         assertEquals(actualPage.getPositionCount(), expectedPage.getPositionCount());
         assertEquals(actualPage.getChannelCount(), expectedPage.getChannelCount());
     }
-
-    private static class TestingClientCallback
+	private static class TestingClientCallback
             implements ClientCallback
     {
         private final CyclicBarrier done;

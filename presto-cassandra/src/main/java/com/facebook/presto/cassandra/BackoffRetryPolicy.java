@@ -22,11 +22,14 @@ import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 
 import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BackoffRetryPolicy
         implements RetryPolicy
 {
-    public static final BackoffRetryPolicy INSTANCE = new BackoffRetryPolicy();
+    private static final Logger logger = LoggerFactory.getLogger(BackoffRetryPolicy.class);
+	public static final BackoffRetryPolicy INSTANCE = new BackoffRetryPolicy();
 
     private BackoffRetryPolicy() {}
 
@@ -44,7 +47,8 @@ public class BackoffRetryPolicy
             return RetryDecision.retry(consistencyLevel);
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            logger.error(e.getMessage(), e);
+			Thread.currentThread().interrupt();
             return RetryDecision.rethrow();
         }
     }

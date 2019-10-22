@@ -81,13 +81,13 @@ public final class PlanSanityChecker
         checkers.get(Stage.FRAGMENT).forEach(checker -> checker.validate(planNode, session, metadata, sqlParser, types, warningCollector));
     }
 
-    public interface Checker
-    {
-        void validate(PlanNode planNode, Session session, Metadata metadata, SqlParser sqlParser, TypeProvider types, WarningCollector warningCollector);
-    }
-
     private enum Stage
     {
         INTERMEDIATE, FINAL, FRAGMENT
+    }
+
+	public interface Checker
+    {
+        void validate(PlanNode planNode, Session session, Metadata metadata, SqlParser sqlParser, TypeProvider types, WarningCollector warningCollector);
     }
 }

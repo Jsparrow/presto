@@ -88,17 +88,18 @@ public final class SliceBigArray
                 sizeOfSlices -= SLICE_INSTANCE_SIZE;
             }
         }
-        if (value != null) {
-            int baseReferenceCount = trackedSlices.incrementAndGet(value.getBase());
-            int sliceReferenceCount = trackedSlices.incrementAndGet(value);
-            if (baseReferenceCount == 1) {
-                // it is the first referenced base
-                sizeOfSlices += value.getRetainedSize();
-            }
-            else if (sliceReferenceCount == 1) {
-                // it is the first referenced slice
-                sizeOfSlices += SLICE_INSTANCE_SIZE;
-            }
-        }
+        if (value == null) {
+			return;
+		}
+		int baseReferenceCount = trackedSlices.incrementAndGet(value.getBase());
+		int sliceReferenceCount = trackedSlices.incrementAndGet(value);
+		if (baseReferenceCount == 1) {
+		    // it is the first referenced base
+		    sizeOfSlices += value.getRetainedSize();
+		}
+		else if (sliceReferenceCount == 1) {
+		    // it is the first referenced slice
+		    sizeOfSlices += SLICE_INSTANCE_SIZE;
+		}
     }
 }

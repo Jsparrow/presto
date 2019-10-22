@@ -45,50 +45,50 @@ public class UncheckedByteArrays
         }
     }
 
-    public static byte getByteUnchecked(byte[] bytes, int index)
+    private UncheckedByteArrays()
+    {}
+
+	public static byte getByteUnchecked(byte[] bytes, int index)
     {
         return unsafe.getByte(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET);
     }
 
-    public static int setByteUnchecked(byte[] bytes, int index, byte value)
+	public static int setByteUnchecked(byte[] bytes, int index, byte value)
     {
         unsafe.putByte(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET, value);
         return index + ARRAY_BYTE_INDEX_SCALE;
     }
 
-    public static short getShortUnchecked(byte[] bytes, int index)
+	public static short getShortUnchecked(byte[] bytes, int index)
     {
         return unsafe.getShort(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET);
     }
 
-    public static int setShortUnchecked(byte[] bytes, int index, short value)
+	public static int setShortUnchecked(byte[] bytes, int index, short value)
     {
         unsafe.putShort(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET, value);
         return index + ARRAY_SHORT_INDEX_SCALE;
     }
 
-    public static int getIntUnchecked(byte[] bytes, int index)
+	public static int getIntUnchecked(byte[] bytes, int index)
     {
         return unsafe.getInt(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET);
     }
 
-    public static int setIntUnchecked(byte[] bytes, int index, int value)
+	public static int setIntUnchecked(byte[] bytes, int index, int value)
     {
         unsafe.putInt(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET, value);
         return index + ARRAY_INT_INDEX_SCALE;
     }
 
-    public static long getLongUnchecked(byte[] bytes, int index)
+	public static long getLongUnchecked(byte[] bytes, int index)
     {
         return unsafe.getLong(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET);
     }
 
-    public static int setLongUnchecked(byte[] bytes, int index, long value)
+	public static int setLongUnchecked(byte[] bytes, int index, long value)
     {
         unsafe.putLong(bytes, (long) index + ARRAY_BYTE_BASE_OFFSET, value);
         return index + ARRAY_LONG_INDEX_SCALE;
     }
-
-    private UncheckedByteArrays()
-    {}
 }

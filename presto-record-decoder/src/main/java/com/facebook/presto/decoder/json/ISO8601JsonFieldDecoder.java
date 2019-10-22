@@ -46,6 +46,8 @@ import static java.time.temporal.ChronoField.INSTANT_SECONDS;
 import static java.time.temporal.ChronoField.MILLI_OF_DAY;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ISO 8601 date format decoder.
@@ -76,7 +78,8 @@ public class ISO8601JsonFieldDecoder
     private static class ISO8601JsonValueProvider
             extends FieldValueProvider
     {
-        private final JsonNode value;
+        private final Logger logger = LoggerFactory.getLogger(ISO8601JsonValueProvider.class);
+		private final JsonNode value;
         private final DecoderColumnHandle columnHandle;
 
         public ISO8601JsonValueProvider(JsonNode value, DecoderColumnHandle columnHandle)
@@ -128,7 +131,8 @@ public class ISO8601JsonFieldDecoder
                 throw new IllegalArgumentException("unsupported type " + columnType);
             }
             catch (DateTimeParseException e) {
-                throw new PrestoException(
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(
                         DECODER_CONVERSION_NOT_SUPPORTED,
                         format("could not parse value '%s' as '%s' for column '%s'", value.asText(), columnType, columnHandle.getName()));
             }

@@ -87,9 +87,8 @@ public class NodeSystemTable
 
     private void addRows(Builder table, Set<InternalNode> nodes, NodeState state)
     {
-        for (InternalNode node : nodes) {
-            table.addRow(node.getNodeIdentifier(), node.getInternalUri().toString(), getNodeVersion(node), isCoordinator(node), state.toString().toLowerCase(Locale.ENGLISH));
-        }
+        nodes.forEach(node -> table.addRow(node.getNodeIdentifier(), node.getInternalUri().toString(), getNodeVersion(node),
+				isCoordinator(node), state.toString().toLowerCase(Locale.ENGLISH)));
     }
 
     private static String getNodeVersion(InternalNode node)

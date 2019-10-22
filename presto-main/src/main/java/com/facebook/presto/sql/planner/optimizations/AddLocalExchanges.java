@@ -183,24 +183,22 @@ public class AddLocalExchanges
         @Override
         public PlanWithProperties visitSort(SortNode node, StreamPreferredProperties parentPreferences)
         {
-            if (isDistributedSortEnabled(session)) {
-                PlanWithProperties sortPlan = planAndEnforceChildren(node, fixedParallelism(), fixedParallelism());
-
-                if (!sortPlan.getProperties().isSingleStream()) {
-                    return deriveProperties(
-                            mergingExchange(
-                                    idAllocator.getNextId(),
-                                    LOCAL,
-                                    sortPlan.getNode(),
-                                    node.getOrderingScheme()),
-                            sortPlan.getProperties());
-                }
-
-                return sortPlan;
-            }
-            // sort requires that all data be in one stream
-            // this node changes the input organization completely, so we do not pass through parent preferences
-            return planAndEnforceChildren(node, singleStream(), defaultParallelism(session));
+            if (!isDistributedSortEnabled(session)) {
+				// sort requires that all data be in one stream
+				// this node changes the input organization completely, so we do not pass through parent preferences
+				return planAndEnforceChildren(node, singleStream(), defaultParallelism(session));
+			}
+			PlanWithProperties sortPlan = planAndEnforceChildren(node, fixedParallelism(), fixedParallelism());
+			if (!sortPlan.getProperties().isSingleStream()) {
+			    return deriveProperties(
+			            mergingExchange(
+			                    idAllocator.getNextId(),
+			                    LOCAL,
+			                    sortPlan.getNode(),
+			                    node.getOrderingScheme()),
+			            sortPlan.getProperties());
+			}
+			return sortPlan;
         }
 
         @Override
@@ -222,7 +220,7 @@ public class AddLocalExchanges
         @Override
         public PlanWithProperties visitTopN(TopNNode node, StreamPreferredProperties parentPreferences)
         {
-            if (node.getStep().equals(TopNNode.Step.PARTIAL)) {
+            if (node.getStep() == TopNNode.Step.PARTIAL) {
                 return planAndEnforceChildren(
                         node,
                         parentPreferences.withoutPreference().withDefaultParallelism(session),

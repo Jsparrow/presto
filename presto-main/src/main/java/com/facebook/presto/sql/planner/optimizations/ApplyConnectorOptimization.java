@@ -65,7 +65,7 @@ public class ApplyConnectorOptimization
             ExceptNode.class);
 
     // for a leaf node that does not belong to any connector (e.g., ValuesNode)
-    private static final ConnectorId EMPTY_CONNECTOR_ID = new ConnectorId("$internal$" + ApplyConnectorOptimization.class + "_CONNECTOR");
+    private static final ConnectorId EMPTY_CONNECTOR_ID = new ConnectorId(new StringBuilder().append("$internal$").append(ApplyConnectorOptimization.class).append("_CONNECTOR").toString());
 
     private final Supplier<Map<ConnectorId, Set<ConnectorPlanOptimizer>>> connectorOptimizersSupplier;
 
@@ -184,9 +184,7 @@ public class ApplyConnectorOptimization
             return;
         }
 
-        for (PlanNode child : node.getSources()) {
-            getAllConnectorIds(child, builder);
-        }
+        node.getSources().forEach(child -> getAllConnectorIds(child, builder));
     }
 
     private static ConnectorPlanNodeContext buildConnectorPlanNodeContext(
@@ -211,11 +209,10 @@ public class ApplyConnectorOptimization
             connectorIds = new HashSet<>();
             planNodeTypes = new HashSet<>();
 
-            for (PlanNode child : node.getSources()) {
-                ConnectorPlanNodeContext childContext = buildConnectorPlanNodeContext(child, node, contextBuilder);
-                connectorIds.addAll(childContext.getReachableConnectors());
-                planNodeTypes.addAll(childContext.getReachablePlanNodeTypes());
-            }
+            node.getSources().stream().map(child -> buildConnectorPlanNodeContext(child, node, contextBuilder)).forEach(childContext -> {
+				connectorIds.addAll(childContext.getReachableConnectors());
+				planNodeTypes.addAll(childContext.getReachablePlanNodeTypes());
+			});
             planNodeTypes.add(node.getClass());
         }
 
@@ -228,7 +225,12 @@ public class ApplyConnectorOptimization
         return connectorPlanNodeContext;
     }
 
-    /**
+    private static <T> boolean containsAll(Set<T> container, Collection<T> test)
+    {
+        return test.stream().allMatch(container::contains);
+    }
+
+	/**
      * Extra information needed for a plan node
      */
     private static final class ConnectorPlanNodeContext
@@ -271,15 +273,5 @@ public class ApplyConnectorOptimization
             // check if all children are accessible by connectors
             return containsAll(CONNECTOR_ACCESSIBLE_PLAN_NODES, reachablePlanNodeTypes);
         }
-    }
-
-    private static <T> boolean containsAll(Set<T> container, Collection<T> test)
-    {
-        for (T element : test) {
-            if (!container.contains(element)) {
-                return false;
-            }
-        }
-        return true;
     }
 }

@@ -106,7 +106,12 @@ public class PagesSerdeUtil
         return new PageReader(serde, sliceInput);
     }
 
-    private static class PageReader
+    public static Iterator<SerializedPage> readSerializedPages(SliceInput sliceInput)
+    {
+        return new SerializedPageReader(sliceInput);
+    }
+
+	private static class PageReader
             extends AbstractIterator<Page>
     {
         private final PagesSerde serde;
@@ -127,11 +132,6 @@ public class PagesSerdeUtil
 
             return serde.deserialize(readSerializedPage(input));
         }
-    }
-
-    public static Iterator<SerializedPage> readSerializedPages(SliceInput sliceInput)
-    {
-        return new SerializedPageReader(sliceInput);
     }
 
     private static class SerializedPageReader

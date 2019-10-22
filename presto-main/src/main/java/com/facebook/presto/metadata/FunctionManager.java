@@ -353,12 +353,9 @@ public class FunctionManager
     private String constructFunctionNotFoundErrorMessage(String name, List<TypeSignatureProvider> parameterTypes, Collection<? extends SqlFunction> candidates)
     {
         List<String> expectedParameters = new ArrayList<>();
-        for (SqlFunction function : candidates) {
-            expectedParameters.add(format("%s(%s) %s",
-                    name,
-                    Joiner.on(", ").join(function.getSignature().getArgumentTypes()),
-                    Joiner.on(", ").join(function.getSignature().getTypeVariableConstraints())));
-        }
+        candidates.forEach(function -> expectedParameters
+				.add(format("%s(%s) %s", name, Joiner.on(", ").join(function.getSignature().getArgumentTypes()),
+						Joiner.on(", ").join(function.getSignature().getTypeVariableConstraints()))));
         String parameters = Joiner.on(", ").join(parameterTypes);
         String message = format("Function %s not registered", name);
         if (!expectedParameters.isEmpty()) {
@@ -397,25 +394,23 @@ public class FunctionManager
         StringBuilder errorMessageBuilder = new StringBuilder();
         errorMessageBuilder.append("Could not choose a best candidate operator. Explicit type casts must be added.\n");
         errorMessageBuilder.append("Candidates are:\n");
-        for (ApplicableFunction function : applicableFunctions) {
+        applicableFunctions.forEach(function -> {
             errorMessageBuilder.append("\t * ");
             errorMessageBuilder.append(function.getBoundSignature().toString());
             errorMessageBuilder.append("\n");
-        }
+        });
         throw new PrestoException(AMBIGUOUS_FUNCTION_CALL, errorMessageBuilder.toString());
     }
 
     private List<ApplicableFunction> identifyApplicableFunctions(Collection<? extends SqlFunction> candidates, List<TypeSignatureProvider> actualParameters, boolean allowCoercion)
     {
         ImmutableList.Builder<ApplicableFunction> applicableFunctions = ImmutableList.builder();
-        for (SqlFunction function : candidates) {
+        candidates.forEach(function -> {
             Signature declaredSignature = function.getSignature();
             Optional<Signature> boundSignature = new SignatureBinder(typeManager, declaredSignature, allowCoercion)
                     .bind(actualParameters);
-            if (boundSignature.isPresent()) {
-                applicableFunctions.add(new ApplicableFunction(declaredSignature, boundSignature.get(), function.isCalledOnNullInput()));
-            }
-        }
+            boundSignature.ifPresent(value -> applicableFunctions.add(new ApplicableFunction(declaredSignature, value, function.isCalledOnNullInput())));
+        });
         return applicableFunctions.build();
     }
 
@@ -450,17 +445,16 @@ public class FunctionManager
         }
 
         // If the return type for all the selected function is the same, and the parameters are declared as RETURN_NULL_ON_NULL
-        // all the functions are semantically the same. We can return just any of those.
-        if (returnTypeIsTheSame(mostSpecificFunctions) && allReturnNullOnGivenInputTypes(mostSpecificFunctions, parameterTypes)) {
-            // make it deterministic
-            ApplicableFunction selectedFunction = Ordering.usingToString()
-                    .reverse()
-                    .sortedCopy(mostSpecificFunctions)
-                    .get(0);
-            return ImmutableList.of(selectedFunction);
-        }
-
-        return mostSpecificFunctions;
+		// all the functions are semantically the same. We can return just any of those.
+		if (!(returnTypeIsTheSame(mostSpecificFunctions) && allReturnNullOnGivenInputTypes(mostSpecificFunctions, parameterTypes))) {
+			return mostSpecificFunctions;
+		}
+		// make it deterministic
+		ApplicableFunction selectedFunction = Ordering.usingToString()
+		        .reverse()
+		        .sortedCopy(mostSpecificFunctions)
+		        .get(0);
+		return ImmutableList.of(selectedFunction);
     }
 
     private List<ApplicableFunction> selectMostSpecificFunctions(List<ApplicableFunction> candidates)
@@ -534,18 +528,10 @@ public class FunctionManager
             return true;
         }
 
-        for (int i = 0; i < parameterTypes.size(); i++) {
-            Type parameterType = parameterTypes.get(i);
-            if (parameterType.equals(UNKNOWN)) {
-                // The original implementation checks only whether the particular argument has @SqlNullable.
-                // However, RETURNS NULL ON NULL INPUT / CALLED ON NULL INPUT is a function level metadata according
-                // to SQL spec. So there is a loss of precision here.
-                if (applicableFunction.isCalledOnNullInput()) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        // The original implementation checks only whether the particular argument has @SqlNullable.
+		// However, RETURNS NULL ON NULL INPUT / CALLED ON NULL INPUT is a function level metadata according
+		// to SQL spec. So there is a loss of precision here.
+		return parameterTypes.stream().noneMatch(parameterType -> parameterType.equals(UNKNOWN) && applicableFunction.isCalledOnNullInput());
     }
 
     private static Optional<List<Type>> toTypes(List<TypeSignatureProvider> typeSignatureProviders, TypeManager typeManager)

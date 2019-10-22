@@ -38,7 +38,7 @@ public class TestPruneFilterColumns
     public void testNotAllInputsReferenced()
     {
         tester().assertThat(new PruneFilterColumns())
-                .on(p -> buildProjectedFilter(p, variable -> variable.getName().equals("b")))
+                .on(p -> buildProjectedFilter(p, variable -> "b".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("b", expression("b")),
@@ -53,7 +53,7 @@ public class TestPruneFilterColumns
     public void testAllInputsReferenced()
     {
         tester().assertThat(new PruneFilterColumns())
-                .on(p -> buildProjectedFilter(p, symbol -> symbol.getName().equals("a")))
+                .on(p -> buildProjectedFilter(p, symbol -> "a".equals(symbol.getName())))
                 .doesNotFire();
     }
 

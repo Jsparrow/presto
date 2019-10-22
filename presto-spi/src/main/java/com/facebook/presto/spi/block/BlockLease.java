@@ -26,5 +26,6 @@ import java.util.function.Supplier;
 public interface BlockLease
         extends Supplier<Block>, AutoCloseable
 {
-    void close();
+    @Override
+	void close();
 }

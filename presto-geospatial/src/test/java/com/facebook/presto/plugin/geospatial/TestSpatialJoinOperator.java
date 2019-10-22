@@ -490,22 +490,22 @@ public class TestSpatialJoinOperator
     private static class TestInternalJoinFilterFunction
             implements InternalJoinFilterFunction
     {
-        public interface Lambda
-        {
-            boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage);
-        }
-
         private final TestInternalJoinFilterFunction.Lambda lambda;
 
-        private TestInternalJoinFilterFunction(TestInternalJoinFilterFunction.Lambda lambda)
+		private TestInternalJoinFilterFunction(TestInternalJoinFilterFunction.Lambda lambda)
         {
             this.lambda = lambda;
         }
 
-        @Override
+		@Override
         public boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage)
         {
             return lambda.filter(leftPosition, leftPage, rightPosition, rightPage);
+        }
+
+		public interface Lambda
+        {
+            boolean filter(int leftPosition, Page leftPage, int rightPosition, Page rightPage);
         }
     }
 }

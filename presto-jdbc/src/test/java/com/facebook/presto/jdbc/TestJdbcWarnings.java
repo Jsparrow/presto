@@ -210,9 +210,7 @@ public class TestJdbcWarnings
             TestingWarningCollectorConfig warningCollectorConfig = new TestingWarningCollectorConfig().setPreloadedWarnings(PRELOADED_WARNINGS).setAddWarnings(true);
             TestingWarningCollector warningCollector = new TestingWarningCollector(new WarningCollectorConfig(), warningCollectorConfig);
             List<PrestoWarning> expectedWarnings = warningCollector.getWarnings();
-            for (PrestoWarning prestoWarning : expectedWarnings) {
-                assertTrue(currentWarnings.contains(new WarningEntry(new PrestoSqlWarning(prestoWarning))));
-            }
+            expectedWarnings.forEach(prestoWarning -> assertTrue(currentWarnings.contains(new WarningEntry(new PrestoSqlWarning(prestoWarning)))));
         }
     }
 

@@ -18,22 +18,22 @@ import java.util.Optional;
 
 public interface QueryConfigurationOverrides
 {
-    enum SessionPropertiesOverrideStrategy
+    Optional<String> getCatalogOverride();
+
+	Optional<String> getSchemaOverride();
+
+	Optional<String> getUsernameOverride();
+
+	Optional<String> getPasswordOverride();
+
+	SessionPropertiesOverrideStrategy getSessionPropertiesOverrideStrategy();
+
+	Map<String, String> getSessionPropertiesOverride();
+
+	enum SessionPropertiesOverrideStrategy
     {
         NO_ACTION,
         OVERRIDE,
         SUBSTITUTE,
     }
-
-    Optional<String> getCatalogOverride();
-
-    Optional<String> getSchemaOverride();
-
-    Optional<String> getUsernameOverride();
-
-    Optional<String> getPasswordOverride();
-
-    SessionPropertiesOverrideStrategy getSessionPropertiesOverrideStrategy();
-
-    Map<String, String> getSessionPropertiesOverride();
 }

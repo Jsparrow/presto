@@ -90,13 +90,12 @@ public class TaskHandle
     public synchronized Priority resetLevelPriority()
     {
         long levelMinPriority = splitQueue.getLevelMinPriority(priority.get().getLevel(), scheduledNanos);
-        if (priority.get().getLevelPriority() < levelMinPriority) {
-            Priority newPriority = new Priority(priority.get().getLevel(), levelMinPriority);
-            priority.set(newPriority);
-            return newPriority;
-        }
-
-        return priority.get();
+        if (priority.get().getLevelPriority() >= levelMinPriority) {
+			return priority.get();
+		}
+		Priority newPriority = new Priority(priority.get().getLevel(), levelMinPriority);
+		priority.set(newPriority);
+		return newPriority;
     }
 
     public synchronized boolean isDestroyed()

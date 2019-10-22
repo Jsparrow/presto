@@ -38,6 +38,8 @@ import java.util.NoSuchElementException;
 import static com.facebook.presto.connector.system.KillQueryProcedure.createKillQueryException;
 import static com.facebook.presto.connector.system.KillQueryProcedure.createPreemptQueryException;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manage queries scheduled on this node
@@ -45,7 +47,8 @@ import static java.util.Objects.requireNonNull;
 @Path("/v1/query")
 public class QueryResource
 {
-    private final QueryManager queryManager;
+    private static final Logger logger = LoggerFactory.getLogger(QueryResource.class);
+	private final QueryManager queryManager;
 
     @Inject
     public QueryResource(QueryManager queryManager)
@@ -58,11 +61,7 @@ public class QueryResource
     {
         QueryState expectedState = stateFilter == null ? null : QueryState.valueOf(stateFilter.toUpperCase(Locale.ENGLISH));
         ImmutableList.Builder<BasicQueryInfo> builder = new ImmutableList.Builder<>();
-        for (BasicQueryInfo queryInfo : queryManager.getQueries()) {
-            if (stateFilter == null || queryInfo.getState() == expectedState) {
-                builder.add(queryInfo);
-            }
-        }
+        queryManager.getQueries().stream().filter(queryInfo -> stateFilter == null || queryInfo.getState() == expectedState).forEach(builder::add);
         return builder.build();
     }
 
@@ -77,7 +76,8 @@ public class QueryResource
             return Response.ok(queryInfo).build();
         }
         catch (NoSuchElementException e) {
-            return Response.status(Status.GONE).build();
+            logger.error(e.getMessage(), e);
+			return Response.status(Status.GONE).build();
         }
     }
 
@@ -125,7 +125,8 @@ public class QueryResource
             return Response.status(Status.OK).build();
         }
         catch (NoSuchElementException e) {
-            return Response.status(Status.GONE).build();
+            logger.error(e.getMessage(), e);
+			return Response.status(Status.GONE).build();
         }
     }
 

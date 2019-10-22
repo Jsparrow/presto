@@ -102,7 +102,7 @@ public class RowToRowCast
 
         // Embed the MD5 hash code of input and output types into the generated class name instead of the raw type names,
         // which could prevent the class name from hitting the length limitation and invalid characters.
-        byte[] md5Suffix = Hashing.md5().hashBytes((fromType + "$" + toType).getBytes()).asBytes();
+        byte[] md5Suffix = Hashing.md5().hashBytes((new StringBuilder().append(fromType).append("$").append(toType).toString()).getBytes()).asBytes();
 
         ClassDefinition definition = new ClassDefinition(
                 a(PUBLIC, FINAL),

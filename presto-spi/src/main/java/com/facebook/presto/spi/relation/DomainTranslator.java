@@ -23,7 +23,24 @@ import static java.util.Objects.requireNonNull;
 
 public interface DomainTranslator
 {
-    interface ColumnExtractor<T>
+    ColumnExtractor<VariableReferenceExpression> BASIC_COLUMN_EXTRACTOR = (expression, domain) -> {
+        if (expression instanceof VariableReferenceExpression) {
+            return Optional.of((VariableReferenceExpression) expression);
+        }
+        return Optional.empty();
+    };
+
+	RowExpression toPredicate(TupleDomain<VariableReferenceExpression> tupleDomain);
+
+	/**
+     * Convert a RowExpression predicate into an ExtractionResult consisting of:
+     * 1) A successfully extracted TupleDomain
+     * 2) An RowExpression fragment which represents the part of the original RowExpression that will need to be re-evaluated
+     * after filtering with the TupleDomain.
+     */
+    <T> ExtractionResult<T> fromPredicate(ConnectorSession session, RowExpression predicate, ColumnExtractor<T> columnExtractor);
+
+	interface ColumnExtractor<T>
     {
         /**
          * Given an expression and values domain, determine whether the expression qualifies as a
@@ -33,16 +50,6 @@ public interface DomainTranslator
          */
         Optional<T> extract(RowExpression expression, Domain domain);
     }
-
-    RowExpression toPredicate(TupleDomain<VariableReferenceExpression> tupleDomain);
-
-    /**
-     * Convert a RowExpression predicate into an ExtractionResult consisting of:
-     * 1) A successfully extracted TupleDomain
-     * 2) An RowExpression fragment which represents the part of the original RowExpression that will need to be re-evaluated
-     * after filtering with the TupleDomain.
-     */
-    <T> ExtractionResult<T> fromPredicate(ConnectorSession session, RowExpression predicate, ColumnExtractor<T> columnExtractor);
 
     class ExtractionResult<T>
     {
@@ -65,11 +72,4 @@ public interface DomainTranslator
             return remainingExpression;
         }
     }
-
-    ColumnExtractor<VariableReferenceExpression> BASIC_COLUMN_EXTRACTOR = (expression, domain) -> {
-        if (expression instanceof VariableReferenceExpression) {
-            return Optional.of((VariableReferenceExpression) expression);
-        }
-        return Optional.empty();
-    };
 }

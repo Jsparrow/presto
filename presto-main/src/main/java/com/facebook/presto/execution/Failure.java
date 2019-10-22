@@ -47,7 +47,7 @@ public class Failure
     {
         String message = getMessage();
         if (message != null) {
-            return type + ": " + message;
+            return new StringBuilder().append(type).append(": ").append(message).toString();
         }
         return type;
     }

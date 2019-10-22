@@ -22,7 +22,8 @@ public interface SingleSourceRelNode
 {
     RelNode getSource();
 
-    default List<RelNode> getSources()
+    @Override
+	default List<RelNode> getSources()
     {
         return singletonList(getSource());
     }

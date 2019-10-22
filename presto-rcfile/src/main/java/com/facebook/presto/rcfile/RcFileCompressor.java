@@ -86,24 +86,26 @@ public interface RcFileCompressor
         public void close()
                 throws IOException
         {
-            if (!closed) {
-                closed = true;
-                super.close();
-            }
+            if (closed) {
+				return;
+			}
+			closed = true;
+			super.close();
         }
 
         public void destroy()
                 throws IOException
         {
-            if (!destroyed) {
-                destroyed = true;
-                try {
-                    close();
-                }
-                finally {
-                    onDestroy.run();
-                }
-            }
+            if (destroyed) {
+				return;
+			}
+			destroyed = true;
+			try {
+			    close();
+			}
+			finally {
+			    onDestroy.run();
+			}
         }
     }
 }

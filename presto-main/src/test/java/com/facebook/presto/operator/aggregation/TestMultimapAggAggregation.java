@@ -188,9 +188,7 @@ public class TestMultimapAggAggregation
     {
         Map<K, List<V>> map = new HashMap<>();
         for (int i = 0; i < expectedKeys.size(); i++) {
-            if (!map.containsKey(expectedKeys.get(i))) {
-                map.put(expectedKeys.get(i), new ArrayList<>());
-            }
+            map.putIfAbsent(expectedKeys.get(i), new ArrayList<>());
             map.get(expectedKeys.get(i)).add(expectedValues.get(i));
         }
 

@@ -47,7 +47,7 @@ public class LongVariableConstraint
     @Override
     public String toString()
     {
-        return name + ":" + expression;
+        return new StringBuilder().append(name).append(":").append(expression).toString();
     }
 
     @Override

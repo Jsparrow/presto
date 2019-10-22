@@ -24,7 +24,15 @@ import static java.util.Objects.requireNonNull;
 
 public class RelationId
 {
-    /**
+    @Nullable
+    private final Node sourceNode;
+
+	private RelationId(Node sourceNode)
+    {
+        this.sourceNode = sourceNode;
+    }
+
+	/**
      * Creates {@link RelationId} equal to any {@link RelationId} created from exactly the same source.
      */
     public static RelationId of(Node sourceNode)
@@ -32,7 +40,7 @@ public class RelationId
         return new RelationId(requireNonNull(sourceNode, "source cannot be null"));
     }
 
-    /**
+	/**
      * Creates {@link RelationId} equal only to itself
      */
     public static RelationId anonymous()
@@ -40,20 +48,12 @@ public class RelationId
         return new RelationId(null);
     }
 
-    @Nullable
-    private final Node sourceNode;
-
-    private RelationId(Node sourceNode)
-    {
-        this.sourceNode = sourceNode;
-    }
-
-    public boolean isAnonymous()
+	public boolean isAnonymous()
     {
         return sourceNode == null;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -66,13 +66,13 @@ public class RelationId
         return sourceNode != null && sourceNode == that.sourceNode;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return identityHashCode(sourceNode);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         if (isAnonymous()) {

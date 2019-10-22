@@ -249,7 +249,7 @@ public class TestPageProcessor
             Page expectedPage = new Page(createSlicesBlock(Arrays.copyOfRange(slices, 0, batchSize)));
             assertPageEquals(ImmutableList.of(VARCHAR), actualPage.orElse(null), expectedPage);
             if (actualPage.orElseThrow(() -> new AssertionError("page is not present")).getSizeInBytes() > MAX_PAGE_SIZE_IN_BYTES) {
-                batchSize = batchSize / 2;
+                batchSize /= 2;
             }
         }
 
@@ -266,7 +266,7 @@ public class TestPageProcessor
             assertPageEquals(ImmutableList.of(VARCHAR), actualPage.orElse(null), expectedPage);
             offset += actualPage.orElseThrow(() -> new AssertionError("page is not present")).getPositionCount();
             if (actualPage.orElseThrow(() -> new AssertionError("page is not present")).getSizeInBytes() < MIN_PAGE_SIZE_IN_BYTES) {
-                batchSize = batchSize * 2;
+                batchSize *= 2;
             }
         }
     }
@@ -301,7 +301,7 @@ public class TestPageProcessor
 
             // batch size will be further reduced to fit within the bounds
             if (actualPage.getSizeInBytes() > MAX_PAGE_SIZE_IN_BYTES) {
-                batchSize = batchSize / 2;
+                batchSize /= 2;
             }
         }
         // second project is invoked once per output page

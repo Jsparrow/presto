@@ -58,9 +58,7 @@ public class DigestAndPercentileArrayStateSerializer
             // write percentiles
             List<Double> percentiles = state.getPercentiles();
             output.appendInt(percentiles.size());
-            for (double percentile : percentiles) {
-                output.appendDouble(percentile);
-            }
+            percentiles.stream().mapToDouble(Double::valueOf).forEach(output::appendDouble);
 
             output.appendInt(digest.length());
             output.appendBytes(digest);

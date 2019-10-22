@@ -369,7 +369,7 @@ public final class VarbinaryFunctions
         checkCondition(
                 0 <= targetLength && targetLength <= Integer.MAX_VALUE,
                 INVALID_FUNCTION_ARGUMENT,
-                "Target length must be in the range [0.." + Integer.MAX_VALUE + "]");
+                new StringBuilder().append("Target length must be in the range [0..").append(Integer.MAX_VALUE).append("]").toString());
         checkCondition(padSlice.length() > 0, INVALID_FUNCTION_ARGUMENT, "Padding bytes must not be empty");
 
         int inputLength = inputSlice.length();

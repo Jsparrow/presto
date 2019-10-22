@@ -43,16 +43,6 @@ public class Scope
     private final RelationType relation;
     private final Map<String, WithQuery> namedQueries;
 
-    public static Scope create()
-    {
-        return builder().build();
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
-    }
-
     private Scope(
             Optional<Scope> parent,
             boolean queryBoundary,
@@ -67,7 +57,17 @@ public class Scope
         this.namedQueries = ImmutableMap.copyOf(requireNonNull(namedQueries, "namedQueries is null"));
     }
 
-    public Optional<Scope> getOuterQueryParent()
+	public static Scope create()
+    {
+        return builder().build();
+    }
+
+	public static Builder builder()
+    {
+        return new Builder();
+    }
+
+	public Optional<Scope> getOuterQueryParent()
     {
         Scope scope = this;
         while (scope.parent.isPresent()) {
@@ -80,7 +80,7 @@ public class Scope
         return Optional.empty();
     }
 
-    public Optional<Scope> getLocalParent()
+	public Optional<Scope> getLocalParent()
     {
         if (!queryBoundary) {
             return parent;
@@ -89,22 +89,22 @@ public class Scope
         return Optional.empty();
     }
 
-    public RelationId getRelationId()
+	public RelationId getRelationId()
     {
         return relationId;
     }
 
-    public RelationType getRelationType()
+	public RelationType getRelationType()
     {
         return relation;
     }
 
-    public ResolvedField resolveField(Expression expression, QualifiedName name)
+	public ResolvedField resolveField(Expression expression, QualifiedName name)
     {
         return tryResolveField(expression, name).orElseThrow(() -> missingAttributeException(expression, name));
     }
 
-    public Optional<ResolvedField> tryResolveField(Expression expression)
+	public Optional<ResolvedField> tryResolveField(Expression expression)
     {
         QualifiedName qualifiedName = asQualifiedName(expression);
         if (qualifiedName != null) {
@@ -113,7 +113,7 @@ public class Scope
         return Optional.empty();
     }
 
-    private static QualifiedName asQualifiedName(Expression expression)
+	private static QualifiedName asQualifiedName(Expression expression)
     {
         QualifiedName name = null;
         if (expression instanceof Identifier) {
@@ -125,12 +125,12 @@ public class Scope
         return name;
     }
 
-    public Optional<ResolvedField> tryResolveField(Expression node, QualifiedName name)
+	public Optional<ResolvedField> tryResolveField(Expression node, QualifiedName name)
     {
         return resolveField(node, name, 0, true);
     }
 
-    private Optional<ResolvedField> resolveField(Expression node, QualifiedName name, int fieldIndexOffset, boolean local)
+	private Optional<ResolvedField> resolveField(Expression node, QualifiedName name, int fieldIndexOffset, boolean local)
     {
         List<Field> matches = relation.resolveFields(name);
         if (matches.size() > 1) {
@@ -150,14 +150,14 @@ public class Scope
         }
     }
 
-    private ResolvedField asResolvedField(Field field, int fieldIndexOffset, boolean local)
+	private ResolvedField asResolvedField(Field field, int fieldIndexOffset, boolean local)
     {
         int relationFieldIndex = relation.indexOf(field);
         int hierarchyFieldIndex = relation.indexOf(field) + fieldIndexOffset;
         return new ResolvedField(this, field, hierarchyFieldIndex, relationFieldIndex, local);
     }
 
-    public boolean isColumnReference(QualifiedName name)
+	public boolean isColumnReference(QualifiedName name)
     {
         Scope current = this;
         while (current != null) {
@@ -170,7 +170,7 @@ public class Scope
         return false;
     }
 
-    private static boolean isColumnReference(QualifiedName name, RelationType relation)
+	private static boolean isColumnReference(QualifiedName name, RelationType relation)
     {
         while (name.getPrefix().isPresent()) {
             name = name.getPrefix().get();
@@ -181,7 +181,7 @@ public class Scope
         return false;
     }
 
-    public Optional<WithQuery> getNamedQuery(String name)
+	public Optional<WithQuery> getNamedQuery(String name)
     {
         if (namedQueries.containsKey(name)) {
             return Optional.of(namedQueries.get(name));
@@ -194,7 +194,7 @@ public class Scope
         return Optional.empty();
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -202,7 +202,7 @@ public class Scope
                 .toString();
     }
 
-    public static final class Builder
+	public static final class Builder
     {
         private RelationId relationId = RelationId.anonymous();
         private RelationType relationType = new RelationType();

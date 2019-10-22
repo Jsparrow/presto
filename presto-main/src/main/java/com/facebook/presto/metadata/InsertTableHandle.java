@@ -82,6 +82,6 @@ public final class InsertTableHandle
     @Override
     public String toString()
     {
-        return connectorId + ":" + connectorHandle;
+        return new StringBuilder().append(connectorId).append(":").append(connectorHandle).toString();
     }
 }

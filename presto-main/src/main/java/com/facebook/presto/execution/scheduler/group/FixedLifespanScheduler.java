@@ -82,7 +82,8 @@ public class FixedLifespanScheduler
         this.concurrentLifespansPerTask = requireNonNull(concurrentLifespansPerTask, "concurrentLifespansPerTask is null");
     }
 
-    public void scheduleInitial(SourceScheduler scheduler)
+    @Override
+	public void scheduleInitial(SourceScheduler scheduler)
     {
         checkState(!initialScheduled);
         initialScheduled = true;
@@ -102,7 +103,8 @@ public class FixedLifespanScheduler
         }
     }
 
-    public void onLifespanExecutionFinished(Iterable<Lifespan> newlyCompletelyExecutedDriverGroups)
+    @Override
+	public void onLifespanExecutionFinished(Iterable<Lifespan> newlyCompletelyExecutedDriverGroups)
     {
         checkState(initialScheduled);
 
@@ -125,7 +127,8 @@ public class FixedLifespanScheduler
         throw new UnsupportedOperationException("onTaskFailed is not supported in FixedLifespanScheduler");
     }
 
-    public SettableFuture schedule(SourceScheduler scheduler)
+    @Override
+	public SettableFuture schedule(SourceScheduler scheduler)
     {
         // Return a new future even if newDriverGroupReady has not finished.
         // Returning the same SettableFuture instance could lead to ListenableFuture retaining too many listener objects.

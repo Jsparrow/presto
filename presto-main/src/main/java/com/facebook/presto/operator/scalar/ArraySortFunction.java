@@ -39,17 +39,17 @@ import static com.facebook.presto.spi.function.OperatorType.LESS_THAN;
 @Description("Sorts the given array in ascending order according to the natural ordering of its elements.")
 public final class ArraySortFunction
 {
-    private final PageBuilder pageBuilder;
     private static final int INITIAL_LENGTH = 128;
-    private List<Integer> positions = Ints.asList(new int[INITIAL_LENGTH]);
+	private final PageBuilder pageBuilder;
+	private List<Integer> positions = Ints.asList(new int[INITIAL_LENGTH]);
 
-    @TypeParameter("E")
+	@TypeParameter("E")
     public ArraySortFunction(@TypeParameter("E") Type elementType)
     {
         pageBuilder = new PageBuilder(ImmutableList.of(elementType));
     }
 
-    @TypeParameter("E")
+	@TypeParameter("E")
     @SqlType("array(E)")
     public Block sort(
             @OperatorDependency(operator = LESS_THAN, argumentTypes = {"E", "E"}) MethodHandle lessThanFunction,
@@ -64,7 +64,7 @@ public final class ArraySortFunction
             positions.set(i, i);
         }
 
-        Collections.sort(positions.subList(0, arrayLength), new Comparator<Integer>()
+        positions.subList(0, arrayLength).sort(new Comparator<Integer>()
         {
             @Override
             public int compare(Integer p1, Integer p2)

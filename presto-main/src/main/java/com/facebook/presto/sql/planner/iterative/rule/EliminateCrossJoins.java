@@ -127,9 +127,7 @@ public class EliminateCrossJoins
             if (!visited.contains(node)) {
                 visited.add(node);
                 joinOrder.add(node);
-                for (JoinGraph.Edge edge : graph.getEdges(node)) {
-                    nodesToVisit.add(edge.getTargetNode());
-                }
+                graph.getEdges(node).forEach(edge -> nodesToVisit.add(edge.getTargetNode()));
             }
 
             if (nodesToVisit.isEmpty() && visited.size() < graph.size()) {
@@ -137,9 +135,7 @@ public class EliminateCrossJoins
                 Optional<PlanNode> firstNotVisitedNode = graph.getNodes().stream()
                         .filter(graphNode -> !visited.contains(graphNode))
                         .findFirst();
-                if (firstNotVisitedNode.isPresent()) {
-                    nodesToVisit.add(firstNotVisitedNode.get());
-                }
+                firstNotVisitedNode.ifPresent(nodesToVisit::add);
             }
         }
 
@@ -167,14 +163,14 @@ public class EliminateCrossJoins
 
             ImmutableList.Builder<JoinNode.EquiJoinClause> criteria = ImmutableList.builder();
 
-            for (JoinGraph.Edge edge : graph.getEdges(rightNode)) {
+            graph.getEdges(rightNode).forEach(edge -> {
                 PlanNode targetNode = edge.getTargetNode();
                 if (alreadyJoinedNodes.contains(targetNode.getId())) {
                     criteria.add(new JoinNode.EquiJoinClause(
                             edge.getTargetVariable(),
                             edge.getSourceVariable()));
                 }
-            }
+            });
 
             result = new JoinNode(
                     idAllocator.getNextId(),

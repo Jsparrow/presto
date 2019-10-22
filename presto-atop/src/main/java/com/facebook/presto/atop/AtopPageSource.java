@@ -129,13 +129,13 @@ public class AtopPageSource
             }
             String row = atop.next();
 
-            if (row.equals("SEP")) {
+            if ("SEP".equals(row)) {
                 continue;
             }
 
             if (table == AtopTable.REBOOTS) {
                 // For the reboots table we're only interested in RESET events, and the event that follows them
-                if (!row.equals("RESET")) {
+                if (!"RESET".equals(row)) {
                     continue;
                 }
                 if (!atop.hasNext()) {
@@ -145,7 +145,7 @@ public class AtopPageSource
                 row = atop.next();
             }
             else {
-                if (row.equals("RESET")) {
+                if ("RESET".equals(row)) {
                     if (atop.hasNext()) {
                         // Drop samples immediately after a RESET, since this will be a "since boot" event
                         // which tends to have a very long duration

@@ -41,15 +41,18 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class ShardPredicate
 {
-    private final String predicate;
-    private final List<JDBCType> types;
-    private final List<Object> values;
-    private static final int MAX_RANGE_COUNT = 100;
+    private static final Logger logger = LoggerFactory.getLogger(ShardPredicate.class);
+	private static final int MAX_RANGE_COUNT = 100;
+	private final String predicate;
+	private final List<JDBCType> types;
+	private final List<Object> values;
 
-    private ShardPredicate(String predicate, List<JDBCType> types, List<Object> values)
+	private ShardPredicate(String predicate, List<JDBCType> types, List<Object> values)
     {
         this.predicate = requireNonNull(predicate, "predicate is null");
         this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
@@ -57,12 +60,12 @@ class ShardPredicate
         checkArgument(types.size() == values.size(), "types and values sizes do not match");
     }
 
-    public String getPredicate()
+	public String getPredicate()
     {
         return predicate;
     }
 
-    public void bind(PreparedStatement statement)
+	public void bind(PreparedStatement statement)
             throws SQLException
     {
         for (int i = 0; i < types.size(); i++) {
@@ -72,7 +75,7 @@ class ShardPredicate
         }
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -80,7 +83,7 @@ class ShardPredicate
                 .toString();
     }
 
-    public static ShardPredicate create(TupleDomain<RaptorColumnHandle> tupleDomain)
+	public static ShardPredicate create(TupleDomain<RaptorColumnHandle> tupleDomain)
     {
         StringJoiner predicate = new StringJoiner(" AND ").setEmptyValue("true");
         ImmutableList.Builder<JDBCType> types = ImmutableList.builder();
@@ -116,7 +119,7 @@ class ShardPredicate
                 continue;
             }
 
-            for (Range range : ranges.getOrderedRanges()) {
+            ranges.getOrderedRanges().forEach(range -> {
                 Object minValue = null;
                 Object maxValue = null;
                 if (range.isSingleValue()) {
@@ -155,13 +158,13 @@ class ShardPredicate
                     values.add(maxValue);
                 }
                 columnPredicate.add(rangePredicate.toString());
-            }
+            });
             predicate.add(columnPredicate.toString());
         }
         return new ShardPredicate(predicate.toString(), types.build(), values.build());
     }
 
-    private static String createShardPredicate(ImmutableList.Builder<JDBCType> types, ImmutableList.Builder<Object> values, Domain domain, JDBCType jdbcType)
+	private static String createShardPredicate(ImmutableList.Builder<JDBCType> types, ImmutableList.Builder<Object> values, Domain domain, JDBCType jdbcType)
     {
         List<Range> ranges = domain.getValues().getRanges().getOrderedRanges();
 
@@ -182,7 +185,8 @@ class ShardPredicate
                 valuesBuilder.add(uuidBytes);
             }
             catch (IllegalArgumentException e) {
-                return "true";
+                logger.error(e.getMessage(), e);
+				return "true";
             }
             rangePredicate.add("shard_uuid = ?");
         }
@@ -192,19 +196,19 @@ class ShardPredicate
         return rangePredicate.toString();
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     protected List<JDBCType> getTypes()
     {
         return types;
     }
 
-    @VisibleForTesting
+	@VisibleForTesting
     protected List<Object> getValues()
     {
         return values;
     }
 
-    public static void bindValue(PreparedStatement statement, JDBCType type, Object value, int index)
+	public static void bindValue(PreparedStatement statement, JDBCType type, Object value, int index)
             throws SQLException
     {
         if (value == null) {

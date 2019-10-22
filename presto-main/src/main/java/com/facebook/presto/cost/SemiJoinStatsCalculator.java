@@ -22,22 +22,19 @@ import static java.lang.Double.min;
 
 public final class SemiJoinStatsCalculator
 {
-    private SemiJoinStatsCalculator() {}
-
     // arbitrary value to be on the safe side when filtering using Anti Join and when value set for filter symbol does not actually overlap with source symbol very much
     private static final double MIN_ANTI_JOIN_FILTER_COEFFICIENT = 0.5;
 
-    // TODO implementation does not take into account overlapping of ranges for source and filtering source.
-    //      Basically it works as low and high values were the same for source and filteringSource and just looks at NDVs.
+	private SemiJoinStatsCalculator() {}
 
-    public static PlanNodeStatsEstimate computeSemiJoin(PlanNodeStatsEstimate sourceStats, PlanNodeStatsEstimate filteringSourceStats, VariableReferenceExpression sourceJoinVariable, VariableReferenceExpression filteringSourceJoinVariable)
+	public static PlanNodeStatsEstimate computeSemiJoin(PlanNodeStatsEstimate sourceStats, PlanNodeStatsEstimate filteringSourceStats, VariableReferenceExpression sourceJoinVariable, VariableReferenceExpression filteringSourceJoinVariable)
     {
         return compute(sourceStats, filteringSourceStats, sourceJoinVariable, filteringSourceJoinVariable,
                 (sourceJoinSymbolStats, filteringSourceJoinSymbolStats) ->
                         min(filteringSourceJoinSymbolStats.getDistinctValuesCount(), sourceJoinSymbolStats.getDistinctValuesCount()));
     }
 
-    public static PlanNodeStatsEstimate computeAntiJoin(PlanNodeStatsEstimate sourceStats, PlanNodeStatsEstimate filteringSourceStats, VariableReferenceExpression sourceJoinVariable, VariableReferenceExpression filteringSourceJoinVariable)
+	public static PlanNodeStatsEstimate computeAntiJoin(PlanNodeStatsEstimate sourceStats, PlanNodeStatsEstimate filteringSourceStats, VariableReferenceExpression sourceJoinVariable, VariableReferenceExpression filteringSourceJoinVariable)
     {
         return compute(sourceStats, filteringSourceStats, sourceJoinVariable, filteringSourceJoinVariable,
                 (sourceJoinSymbolStats, filteringSourceJoinSymbolStats) ->
@@ -45,7 +42,7 @@ public final class SemiJoinStatsCalculator
                                 sourceJoinSymbolStats.getDistinctValuesCount() - filteringSourceJoinSymbolStats.getDistinctValuesCount()));
     }
 
-    private static PlanNodeStatsEstimate compute(
+	private static PlanNodeStatsEstimate compute(
             PlanNodeStatsEstimate sourceStats,
             PlanNodeStatsEstimate filteringSourceStats,
             VariableReferenceExpression sourceJoinVariable,
@@ -76,4 +73,9 @@ public final class SemiJoinStatsCalculator
                 .setOutputRowCount(outputRowCount)
                 .build();
     }
+
+    // TODO implementation does not take into account overlapping of ranges for source and filtering source.
+    //      Basically it works as low and high values were the same for source and filteringSource and just looks at NDVs.
+
+    
 }

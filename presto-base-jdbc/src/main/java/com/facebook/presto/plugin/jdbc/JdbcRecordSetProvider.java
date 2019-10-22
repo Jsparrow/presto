@@ -44,9 +44,7 @@ public class JdbcRecordSetProvider
         JdbcSplit jdbcSplit = (JdbcSplit) split;
 
         ImmutableList.Builder<JdbcColumnHandle> handles = ImmutableList.builder();
-        for (ColumnHandle handle : columns) {
-            handles.add((JdbcColumnHandle) handle);
-        }
+        columns.forEach(handle -> handles.add((JdbcColumnHandle) handle));
 
         return new JdbcRecordSet(jdbcClient, session, jdbcSplit, handles.build());
     }

@@ -29,20 +29,10 @@ import static java.util.Objects.requireNonNull;
 
 public class QueryTemplate
 {
-    public static QueryTemplate queryTemplate(String queryTemplate, Parameter... parameters)
-    {
-        return new QueryTemplate(queryTemplate, parameters);
-    }
-
-    public static Parameter parameter(String key)
-    {
-        return new Parameter(key);
-    }
-
     private final String queryTemplate;
-    private final List<Parameter> defaultParameters;
+	private final List<Parameter> defaultParameters;
 
-    private QueryTemplate(String queryTemplate, Parameter... parameters)
+	private QueryTemplate(String queryTemplate, Parameter... parameters)
     {
         for (Parameter parameter : parameters) {
             String queryParameterKey = asQueryParameterKey(parameter.getKey());
@@ -54,7 +44,17 @@ public class QueryTemplate
         this.defaultParameters = ImmutableList.copyOf(parameters);
     }
 
-    public String replace(Parameter... parameters)
+	public static QueryTemplate queryTemplate(String queryTemplate, Parameter... parameters)
+    {
+        return new QueryTemplate(queryTemplate, parameters);
+    }
+
+	public static Parameter parameter(String key)
+    {
+        return new Parameter(key);
+    }
+
+	public String replace(Parameter... parameters)
     {
         String query = queryTemplate;
         for (Parameter parameter : parameters) {
@@ -69,17 +69,14 @@ public class QueryTemplate
         return query;
     }
 
-    private void checkQueryHasAllParametersReplaced(String query)
+	private void checkQueryHasAllParametersReplaced(String query)
     {
-        for (Parameter parameter : defaultParameters) {
-            String queryParameterKey = asQueryParameterKey(parameter.getKey());
-            checkArgument(
-                    !query.contains(queryParameterKey),
-                    "Query template parameters was not given: %s", queryParameterKey);
-        }
+        defaultParameters.stream().map(parameter -> asQueryParameterKey(parameter.getKey())).forEach(queryParameterKey -> checkArgument(
+		        !query.contains(queryParameterKey),
+		        "Query template parameters was not given: %s", queryParameterKey));
     }
 
-    @SafeVarargs
+	@SafeVarargs
     public final Stream<String> replaceAll(List<Parameter>... parametersLists)
     {
         List<String> queries = new ArrayList<>();
@@ -87,13 +84,13 @@ public class QueryTemplate
         return queries.stream();
     }
 
-    public void replaceAll(Consumer<String> queryConsumer, List<Parameter>... parametersLists)
+	public void replaceAll(Consumer<String> queryConsumer, List<Parameter>... parametersLists)
     {
         requireNonNull(queryConsumer, "queryConsumer is null");
         replaceAll(queryTemplate, queryConsumer, ImmutableList.copyOf(parametersLists));
     }
 
-    private void replaceAll(String queryTemplate, Consumer<String> queryConsumer, List<List<Parameter>> parametersLists)
+	private void replaceAll(String queryTemplate, Consumer<String> queryConsumer, List<List<Parameter>> parametersLists)
     {
         if (parametersLists.size() == 0) {
             checkQueryHasAllParametersReplaced(queryTemplate);
@@ -103,26 +100,23 @@ public class QueryTemplate
             List<List<Parameter>> restParameters = IntStream.range(1, parametersLists.size())
                     .mapToObj(parametersLists::get)
                     .collect(toImmutableList());
-            for (Parameter parameter : parametersLists.get(0)) {
-                String intermediateQueryTemplate = resolve(queryTemplate, parameter);
-                replaceAll(intermediateQueryTemplate, queryConsumer, restParameters);
-            }
+            parametersLists.get(0).stream().map(parameter -> resolve(queryTemplate, parameter)).forEach(intermediateQueryTemplate -> replaceAll(intermediateQueryTemplate, queryConsumer, restParameters));
         }
     }
 
-    private String resolve(String query, Parameter parameter)
+	private String resolve(String query, Parameter parameter)
     {
         return parameter.getValue()
                 .map(value -> query.replaceAll(asQueryParameterKey(parameter.getKey()), value))
                 .orElse(query);
     }
 
-    private String asQueryParameterKey(String key)
+	private String asQueryParameterKey(String key)
     {
-        return "%" + key + "%";
+        return new StringBuilder().append("%").append(key).append("%").toString();
     }
 
-    public static final class Parameter
+	public static final class Parameter
     {
         private final String key;
         private final Optional<String> value;

@@ -157,7 +157,7 @@ public class HivePartitionManager
         List<HivePartition> partitions = getPartitionsAsList(getPartitionsIterator(metastore, tableHandle, constraint, session).iterator());
 
         // never ignore table bucketing for temporary tables as those are created such explicitly by the engine request
-        boolean shouldIgnoreTableBucketing = !table.getTableType().equals(TEMPORARY_TABLE) && shouldIgnoreTableBucketing(session);
+        boolean shouldIgnoreTableBucketing = table.getTableType() != TEMPORARY_TABLE && shouldIgnoreTableBucketing(session);
         Optional<HiveBucketHandle> hiveBucketHandle = shouldIgnoreTableBucketing ? Optional.empty() : getHiveBucketHandle(table);
         Optional<HiveBucketFilter> bucketFilter = shouldIgnoreTableBucketing ? Optional.empty() : getHiveBucketFilter(table, effectivePredicate);
 

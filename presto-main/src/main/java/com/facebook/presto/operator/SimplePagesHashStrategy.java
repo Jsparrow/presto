@@ -73,10 +73,11 @@ public class SimplePagesHashStrategy
         requireNonNull(functionManager, "functionManager is null");
         this.groupByUsesEqualTo = groupByUsesEqualTo;
         ImmutableList.Builder<MethodHandle> distinctFromMethodHandlesBuilder = ImmutableList.builder();
-        for (Type type : types) {
-            distinctFromMethodHandlesBuilder.add(
-                    functionManager.getScalarFunctionImplementation(functionManager.resolveOperator(IS_DISTINCT_FROM, fromTypes(type, type))).getMethodHandle());
-        }
+        types.forEach(type -> distinctFromMethodHandlesBuilder
+				.add(functionManager
+						.getScalarFunctionImplementation(
+								functionManager.resolveOperator(IS_DISTINCT_FROM, fromTypes(type, type)))
+						.getMethodHandle()));
         distinctFromMethodHandles = distinctFromMethodHandlesBuilder.build();
     }
 
@@ -251,12 +252,7 @@ public class SimplePagesHashStrategy
     @Override
     public boolean isPositionNull(int blockIndex, int blockPosition)
     {
-        for (int hashChannel : hashChannels) {
-            if (isChannelPositionNull(hashChannel, blockIndex, blockPosition)) {
-                return true;
-            }
-        }
-        return false;
+        return hashChannels.stream().anyMatch(hashChannel -> isChannelPositionNull(hashChannel, blockIndex, blockPosition));
     }
 
     @Override

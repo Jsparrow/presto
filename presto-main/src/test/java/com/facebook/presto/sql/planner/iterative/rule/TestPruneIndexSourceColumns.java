@@ -51,7 +51,7 @@ public class TestPruneIndexSourceColumns
     public void testNotAllOutputsReferenced()
     {
         tester().assertThat(new PruneIndexSourceColumns())
-                .on(p -> buildProjectedIndexSource(p, variable -> variable.getName().equals("orderkey")))
+                .on(p -> buildProjectedIndexSource(p, variable -> "orderkey".equals(variable.getName())))
                 .matches(
                         strictProject(
                                 ImmutableMap.of("x", expression("orderkey")),

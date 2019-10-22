@@ -28,7 +28,9 @@ import static org.testng.Assert.fail;
 
 public class QueryAssertions
 {
-    public static void assertContainsEventually(Supplier<QueryResult> all, QueryResult expectedSubset, Duration timeout)
+    private QueryAssertions() {}
+
+	public static void assertContainsEventually(Supplier<QueryResult> all, QueryResult expectedSubset, Duration timeout)
     {
         long start = System.nanoTime();
         while (!Thread.currentThread().isInterrupted()) {
@@ -45,19 +47,10 @@ public class QueryAssertions
         }
     }
 
-    public static void assertContains(QueryResult all, QueryResult expectedSubset)
+	public static void assertContains(QueryResult all, QueryResult expectedSubset)
     {
-        for (Object row : expectedSubset.rows()) {
-            if (!all.rows().contains(row)) {
-                fail(format("expected row missing: %s\nAll %s rows:\n    %s\nExpected subset %s rows:\n    %s\n",
-                        row,
-                        all.getRowsCount(),
-                        Joiner.on("\n    ").join(Iterables.limit(all.rows(), 100)),
-                        expectedSubset.getRowsCount(),
-                        Joiner.on("\n    ").join(Iterables.limit(expectedSubset.rows(), 100))));
-            }
-        }
+        expectedSubset.rows().stream().filter(row -> !all.rows().contains(row)).forEach(row -> fail(format("expected row missing: %s\nAll %s rows:\n    %s\nExpected subset %s rows:\n    %s\n", row,
+				all.getRowsCount(), Joiner.on("\n    ").join(Iterables.limit(all.rows(), 100)),
+				expectedSubset.getRowsCount(), Joiner.on("\n    ").join(Iterables.limit(expectedSubset.rows(), 100)))));
     }
-
-    private QueryAssertions() {}
 }

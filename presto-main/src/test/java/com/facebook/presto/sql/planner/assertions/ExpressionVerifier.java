@@ -195,7 +195,8 @@ final class ExpressionVerifier
         return false;
     }
 
-    protected Boolean visitGenericLiteral(GenericLiteral actual, Node expected)
+    @Override
+	protected Boolean visitGenericLiteral(GenericLiteral actual, Node expected)
     {
         if (expected instanceof GenericLiteral) {
             return getValueFromLiteral(actual).equals(getValueFromLiteral(expected));
@@ -268,11 +269,11 @@ final class ExpressionVerifier
     @Override
     protected Boolean visitStringLiteral(StringLiteral actual, Node expectedExpression)
     {
-        if (expectedExpression instanceof StringLiteral) {
-            StringLiteral expected = (StringLiteral) expectedExpression;
-            return actual.getValue().equals(expected.getValue());
-        }
-        return false;
+        if (!(expectedExpression instanceof StringLiteral)) {
+			return false;
+		}
+		StringLiteral expected = (StringLiteral) expectedExpression;
+		return actual.getValue().equals(expected.getValue());
     }
 
     @Override
@@ -290,12 +291,11 @@ final class ExpressionVerifier
     @Override
     protected Boolean visitBetweenPredicate(BetweenPredicate actual, Node expectedExpression)
     {
-        if (expectedExpression instanceof BetweenPredicate) {
-            BetweenPredicate expected = (BetweenPredicate) expectedExpression;
-            return process(actual.getValue(), expected.getValue()) && process(actual.getMin(), expected.getMin()) && process(actual.getMax(), expected.getMax());
-        }
-
-        return false;
+        if (!(expectedExpression instanceof BetweenPredicate)) {
+			return false;
+		}
+		BetweenPredicate expected = (BetweenPredicate) expectedExpression;
+		return process(actual.getValue(), expected.getValue()) && process(actual.getMin(), expected.getMin()) && process(actual.getMax(), expected.getMax());
     }
 
     @Override
@@ -324,14 +324,14 @@ final class ExpressionVerifier
         }
 
         CoalesceExpression expectedCoalesce = (CoalesceExpression) expected;
-        if (actual.getOperands().size() == expectedCoalesce.getOperands().size()) {
-            boolean verified = true;
-            for (int i = 0; i < actual.getOperands().size(); i++) {
-                verified &= process(actual.getOperands().get(i), expectedCoalesce.getOperands().get(i));
-            }
-            return verified;
-        }
-        return false;
+        if (actual.getOperands().size() != expectedCoalesce.getOperands().size()) {
+			return false;
+		}
+		boolean verified = true;
+		for (int i = 0; i < actual.getOperands().size(); i++) {
+		    verified &= process(actual.getOperands().get(i), expectedCoalesce.getOperands().get(i));
+		}
+		return verified;
     }
 
     @Override

@@ -107,7 +107,17 @@ public class BenchmarkSTIntersects
         data.validate();
     }
 
-    @State(Scope.Thread)
+    public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkSTIntersects.class.getSimpleName()).append(".*").toString())
+                .build();
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class BenchmarkData
     {
         private Slice simpleGeometry;
@@ -155,15 +165,5 @@ public class BenchmarkSTIntersects
             verify(!stIntersects(geometry, outerLineNotInEnvelope));
             verify(!stIntersects(envelope, outerLineNotInEnvelope));
         }
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkSTIntersects.class.getSimpleName() + ".*")
-                .build();
-        new Runner(options).run();
     }
 }

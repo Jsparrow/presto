@@ -181,9 +181,7 @@ public class ShardCompactionManager
             Collection<OrganizationSet> organizationSets = filterAndCreateCompactionSets(tableId, shards);
             log.info("Created %s organization set(s) for table ID %s", organizationSets.size(), tableId);
 
-            for (OrganizationSet set : organizationSets) {
-                organizer.enqueue(set);
-            }
+            organizationSets.forEach(organizer::enqueue);
         }
     }
 
@@ -204,23 +202,22 @@ public class ShardCompactionManager
                 .collect(toSet());
 
         Collection<ShardIndexInfo> shardIndexInfos = getOrganizationEligibleShards(dbi, metadataDao, tableInfo, filteredShards, false);
-        if (tableInfo.getTemporalColumnId().isPresent()) {
-            Set<ShardIndexInfo> temporalShards = shardIndexInfos.stream()
-                    .filter(shard -> shard.getTemporalRange().isPresent())
-                    .collect(toSet());
-            return compactionSetCreator.createCompactionSets(tableInfo, temporalShards);
-        }
-
-        return compactionSetCreator.createCompactionSets(tableInfo, shardIndexInfos);
+        if (!tableInfo.getTemporalColumnId().isPresent()) {
+			return compactionSetCreator.createCompactionSets(tableInfo, shardIndexInfos);
+		}
+		Set<ShardIndexInfo> temporalShards = shardIndexInfos.stream()
+		        .filter(shard -> shard.getTemporalRange().isPresent())
+		        .collect(toSet());
+		return compactionSetCreator.createCompactionSets(tableInfo, temporalShards);
     }
 
     private static boolean isValidTemporalColumn(long tableId, Type type)
     {
-        if (!type.equals(DATE) && !type.equals(TIMESTAMP)) {
-            log.warn("Temporal column type of table ID %s set incorrectly to %s", tableId, type);
-            return false;
-        }
-        return true;
+        if (!(!type.equals(DATE) && !type.equals(TIMESTAMP))) {
+			return true;
+		}
+		log.warn("Temporal column type of table ID %s set incorrectly to %s", tableId, type);
+		return false;
     }
 
     private boolean needsCompaction(ShardMetadata shard)

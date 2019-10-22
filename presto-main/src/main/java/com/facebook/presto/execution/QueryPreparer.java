@@ -51,14 +51,12 @@ public class QueryPreparer
     }
 
     public PreparedQuery prepareQuery(Session session, String query, WarningCollector warningCollector)
-            throws ParsingException, PrestoException, SemanticException
     {
         Statement wrappedStatement = sqlParser.createStatement(query, createParsingOptions(session, warningCollector));
         return prepareQuery(session, wrappedStatement, warningCollector);
     }
 
     public PreparedQuery prepareQuery(Session session, Statement wrappedStatement, WarningCollector warningCollector)
-            throws ParsingException, PrestoException, SemanticException
     {
         Statement statement = unwrapExecuteStatement(wrappedStatement, sqlParser, session, warningCollector);
         if (statement instanceof Explain && ((Explain) statement).isAnalyze()) {
@@ -92,9 +90,7 @@ public class QueryPreparer
         if (parameterValues.size() != parameterCount) {
             throw new SemanticException(INVALID_PARAMETER_USAGE, node, "Incorrect number of parameters: expected %s but found %s", parameterCount, parameterValues.size());
         }
-        for (Expression expression : parameterValues) {
-            verifyExpressionIsConstant(emptySet(), expression);
-        }
+        parameterValues.forEach(expression -> verifyExpressionIsConstant(emptySet(), expression));
     }
 
     public static class PreparedQuery

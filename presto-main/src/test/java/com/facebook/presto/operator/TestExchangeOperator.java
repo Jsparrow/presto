@@ -311,9 +311,7 @@ public class TestExchangeOperator
 
         // verify pages
         assertEquals(outputPages.size(), expectedPageCount);
-        for (Page page : outputPages) {
-            assertPageEquals(TYPES, page, PAGE);
-        }
+        outputPages.forEach(page -> assertPageEquals(TYPES, page, PAGE));
 
         assertEquals(operator.getOperatorContext().getOperatorStats().getSystemMemoryReservation().toBytes(), 0);
 

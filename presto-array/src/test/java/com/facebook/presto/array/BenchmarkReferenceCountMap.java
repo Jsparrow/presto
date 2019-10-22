@@ -49,7 +49,33 @@ public class BenchmarkReferenceCountMap
     private static final int NUMBER_OF_ENTRIES = 1_000_000;
     private static final int NUMBER_OF_BASES = 100;
 
-    @State(Scope.Thread)
+    @Benchmark
+    @OperationsPerInvocation(NUMBER_OF_ENTRIES)
+    public ReferenceCountMap benchmarkInserts(Data data)
+    {
+        ReferenceCountMap map = new ReferenceCountMap();
+        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
+            map.incrementAndGet(data.slices[i]);
+            map.incrementAndGet(data.slices[i].getBase());
+        }
+        return map;
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .warmupMode(WarmupMode.BULK)
+                .include(new StringBuilder().append(".*").append(BenchmarkReferenceCountMap.class.getSimpleName()).append(".*").toString())
+                .addProfiler(GCProfiler.class)
+                .jvmArgs("-XX:+UseG1GC")
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Scope.Thread)
     public static class Data
     {
         @Param({"int", "double", "long", "byte"})
@@ -103,31 +129,5 @@ public class BenchmarkReferenceCountMap
                 }
             }
         }
-    }
-
-    @Benchmark
-    @OperationsPerInvocation(NUMBER_OF_ENTRIES)
-    public ReferenceCountMap benchmarkInserts(Data data)
-    {
-        ReferenceCountMap map = new ReferenceCountMap();
-        for (int i = 0; i < NUMBER_OF_ENTRIES; i++) {
-            map.incrementAndGet(data.slices[i]);
-            map.incrementAndGet(data.slices[i].getBase());
-        }
-        return map;
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .warmupMode(WarmupMode.BULK)
-                .include(".*" + BenchmarkReferenceCountMap.class.getSimpleName() + ".*")
-                .addProfiler(GCProfiler.class)
-                .jvmArgs("-XX:+UseG1GC")
-                .build();
-
-        new Runner(options).run();
     }
 }

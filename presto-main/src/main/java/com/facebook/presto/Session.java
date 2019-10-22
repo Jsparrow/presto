@@ -276,13 +276,13 @@ public final class Session
         requireNonNull(transactionManager, "transactionManager is null");
         requireNonNull(accessControl, "accessControl is null");
 
-        for (Entry<String, String> property : systemProperties.entrySet()) {
+        systemProperties.entrySet().forEach(property -> {
             // verify permissions
             accessControl.checkCanSetSystemSessionProperty(identity, property.getKey());
 
             // validate session property value
             sessionPropertyManager.validateSystemSessionProperty(property.getKey(), property.getValue());
-        }
+        });
 
         // Now that there is a transaction, the catalog name can be resolved to a connector, and the catalog properties can be validated
         ImmutableMap.Builder<ConnectorId, Map<String, String>> connectorProperties = ImmutableMap.builder();
@@ -296,13 +296,13 @@ public final class Session
                     .orElseThrow(() -> new PrestoException(NOT_FOUND, "Session property catalog does not exist: " + catalogName))
                     .getConnectorId();
 
-            for (Entry<String, String> property : catalogProperties.entrySet()) {
+            catalogProperties.entrySet().forEach(property -> {
                 // verify permissions
                 accessControl.checkCanSetCatalogSessionProperty(transactionId, identity, catalogName, property.getKey());
 
                 // validate session property value
                 sessionPropertyManager.validateCatalogSessionProperty(connectorId, catalogName, property.getKey(), property.getValue());
-            }
+            });
             connectorProperties.put(connectorId, catalogProperties);
         }
 
@@ -372,13 +372,10 @@ public final class Session
         Map<String, Map<String, String>> connectorProperties = catalogPropertyDefaults.entrySet().stream()
                 .map(entry -> Maps.immutableEntry(entry.getKey(), new HashMap<>(entry.getValue())))
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-        for (Entry<String, Map<String, String>> catalogProperties : this.unprocessedCatalogProperties.entrySet()) {
+        this.unprocessedCatalogProperties.entrySet().forEach(catalogProperties -> {
             String catalog = catalogProperties.getKey();
-            for (Entry<String, String> entry : catalogProperties.getValue().entrySet()) {
-                connectorProperties.computeIfAbsent(catalog, id -> new HashMap<>())
-                        .put(entry.getKey(), entry.getValue());
-            }
-        }
+            catalogProperties.getValue().entrySet().forEach(entry -> connectorProperties.computeIfAbsent(catalog, id -> new HashMap<>()).put(entry.getKey(), entry.getValue()));
+        });
 
         return new Session(
                 queryId,

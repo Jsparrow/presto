@@ -123,9 +123,7 @@ public class Row
         }
         else {
             StringBuilder builder = new StringBuilder("(");
-            for (Field f : fields) {
-                builder.append(f).append(",");
-            }
+            fields.forEach(f -> builder.append(f).append(","));
             builder.deleteCharAt(builder.length() - 1);
             return builder.append(')').toString();
         }

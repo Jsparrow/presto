@@ -167,42 +167,37 @@ public class StorageManagerConfig
         return this;
     }
 
-    public enum OrcOptimizedWriterStage
-    {
-        ENABLED, ENABLED_AND_VALIDATED
-    }
-
     public OrcOptimizedWriterStage getOrcOptimizedWriterStage()
     {
         return orcOptimizedWriterStage;
     }
 
-    @Config("storage.orc.optimized-writer-stage")
+	@Config("storage.orc.optimized-writer-stage")
     public StorageManagerConfig setOrcOptimizedWriterStage(OrcOptimizedWriterStage orcOptimizedWriterStage)
     {
         this.orcOptimizedWriterStage = orcOptimizedWriterStage;
         return this;
     }
 
-    public CompressionKind getOrcCompressionKind()
+	public CompressionKind getOrcCompressionKind()
     {
         return orcCompressionKind;
     }
 
-    @Config("storage.orc.compression-kind")
+	@Config("storage.orc.compression-kind")
     public StorageManagerConfig setOrcCompressionKind(CompressionKind orcCompressionKind)
     {
         this.orcCompressionKind = orcCompressionKind;
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getDeletionThreads()
     {
         return deletionThreads;
     }
 
-    @Config("storage.max-deletion-threads")
+	@Config("storage.max-deletion-threads")
     @ConfigDescription("Maximum number of threads to use for deletions")
     public StorageManagerConfig setDeletionThreads(int deletionThreads)
     {
@@ -210,13 +205,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDuration("1s")
+	@MinDuration("1s")
     public Duration getShardRecoveryTimeout()
     {
         return shardRecoveryTimeout;
     }
 
-    @Config("storage.shard-recovery-timeout")
+	@Config("storage.shard-recovery-timeout")
     @ConfigDescription("Maximum time to wait for a shard to recover from backup while running a query")
     public StorageManagerConfig setShardRecoveryTimeout(Duration shardRecoveryTimeout)
     {
@@ -224,13 +219,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDuration("1s")
+	@MinDuration("1s")
     public Duration getMissingShardDiscoveryInterval()
     {
         return missingShardDiscoveryInterval;
     }
 
-    @Config("storage.missing-shard-discovery-interval")
+	@Config("storage.missing-shard-discovery-interval")
     @ConfigDescription("How often to check the database and local file system missing shards")
     public StorageManagerConfig setMissingShardDiscoveryInterval(Duration missingShardDiscoveryInterval)
     {
@@ -238,13 +233,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDuration("1s")
+	@MinDuration("1s")
     public Duration getCompactionInterval()
     {
         return compactionInterval;
     }
 
-    @Config("storage.compaction-interval")
+	@Config("storage.compaction-interval")
     @ConfigDescription("How often to check for local shards that need compaction")
     public StorageManagerConfig setCompactionInterval(Duration compactionInterval)
     {
@@ -252,14 +247,14 @@ public class StorageManagerConfig
         return this;
     }
 
-    @NotNull
+	@NotNull
     @MinDuration("1s")
     public Duration getOrganizationInterval()
     {
         return organizationInterval;
     }
 
-    @Config("storage.organization-interval")
+	@Config("storage.organization-interval")
     @ConfigDescription("How long to wait between table organization iterations")
     public StorageManagerConfig setOrganizationInterval(Duration organizationInterval)
     {
@@ -267,14 +262,14 @@ public class StorageManagerConfig
         return this;
     }
 
-    @NotNull
+	@NotNull
     @MinDuration("1s")
     public Duration getOrganizationDiscoveryInterval()
     {
         return organizationDiscoveryInterval;
     }
 
-    @Config("storage.organization-discovery-interval")
+	@Config("storage.organization-discovery-interval")
     @ConfigDescription("How long to wait between discovering tables that need to be organized")
     public StorageManagerConfig setOrganizationDiscoveryInterval(Duration organizationDiscoveryInterval)
     {
@@ -282,13 +277,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDuration("5m")
+	@MinDuration("5m")
     public Duration getShardEjectorInterval()
     {
         return shardEjectorInterval;
     }
 
-    @Config("storage.ejector-interval")
+	@Config("storage.ejector-interval")
     @ConfigDescription("How often to check for local shards that need ejection to balance capacity")
     public StorageManagerConfig setShardEjectorInterval(Duration shardEjectorInterval)
     {
@@ -296,13 +291,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getRecoveryThreads()
     {
         return recoveryThreads;
     }
 
-    @Config("storage.max-recovery-threads")
+	@Config("storage.max-recovery-threads")
     @ConfigDescription("Maximum number of threads to use for recovery")
     public StorageManagerConfig setRecoveryThreads(int recoveryThreads)
     {
@@ -310,7 +305,7 @@ public class StorageManagerConfig
         return this;
     }
 
-    @LegacyConfig("storage.max-compaction-threads")
+	@LegacyConfig("storage.max-compaction-threads")
     @Config("storage.max-organization-threads")
     @ConfigDescription("Maximum number of threads to use for organization")
     public StorageManagerConfig setOrganizationThreads(int organizationThreads)
@@ -319,20 +314,20 @@ public class StorageManagerConfig
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getOrganizationThreads()
     {
         return organizationThreads;
     }
 
-    @Min(1)
+	@Min(1)
     @Max(1_000_000_000)
     public long getMaxShardRows()
     {
         return maxShardRows;
     }
 
-    @Config("storage.max-shard-rows")
+	@Config("storage.max-shard-rows")
     @ConfigDescription("Approximate maximum number of rows per shard")
     public StorageManagerConfig setMaxShardRows(long maxShardRows)
     {
@@ -340,14 +335,14 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDataSize("1MB")
+	@MinDataSize("1MB")
     @MaxDataSize("1GB")
     public DataSize getMaxShardSize()
     {
         return maxShardSize;
     }
 
-    @Config("storage.max-shard-size")
+	@Config("storage.max-shard-size")
     @ConfigDescription("Approximate maximum uncompressed size of a shard")
     public StorageManagerConfig setMaxShardSize(DataSize maxShardSize)
     {
@@ -355,13 +350,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @MinDataSize("1MB")
+	@MinDataSize("1MB")
     public DataSize getMaxBufferSize()
     {
         return maxBufferSize;
     }
 
-    @Config("storage.max-buffer-size")
+	@Config("storage.max-buffer-size")
     @ConfigDescription("Maximum data to buffer before flushing to disk")
     public StorageManagerConfig setMaxBufferSize(DataSize maxBufferSize)
     {
@@ -369,13 +364,13 @@ public class StorageManagerConfig
         return this;
     }
 
-    @Min(1)
+	@Min(1)
     public int getMaxAllowedFilesPerWriter()
     {
         return maxAllowedFilesPerWriter;
     }
 
-    @Config("storage.max-allowed-files-per-writer")
+	@Config("storage.max-allowed-files-per-writer")
     @ConfigDescription("Maximum number of files that can be created per writer for a query. Default value is Integer.MAX_VALUE")
     public StorageManagerConfig setMaxAllowedFilesPerWriter(int maxAllowedFilesPerWriter)
     {
@@ -383,36 +378,36 @@ public class StorageManagerConfig
         return this;
     }
 
-    public boolean isCompactionEnabled()
+	public boolean isCompactionEnabled()
     {
         return compactionEnabled;
     }
 
-    @Config("storage.compaction-enabled")
+	@Config("storage.compaction-enabled")
     public StorageManagerConfig setCompactionEnabled(boolean compactionEnabled)
     {
         this.compactionEnabled = compactionEnabled;
         return this;
     }
 
-    public boolean isOrganizationEnabled()
+	public boolean isOrganizationEnabled()
     {
         return organizationEnabled;
     }
 
-    @Config("storage.organization-enabled")
+	@Config("storage.organization-enabled")
     public StorageManagerConfig setOrganizationEnabled(boolean organizationEnabled)
     {
         this.organizationEnabled = organizationEnabled;
         return this;
     }
 
-    public int getOneSplitPerBucketThreshold()
+	public int getOneSplitPerBucketThreshold()
     {
         return oneSplitPerBucketThreshold;
     }
 
-    @Config("storage.one-split-per-bucket-threshold")
+	@Config("storage.one-split-per-bucket-threshold")
     @ConfigDescription("Experimental: Maximum bucket count at which to produce multiple splits per bucket")
     public StorageManagerConfig setOneSplitPerBucketThreshold(int oneSplitPerBucketThreshold)
     {
@@ -420,16 +415,21 @@ public class StorageManagerConfig
         return this;
     }
 
-    public DateTimeZone getShardDayBoundaryTimeZone()
+	public DateTimeZone getShardDayBoundaryTimeZone()
     {
         return DateTimeZone.forTimeZone(TimeZone.getTimeZone(shardDayBoundaryTimeZone));
     }
 
-    @Config("storage.shard-day-boundary-time-zone")
+	@Config("storage.shard-day-boundary-time-zone")
     @ConfigDescription("Time zone to use for computing day boundary for shards")
     public StorageManagerConfig setShardDayBoundaryTimeZone(String timeZone)
     {
         this.shardDayBoundaryTimeZone = timeZone;
         return this;
+    }
+
+	public enum OrcOptimizedWriterStage
+    {
+        ENABLED, ENABLED_AND_VALIDATED
     }
 }

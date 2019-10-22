@@ -109,11 +109,14 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestSqlTaskExecution
 {
-    private static final OutputBufferId OUTPUT_BUFFER_ID = new OutputBufferId(0);
+    private static final Logger logger = LoggerFactory.getLogger(TestSqlTaskExecution.class);
+	private static final OutputBufferId OUTPUT_BUFFER_ID = new OutputBufferId(0);
     private static final ConnectorId CONNECTOR_ID = new ConnectorId("test");
     private static final ConnectorTransactionHandle TRANSACTION_HANDLE = TestingTransactionHandle.create();
     private static final Duration ASSERT_WAIT_TIMEOUT = new Duration(1, HOURS);
@@ -643,13 +646,19 @@ public class TestSqlTaskExecution
                 Thread.sleep(10);
             }
             catch (InterruptedException e) {
+				logger.error(e.getMessage(), e);
                 // do nothing
             }
         }
         assertEquals(actualSupplier.get(), expected);
     }
 
-    private static class OutputBufferConsumer
+    private ScheduledSplit newScheduledSplit(int sequenceId, PlanNodeId planNodeId, Lifespan lifespan, int begin, int count)
+    {
+        return new ScheduledSplit(sequenceId, planNodeId, new Split(CONNECTOR_ID, TRANSACTION_HANDLE, new TestingSplit(begin, begin + count), lifespan));
+    }
+
+	private static class OutputBufferConsumer
     {
         private final OutputBuffer outputBuffer;
         private final OutputBufferId outputBufferId;
@@ -672,9 +681,7 @@ public class TestSqlTaskExecution
                 assertFalse(bufferComplete, "bufferComplete is set before enough positions are consumed");
                 BufferResult results = outputBuffer.get(outputBufferId, sequenceId, new DataSize(1, MEGABYTE)).get(nanoUntil - System.nanoTime(), TimeUnit.NANOSECONDS);
                 bufferComplete = results.isBufferComplete();
-                for (SerializedPage serializedPage : results.getSerializedPages()) {
-                    surplusPositions += serializedPage.getPositionCount();
-                }
+                results.getSerializedPages().forEach(serializedPage -> surplusPositions += serializedPage.getPositionCount());
                 sequenceId += results.getSerializedPages().size();
             }
             outputBuffer.acknowledge(outputBufferId, sequenceId);
@@ -688,9 +695,7 @@ public class TestSqlTaskExecution
             while (!bufferComplete) {
                 BufferResult results = outputBuffer.get(outputBufferId, sequenceId, new DataSize(1, MEGABYTE)).get(nanoUntil - System.nanoTime(), TimeUnit.NANOSECONDS);
                 bufferComplete = results.isBufferComplete();
-                for (SerializedPage serializedPage : results.getSerializedPages()) {
-                    assertEquals(serializedPage.getPositionCount(), 0);
-                }
+                results.getSerializedPages().forEach(serializedPage -> assertEquals(serializedPage.getPositionCount(), 0));
                 sequenceId += results.getSerializedPages().size();
             }
         }
@@ -700,11 +705,6 @@ public class TestSqlTaskExecution
             outputBuffer.abort(outputBufferId);
             assertEquals(outputBuffer.getInfo().getState(), BufferState.FINISHED);
         }
-    }
-
-    private ScheduledSplit newScheduledSplit(int sequenceId, PlanNodeId planNodeId, Lifespan lifespan, int begin, int count)
-    {
-        return new ScheduledSplit(sequenceId, planNodeId, new Split(CONNECTOR_ID, TRANSACTION_HANDLE, new TestingSplit(begin, begin + count), lifespan));
     }
 
     public static class Pauser

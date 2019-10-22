@@ -30,31 +30,15 @@ import static java.util.Objects.requireNonNull;
 class InvokeBytecodeExpression
         extends BytecodeExpression
 {
-    public static InvokeBytecodeExpression createInvoke(
-            BytecodeExpression instance,
-            String methodName,
-            ParameterizedType returnType,
-            Iterable<ParameterizedType> parameterTypes,
-            Iterable<? extends BytecodeExpression> parameters)
-    {
-        return new InvokeBytecodeExpression(
-                requireNonNull(instance, "instance is null"),
-                instance.getType(),
-                requireNonNull(methodName, "methodName is null"),
-                requireNonNull(returnType, "returnType is null"),
-                requireNonNull(parameterTypes, "parameterTypes is null"),
-                requireNonNull(parameters, "parameters is null"));
-    }
-
     @Nullable
     private final BytecodeExpression instance;
-    private final ParameterizedType methodTargetType;
-    private final String methodName;
-    private final ParameterizedType returnType;
-    private final List<BytecodeExpression> parameters;
-    private final ImmutableList<ParameterizedType> parameterTypes;
+	private final ParameterizedType methodTargetType;
+	private final String methodName;
+	private final ParameterizedType returnType;
+	private final List<BytecodeExpression> parameters;
+	private final ImmutableList<ParameterizedType> parameterTypes;
 
-    public InvokeBytecodeExpression(
+	public InvokeBytecodeExpression(
             @Nullable BytecodeExpression instance,
             ParameterizedType methodTargetType,
             String methodName,
@@ -72,7 +56,23 @@ class InvokeBytecodeExpression
         this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters is null"));
     }
 
-    @Override
+	public static InvokeBytecodeExpression createInvoke(
+            BytecodeExpression instance,
+            String methodName,
+            ParameterizedType returnType,
+            Iterable<ParameterizedType> parameterTypes,
+            Iterable<? extends BytecodeExpression> parameters)
+    {
+        return new InvokeBytecodeExpression(
+                requireNonNull(instance, "instance is null"),
+                instance.getType(),
+                requireNonNull(methodName, "methodName is null"),
+                requireNonNull(returnType, "returnType is null"),
+                requireNonNull(parameterTypes, "parameterTypes is null"),
+                requireNonNull(parameters, "parameters is null"));
+    }
+
+	@Override
     public BytecodeNode getBytecode(MethodGenerationContext generationContext)
     {
         BytecodeBlock block = new BytecodeBlock();
@@ -80,9 +80,7 @@ class InvokeBytecodeExpression
             block.append(instance);
         }
 
-        for (BytecodeExpression parameter : parameters) {
-            block.append(parameter);
-        }
+        parameters.forEach(block::append);
 
         if (instance == null) {
             return block.invokeStatic(methodTargetType, methodName, returnType, parameterTypes);
@@ -95,17 +93,19 @@ class InvokeBytecodeExpression
         }
     }
 
-    @Override
+	@Override
     protected String formatOneLine()
     {
         if (instance == null) {
-            return methodTargetType.getSimpleName() + "." + methodName + "(" + Joiner.on(", ").join(parameters) + ")";
+            return new StringBuilder().append(methodTargetType.getSimpleName()).append(".").append(methodName).append("(").append(Joiner.on(", ").join(parameters)).append(")")
+					.toString();
         }
 
-        return instance + "." + methodName + "(" + Joiner.on(", ").join(parameters) + ")";
+        return new StringBuilder().append(instance).append(".").append(methodName).append("(").append(Joiner.on(", ").join(parameters)).append(")")
+				.toString();
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         ImmutableList.Builder<BytecodeNode> children = ImmutableList.builder();

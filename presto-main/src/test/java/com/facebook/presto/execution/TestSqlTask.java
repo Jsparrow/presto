@@ -66,11 +66,14 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestSqlTask
 {
-    public static final OutputBufferId OUT = new OutputBufferId(0);
+    private static final Logger logger = LoggerFactory.getLogger(TestSqlTask.class);
+	public static final OutputBufferId OUT = new OutputBufferId(0);
     private final TaskExecutor taskExecutor;
     private final ScheduledExecutorService taskNotificationExecutor;
     private final ScheduledExecutorService driverYieldExecutor;
@@ -292,6 +295,7 @@ public class TestSqlTask
             fail("expected TimeoutException");
         }
         catch (TimeoutException expected) {
+			logger.error(expected.getMessage(), expected);
             // expected
         }
         assertFalse(sqlTask.getTaskResults(OUT, 0, new DataSize(1, MEGABYTE)).isDone());

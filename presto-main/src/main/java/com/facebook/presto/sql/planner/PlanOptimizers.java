@@ -173,20 +173,6 @@ public class PlanOptimizers
                 taskCountEstimator);
     }
 
-    @PostConstruct
-    public void initialize()
-    {
-        ruleStats.export(exporter);
-        optimizerStats.export(exporter);
-    }
-
-    @PreDestroy
-    public void destroy()
-    {
-        ruleStats.unexport(exporter);
-        optimizerStats.unexport(exporter);
-    }
-
     public PlanOptimizers(
             Metadata metadata,
             SqlParser sqlParser,
@@ -555,7 +541,21 @@ public class PlanOptimizers
         this.optimizers = builder.build();
     }
 
-    public List<PlanOptimizer> get()
+	@PostConstruct
+    public void initialize()
+    {
+        ruleStats.export(exporter);
+        optimizerStats.export(exporter);
+    }
+
+	@PreDestroy
+    public void destroy()
+    {
+        ruleStats.unexport(exporter);
+        optimizerStats.unexport(exporter);
+    }
+
+	public List<PlanOptimizer> get()
     {
         return optimizers;
     }

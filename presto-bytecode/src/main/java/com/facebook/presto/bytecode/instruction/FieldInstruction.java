@@ -35,69 +35,17 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 public abstract class FieldInstruction
         implements InstructionNode
 {
-    public static FieldInstruction getFieldInstruction(Field field)
-    {
-        boolean isStatic = Modifier.isStatic(field.getModifiers());
-        return new GetFieldInstruction(isStatic, type(field.getDeclaringClass()), field.getName(), type(field.getType()));
-    }
-
-    public static FieldInstruction putFieldInstruction(Field field)
-    {
-        boolean isStatic = Modifier.isStatic(field.getModifiers());
-        return new PutFieldInstruction(isStatic, type(field.getDeclaringClass()), field.getName(), type(field.getType()));
-    }
-
-    public static FieldInstruction getFieldInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
-    {
-        return new GetFieldInstruction(false, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction getFieldInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
-    {
-        return new GetFieldInstruction(false, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction putFieldInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
-    {
-        return new PutFieldInstruction(false, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction putFieldInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
-    {
-        return new PutFieldInstruction(false, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction getStaticInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
-    {
-        return new GetFieldInstruction(true, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction getStaticInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
-    {
-        return new GetFieldInstruction(true, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction putStaticInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
-    {
-        return new PutFieldInstruction(true, classType, fieldName, fieldType);
-    }
-
-    public static FieldInstruction putStaticInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
-    {
-        return new PutFieldInstruction(true, classType, fieldName, fieldType);
-    }
-
     private final boolean isStatic;
 
-    private final OpCode opCode;
+	private final OpCode opCode;
 
-    private final ParameterizedType classType;
+	private final ParameterizedType classType;
 
-    private final String fieldName;
+	private final String fieldName;
 
-    private final ParameterizedType fieldType;
+	private final ParameterizedType fieldType;
 
-    private FieldInstruction(boolean isStatic, OpCode opCode, ParameterizedType classType, String fieldName, ParameterizedType fieldType)
+	private FieldInstruction(boolean isStatic, OpCode opCode, ParameterizedType classType, String fieldName, ParameterizedType fieldType)
     {
         this.isStatic = isStatic;
         this.opCode = opCode;
@@ -106,25 +54,77 @@ public abstract class FieldInstruction
         this.fieldType = fieldType;
     }
 
-    @Override
+	public static FieldInstruction getFieldInstruction(Field field)
+    {
+        boolean isStatic = Modifier.isStatic(field.getModifiers());
+        return new GetFieldInstruction(isStatic, type(field.getDeclaringClass()), field.getName(), type(field.getType()));
+    }
+
+	public static FieldInstruction putFieldInstruction(Field field)
+    {
+        boolean isStatic = Modifier.isStatic(field.getModifiers());
+        return new PutFieldInstruction(isStatic, type(field.getDeclaringClass()), field.getName(), type(field.getType()));
+    }
+
+	public static FieldInstruction getFieldInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
+    {
+        return new GetFieldInstruction(false, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction getFieldInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
+    {
+        return new GetFieldInstruction(false, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction putFieldInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
+    {
+        return new PutFieldInstruction(false, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction putFieldInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
+    {
+        return new PutFieldInstruction(false, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction getStaticInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
+    {
+        return new GetFieldInstruction(true, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction getStaticInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
+    {
+        return new GetFieldInstruction(true, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction putStaticInstruction(ParameterizedType classType, String fieldName, ParameterizedType fieldType)
+    {
+        return new PutFieldInstruction(true, classType, fieldName, fieldType);
+    }
+
+	public static FieldInstruction putStaticInstruction(Class<?> classType, String fieldName, Class<?> fieldType)
+    {
+        return new PutFieldInstruction(true, classType, fieldName, fieldType);
+    }
+
+	@Override
     public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
     {
         visitor.visitFieldInsn(opCode.getOpCode(), classType.getClassName(), fieldName, fieldType.getType());
     }
 
-    @Override
+	@Override
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
     {
         return visitor.visitFieldInstruction(parent, this);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -135,7 +135,7 @@ public abstract class FieldInstruction
                 .toString();
     }
 
-    public static class GetFieldInstruction
+	public static class GetFieldInstruction
             extends FieldInstruction
     {
         public GetFieldInstruction(boolean isStatic, ParameterizedType classType, String fieldName, ParameterizedType fieldType)

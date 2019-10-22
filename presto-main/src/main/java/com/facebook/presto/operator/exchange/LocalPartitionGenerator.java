@@ -35,12 +35,14 @@ public class LocalPartitionGenerator
         hashMask = partitionCount - 1;
     }
 
-    public int getPartitionCount()
+    @Override
+	public int getPartitionCount()
     {
         return partitionCount;
     }
 
-    public int getPartition(Page page, int position)
+    @Override
+	public int getPartition(Page page, int position)
     {
         long rawHash = getRawHash(page, position);
         return processRawHash(rawHash) & hashMask;

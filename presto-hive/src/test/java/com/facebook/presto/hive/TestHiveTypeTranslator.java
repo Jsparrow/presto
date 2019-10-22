@@ -70,9 +70,7 @@ public class TestHiveTypeTranslator
     @Test
     public void testTypeTranslator()
     {
-        for (Map.Entry<String, HiveType> entry : typeTranslationMap.entrySet()) {
-            assertTypeTranslation(entry.getKey(), entry.getValue());
-        }
+        typeTranslationMap.entrySet().forEach(entry -> assertTypeTranslation(entry.getKey(), entry.getValue()));
 
         assertInvalidTypeTranslation("row(integer,varbinary)", NOT_SUPPORTED.toErrorCode(), "Anonymous row type is not supported in Hive. Please give each field a name: row(integer,varbinary)");
     }

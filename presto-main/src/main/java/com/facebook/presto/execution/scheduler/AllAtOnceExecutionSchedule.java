@@ -173,9 +173,7 @@ public class AllAtOnceExecutionSchedule
         @Override
         public Void visitUnion(UnionNode node, Void context)
         {
-            for (PlanNode subPlanNode : node.getSources()) {
-                subPlanNode.accept(this, context);
-            }
+            node.getSources().forEach(subPlanNode -> subPlanNode.accept(this, context));
 
             return null;
         }
@@ -183,9 +181,7 @@ public class AllAtOnceExecutionSchedule
         @Override
         public Void visitExchange(ExchangeNode node, Void context)
         {
-            for (PlanNode subPlanNode : node.getSources()) {
-                subPlanNode.accept(this, context);
-            }
+            node.getSources().forEach(subPlanNode -> subPlanNode.accept(this, context));
             return null;
         }
 

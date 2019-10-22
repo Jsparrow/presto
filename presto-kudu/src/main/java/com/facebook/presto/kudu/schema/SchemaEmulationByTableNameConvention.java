@@ -187,12 +187,11 @@ public class SchemaEmulationByTableNameConvention
         List<String> tables = client.getTablesList().getTablesList();
         LinkedHashSet<String> schemas = new LinkedHashSet<>();
         schemas.add(DEFAULT_SCHEMA);
-        for (String table : tables) {
-            SchemaTableName schemaTableName = fromRawName(table);
-            if (schemaTableName != null) {
+        tables.stream().map(this::fromRawName).forEach(schemaTableName -> {
+			if (schemaTableName != null) {
                 schemas.add(schemaTableName.getSchemaName());
             }
-        }
+		});
         return ImmutableList.copyOf(schemas);
     }
 
@@ -209,7 +208,7 @@ public class SchemaEmulationByTableNameConvention
             else {
                 if (schemaTableName.getTableName().startsWith(commonPrefix)) {
                     // in default schema table name must not start with common prefix
-                    throw new PrestoException(GENERIC_USER_ERROR, "Table name conflicts with schema emulation settings. Table name must not start with '" + commonPrefix + "'.");
+                    throw new PrestoException(GENERIC_USER_ERROR, new StringBuilder().append("Table name conflicts with schema emulation settings. Table name must not start with '").append(commonPrefix).append("'.").toString());
                 }
             }
         }
@@ -222,7 +221,7 @@ public class SchemaEmulationByTableNameConvention
             return schemaTableName.getTableName();
         }
         else {
-            return commonPrefix + schemaTableName.getSchemaName() + "." + schemaTableName.getTableName();
+            return new StringBuilder().append(commonPrefix).append(schemaTableName.getSchemaName()).append(".").append(schemaTableName.getTableName()).toString();
         }
     }
 
@@ -265,7 +264,7 @@ public class SchemaEmulationByTableNameConvention
             return "";
         }
         else {
-            return commonPrefix + schemaName + ".";
+            return new StringBuilder().append(commonPrefix).append(schemaName).append(".").toString();
         }
     }
 }

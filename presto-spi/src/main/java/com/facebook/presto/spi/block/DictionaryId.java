@@ -26,11 +26,6 @@ public class DictionaryId
     private final long leastSignificantBits;
     private final long sequenceId;
 
-    public static DictionaryId randomDictionaryId()
-    {
-        return new DictionaryId(nodeId.getMostSignificantBits(), nodeId.getLeastSignificantBits(), sequenceGenerator.getAndIncrement());
-    }
-
     public DictionaryId(long mostSignificantBits, long leastSignificantBits, long sequenceId)
     {
         this.mostSignificantBits = mostSignificantBits;
@@ -38,22 +33,27 @@ public class DictionaryId
         this.sequenceId = sequenceId;
     }
 
-    public long getMostSignificantBits()
+	public static DictionaryId randomDictionaryId()
+    {
+        return new DictionaryId(nodeId.getMostSignificantBits(), nodeId.getLeastSignificantBits(), sequenceGenerator.getAndIncrement());
+    }
+
+	public long getMostSignificantBits()
     {
         return mostSignificantBits;
     }
 
-    public long getLeastSignificantBits()
+	public long getLeastSignificantBits()
     {
         return leastSignificantBits;
     }
 
-    public long getSequenceId()
+	public long getSequenceId()
     {
         return sequenceId;
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -68,7 +68,7 @@ public class DictionaryId
                 sequenceId == that.sequenceId;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(mostSignificantBits, leastSignificantBits, sequenceId);

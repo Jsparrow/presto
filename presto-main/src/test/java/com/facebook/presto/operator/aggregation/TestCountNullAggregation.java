@@ -67,7 +67,19 @@ public class TestCountNullAggregation
         return (long) lengthIncludingNulls - length;
     }
 
-    @AggregationFunction("count_null")
+    @Override
+    protected String getFunctionName()
+    {
+        return "count_null";
+    }
+
+	@Override
+    protected List<String> getFunctionParameterTypes()
+    {
+        return ImmutableList.of(StandardTypes.BIGINT);
+    }
+
+	@AggregationFunction("count_null")
     public static final class CountNull
     {
         private CountNull() {}
@@ -93,17 +105,5 @@ public class TestCountNullAggregation
         {
             NullableLongState.write(BIGINT, state, out);
         }
-    }
-
-    @Override
-    protected String getFunctionName()
-    {
-        return "count_null";
-    }
-
-    @Override
-    protected List<String> getFunctionParameterTypes()
-    {
-        return ImmutableList.of(StandardTypes.BIGINT);
     }
 }

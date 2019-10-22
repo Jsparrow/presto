@@ -59,37 +59,36 @@ import static org.testng.Assert.assertEquals;
 public final class HiveQueryRunner
 {
     private static final Logger log = Logger.get(HiveQueryRunner.class);
+	public static final String HIVE_CATALOG = "hive";
+	public static final String HIVE_BUCKETED_CATALOG = "hive_bucketed";
+	public static final String TPCH_SCHEMA = "tpch";
+	public static final String TPCH_BUCKETED_SCHEMA = "tpch_bucketed";
+	private static final String TEMPORARY_TABLE_SCHEMA = "__temporary_tables__";
+	private static final DateTimeZone TIME_ZONE = DateTimeZone.forID("America/Bahia_Banderas");
 
-    private HiveQueryRunner()
+	private HiveQueryRunner()
     {
     }
 
-    public static final String HIVE_CATALOG = "hive";
-    public static final String HIVE_BUCKETED_CATALOG = "hive_bucketed";
-    public static final String TPCH_SCHEMA = "tpch";
-    public static final String TPCH_BUCKETED_SCHEMA = "tpch_bucketed";
-    private static final String TEMPORARY_TABLE_SCHEMA = "__temporary_tables__";
-    private static final DateTimeZone TIME_ZONE = DateTimeZone.forID("America/Bahia_Banderas");
-
-    public static DistributedQueryRunner createQueryRunner(TpchTable<?>... tables)
+	public static DistributedQueryRunner createQueryRunner(TpchTable<?>... tables)
             throws Exception
     {
         return createQueryRunner(ImmutableList.copyOf(tables));
     }
 
-    public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables)
+	public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables)
             throws Exception
     {
         return createQueryRunner(tables, ImmutableMap.of(), Optional.empty());
     }
 
-    public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables, Map<String, String> extraProperties, Optional<Path> baseDataDir)
+	public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables, Map<String, String> extraProperties, Optional<Path> baseDataDir)
             throws Exception
     {
         return createQueryRunner(tables, extraProperties, "sql-standard", ImmutableMap.of(), baseDataDir);
     }
 
-    public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables, Map<String, String> extraProperties, String security, Map<String, String> extraHiveProperties, Optional<Path> baseDataDir)
+	public static DistributedQueryRunner createQueryRunner(Iterable<TpchTable<?>> tables, Map<String, String> extraProperties, String security, Map<String, String> extraHiveProperties, Optional<Path> baseDataDir)
             throws Exception
     {
         assertEquals(DateTimeZone.getDefault(), TIME_ZONE, "Timezone not configured correctly. Add -Duser.timezone=America/Bahia_Banderas to your JVM arguments");
@@ -168,7 +167,7 @@ public final class HiveQueryRunner
         }
     }
 
-    public static DistributedQueryRunner createMaterializingQueryRunner(Iterable<TpchTable<?>> tables)
+	public static DistributedQueryRunner createMaterializingQueryRunner(Iterable<TpchTable<?>> tables)
             throws Exception
     {
         return createQueryRunner(
@@ -182,7 +181,7 @@ public final class HiveQueryRunner
                 Optional.empty());
     }
 
-    private static void setupLogging()
+	private static void setupLogging()
     {
         Logging logging = Logging.initialize();
         logging.setLevel("com.facebook.presto.event", WARN);
@@ -196,7 +195,7 @@ public final class HiveQueryRunner
         logging.setLevel("parquet.hadoop", WARN);
     }
 
-    private static Database createDatabaseMetastoreObject(String name)
+	private static Database createDatabaseMetastoreObject(String name)
     {
         return Database.builder()
                 .setDatabaseName(name)
@@ -205,7 +204,7 @@ public final class HiveQueryRunner
                 .build();
     }
 
-    public static Session createSession(Optional<SelectedRole> role)
+	public static Session createSession(Optional<SelectedRole> role)
     {
         return testSessionBuilder()
                 .setIdentity(new Identity(
@@ -219,7 +218,7 @@ public final class HiveQueryRunner
                 .build();
     }
 
-    public static Session createBucketedSession(Optional<SelectedRole> role)
+	public static Session createBucketedSession(Optional<SelectedRole> role)
     {
         return testSessionBuilder()
                 .setIdentity(new Identity(
@@ -233,7 +232,7 @@ public final class HiveQueryRunner
                 .build();
     }
 
-    public static Session createMaterializeExchangesSession(Optional<SelectedRole> role)
+	public static Session createMaterializeExchangesSession(Optional<SelectedRole> role)
     {
         return testSessionBuilder()
                 .setIdentity(new Identity(
@@ -252,7 +251,7 @@ public final class HiveQueryRunner
                 .build();
     }
 
-    public static void copyTpchTablesBucketed(
+	public static void copyTpchTablesBucketed(
             QueryRunner queryRunner,
             String sourceCatalog,
             String sourceSchema,
@@ -267,7 +266,7 @@ public final class HiveQueryRunner
         log.info("Loading from %s.%s complete in %s", sourceCatalog, sourceSchema, nanosSince(startTime).toString(SECONDS));
     }
 
-    private static void copyTableBucketed(QueryRunner queryRunner, QualifiedObjectName table, Session session)
+	private static void copyTableBucketed(QueryRunner queryRunner, QualifiedObjectName table, Session session)
     {
         long start = System.nanoTime();
         log.info("Running import for %s", table.getObjectName());
@@ -296,7 +295,7 @@ public final class HiveQueryRunner
         log.info("Imported %s rows for %s in %s", rows, table.getObjectName(), nanosSince(start).convertToMostSuccinctTimeUnit());
     }
 
-    public static void main(String[] args)
+	public static void main(String[] args)
             throws Exception
     {
         // You need to add "--user user" to your CLI for your queries to work
@@ -313,11 +312,11 @@ public final class HiveQueryRunner
             File baseDataDirFile = new File(args[0]);
             if (baseDataDirFile.exists()) {
                 if (!baseDataDirFile.isDirectory()) {
-                    log.error("Error: " + baseDataDirFile.getAbsolutePath() + " is not a directory.");
+                    log.error(new StringBuilder().append("Error: ").append(baseDataDirFile.getAbsolutePath()).append(" is not a directory.").toString());
                     System.exit(1);
                 }
                 else if (!baseDataDirFile.canRead() || !baseDataDirFile.canWrite()) {
-                    log.error("Error: " + baseDataDirFile.getAbsolutePath() + " is not readable/writable.");
+                    log.error(new StringBuilder().append("Error: ").append(baseDataDirFile.getAbsolutePath()).append(" is not readable/writable.").toString());
                     System.exit(1);
                 }
             }
@@ -328,7 +327,7 @@ public final class HiveQueryRunner
                     baseDataDirFile = baseDataDirFile.getParentFile();
                 }
                 if (!baseDataDirFile.canRead() || !baseDataDirFile.canWrite()) {
-                    log.error("Error: The ancestor directory " + baseDataDirFile.getAbsolutePath() + " is not readable/writable.");
+                    log.error(new StringBuilder().append("Error: The ancestor directory ").append(baseDataDirFile.getAbsolutePath()).append(" is not readable/writable.").toString());
                     System.exit(1);
                 }
             }

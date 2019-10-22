@@ -55,7 +55,7 @@ public class ProjectStatsRule
         PlanNodeStatsEstimate.Builder calculatedStats = PlanNodeStatsEstimate.builder()
                 .setOutputRowCount(sourceStats.getOutputRowCount());
 
-        for (Map.Entry<VariableReferenceExpression, RowExpression> entry : node.getAssignments().entrySet()) {
+        node.getAssignments().entrySet().forEach(entry -> {
             RowExpression expression = entry.getValue();
             if (isExpression(expression)) {
                 calculatedStats.addVariableStatistics(entry.getKey(), scalarStatsCalculator.calculate(castToExpression(expression), sourceStats, session, types));
@@ -63,7 +63,7 @@ public class ProjectStatsRule
             else {
                 calculatedStats.addVariableStatistics(entry.getKey(), scalarStatsCalculator.calculate(expression, sourceStats, session));
             }
-        }
+        });
         return Optional.of(calculatedStats.build());
     }
 }

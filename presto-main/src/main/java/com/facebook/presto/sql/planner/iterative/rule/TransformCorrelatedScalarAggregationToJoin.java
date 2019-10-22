@@ -68,21 +68,20 @@ public class TransformCorrelatedScalarAggregationToJoin
 {
     private static final Pattern<LateralJoinNode> PATTERN = lateralJoin()
             .with(nonEmpty(correlation()));
+	private final FunctionManager functionManager;
 
-    @Override
+	public TransformCorrelatedScalarAggregationToJoin(FunctionManager functionManager)
+    {
+        this.functionManager = requireNonNull(functionManager, "functionManager is null");
+    }
+
+	@Override
     public Pattern<LateralJoinNode> getPattern()
     {
         return PATTERN;
     }
 
-    private final FunctionManager functionManager;
-
-    public TransformCorrelatedScalarAggregationToJoin(FunctionManager functionManager)
-    {
-        this.functionManager = requireNonNull(functionManager, "functionManager is null");
-    }
-
-    @Override
+	@Override
     public Result apply(LateralJoinNode lateralJoinNode, Captures captures, Context context)
     {
         PlanNode subquery = lateralJoinNode.getSubquery();
@@ -107,7 +106,7 @@ public class TransformCorrelatedScalarAggregationToJoin
         return Result.ofPlanNode(rewrittenNode);
     }
 
-    private static Optional<AggregationNode> findAggregation(PlanNode rootNode, Lookup lookup)
+	private static Optional<AggregationNode> findAggregation(PlanNode rootNode, Lookup lookup)
     {
         return searchFrom(rootNode, lookup)
                 .where(AggregationNode.class::isInstance)

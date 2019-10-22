@@ -53,18 +53,18 @@ import static org.testng.Assert.assertEquals;
 
 public class TestLogicalRowExpressions
 {
-    private FunctionManager functionManager;
-    private LogicalRowExpressions logicalRowExpressions;
     private static final RowExpression a = name("a");
-    private static final RowExpression b = name("b");
-    private static final RowExpression c = name("c");
-    private static final RowExpression d = name("d");
-    private static final RowExpression e = name("e");
-    private static final RowExpression f = name("f");
-    private static final RowExpression g = name("g");
-    private static final RowExpression h = name("h");
+	private static final RowExpression b = name("b");
+	private static final RowExpression c = name("c");
+	private static final RowExpression d = name("d");
+	private static final RowExpression e = name("e");
+	private static final RowExpression f = name("f");
+	private static final RowExpression g = name("g");
+	private static final RowExpression h = name("h");
+	private FunctionManager functionManager;
+	private LogicalRowExpressions logicalRowExpressions;
 
-    @BeforeClass
+	@BeforeClass
     public void setup()
     {
         TypeManager typeManager = new TypeRegistry();
@@ -72,7 +72,7 @@ public class TestLogicalRowExpressions
         logicalRowExpressions = new LogicalRowExpressions(new RowExpressionDeterminismEvaluator(functionManager), new FunctionResolution(functionManager), functionManager);
     }
 
-    @Test
+	@Test
     public void testAnd()
     {
         assertEquals(
@@ -96,7 +96,7 @@ public class TestLogicalRowExpressions
                 ImmutableList.of(a, b, c, d, e));
     }
 
-    @Test
+	@Test
     public void testOr()
     {
         assertEquals(
@@ -116,7 +116,7 @@ public class TestLogicalRowExpressions
                 ImmutableList.of(a, b, c, d, e));
     }
 
-    @Test
+	@Test
     public void testDeterminism()
     {
         RowExpression nondeterministic = call("random", functionManager.lookupFunction("random", fromTypes()), DOUBLE);
@@ -128,7 +128,7 @@ public class TestLogicalRowExpressions
         assertEquals(logicalRowExpressions.filterNonDeterministicConjuncts(expression), or(b, nondeterministic));
     }
 
-    @Test
+	@Test
     public void testPushNegationToLeaves()
     {
         assertEquals(logicalRowExpressions.pushNegationToLeaves(not(and(a, b))), or(not(a), not(b)));
@@ -152,7 +152,7 @@ public class TestLogicalRowExpressions
         assertEquals(logicalRowExpressions.pushNegationToLeaves(not(compare(a, LESS_THAN_OR_EQUAL, not(not(b))))), compare(a, GREATER_THAN, b));
     }
 
-    @Test
+	@Test
     public void testEliminateConstant()
     {
         // Testing eliminate constant
@@ -172,7 +172,7 @@ public class TestLogicalRowExpressions
                 and(and(a, b), or(c, and(e, f))));
     }
 
-    @Test
+	@Test
     public void testEliminateDuplicate()
     {
         RowExpression nd = call("random", functionManager.lookupFunction("random", fromTypes()), DOUBLE);
@@ -264,7 +264,7 @@ public class TestLogicalRowExpressions
                 and(a, c));
     }
 
-    @Test
+	@Test
     public void testConvertToCNF()
     {
         // When considering where we want to swap forms (i.e. an AND expression for DNF or OR expression for CNF), there are 3 cases for each argument
@@ -374,7 +374,7 @@ public class TestLogicalRowExpressions
                 or(and(and(a, b), c), and(and(d, e), f)));
     }
 
-    @Test
+	@Test
     public void testBigExpressions()
     {
         // Do not expand big list (a0 && b0) || (a1 && b1) || ....
@@ -401,7 +401,7 @@ public class TestLogicalRowExpressions
                 or(Stream.concat(Stream.of(name("a")), IntStream.range(0, 10001).boxed().map(i -> and(name("a"), name("b" + i)))).toArray(RowExpression[]::new)));
     }
 
-    @Test
+	@Test
     public void testConvertToDNF()
     {
         // 1, 1
@@ -489,12 +489,12 @@ public class TestLogicalRowExpressions
                 and(or(or(a, b), c), or(or(d, e), f)));
     }
 
-    private static RowExpression name(String name)
+	private static RowExpression name(String name)
     {
         return new VariableReferenceExpression(name, BOOLEAN);
     }
 
-    private RowExpression compare(RowExpression left, OperatorType operator, RowExpression right)
+	private RowExpression compare(RowExpression left, OperatorType operator, RowExpression right)
     {
         return call(
                 operator.getOperator(),
@@ -504,22 +504,22 @@ public class TestLogicalRowExpressions
                 right);
     }
 
-    private RowExpression and(RowExpression left, RowExpression right)
+	private RowExpression and(RowExpression left, RowExpression right)
     {
         return new SpecialFormExpression(AND, BOOLEAN, left, right);
     }
 
-    private RowExpression or(RowExpression... expressions)
+	private RowExpression or(RowExpression... expressions)
     {
         return logicalRowExpressions.or(expressions);
     }
 
-    private RowExpression or(RowExpression left, RowExpression right)
+	private RowExpression or(RowExpression left, RowExpression right)
     {
         return new SpecialFormExpression(OR, BOOLEAN, left, right);
     }
 
-    private RowExpression not(RowExpression expression)
+	private RowExpression not(RowExpression expression)
     {
         return new CallExpression("not", new FunctionResolution(functionManager).notFunction(), BOOLEAN, ImmutableList.of(expression));
     }

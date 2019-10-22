@@ -16,17 +16,20 @@ package com.facebook.presto.cli;
 import io.airlift.airline.Option;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VersionOption
 {
-    @Option(name = "--version", description = "Display version information and exit")
+    private static final Logger logger = LoggerFactory.getLogger(VersionOption.class);
+	@Option(name = "--version", description = "Display version information and exit")
     public Boolean version = false;
 
     public boolean showVersionIfRequested()
     {
         if (version) {
             String clientVersion = Presto.class.getPackage().getImplementationVersion();
-            System.out.println("Presto CLI " + firstNonNull(clientVersion, "(version unknown)"));
+            logger.info("Presto CLI " + firstNonNull(clientVersion, "(version unknown)"));
         }
         return version;
     }

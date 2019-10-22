@@ -53,7 +53,7 @@ public class TestingExchangeHttpClientHandler
     public Response handle(Request request)
     {
         ImmutableList<String> parts = ImmutableList.copyOf(Splitter.on("/").omitEmptyStrings().split(request.getUri().getPath()));
-        if (request.getMethod().equals("DELETE")) {
+        if ("DELETE".equals(request.getMethod())) {
             assertEquals(parts.size(), 1);
             return new TestingResponse(HttpStatus.OK, ImmutableListMultimap.of(), new byte[0]);
         }

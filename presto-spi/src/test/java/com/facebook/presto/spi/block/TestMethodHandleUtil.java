@@ -97,17 +97,17 @@ public class TestMethodHandleUtil
 
     public static String squareBracket(String s)
     {
-        return "[" + s + "]";
+        return new StringBuilder().append("[").append(s).append("]").toString();
     }
 
     public static String squareBracket(String s, double d)
     {
-        return "[" + s + "," + ((long) d) + "]";
+        return new StringBuilder().append("[").append(s).append(",").append((long) d).append("]").toString();
     }
 
     public static String curlyBracket(String s, char c)
     {
-        return "{" + s + "=" + c + "}";
+        return new StringBuilder().append("{").append(s).append("=").append(c).append("}").toString();
     }
 
     public static double sum(long x, int c)

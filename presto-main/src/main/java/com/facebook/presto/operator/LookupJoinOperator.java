@@ -359,14 +359,8 @@ public class LookupJoinOperator
             unspilledInputPages = spiller.map(spiller -> spiller.getSpilledPages(partition))
                     .orElse(emptyIterator());
 
-            Optional.ofNullable(savedRows.remove(partition)).ifPresent(savedRow -> {
-                restoreProbe(
-                        savedRow.row,
-                        savedRow.joinPositionWithinPartition,
-                        savedRow.currentProbePositionProducedRow,
-                        savedRow.joinSourcePositions,
-                        SpillInfoSnapshot.noSpill());
-            });
+            Optional.ofNullable(savedRows.remove(partition)).ifPresent(savedRow -> restoreProbe(savedRow.row, savedRow.joinPositionWithinPartition, savedRow.currentProbePositionProducedRow,
+					savedRow.joinSourcePositions, SpillInfoSnapshot.noSpill()));
 
             return;
         }
@@ -582,7 +576,36 @@ public class LookupJoinOperator
         return true;
     }
 
-    // This class must be public because LookupJoinOperator is isolated.
+    private boolean tryBuildPage()
+    {
+        if (!pageBuilder.isFull()) {
+			return false;
+		}
+		buildPage();
+		return true;
+    }
+
+	private void buildPage()
+    {
+        verify(outputPage == null);
+        verify(probe != null);
+
+        if (pageBuilder.isEmpty()) {
+            return;
+        }
+
+        outputPage = pageBuilder.build(probe);
+        pageBuilder.reset();
+    }
+
+	private void clearProbe()
+    {
+        // Before updating the probe flush the current page
+        buildPage();
+        probe = null;
+    }
+
+	// This class must be public because LookupJoinOperator is isolated.
     public static class SpillInfoSnapshot
     {
         private final boolean hasSpilled;
@@ -657,34 +680,5 @@ public class LookupJoinOperator
             this.currentProbePositionProducedRow = currentProbePositionProducedRow;
             this.joinSourcePositions = joinSourcePositions;
         }
-    }
-
-    private boolean tryBuildPage()
-    {
-        if (pageBuilder.isFull()) {
-            buildPage();
-            return true;
-        }
-        return false;
-    }
-
-    private void buildPage()
-    {
-        verify(outputPage == null);
-        verify(probe != null);
-
-        if (pageBuilder.isEmpty()) {
-            return;
-        }
-
-        outputPage = pageBuilder.build(probe);
-        pageBuilder.reset();
-    }
-
-    private void clearProbe()
-    {
-        // Before updating the probe flush the current page
-        buildPage();
-        probe = null;
     }
 }

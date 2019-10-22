@@ -88,9 +88,7 @@ public final class TimeZoneKey
             ZONE_KEYS = Collections.unmodifiableSet(new LinkedHashSet<>(zoneIdToKey.values()));
 
             TIME_ZONE_KEYS = new TimeZoneKey[maxZoneKey + 1];
-            for (TimeZoneKey timeZoneKey : zoneIdToKey.values()) {
-                TIME_ZONE_KEYS[timeZoneKey.getKey()] = timeZoneKey;
-            }
+            zoneIdToKey.values().forEach(timeZoneKey -> TIME_ZONE_KEYS[timeZoneKey.getKey()] = timeZoneKey);
 
             for (short offset = OFFSET_TIME_ZONE_MIN; offset <= OFFSET_TIME_ZONE_MAX; offset++) {
                 if (offset == 0) {
@@ -106,19 +104,31 @@ public final class TimeZoneKey
         }
     }
 
-    public static Set<TimeZoneKey> getTimeZoneKeys()
+	private final String id;
+	private final short key;
+
+	TimeZoneKey(String id, short key)
+    {
+        this.id = requireNonNull(id, "id is null");
+        if (key < 0) {
+            throw new IllegalArgumentException("key is negative");
+        }
+        this.key = key;
+    }
+
+	public static Set<TimeZoneKey> getTimeZoneKeys()
     {
         return ZONE_KEYS;
     }
 
-    @JsonCreator
+	@JsonCreator
     public static TimeZoneKey getTimeZoneKey(short timeZoneKey)
     {
         checkArgument(timeZoneKey < TIME_ZONE_KEYS.length && TIME_ZONE_KEYS[timeZoneKey] != null, "Invalid time zone key %d", timeZoneKey);
         return TIME_ZONE_KEYS[timeZoneKey];
     }
 
-    public static TimeZoneKey getTimeZoneKey(String zoneId)
+	public static TimeZoneKey getTimeZoneKey(String zoneId)
     {
         requireNonNull(zoneId, "Zone id is null");
         checkArgument(!zoneId.isEmpty(), "Zone id is an empty string");
@@ -133,7 +143,7 @@ public final class TimeZoneKey
         return zoneKey;
     }
 
-    public static TimeZoneKey getTimeZoneKeyForOffset(long offsetMinutes)
+	public static TimeZoneKey getTimeZoneKeyForOffset(long offsetMinutes)
     {
         if (offsetMinutes == 0) {
             return UTC_KEY;
@@ -149,37 +159,24 @@ public final class TimeZoneKey
         return timeZoneKey;
     }
 
-    private final String id;
-
-    private final short key;
-
-    TimeZoneKey(String id, short key)
-    {
-        this.id = requireNonNull(id, "id is null");
-        if (key < 0) {
-            throw new IllegalArgumentException("key is negative");
-        }
-        this.key = key;
-    }
-
-    public String getId()
+	public String getId()
     {
         return id;
     }
 
-    @JsonValue
+	@JsonValue
     public short getKey()
     {
         return key;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(id, key);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -192,18 +189,18 @@ public final class TimeZoneKey
         return Objects.equals(this.id, other.id) && Objects.equals(this.key, other.key);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return id;
     }
 
-    public static boolean isUtcZoneId(String zoneId)
+	public static boolean isUtcZoneId(String zoneId)
     {
-        return normalizeZoneId(zoneId).equals("utc");
+        return "utc".equals(normalizeZoneId(zoneId));
     }
 
-    private static String normalizeZoneId(String originalZoneId)
+	private static String normalizeZoneId(String originalZoneId)
     {
         String zoneId = originalZoneId.toLowerCase(ENGLISH);
 
@@ -285,29 +282,29 @@ public final class TimeZoneKey
             return "utc";
         }
 
-        return "" + signChar + hourTens + hourOnes + ":00";
+        return new StringBuilder().append("").append(signChar).append(hourTens).append(hourOnes).append(":00").toString();
     }
 
-    private static boolean isUtcEquivalentName(String zoneId)
+	private static boolean isUtcEquivalentName(String zoneId)
     {
-        return zoneId.equals("utc") ||
-                zoneId.equals("z") ||
-                zoneId.equals("ut") ||
-                zoneId.equals("uct") ||
-                zoneId.equals("ut") ||
-                zoneId.equals("gmt") ||
-                zoneId.equals("gmt0") ||
-                zoneId.equals("greenwich") ||
-                zoneId.equals("universal") ||
-                zoneId.equals("zulu");
+        return "utc".equals(zoneId) ||
+                "z".equals(zoneId) ||
+                "ut".equals(zoneId) ||
+                "uct".equals(zoneId) ||
+                "ut".equals(zoneId) ||
+                "gmt".equals(zoneId) ||
+                "gmt0".equals(zoneId) ||
+                "greenwich".equals(zoneId) ||
+                "universal".equals(zoneId) ||
+                "zulu".equals(zoneId);
     }
 
-    private static String zoneIdForOffset(long offset)
+	private static String zoneIdForOffset(long offset)
     {
         return String.format("%s%02d:%02d", offset < 0 ? "-" : "+", abs(offset / 60), abs(offset % 60));
     }
 
-    private static void checkArgument(boolean check, String message, Object... args)
+	private static void checkArgument(boolean check, String message, Object... args)
     {
         if (!check) {
             throw new IllegalArgumentException(String.format(message, args));

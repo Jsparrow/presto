@@ -167,9 +167,7 @@ public class PagesSpatialIndexFactory
             pagesSpatialIndexFutures.clear();
         }
 
-        for (SettableFuture<PagesSpatialIndex> settableFuture : settableFutures) {
-            settableFuture.set(pagesSpatialIndex.get());
-        }
+        settableFutures.forEach(settableFuture -> settableFuture.set(pagesSpatialIndex.get()));
 
         return activeProbeOperators.getFreeFuture();
     }

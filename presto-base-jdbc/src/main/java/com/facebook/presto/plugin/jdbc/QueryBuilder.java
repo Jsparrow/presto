@@ -68,34 +68,12 @@ public class QueryBuilder
 
     private final String quote;
 
-    private static class TypeAndValue
-    {
-        private final Type type;
-        private final Object value;
-
-        public TypeAndValue(Type type, Object value)
-        {
-            this.type = requireNonNull(type, "type is null");
-            this.value = requireNonNull(value, "value is null");
-        }
-
-        public Type getType()
-        {
-            return type;
-        }
-
-        public Object getValue()
-        {
-            return value;
-        }
-    }
-
     public QueryBuilder(String quote)
     {
         this.quote = requireNonNull(quote, "quote is null");
     }
 
-    public PreparedStatement buildSql(
+	public PreparedStatement buildSql(
             JdbcClient client,
             Connection connection,
             String catalog,
@@ -200,7 +178,7 @@ public class QueryBuilder
         return statement;
     }
 
-    private static boolean isAcceptedType(Type type)
+	private static boolean isAcceptedType(Type type)
     {
         Type validType = requireNonNull(type, "type is null");
         return validType.equals(BigintType.BIGINT) ||
@@ -219,10 +197,10 @@ public class QueryBuilder
                 validType instanceof CharType;
     }
 
-    private List<String> toConjuncts(List<JdbcColumnHandle> columns, TupleDomain<ColumnHandle> tupleDomain, List<TypeAndValue> accumulator)
+	private List<String> toConjuncts(List<JdbcColumnHandle> columns, TupleDomain<ColumnHandle> tupleDomain, List<TypeAndValue> accumulator)
     {
         ImmutableList.Builder<String> builder = ImmutableList.builder();
-        for (JdbcColumnHandle column : columns) {
+        columns.forEach(column -> {
             Type type = column.getColumnType();
             if (isAcceptedType(type)) {
                 Domain domain = tupleDomain.getDomains().get().get(column);
@@ -230,11 +208,11 @@ public class QueryBuilder
                     builder.add(toPredicate(column.getColumnName(), domain, type, accumulator));
                 }
             }
-        }
+        });
         return builder.build();
     }
 
-    private String toPredicate(String columnName, Domain domain, Type type, List<TypeAndValue> accumulator)
+	private String toPredicate(String columnName, Domain domain, Type type, List<TypeAndValue> accumulator)
     {
         checkArgument(domain.getType().isOrderable(), "Domain type must be orderable");
 
@@ -285,7 +263,7 @@ public class QueryBuilder
                 }
                 // If rangeConjuncts is null, then the range was ALL, which should already have been checked for
                 checkState(!rangeConjuncts.isEmpty());
-                disjuncts.add("(" + Joiner.on(" AND ").join(rangeConjuncts) + ")");
+                disjuncts.add(new StringBuilder().append("(").append(Joiner.on(" AND ").join(rangeConjuncts)).append(")").toString());
             }
         }
 
@@ -294,11 +272,9 @@ public class QueryBuilder
             disjuncts.add(toPredicate(columnName, "=", getOnlyElement(singleValues), type, accumulator));
         }
         else if (singleValues.size() > 1) {
-            for (Object value : singleValues) {
-                bindValue(value, type, accumulator);
-            }
+            singleValues.forEach(value -> bindValue(value, type, accumulator));
             String values = Joiner.on(",").join(nCopies(singleValues.size(), "?"));
-            disjuncts.add(quote(columnName) + " IN (" + values + ")");
+            disjuncts.add(new StringBuilder().append(quote(columnName)).append(" IN (").append(values).append(")").toString());
         }
 
         // Add nullability disjuncts
@@ -307,24 +283,46 @@ public class QueryBuilder
             disjuncts.add(quote(columnName) + " IS NULL");
         }
 
-        return "(" + Joiner.on(" OR ").join(disjuncts) + ")";
+        return new StringBuilder().append("(").append(Joiner.on(" OR ").join(disjuncts)).append(")").toString();
     }
 
-    private String toPredicate(String columnName, String operator, Object value, Type type, List<TypeAndValue> accumulator)
+	private String toPredicate(String columnName, String operator, Object value, Type type, List<TypeAndValue> accumulator)
     {
         bindValue(value, type, accumulator);
-        return quote(columnName) + " " + operator + " ?";
+        return new StringBuilder().append(quote(columnName)).append(" ").append(operator).append(" ?").toString();
     }
 
-    private String quote(String name)
+	private String quote(String name)
     {
         name = name.replace(quote, quote + quote);
-        return quote + name + quote;
+        return new StringBuilder().append(quote).append(name).append(quote).toString();
     }
 
-    private static void bindValue(Object value, Type type, List<TypeAndValue> accumulator)
+	private static void bindValue(Object value, Type type, List<TypeAndValue> accumulator)
     {
         checkArgument(isAcceptedType(type), "Can't handle type: %s", type);
         accumulator.add(new TypeAndValue(type, value));
+    }
+
+	private static class TypeAndValue
+    {
+        private final Type type;
+        private final Object value;
+
+        public TypeAndValue(Type type, Object value)
+        {
+            this.type = requireNonNull(type, "type is null");
+            this.value = requireNonNull(value, "value is null");
+        }
+
+        public Type getType()
+        {
+            return type;
+        }
+
+        public Object getValue()
+        {
+            return value;
+        }
     }
 }

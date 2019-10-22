@@ -101,14 +101,14 @@ class QueryAssertions
             fail("Execution of 'expected' query failed: " + expected, ex);
         }
 
-        assertEquals(actualResults.getTypes(), expectedResults.getTypes(), "Types mismatch for query: \n " + actual + "\n:");
+        assertEquals(actualResults.getTypes(), expectedResults.getTypes(), new StringBuilder().append("Types mismatch for query: \n ").append(actual).append("\n:").toString());
 
         List<MaterializedRow> actualRows = actualResults.getMaterializedRows();
         List<MaterializedRow> expectedRows = expectedResults.getMaterializedRows();
 
         if (ensureOrdering) {
             if (!actualRows.equals(expectedRows)) {
-                assertEquals(actualRows, expectedRows, "For query: \n " + actual + "\n:");
+                assertEquals(actualRows, expectedRows, new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
             }
         }
         else {

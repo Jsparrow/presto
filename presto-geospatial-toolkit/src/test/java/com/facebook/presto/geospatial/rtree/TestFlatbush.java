@@ -195,13 +195,13 @@ public class TestFlatbush
         List<Rectangle> probeRectangles = makeRectangles(random, numProbeRectangles);
 
         Flatbush<Rectangle> rtree = new Flatbush<>(buildRectangles.toArray(new Rectangle[] {}));
-        for (Rectangle query : probeRectangles) {
+        probeRectangles.forEach(query -> {
             List<Rectangle> actual = findIntersections(rtree, query);
             List<Rectangle> expected = buildRectangles.stream()
                     .filter(rect -> rect.intersects(query))
                     .collect(toList());
             assertEqualsSorted(actual, expected, RECTANGLE_COMPARATOR);
-        }
+        });
     }
 
     @Test

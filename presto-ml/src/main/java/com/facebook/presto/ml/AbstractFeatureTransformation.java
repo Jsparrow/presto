@@ -23,9 +23,7 @@ public abstract class AbstractFeatureTransformation
     public Dataset transform(Dataset dataset)
     {
         List<FeatureVector> transformed = new ArrayList<>();
-        for (FeatureVector features : dataset.getDatapoints()) {
-            transformed.add(transform(features));
-        }
+        dataset.getDatapoints().forEach(features -> transformed.add(transform(features)));
         return new Dataset(dataset.getLabels(), transformed, dataset.getLabelEnumeration());
     }
 }

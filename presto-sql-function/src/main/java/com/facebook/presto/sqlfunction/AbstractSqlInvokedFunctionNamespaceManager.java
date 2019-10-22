@@ -54,9 +54,8 @@ public abstract class AbstractSqlInvokedFunctionNamespaceManager
                     public Collection<SqlInvokedRegularFunction> load(FullyQualifiedName functionName)
                     {
                         Collection<SqlInvokedRegularFunction> functions = fetchFunctionsDirect(functionName);
-                        for (SqlInvokedRegularFunction function : functions) {
-                            metadataByHandle.put(function.getRequiredFunctionHandle(), sqlInvokedFunctionToMetadata(function));
-                        }
+                        functions.forEach(function -> metadataByHandle.put(function.getRequiredFunctionHandle(),
+								sqlInvokedFunctionToMetadata(function)));
                         return functions;
                     }
                 });

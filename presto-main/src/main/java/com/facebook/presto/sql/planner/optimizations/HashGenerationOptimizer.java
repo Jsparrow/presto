@@ -108,14 +108,57 @@ public class HashGenerationOptimizer
         requireNonNull(types, "types is null");
         requireNonNull(variableAllocator, "variableAllocator is null");
         requireNonNull(idAllocator, "idAllocator is null");
-        if (SystemSessionProperties.isOptimizeHashGenerationEnabled(session)) {
-            PlanWithProperties result = plan.accept(new Rewriter(idAllocator, variableAllocator, functionManager), new HashComputationSet());
-            return result.getNode();
-        }
-        return plan;
+        if (!SystemSessionProperties.isOptimizeHashGenerationEnabled(session)) {
+			return plan;
+		}
+		PlanWithProperties result = plan.accept(new Rewriter(idAllocator, variableAllocator, functionManager), new HashComputationSet());
+		return result.getNode();
     }
 
-    private static class Rewriter
+    private static Optional<HashComputation> computeHash(Iterable<VariableReferenceExpression> fields, FunctionManager functionManager)
+    {
+        requireNonNull(fields, "fields is null");
+        List<VariableReferenceExpression> variables = ImmutableList.copyOf(fields);
+        if (variables.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new HashComputation(fields, functionManager));
+    }
+
+	public static Optional<RowExpression> getHashExpression(FunctionManager functionManager, List<VariableReferenceExpression> variables)
+    {
+        if (variables.isEmpty()) {
+            return Optional.empty();
+        }
+
+        RowExpression result = constant(INITIAL_HASH_VALUE, BIGINT);
+        for (VariableReferenceExpression variable : variables) {
+            RowExpression hashField = call(functionManager, HASH_CODE, BIGINT, variable);
+            hashField = orNullHashCode(hashField);
+            result = call(functionManager, "combine_hash", BIGINT, result, hashField);
+        }
+        return Optional.of(result);
+    }
+
+	private static RowExpression orNullHashCode(RowExpression expression)
+    {
+        checkArgument(BIGINT.equals(expression.getType()), "expression should be BIGINT type");
+        return new SpecialFormExpression(SpecialFormExpression.Form.COALESCE, BIGINT, expression, constant(NULL_HASH_CODE, BIGINT));
+    }
+
+	private static Map<VariableReferenceExpression, VariableReferenceExpression> computeIdentityTranslations(Map<VariableReferenceExpression, RowExpression> assignments)
+    {
+        Map<VariableReferenceExpression, VariableReferenceExpression> outputToInput = new HashMap<>();
+        assignments.entrySet().forEach(assignment -> {
+            checkArgument(!isExpression(assignment.getValue()), "Cannot have OriginalExpression in assignments");
+            if (assignment.getValue() instanceof VariableReferenceExpression) {
+                outputToInput.put(assignment.getKey(), (VariableReferenceExpression) assignment.getValue());
+            }
+        });
+        return outputToInput;
+    }
+
+	private static class Rewriter
             extends InternalPlanVisitor<PlanWithProperties, HashComputationSet>
     {
         private final PlanNodeIdAllocator idAllocator;
@@ -504,9 +547,7 @@ public class HashGenerationOptimizer
             // establish fixed ordering for hash variables
             List<HashComputation> hashVariableOrder = ImmutableList.copyOf(preference.getHashes());
             Map<HashComputation, VariableReferenceExpression> newHashVariables = new HashMap<>();
-            for (HashComputation preferredHashVariable : hashVariableOrder) {
-                newHashVariables.put(preferredHashVariable, variableAllocator.newHashVariable());
-            }
+            hashVariableOrder.forEach(preferredHashVariable -> newHashVariables.put(preferredHashVariable, variableAllocator.newHashVariable()));
 
             // rewrite partition function to include new variables (and precomputed hash
             partitioningScheme = new PartitioningScheme(
@@ -541,10 +582,7 @@ public class HashGenerationOptimizer
                 // add hash variables to inputs in the required order
                 ImmutableList.Builder<VariableReferenceExpression> newInputVariables = ImmutableList.builder();
                 newInputVariables.addAll(inputVariables);
-                for (HashComputation preferredHashSymbol : hashVariableOrder) {
-                    HashComputation hashComputation = preferredHashSymbol.translate(outputToInputTranslator).get();
-                    newInputVariables.add(child.getRequiredHashVariable(hashComputation));
-                }
+                hashVariableOrder.stream().map(preferredHashSymbol -> preferredHashSymbol.translate(outputToInputTranslator).get()).forEach(hashComputation -> newInputVariables.add(child.getRequiredHashVariable(hashComputation)));
 
                 newInputs.add(newInputVariables.build());
             }
@@ -569,9 +607,7 @@ public class HashGenerationOptimizer
 
             // create new hash variables
             Map<HashComputation, VariableReferenceExpression> newHashVariables = new HashMap<>();
-            for (HashComputation preferredHashSymbol : preference.getHashes()) {
-                newHashVariables.put(preferredHashSymbol, variableAllocator.newHashVariable());
-            }
+            preference.getHashes().forEach(preferredHashSymbol -> newHashVariables.put(preferredHashSymbol, variableAllocator.newHashVariable()));
 
             // add hash variables to sources
             ImmutableListMultimap.Builder<VariableReferenceExpression, VariableReferenceExpression> newVariableMapping = ImmutableListMultimap.builder();
@@ -590,10 +626,10 @@ public class HashGenerationOptimizer
                 newSources.add(child.getNode());
 
                 // add hash variables to inputs
-                for (Entry<HashComputation, VariableReferenceExpression> entry : newHashVariables.entrySet()) {
+				newHashVariables.entrySet().forEach(entry -> {
                     HashComputation hashComputation = entry.getKey().translate(outputToInputTranslator).get();
                     newVariableMapping.put(entry.getValue(), child.getRequiredHashVariable(hashComputation));
-                }
+                });
             }
 
             ListMultimap<VariableReferenceExpression, VariableReferenceExpression> outputsToInputs = newVariableMapping.build();
@@ -619,7 +655,7 @@ public class HashGenerationOptimizer
 
             // and all hash variables that could be translated to the source variables
             Map<HashComputation, VariableReferenceExpression> allHashVariables = new HashMap<>();
-            for (HashComputation hashComputation : sourceContext.getHashes()) {
+            sourceContext.getHashes().forEach(hashComputation -> {
                 VariableReferenceExpression hashVariable = child.getHashVariables().get(hashComputation);
                 RowExpression hashExpression;
                 if (hashVariable == null) {
@@ -631,7 +667,7 @@ public class HashGenerationOptimizer
                 }
                 newAssignments.put(hashVariable, hashExpression);
                 allHashVariables.put(hashComputation, hashVariable);
-            }
+            });
 
             return new PlanWithProperties(new ProjectNode(node.getId(), child.getNode(), newAssignments.build()), allHashVariables);
         }
@@ -723,7 +759,7 @@ public class HashGenerationOptimizer
 
             // copy through all variables from child, except for hash variables not needed by the parent
             Map<VariableReferenceExpression, HashComputation> resultHashVariables = planWithProperties.getHashVariables().inverse();
-            for (VariableReferenceExpression variable : planWithProperties.getNode().getOutputVariables()) {
+            planWithProperties.getNode().getOutputVariables().forEach(variable -> {
                 HashComputation partitionVariables = resultHashVariables.get(variable);
                 if (partitionVariables == null || requiredHashes.getHashes().contains(partitionVariables)) {
                     assignments.put(variable, variable);
@@ -732,17 +768,15 @@ public class HashGenerationOptimizer
                         outputHashVariables.put(partitionVariables, planWithProperties.getHashVariables().get(partitionVariables));
                     }
                 }
-            }
+            });
 
             // add new projections for hash variables needed by the parent
-            for (HashComputation hashComputation : requiredHashes.getHashes()) {
-                if (!planWithProperties.getHashVariables().containsKey(hashComputation)) {
-                    RowExpression hashExpression = hashComputation.getHashExpression();
-                    VariableReferenceExpression hashVariable = variableAllocator.newHashVariable();
-                    assignments.put(hashVariable, hashExpression);
-                    outputHashVariables.put(hashComputation, hashVariable);
-                }
-            }
+			requiredHashes.getHashes().stream().filter(hashComputation -> !planWithProperties.getHashVariables().containsKey(hashComputation)).forEach(hashComputation -> {
+			    RowExpression hashExpression = hashComputation.getHashExpression();
+			    VariableReferenceExpression hashVariable = variableAllocator.newHashVariable();
+			    assignments.put(hashVariable, hashExpression);
+			    outputHashVariables.put(hashComputation, hashVariable);
+			});
 
             ProjectNode projectNode = new ProjectNode(idAllocator.getNextId(), planWithProperties.getNode(), assignments.build());
             return new PlanWithProperties(projectNode, outputHashVariables);
@@ -824,37 +858,6 @@ public class HashGenerationOptimizer
                     .add(hashComputation.get())
                     .build());
         }
-    }
-
-    private static Optional<HashComputation> computeHash(Iterable<VariableReferenceExpression> fields, FunctionManager functionManager)
-    {
-        requireNonNull(fields, "fields is null");
-        List<VariableReferenceExpression> variables = ImmutableList.copyOf(fields);
-        if (variables.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(new HashComputation(fields, functionManager));
-    }
-
-    public static Optional<RowExpression> getHashExpression(FunctionManager functionManager, List<VariableReferenceExpression> variables)
-    {
-        if (variables.isEmpty()) {
-            return Optional.empty();
-        }
-
-        RowExpression result = constant(INITIAL_HASH_VALUE, BIGINT);
-        for (VariableReferenceExpression variable : variables) {
-            RowExpression hashField = call(functionManager, HASH_CODE, BIGINT, variable);
-            hashField = orNullHashCode(hashField);
-            result = call(functionManager, "combine_hash", BIGINT, result, hashField);
-        }
-        return Optional.of(result);
-    }
-
-    private static RowExpression orNullHashCode(RowExpression expression)
-    {
-        checkArgument(BIGINT.equals(expression.getType()), "expression should be BIGINT type");
-        return new SpecialFormExpression(SpecialFormExpression.Form.COALESCE, BIGINT, expression, constant(NULL_HASH_CODE, BIGINT));
     }
 
     private static class HashComputation
@@ -958,17 +961,5 @@ public class HashGenerationOptimizer
             requireNonNull(hashVariable, () -> "No hash variable generated for " + hash);
             return hashVariable;
         }
-    }
-
-    private static Map<VariableReferenceExpression, VariableReferenceExpression> computeIdentityTranslations(Map<VariableReferenceExpression, RowExpression> assignments)
-    {
-        Map<VariableReferenceExpression, VariableReferenceExpression> outputToInput = new HashMap<>();
-        for (Map.Entry<VariableReferenceExpression, RowExpression> assignment : assignments.entrySet()) {
-            checkArgument(!isExpression(assignment.getValue()), "Cannot have OriginalExpression in assignments");
-            if (assignment.getValue() instanceof VariableReferenceExpression) {
-                outputToInput.put(assignment.getKey(), (VariableReferenceExpression) assignment.getValue());
-            }
-        }
-        return outputToInput;
     }
 }

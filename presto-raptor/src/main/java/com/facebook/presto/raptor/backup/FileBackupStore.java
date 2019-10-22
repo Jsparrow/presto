@@ -32,11 +32,14 @@ import static com.facebook.presto.raptor.RaptorErrorCode.RAPTOR_BACKUP_NOT_FOUND
 import static com.facebook.presto.raptor.storage.FileStorageService.getFileSystemPath;
 import static java.nio.file.Files.deleteIfExists;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileBackupStore
         implements BackupStore
 {
-    private final File baseDir;
+    private static final Logger logger = LoggerFactory.getLogger(FileBackupStore.class);
+	private final File baseDir;
 
     @Inject
     public FileBackupStore(FileBackupConfig config)
@@ -66,7 +69,8 @@ public class FileBackupStore
                 copyFile(source, backupFile);
             }
             catch (FileNotFoundException e) {
-                createDirectories(backupFile.getParentFile());
+                logger.error(e.getMessage(), e);
+				createDirectories(backupFile.getParentFile());
                 copyFile(source, backupFile);
             }
         }

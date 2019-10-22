@@ -54,7 +54,46 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @Measurement(iterations = 10)
 public class BenchmarkInequalityJoin
 {
-    @State(Thread)
+    @Benchmark
+    public List<Page> benchmarkJoin(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) WHERE t1.val1 < t2.val2");
+    }
+
+	@Benchmark
+    public List<Page> benchmarkJoinWithArithmeticInPredicate(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 < t2.val2 + 10");
+    }
+
+	@Benchmark
+    public List<Page> benchmarkJoinWithFunctionPredicate(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 < sin(t2.val2)");
+    }
+
+	@Benchmark
+    public List<Page> benchmarkRangePredicateJoin(Context context)
+    {
+        return context.getQueryRunner()
+                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 + 1 < t2.val2 AND t2.val2 < t1.val1 + 5 ");
+    }
+
+	public static void main(String[] args)
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkInequalityJoin.class.getSimpleName()).append(".*").toString())
+                .build();
+
+        new Runner(options).run();
+    }
+
+	@State(Thread)
     public static class Context
     {
         private MemoryLocalQueryRunner queryRunner;
@@ -84,18 +123,12 @@ public class BenchmarkInequalityJoin
             // t1.val1 is in range [0, 1000)
             // t1.bucket is in [0, 1000)
             queryRunner.execute(format(
-                    "CREATE TABLE memory.default.t1 AS SELECT " +
-                            "orderkey %% %d bucket, " +
-                            "(orderkey * 13) %% 1000 val1 " +
-                            "FROM tpch.tiny.lineitem",
+                    new StringBuilder().append("CREATE TABLE memory.default.t1 AS SELECT ").append("orderkey %% %d bucket, ").append("(orderkey * 13) %% 1000 val1 ").append("FROM tpch.tiny.lineitem").toString(),
                     buckets));
             // t2.val2 is in range [0, 10)
             // t2.bucket is in [0, 1000)
             queryRunner.execute(format(
-                    "CREATE TABLE memory.default.t2 AS SELECT " +
-                            "orderkey %% %d bucket, " +
-                            "(orderkey * 379) %% %d val2 " +
-                            "FROM tpch.tiny.lineitem",
+                    new StringBuilder().append("CREATE TABLE memory.default.t2 AS SELECT ").append("orderkey %% %d bucket, ").append("(orderkey * 379) %% %d val2 ").append("FROM tpch.tiny.lineitem").toString(),
                     buckets,
                     filterOutCoefficient));
         }
@@ -106,44 +139,5 @@ public class BenchmarkInequalityJoin
             queryRunner.close();
             queryRunner = null;
         }
-    }
-
-    @Benchmark
-    public List<Page> benchmarkJoin(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) WHERE t1.val1 < t2.val2");
-    }
-
-    @Benchmark
-    public List<Page> benchmarkJoinWithArithmeticInPredicate(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 < t2.val2 + 10");
-    }
-
-    @Benchmark
-    public List<Page> benchmarkJoinWithFunctionPredicate(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 < sin(t2.val2)");
-    }
-
-    @Benchmark
-    public List<Page> benchmarkRangePredicateJoin(Context context)
-    {
-        return context.getQueryRunner()
-                .execute("SELECT count(*) FROM t1 JOIN t2 on (t1.bucket = t2.bucket) AND t1.val1 + 1 < t2.val2 AND t2.val2 < t1.val1 + 5 ");
-    }
-
-    public static void main(String[] args)
-            throws RunnerException
-    {
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkInequalityJoin.class.getSimpleName() + ".*")
-                .build();
-
-        new Runner(options).run();
     }
 }

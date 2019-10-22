@@ -247,7 +247,14 @@ public final class TinyintOperators
         return XxHash64.hash(value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.TINYINT) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class TinyintDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -281,12 +288,5 @@ public final class TinyintOperators
             }
             return notEqual(TINYINT.getLong(left, leftPosition), TINYINT.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.TINYINT) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

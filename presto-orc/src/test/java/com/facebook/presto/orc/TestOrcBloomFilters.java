@@ -184,7 +184,7 @@ public class TestOrcBloomFilters
     {
         BloomFilter bloomFilter = new BloomFilter(TEST_VALUES.size() * 10, 0.01);
 
-        for (Object o : TEST_VALUES.keySet()) {
+        TEST_VALUES.keySet().forEach(o -> {
             if (o instanceof Long) {
                 bloomFilter.addLong((Long) o);
             }
@@ -209,12 +209,12 @@ public class TestOrcBloomFilters
             else {
                 fail("Unsupported type " + o.getClass());
             }
-        }
+        });
 
-        for (Map.Entry<Object, Type> testValue : TEST_VALUES.entrySet()) {
+        TEST_VALUES.entrySet().forEach(testValue -> {
             boolean matched = checkInBloomFilter(bloomFilter, testValue.getKey(), testValue.getValue());
             assertTrue(matched, "type " + testValue.getClass());
-        }
+        });
 
         // test unsupported type: can be supported by ORC but is not implemented yet
         assertTrue(checkInBloomFilter(bloomFilter, new Date(), DATE), "unsupported type DATE should always return true");
@@ -225,10 +225,10 @@ public class TestOrcBloomFilters
     {
         BloomFilter bloomFilter = new BloomFilter(TEST_VALUES.size() * 10, 0.01);
 
-        for (Map.Entry<Object, Type> testValue : TEST_VALUES.entrySet()) {
+        TEST_VALUES.entrySet().forEach(testValue -> {
             boolean matched = checkInBloomFilter(bloomFilter, testValue.getKey(), testValue.getValue());
             assertFalse(matched, "type " + testValue.getKey().getClass());
-        }
+        });
 
         // test unsupported type: can be supported by ORC but is not implemented yet
         assertTrue(checkInBloomFilter(bloomFilter, new Date(), DATE), "unsupported type DATE should always return true");
@@ -245,14 +245,14 @@ public class TestOrcBloomFilters
                 .put(VARCHAR, utf8Slice(TEST_STRING))
                 .build();
 
-        for (Map.Entry<Type, Object> testValue : testValues.entrySet()) {
+        testValues.entrySet().forEach(testValue -> {
             Domain predicateDomain = Domain.singleValue(testValue.getKey(), testValue.getValue());
             Optional<Collection<Object>> discreteValues = extractDiscreteValues(predicateDomain.getValues());
             assertTrue(discreteValues.isPresent());
             Collection<Object> objects = discreteValues.get();
             assertEquals(objects.size(), 1);
             assertEquals(objects.iterator().next(), testValue.getValue());
-        }
+        });
     }
 
     @Test

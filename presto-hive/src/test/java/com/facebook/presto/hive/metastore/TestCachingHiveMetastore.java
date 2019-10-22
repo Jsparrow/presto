@@ -42,11 +42,14 @@ import static java.util.concurrent.Executors.newCachedThreadPool;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Test(singleThreaded = true)
 public class TestCachingHiveMetastore
 {
-    private MockHiveMetastoreClient mockClient;
+    private static final Logger logger = LoggerFactory.getLogger(TestCachingHiveMetastore.class);
+	private MockHiveMetastoreClient mockClient;
     private CachingHiveMetastore metastore;
     private ThriftHiveMetastoreStats stats;
 
@@ -244,6 +247,7 @@ public class TestCachingHiveMetastore
             metastore.getAllDatabases();
         }
         catch (RuntimeException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         assertEquals(mockClient.getAccessCount(), 1);
 
@@ -252,6 +256,7 @@ public class TestCachingHiveMetastore
             metastore.getAllDatabases();
         }
         catch (RuntimeException ignored) {
+			logger.error(ignored.getMessage(), ignored);
         }
         assertEquals(mockClient.getAccessCount(), 2);
     }

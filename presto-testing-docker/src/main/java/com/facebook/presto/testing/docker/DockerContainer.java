@@ -196,11 +196,10 @@ public final class DockerContainer
                 .stream()
                 .filter(entry -> ports.contains(extractPort(entry)))
                 .collect(toImmutableMap(
-                        entry -> extractPort(entry),
+                        DockerContainer::extractPort,
                         entry -> entry.getValue().stream()
-                                .peek(portBinding -> {
-                                    checkState(portBinding.hostIp().equals(HOST_IP), "Unexpected port binding found: %s", portBinding);
-                                })
+                                .peek(portBinding -> checkState(portBinding.hostIp().equals(HOST_IP), "Unexpected port binding found: %s",
+										portBinding))
                                 .map(PortBinding::hostPort)
                                 .collect(toOptional())
                                 .map(Integer::parseInt)

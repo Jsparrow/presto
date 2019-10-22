@@ -50,25 +50,20 @@ public class TestSpatialJoins
     // A set of polygons such that:
     // - a and c intersect;
     // - c covers b;
-    private static final String POLYGONS_SQL = "VALUES " +
-            "('POLYGON ((-0.5 -0.6, 1.5 0, 1 1, 0 1, -0.5 -0.6))', 'a', 1), " +
-            "('POLYGON ((2 2, 3 2, 2.5 3, 2 2))', 'b', 2), " +
-            "('POLYGON ((0.8 0.7, 0.8 4, 5 4, 4.5 0.8, 0.8 0.7))', 'c', 3), " +
-            "('POLYGON ((7 7, 11 7, 11 11, 7 7))', 'd', 4), " +
-            "('POLYGON EMPTY', 'empty', 5), " +
-            "(null, 'null', 6)";
+    private static final String POLYGONS_SQL = new StringBuilder().append("VALUES ").append("('POLYGON ((-0.5 -0.6, 1.5 0, 1 1, 0 1, -0.5 -0.6))', 'a', 1), ").append("('POLYGON ((2 2, 3 2, 2.5 3, 2 2))', 'b', 2), ").append("('POLYGON ((0.8 0.7, 0.8 4, 5 4, 4.5 0.8, 0.8 0.7))', 'c', 3), ").append("('POLYGON ((7 7, 11 7, 11 11, 7 7))', 'd', 4), ").append("('POLYGON EMPTY', 'empty', 5), ").append("(null, 'null', 6)").toString();
 
     // A set of points such that:
     // - a contains x
     // - b and c contain y
     // - d contains z
-    private static final String POINTS_SQL = "VALUES " +
-            "(-0.1, -0.1, 'x', 1), " +
-            "(2.1, 2.1, 'y', 2), " +
-            "(7.1, 7.2, 'z', 3), " +
-            "(null, 1.2, 'null', 4)";
+    private static final String POINTS_SQL = new StringBuilder().append("VALUES ").append("(-0.1, -0.1, 'x', 1), ").append("(2.1, 2.1, 'y', 2), ").append("(7.1, 7.2, 'z', 3), ").append("(null, 1.2, 'null', 4)").toString();
 
-    private static String getRelationalGeometriesSql()
+    public TestSpatialJoins()
+    {
+        super(TestSpatialJoins::createQueryRunner);
+    }
+
+	private static String getRelationalGeometriesSql()
     {
         StringBuilder sql = new StringBuilder("VALUES ");
         for (int i = 0; i < RELATION_GEOMETRIES_WKT.size(); i++) {
@@ -80,12 +75,7 @@ public class TestSpatialJoins
         return sql.toString();
     }
 
-    public TestSpatialJoins()
-    {
-        super(() -> createQueryRunner());
-    }
-
-    private static DistributedQueryRunner createQueryRunner()
+	private static DistributedQueryRunner createQueryRunner()
             throws Exception
     {
         DistributedQueryRunner queryRunner = new DistributedQueryRunner(testSessionBuilder()
@@ -113,18 +103,16 @@ public class TestSpatialJoins
         return queryRunner;
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinContains()
     {
         testSpatialJoinContains(getSession());
     }
 
-    @Test
+	@Test
     public void testDistributedSpatialJoinContains()
     {
-        assertUpdate(format("CREATE TABLE contains_partitioning AS " +
-                        "SELECT spatial_partitioning(ST_GeometryFromText(wkt)) as v " +
-                        "FROM (%s) as a (wkt, name, id)", POLYGONS_SQL), 1);
+        assertUpdate(format(new StringBuilder().append("CREATE TABLE contains_partitioning AS ").append("SELECT spatial_partitioning(ST_GeometryFromText(wkt)) as v ").append("FROM (%s) as a (wkt, name, id)").toString(), POLYGONS_SQL), 1);
 
         Session session = Session.builder(getSession())
                 .setSystemProperty(SPATIAL_PARTITIONING_TABLE_NAME, "contains_partitioning")
@@ -132,56 +120,48 @@ public class TestSpatialJoins
         testSpatialJoinContains(session);
     }
 
-    private void testSpatialJoinContains(Session session)
+	private void testSpatialJoinContains(Session session)
     {
         // Test ST_Contains(build, probe)
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POINTS_SQL + ") AS a (latitude, longitude, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POINTS_SQL).append(") AS a (latitude, longitude, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'x'), ('b', 'y'), ('c', 'y'), ('d', 'z'))");
 
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POINTS_SQL + ") AS a (latitude, longitude, name, id) JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POINTS_SQL).append(") AS a (latitude, longitude, name, id) JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'x'), ('b', 'y'), ('c', 'y'), ('d', 'z'))");
 
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), ('c', 'b'))");
 
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), ('c', 'b'))");
 
         // Test ST_Contains(probe, build)
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS b (wkt, name, id), (" + POINTS_SQL + ") AS a (latitude, longitude, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS b (wkt, name, id), (").append(POINTS_SQL).append(") AS a (latitude, longitude, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'x'), ('b', 'y'), ('c', 'y'), ('d', 'z'))");
 
-        assertQuery(session, "SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(a.wkt), ST_GeometryFromText(b.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(a.wkt), ST_GeometryFromText(b.wkt))")
+				.toString(),
                 "SELECT * FROM (VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), ('b', 'c'))");
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinContainsWithExtraConditions()
     {
-        assertQuery("SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) AND a.name != b.name",
+        assertQuery(new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) AND a.name != b.name")
+				.toString(),
                 "SELECT * FROM (VALUES ('c', 'b'))");
 
-        assertQuery("SELECT b.name, a.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) AND a.name != b.name",
+        assertQuery(new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) AND a.name != b.name")
+				.toString(),
                 "SELECT * FROM (VALUES ('c', 'b'))");
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinContainsWithStatefulExtraCondition()
     {
         // Generate multi-page probe input: 10K points in polygon 'a' and 10K points in polygon 'b'
@@ -189,47 +169,40 @@ public class TestSpatialJoins
         String pointsY = generatePointsSql(2, 2, 2.5, 2.5, 10_000, "y");
 
         // Run spatial join with additional stateful filter
-        assertQuery("SELECT b.name, a.name " +
-                        "FROM (" + pointsX + " UNION ALL " + pointsY + ") AS a (latitude, longitude, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude)) AND stateful_sleeping_sum(0.001, 100, a.id, b.id) <= 3",
+        assertQuery(new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(pointsX).append(" UNION ALL ").append(pointsY).append(") AS a (latitude, longitude, name, id), (").append(POLYGONS_SQL)
+				.append(") AS b (wkt, name, id) ").append("WHERE ST_Contains(ST_GeometryFromText(wkt), ST_Point(longitude, latitude)) AND stateful_sleeping_sum(0.001, 100, a.id, b.id) <= 3").toString(),
                 "SELECT * FROM (VALUES ('a', 'x1'), ('a', 'x2'), ('b', 'y1'))");
     }
 
-    private static String generatePointsSql(double minX, double minY, double maxX, double maxY, int pointCount, String prefix)
+	private static String generatePointsSql(double minX, double minY, double maxX, double maxY, int pointCount, String prefix)
     {
-        return format("SELECT %s + n * %f, %s + n * %f, '%s' || CAST (n AS VARCHAR), n " +
-                "FROM (SELECT sequence(1, %s) as numbers) " +
-                "CROSS JOIN UNNEST (numbers) AS t(n)", minX, (maxX - minX) / pointCount, minY, (maxY - minY) / pointCount, prefix, pointCount);
+        return format(new StringBuilder().append("SELECT %s + n * %f, %s + n * %f, '%s' || CAST (n AS VARCHAR), n ").append("FROM (SELECT sequence(1, %s) as numbers) ").append("CROSS JOIN UNNEST (numbers) AS t(n)").toString(), minX, (maxX - minX) / pointCount, minY, (maxY - minY) / pointCount, prefix, pointCount);
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinContainsWithEmptyBuildSide()
     {
-        assertQueryReturnsEmptyResult("SELECT b.name, a.name " +
-                "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                "WHERE b.name = 'invalid' AND ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))");
+        assertQueryReturnsEmptyResult(new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE b.name = 'invalid' AND ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString());
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinContainsWithEmptyProbeSide()
     {
-        assertQueryReturnsEmptyResult("SELECT b.name, a.name " +
-                "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                "WHERE a.name = 'invalid' AND ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))");
+        assertQueryReturnsEmptyResult(new StringBuilder().append("SELECT b.name, a.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE a.name = 'invalid' AND ST_Contains(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString());
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinIntersects()
     {
         testSpatialJoinIntersects(getSession());
     }
 
-    @Test
+	@Test
     public void tesDistributedSpatialJoinIntersects()
     {
-        assertUpdate(format("CREATE TABLE intersects_partitioning AS " +
-                "SELECT spatial_partitioning(ST_GeometryFromText(wkt)) as v " +
-                "FROM (%s) as a (wkt, name, id)", POLYGONS_SQL), 1);
+        assertUpdate(format(new StringBuilder().append("CREATE TABLE intersects_partitioning AS ").append("SELECT spatial_partitioning(ST_GeometryFromText(wkt)) as v ").append("FROM (%s) as a (wkt, name, id)").toString(), POLYGONS_SQL), 1);
 
         Session session = Session.builder(getSession())
                 .setSystemProperty(SPATIAL_PARTITIONING_TABLE_NAME, "intersects_partitioning")
@@ -237,58 +210,49 @@ public class TestSpatialJoins
         testSpatialJoinIntersects(session);
     }
 
-    private void testSpatialJoinIntersects(Session session)
+	private void testSpatialJoinIntersects(Session session)
     {
         // Test ST_Intersects(build, probe)
-        assertQuery(session, "SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), " +
                         "('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c')");
 
-        assertQuery(session, "SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), " +
                         "('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c')");
 
         // Test ST_Intersects(probe, build)
-        assertQuery(session, "SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Intersects(ST_GeometryFromText(a.wkt), ST_GeometryFromText(b.wkt))",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Intersects(ST_GeometryFromText(a.wkt), ST_GeometryFromText(b.wkt))")
+				.toString(),
                 "SELECT * FROM VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), " +
                         "('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c')");
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialJoinIntersectsWithExtraConditions()
     {
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) " +
-                        "   AND a.name != b.name",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) ")
+				.append("   AND a.name != b.name").toString(),
                 "SELECT * FROM VALUES ('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c')");
 
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) " +
-                        "   AND a.name != b.name",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) ")
+				.append("   AND a.name != b.name").toString(),
                 "SELECT * FROM VALUES ('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c')");
 
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id), (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) " +
-                        "   AND a.name < b.name",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id), (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("WHERE ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt)) ")
+				.append("   AND a.name < b.name").toString(),
                 "SELECT * FROM VALUES ('a', 'c'), ('b', 'c')");
     }
 
-    @Test
+	@Test
     public void testBroadcastDistanceQuery()
     {
         testDistanceQuery(getSession());
     }
 
-    @Test
+	@Test
     public void testDistributedDistanceQuery()
     {
         assertUpdate(format("CREATE TABLE distance_partitioning AS SELECT spatial_partitioning(ST_Point(x, y)) as v " +
@@ -300,53 +264,41 @@ public class TestSpatialJoins
         testDistanceQuery(session);
     }
 
-    private void testDistanceQuery(Session session)
+	private void testDistanceQuery(Session session)
     {
         // ST_Distance(probe, build)
-        assertQuery(session, "SELECT a.name, b.name " +
-                        "FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), " +
-                        "(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) " +
-                        "WHERE ST_Distance(ST_Point(a.x, a.y), ST_Point(b.x, b.y)) <= 1.5",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), ").append("(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) ").append("WHERE ST_Distance(ST_Point(a.x, a.y), ST_Point(b.x, b.y)) <= 1.5").toString(),
                 "SELECT * FROM VALUES ('0_0', '0_1'), ('0_0', '1_1'), ('1_0', '0_1'), ('1_0', '1_1'), ('3_0', '3_1'), ('10_0', '10_1')");
 
         // ST_Distance(build, probe)
-        assertQuery(session, "SELECT a.name, b.name " +
-                        "FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), " +
-                        "(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) " +
-                        "WHERE ST_Distance(ST_Point(b.x, b.y), ST_Point(a.x, a.y)) <= 1.5",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), ").append("(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) ").append("WHERE ST_Distance(ST_Point(b.x, b.y), ST_Point(a.x, a.y)) <= 1.5").toString(),
                 "SELECT * FROM VALUES ('0_0', '0_1'), ('0_0', '1_1'), ('1_0', '0_1'), ('1_0', '1_1'), ('3_0', '3_1'), ('10_0', '10_1')");
 
         // radius expression
-        assertQuery(session, "SELECT a.name, b.name " + "FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), " +
-                        "(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) " +
-                        "WHERE ST_Distance(ST_Point(a.x, a.y), ST_Point(b.x, b.y)) <= sqrt(b.x * b.x + b.y * b.y)",
+        assertQuery(session, new StringBuilder().append("SELECT a.name, b.name ").append("FROM (VALUES (0, 0, '0_0'), (1, 0, '1_0'), (3, 0, '3_0'), (10, 0, '10_0')) as a (x, y, name), ").append("(VALUES (0, 1, '0_1'), (1, 1, '1_1'), (3, 1, '3_1'), (10, 1, '10_1')) as b (x, y, name) ").append("WHERE ST_Distance(ST_Point(a.x, a.y), ST_Point(b.x, b.y)) <= sqrt(b.x * b.x + b.y * b.y)").toString(),
                 "SELECT * FROM VALUES ('0_0', '0_1'), ('0_0', '1_1'), ('0_0', '3_1'), ('0_0', '10_1'), ('1_0', '1_1'), ('1_0', '3_1'), ('1_0', '10_1'), ('3_0', '3_1'), ('3_0', '10_1'), ('10_0', '10_1')");
     }
 
-    @Test
+	@Test
     public void testBroadcastSpatialLeftJoin()
     {
         // Test ST_Intersects(build, probe)
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) LEFT JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) LEFT JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM VALUES ('a', 'a'), ('b', 'b'), ('c', 'c'), ('d', 'd'), " +
                         "('a', 'c'), ('c', 'a'), ('c', 'b'), ('b', 'c'), ('empty', null), ('null', null)");
 
         // Empty build side
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) LEFT JOIN (VALUES (null, 'null', 1)) AS b (wkt, name, id) " +
-                        "ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) LEFT JOIN (VALUES (null, 'null', 1)) AS b (wkt, name, id) ").append("ON ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))").toString(),
                 "SELECT * FROM VALUES ('a', null), ('b', null), ('c', null), ('d', null), ('empty', null), ('null', null)");
 
         // Extra condition
-        assertQuery("SELECT a.name, b.name " +
-                        "FROM (" + POLYGONS_SQL + ") AS a (wkt, name, id) LEFT JOIN (" + POLYGONS_SQL + ") AS b (wkt, name, id) " +
-                        "ON a.name > b.name AND ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))",
+        assertQuery(new StringBuilder().append("SELECT a.name, b.name ").append("FROM (").append(POLYGONS_SQL).append(") AS a (wkt, name, id) LEFT JOIN (").append(POLYGONS_SQL).append(") AS b (wkt, name, id) ").append("ON a.name > b.name AND ST_Intersects(ST_GeometryFromText(b.wkt), ST_GeometryFromText(a.wkt))")
+				.toString(),
                 "SELECT * FROM VALUES ('a', null), ('b', null), ('c', 'a'), ('c', 'b'), ('d', null), ('empty', null), ('null', null)");
     }
 
-    private void testRelationshipSpatialJoin(Session session, String relation, List<Pair<Integer, Integer>> expectedPairs)
+	private void testRelationshipSpatialJoin(Session session, String relation, List<Pair<Integer, Integer>> expectedPairs)
     {
         StringBuilder expected = new StringBuilder("SELECT * FROM VALUES ");
         for (int i = 0; i < expectedPairs.size(); i++) {
@@ -374,7 +326,7 @@ public class TestSpatialJoins
                 expected.toString());
     }
 
-    @Test
+	@Test
     public void testRelationshipBroadcastSpatialJoin()
     {
         testRelationshipSpatialJoin(getSession(), "ST_Equals", EQUALS_PAIRS);

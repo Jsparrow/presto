@@ -189,9 +189,7 @@ public class OrcSelectiveRecordReader
             }
         }
 
-        for (Map.Entry<Integer, Object> entry : constantValues.entrySet()) {
-            this.constantValues[zeroBasedIndices.get(entry.getKey())] = entry.getValue();
-        }
+        constantValues.entrySet().forEach(entry -> this.constantValues[zeroBasedIndices.get(entry.getKey())] = entry.getValue());
 
         // Initial order of stream readers is:
         //  - readers with integer equality
@@ -400,12 +398,13 @@ public class OrcSelectiveRecordReader
 
     private void initializePositions(int batchSize)
     {
-        if (positions == null || positions.length < batchSize) {
-            positions = new int[batchSize];
-            for (int i = 0; i < batchSize; i++) {
-                positions[i] = i;
-            }
-        }
+        if (!(positions == null || positions.length < batchSize)) {
+			return;
+		}
+		positions = new int[batchSize];
+		for (int i = 0; i < batchSize; i++) {
+		    positions[i] = i;
+		}
     }
 
     private int applyFilterFunctions(int[] positions, int positionCount)

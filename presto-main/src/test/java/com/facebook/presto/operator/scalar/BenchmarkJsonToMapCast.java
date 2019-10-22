@@ -84,7 +84,31 @@ public class BenchmarkJsonToMapCast
                         data.getPage()));
     }
 
-    @SuppressWarnings("FieldMayBeFinal")
+    @Test
+    public void verify()
+    {
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkJsonToMapCast().benchmark(data);
+    }
+
+	public static void main(String[] args)
+            throws Throwable
+    {
+        // assure the benchmarks are valid before running
+        BenchmarkData data = new BenchmarkData();
+        data.setup();
+        new BenchmarkJsonToMapCast().benchmark(data);
+
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(new StringBuilder().append(".*").append(BenchmarkJsonToMapCast.class.getSimpleName()).append(".*").toString())
+                .warmupMode(WarmupMode.BULK_INDI)
+                .build();
+        new Runner(options).run();
+    }
+
+	@SuppressWarnings("FieldMayBeFinal")
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -184,29 +208,5 @@ public class BenchmarkJsonToMapCast
         {
             return page;
         }
-    }
-
-    @Test
-    public void verify()
-    {
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkJsonToMapCast().benchmark(data);
-    }
-
-    public static void main(String[] args)
-            throws Throwable
-    {
-        // assure the benchmarks are valid before running
-        BenchmarkData data = new BenchmarkData();
-        data.setup();
-        new BenchmarkJsonToMapCast().benchmark(data);
-
-        Options options = new OptionsBuilder()
-                .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkJsonToMapCast.class.getSimpleName() + ".*")
-                .warmupMode(WarmupMode.BULK_INDI)
-                .build();
-        new Runner(options).run();
     }
 }

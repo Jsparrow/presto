@@ -29,7 +29,13 @@ public class FullyQualifiedName
     private final List<String> parts;
     private final List<String> originalParts;
 
-    @JsonCreator
+    private FullyQualifiedName(List<String> originalParts, List<String> parts)
+    {
+        this.originalParts = unmodifiableList(originalParts);
+        this.parts = unmodifiableList(parts);
+    }
+
+	@JsonCreator
     public static FullyQualifiedName of(String dottedName)
     {
         String[] parts = dottedName.split("\\.");
@@ -39,7 +45,7 @@ public class FullyQualifiedName
         return of(asList(parts));
     }
 
-    public static FullyQualifiedName of(String part1, String part2, String part3, String... rest)
+	public static FullyQualifiedName of(String part1, String part2, String part3, String... rest)
     {
         List<String> parts = new ArrayList<>(rest.length + 3);
         parts.add(part1);
@@ -49,7 +55,7 @@ public class FullyQualifiedName
         return of(parts);
     }
 
-    public static FullyQualifiedName of(List<String> originalParts)
+	public static FullyQualifiedName of(List<String> originalParts)
     {
         requireNonNull(originalParts, "originalParts is null");
         if (originalParts.size() < 3) {
@@ -57,54 +63,46 @@ public class FullyQualifiedName
         }
 
         List<String> parts = new ArrayList<>(originalParts.size());
-        for (String originalPart : originalParts) {
-            parts.add(originalPart.toLowerCase(ENGLISH));
-        }
+        originalParts.forEach(originalPart -> parts.add(originalPart.toLowerCase(ENGLISH)));
 
         return new FullyQualifiedName(originalParts, parts);
     }
 
-    public static FullyQualifiedName of(FullyQualifiedName.Prefix prefix, String name)
+	public static FullyQualifiedName of(FullyQualifiedName.Prefix prefix, String name)
     {
         List<String> parts = new ArrayList<>(prefix.parts);
         parts.add(name);
         return of(parts);
     }
 
-    private FullyQualifiedName(List<String> originalParts, List<String> parts)
-    {
-        this.originalParts = unmodifiableList(originalParts);
-        this.parts = unmodifiableList(parts);
-    }
-
-    public List<String> getParts()
+	public List<String> getParts()
     {
         return parts;
     }
 
-    public List<String> getOriginalParts()
+	public List<String> getOriginalParts()
     {
         return originalParts;
     }
 
-    public String getSuffix()
+	public String getSuffix()
     {
         return parts.get(parts.size() - 1);
     }
 
-    public Prefix getPrefix()
+	public Prefix getPrefix()
     {
         return new Prefix(parts.subList(0, parts.size() - 1));
     }
 
-    @JsonValue
+	@JsonValue
     @Override
     public String toString()
     {
         return String.join(".", parts);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -116,13 +114,13 @@ public class FullyQualifiedName
         return parts.equals(((FullyQualifiedName) o).parts);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return parts.hashCode();
     }
 
-    public static class Prefix
+	public static class Prefix
     {
         private final List<String> parts;
 

@@ -33,23 +33,18 @@ import static org.testng.Assert.assertNull;
 
 public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder, T>
 {
-    public enum StatisticsType
-    {
-        NONE, BOOLEAN, INTEGER, DOUBLE, STRING, DATE, DECIMAL
-    }
-
     private final StatisticsType statisticsType;
-    private final Supplier<B> statisticsBuilderSupplier;
-    private final BiConsumer<B, T> adder;
+	private final Supplier<B> statisticsBuilderSupplier;
+	private final BiConsumer<B, T> adder;
 
-    public AbstractStatisticsBuilderTest(StatisticsType statisticsType, Supplier<B> statisticsBuilderSupplier, BiConsumer<B, T> adder)
+	public AbstractStatisticsBuilderTest(StatisticsType statisticsType, Supplier<B> statisticsBuilderSupplier, BiConsumer<B, T> adder)
     {
         this.statisticsType = statisticsType;
         this.statisticsBuilderSupplier = statisticsBuilderSupplier;
         this.adder = adder;
     }
 
-    @Test
+	@Test
     public void testNoValue()
     {
         B statisticsBuilder = statisticsBuilderSupplier.get();
@@ -68,7 +63,7 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertNoColumnStatistics(aggregateColumnStatistics.getMergedColumnStatistics(Optional.empty()), 0);
     }
 
-    public void assertMinAverageValueBytes(long expectedAverageValueBytes, List<T> values)
+	public void assertMinAverageValueBytes(long expectedAverageValueBytes, List<T> values)
     {
         // test add value
         B statisticsBuilder = statisticsBuilderSupplier.get();
@@ -92,7 +87,7 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertEquals(mergeColumnStatistics(ImmutableList.of(firstStats, secondStats)).getMinAverageValueSizeInBytes(), expectedAverageValueBytes);
     }
 
-    public void assertMinMaxValues(T expectedMin, T expectedMax)
+	public void assertMinMaxValues(T expectedMin, T expectedMax)
     {
         // just min
         assertValues(expectedMin, expectedMin, ImmutableList.of(expectedMin));
@@ -104,7 +99,7 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertValues(expectedMin, expectedMax, ImmutableList.of(expectedMin, expectedMax));
     }
 
-    public void assertValues(T expectedMin, T expectedMax, List<T> values)
+	public void assertValues(T expectedMin, T expectedMax, List<T> values)
     {
         assertValuesInternal(expectedMin, expectedMax, values);
         assertValuesInternal(expectedMin, expectedMax, ImmutableList.copyOf(values).reverse());
@@ -114,7 +109,7 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertValuesInternal(expectedMin, expectedMax, randomOrder);
     }
 
-    private void assertValuesInternal(T expectedMin, T expectedMax, List<T> values)
+	private void assertValuesInternal(T expectedMin, T expectedMax, List<T> values)
     {
         B statisticsBuilder = statisticsBuilderSupplier.get();
         AggregateColumnStatistics aggregateColumnStatistics = new AggregateColumnStatistics();
@@ -122,15 +117,15 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertColumnStatistics(statisticsBuilder.buildColumnStatistics(), 0, null, null, aggregateColumnStatistics);
 
         for (int loop = 0; loop < 4; loop++) {
-            for (T value : values) {
+            values.forEach(value -> {
                 adder.accept(statisticsBuilder, value);
                 aggregateColumnStatistics.add(statisticsBuilder.buildColumnStatistics());
-            }
+            });
             assertColumnStatistics(statisticsBuilder.buildColumnStatistics(), values.size() * (loop + 1), expectedMin, expectedMax, aggregateColumnStatistics);
         }
     }
 
-    public static void assertNoColumnStatistics(ColumnStatistics columnStatistics, int expectedNumberOfValues)
+	public static void assertNoColumnStatistics(ColumnStatistics columnStatistics, int expectedNumberOfValues)
     {
         assertEquals(columnStatistics.getNumberOfValues(), expectedNumberOfValues);
         assertNull(columnStatistics.getBooleanStatistics());
@@ -142,7 +137,7 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertNull(columnStatistics.getBloomFilter());
     }
 
-    private void assertColumnStatistics(
+	private void assertColumnStatistics(
             ColumnStatistics columnStatistics,
             int expectedNumberOfValues,
             T expectedMin,
@@ -168,14 +163,14 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertNoColumnStatistics(mergeColumnStatistics(insertEmptyColumnStatisticsAt(statisticsList, statisticsList.size() / 2, 10)), totalCount + 10);
     }
 
-    static List<ColumnStatistics> insertEmptyColumnStatisticsAt(List<ColumnStatistics> statisticsList, int index, long numberOfValues)
+	static List<ColumnStatistics> insertEmptyColumnStatisticsAt(List<ColumnStatistics> statisticsList, int index, long numberOfValues)
     {
         List<ColumnStatistics> newStatisticsList = new ArrayList<>(statisticsList);
         newStatisticsList.add(index, new ColumnStatistics(numberOfValues, 0, null, null, null, null, null, null, null, null));
         return newStatisticsList;
     }
 
-    public void assertColumnStatistics(ColumnStatistics columnStatistics, int expectedNumberOfValues, T expectedMin, T expectedMax)
+	public void assertColumnStatistics(ColumnStatistics columnStatistics, int expectedNumberOfValues, T expectedMin, T expectedMax)
     {
         assertEquals(columnStatistics.getNumberOfValues(), expectedNumberOfValues);
 
@@ -224,14 +219,19 @@ public abstract class AbstractStatisticsBuilderTest<B extends StatisticsBuilder,
         assertNull(columnStatistics.getBloomFilter());
     }
 
-    void assertRangeStatistics(RangeStatistics<?> rangeStatistics, T expectedMin, T expectedMax)
+	void assertRangeStatistics(RangeStatistics<?> rangeStatistics, T expectedMin, T expectedMax)
     {
         assertNotNull(rangeStatistics);
         assertEquals(rangeStatistics.getMin(), expectedMin);
         assertEquals(rangeStatistics.getMax(), expectedMax);
     }
 
-    public static class AggregateColumnStatistics
+	public enum StatisticsType
+    {
+        NONE, BOOLEAN, INTEGER, DOUBLE, STRING, DATE, DECIMAL
+    }
+
+	public static class AggregateColumnStatistics
     {
         private int totalCount;
         private final ImmutableList.Builder<ColumnStatistics> statisticsList = ImmutableList.builder();

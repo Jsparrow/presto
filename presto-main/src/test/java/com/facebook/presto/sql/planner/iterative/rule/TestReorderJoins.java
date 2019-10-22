@@ -57,12 +57,12 @@ import static com.facebook.presto.sql.tree.ComparisonExpression.Operator.LESS_TH
 
 public class TestReorderJoins
 {
-    private RuleTester tester;
-
     // TWO_ROWS are used to prevent node from being scalar
     private static final ImmutableList<List<RowExpression>> TWO_ROWS = ImmutableList.of(ImmutableList.of(), ImmutableList.of());
 
-    @BeforeClass
+	private RuleTester tester;
+
+	@BeforeClass
     public void setUp()
     {
         tester = new RuleTester(
@@ -73,14 +73,14 @@ public class TestReorderJoins
                 Optional.of(4));
     }
 
-    @AfterClass(alwaysRun = true)
+	@AfterClass(alwaysRun = true)
     public void tearDown()
     {
         closeAllRuntimeException(tester);
         tester = null;
     }
 
-    @Test
+	@Test
     public void testKeepsOutputSymbols()
     {
         assertReorderJoins()
@@ -112,7 +112,7 @@ public class TestReorderJoins
                         .withExactOutputs("A2"));
     }
 
-    @Test
+	@Test
     public void testReplicatesAndFlipsWhenOneTableMuchSmaller()
     {
         assertReorderJoins()
@@ -141,7 +141,7 @@ public class TestReorderJoins
                         values(ImmutableMap.of("A1", 0))));
     }
 
-    @Test
+	@Test
     public void testRepartitionsWhenRequiredBySession()
     {
         assertReorderJoins()
@@ -171,7 +171,7 @@ public class TestReorderJoins
                         values(ImmutableMap.of("A1", 0))));
     }
 
-    @Test
+	@Test
     public void testRepartitionsWhenBothTablesEqual()
     {
         assertReorderJoins()
@@ -200,7 +200,7 @@ public class TestReorderJoins
                         values(ImmutableMap.of("B1", 0))));
     }
 
-    @Test
+	@Test
     public void testReplicatesUnrestrictedWhenRequiredBySession()
     {
         assertReorderJoins()
@@ -231,7 +231,7 @@ public class TestReorderJoins
                         values(ImmutableMap.of("B1", 0))));
     }
 
-    @Test
+	@Test
     public void testReplicatedScalarJoinEvenWhereSessionRequiresRepartitioned()
     {
         PlanMatchPattern expectedPlan = join(
@@ -280,7 +280,7 @@ public class TestReorderJoins
                 .matches(expectedPlan);
     }
 
-    @Test
+	@Test
     public void testDoesNotFireForCrossJoin()
     {
         assertReorderJoins()
@@ -303,7 +303,7 @@ public class TestReorderJoins
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testDoesNotFireWithNoStats()
     {
         assertReorderJoins()
@@ -319,7 +319,7 @@ public class TestReorderJoins
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testDoesNotFireForNonDeterministicFilter()
     {
         assertReorderJoins()
@@ -334,7 +334,7 @@ public class TestReorderJoins
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testPredicatesPushedDown()
     {
         assertReorderJoins()
@@ -379,7 +379,7 @@ public class TestReorderJoins
                                         values("B1", "B2"))));
     }
 
-    @Test
+	@Test
     public void testSmallerJoinFirst()
     {
         assertReorderJoins()
@@ -424,7 +424,7 @@ public class TestReorderJoins
                                         values("B1", "B2"))));
     }
 
-    @Test
+	@Test
     public void testReplicatesWhenNotRestricted()
     {
         int aRows = 10_000;
@@ -493,7 +493,7 @@ public class TestReorderJoins
                         values(ImmutableMap.of("B1", 0))));
     }
 
-    private RuleAssert assertReorderJoins()
+	private RuleAssert assertReorderJoins()
     {
         return tester.assertThat(new ReorderJoins(new CostComparator(1, 1, 1)));
     }

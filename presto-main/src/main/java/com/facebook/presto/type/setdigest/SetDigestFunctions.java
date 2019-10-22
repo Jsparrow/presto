@@ -92,10 +92,10 @@ public final class SetDigestFunctions
         // Maybe use static BlockBuilderStatus in order avoid `new`?
         BlockBuilder blockBuilder = mapType.createBlockBuilder(null, 1);
         BlockBuilder singleMapBlockBuilder = blockBuilder.beginBlockEntry();
-        for (Map.Entry<Long, Short> entry : digest.getHashCounts().entrySet()) {
+        digest.getHashCounts().entrySet().forEach(entry -> {
             BIGINT.writeLong(singleMapBlockBuilder, entry.getKey());
             SMALLINT.writeLong(singleMapBlockBuilder, entry.getValue());
-        }
+        });
         blockBuilder.closeEntry();
 
         return (Block) mapType.getObject(blockBuilder, 0);

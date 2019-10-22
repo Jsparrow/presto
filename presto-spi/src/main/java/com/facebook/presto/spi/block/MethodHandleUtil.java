@@ -146,7 +146,7 @@ public final class MethodHandleUtil
             methodHandle = GET_BLOCK;
         }
         else {
-            throw new IllegalArgumentException("Unknown java type " + javaType + " from type " + type);
+            throw new IllegalArgumentException(new StringBuilder().append("Unknown java type ").append(javaType).append(" from type ").append(type).toString());
         }
 
         return methodHandle.bindTo(type);
@@ -173,7 +173,7 @@ public final class MethodHandleUtil
             methodHandle = WRITE_BLOCK;
         }
         else {
-            throw new IllegalArgumentException("Unknown java type " + javaType + " from type " + type);
+            throw new IllegalArgumentException(new StringBuilder().append("Unknown java type ").append(javaType).append(" from type ").append(type).toString());
         }
 
         return methodHandle.bindTo(type);

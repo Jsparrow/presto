@@ -30,38 +30,18 @@ import static java.util.Objects.requireNonNull;
 
 public class RowPagesBuilder
 {
-    public static RowPagesBuilder rowPagesBuilder(Type... types)
-    {
-        return rowPagesBuilder(ImmutableList.copyOf(types));
-    }
-
-    public static RowPagesBuilder rowPagesBuilder(Iterable<Type> types)
-    {
-        return new RowPagesBuilder(types);
-    }
-
-    public static RowPagesBuilder rowPagesBuilder(boolean hashEnabled, List<Integer> hashChannels, Type... types)
-    {
-        return rowPagesBuilder(hashEnabled, hashChannels, ImmutableList.copyOf(types));
-    }
-
-    public static RowPagesBuilder rowPagesBuilder(boolean hashEnabled, List<Integer> hashChannels, Iterable<Type> types)
-    {
-        return new RowPagesBuilder(hashEnabled, Optional.of(hashChannels), types);
-    }
-
     private final ImmutableList.Builder<Page> pages = ImmutableList.builder();
-    private final List<Type> types;
-    private RowPageBuilder builder;
-    private final boolean hashEnabled;
-    private final Optional<List<Integer>> hashChannels;
+	private final List<Type> types;
+	private RowPageBuilder builder;
+	private final boolean hashEnabled;
+	private final Optional<List<Integer>> hashChannels;
 
-    RowPagesBuilder(Iterable<Type> types)
+	RowPagesBuilder(Iterable<Type> types)
     {
         this(false, Optional.empty(), types);
     }
 
-    RowPagesBuilder(boolean hashEnabled, Optional<List<Integer>> hashChannels, Iterable<Type> types)
+	RowPagesBuilder(boolean hashEnabled, Optional<List<Integer>> hashChannels, Iterable<Type> types)
     {
         this.types = ImmutableList.copyOf(requireNonNull(types, "types is null"));
         this.hashEnabled = hashEnabled;
@@ -69,7 +49,27 @@ public class RowPagesBuilder
         builder = rowPageBuilder(types);
     }
 
-    public RowPagesBuilder addSequencePage(int length, int... initialValues)
+	public static RowPagesBuilder rowPagesBuilder(Type... types)
+    {
+        return rowPagesBuilder(ImmutableList.copyOf(types));
+    }
+
+	public static RowPagesBuilder rowPagesBuilder(Iterable<Type> types)
+    {
+        return new RowPagesBuilder(types);
+    }
+
+	public static RowPagesBuilder rowPagesBuilder(boolean hashEnabled, List<Integer> hashChannels, Type... types)
+    {
+        return rowPagesBuilder(hashEnabled, hashChannels, ImmutableList.copyOf(types));
+    }
+
+	public static RowPagesBuilder rowPagesBuilder(boolean hashEnabled, List<Integer> hashChannels, Iterable<Type> types)
+    {
+        return new RowPagesBuilder(hashEnabled, Optional.of(hashChannels), types);
+    }
+
+	public RowPagesBuilder addSequencePage(int length, int... initialValues)
     {
         checkArgument(length > 0, "length must be at least 1");
         requireNonNull(initialValues, "initialValues is null");
@@ -81,19 +81,19 @@ public class RowPagesBuilder
         return this;
     }
 
-    public RowPagesBuilder addBlocksPage(Block... blocks)
+	public RowPagesBuilder addBlocksPage(Block... blocks)
     {
         pages.add(new Page(blocks));
         return this;
     }
 
-    public RowPagesBuilder row(Object... values)
+	public RowPagesBuilder row(Object... values)
     {
         builder.row(values);
         return this;
     }
 
-    public RowPagesBuilder rows(Object[]... rows)
+	public RowPagesBuilder rows(Object[]... rows)
     {
         for (Object[] row : rows) {
             row(row);
@@ -101,7 +101,7 @@ public class RowPagesBuilder
         return this;
     }
 
-    public RowPagesBuilder pageBreak()
+	public RowPagesBuilder pageBreak()
     {
         if (!builder.isEmpty()) {
             pages.add(builder.build());
@@ -110,7 +110,7 @@ public class RowPagesBuilder
         return this;
     }
 
-    public List<Page> build()
+	public List<Page> build()
     {
         pageBreak();
         List<Page> resultPages = pages.build();
@@ -120,16 +120,14 @@ public class RowPagesBuilder
         return resultPages;
     }
 
-    private List<Page> pagesWithHash(List<Page> pages)
+	private List<Page> pagesWithHash(List<Page> pages)
     {
         ImmutableList.Builder<Page> resultPages = ImmutableList.builder();
-        for (Page page : pages) {
-            resultPages.add(TypeUtils.getHashPage(page, types, hashChannels.get()));
-        }
+        pages.forEach(page -> resultPages.add(TypeUtils.getHashPage(page, types, hashChannels.get())));
         return resultPages.build();
     }
 
-    public List<Type> getTypes()
+	public List<Type> getTypes()
     {
         if (hashEnabled) {
             return ImmutableList.copyOf(Iterables.concat(types, ImmutableList.of(BigintType.BIGINT)));
@@ -137,12 +135,12 @@ public class RowPagesBuilder
         return types;
     }
 
-    public List<Type> getTypesWithoutHash()
+	public List<Type> getTypesWithoutHash()
     {
         return types;
     }
 
-    public Optional<Integer> getHashChannel()
+	public Optional<Integer> getHashChannel()
     {
         if (hashEnabled) {
             return Optional.of(types.size());

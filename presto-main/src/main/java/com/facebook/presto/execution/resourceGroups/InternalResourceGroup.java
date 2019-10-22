@@ -522,10 +522,8 @@ public class InternalResourceGroup
                     queryQueue = new IndexedPriorityQueue<>();
                     break;
                 case QUERY_PRIORITY:
-                    // Sub groups must use query priority to ensure ordering
-                    for (InternalResourceGroup group : subGroups.values()) {
-                        group.setSchedulingPolicy(QUERY_PRIORITY);
-                    }
+				// Sub groups must use query priority to ensure ordering
+				subGroups.values().forEach(group -> group.setSchedulingPolicy(QUERY_PRIORITY));
                     queue = new IndexedPriorityQueue<>();
                     queryQueue = new IndexedPriorityQueue<>();
                     break;
@@ -708,9 +706,7 @@ public class InternalResourceGroup
         synchronized (root) {
             if (subGroups.isEmpty()) {
                 cachedMemoryUsageBytes = 0;
-                for (ManagedQueryExecution query : runningQueries) {
-                    cachedMemoryUsageBytes += query.getUserMemoryReservation().toBytes();
-                }
+                runningQueries.forEach(query -> cachedMemoryUsageBytes += query.getUserMemoryReservation().toBytes());
             }
             else {
                 for (Iterator<InternalResourceGroup> iterator = dirtySubGroups.iterator(); iterator.hasNext(); ) {
@@ -739,9 +735,7 @@ public class InternalResourceGroup
             if (cpuUsageMillis < 0 || cpuUsageMillis == Long.MAX_VALUE) {
                 cpuUsageMillis = 0;
             }
-            for (InternalResourceGroup group : subGroups.values()) {
-                group.internalGenerateCpuQuota(elapsedSeconds);
-            }
+            subGroups.values().forEach(group -> group.internalGenerateCpuQuota(elapsedSeconds));
         }
     }
 

@@ -192,14 +192,15 @@ public class SliceDictionaryBatchStreamReader
     {
         verify(positionCount > 0);
         // only update the block if the array changed to prevent creation of new Block objects, since
-        // the engine currently uses identity equality to test if dictionaries are the same
-        if (currentDictionaryData != dictionaryData) {
-            boolean[] isNullVector = new boolean[positionCount];
-            isNullVector[positionCount - 1] = true;
-            dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
-            dictionaryBlock = new VariableWidthBlock(positionCount, wrappedBuffer(dictionaryData), dictionaryOffsets, Optional.of(isNullVector));
-            currentDictionaryData = dictionaryData;
-        }
+		// the engine currently uses identity equality to test if dictionaries are the same
+		if (currentDictionaryData == dictionaryData) {
+			return;
+		}
+		boolean[] isNullVector = new boolean[positionCount];
+		isNullVector[positionCount - 1] = true;
+		dictionaryOffsets[positionCount] = dictionaryOffsets[positionCount - 1];
+		dictionaryBlock = new VariableWidthBlock(positionCount, wrappedBuffer(dictionaryData), dictionaryOffsets, Optional.of(isNullVector));
+		currentDictionaryData = dictionaryData;
     }
 
     private void openRowGroup(Type type)

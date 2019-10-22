@@ -119,78 +119,27 @@ public class PagesIndex
         estimatedSize = calculateEstimatedSize();
     }
 
-    public interface Factory
-    {
-        PagesIndex newPagesIndex(List<Type> types, int expectedPositions);
-    }
-
-    public static class TestingFactory
-            implements Factory
-    {
-        private static final OrderingCompiler ORDERING_COMPILER = new OrderingCompiler();
-        private static final JoinCompiler JOIN_COMPILER = new JoinCompiler(MetadataManager.createTestMetadataManager(), new FeaturesConfig());
-        private final boolean groupByUsesEqualTo = new FeaturesConfig().isGroupByUsesEqualTo();
-        private final boolean eagerCompact;
-
-        public TestingFactory(boolean eagerCompact)
-        {
-            this.eagerCompact = eagerCompact;
-        }
-
-        @Override
-        public PagesIndex newPagesIndex(List<Type> types, int expectedPositions)
-        {
-            return new PagesIndex(ORDERING_COMPILER, JOIN_COMPILER, MetadataManager.createTestMetadataManager().getFunctionManager(), groupByUsesEqualTo, types, expectedPositions, eagerCompact);
-        }
-    }
-
-    public static class DefaultFactory
-            implements Factory
-    {
-        private final OrderingCompiler orderingCompiler;
-        private final JoinCompiler joinCompiler;
-        private final boolean eagerCompact;
-        private final FunctionManager functionManager;
-        private final boolean groupByUsesEqualTo;
-
-        @Inject
-        public DefaultFactory(OrderingCompiler orderingCompiler, JoinCompiler joinCompiler, FeaturesConfig featuresConfig, Metadata metadata)
-        {
-            this.orderingCompiler = requireNonNull(orderingCompiler, "orderingCompiler is null");
-            this.joinCompiler = requireNonNull(joinCompiler, "joinCompiler is null");
-            this.eagerCompact = requireNonNull(featuresConfig, "featuresConfig is null").isPagesIndexEagerCompactionEnabled();
-            this.functionManager = requireNonNull(metadata, "metadata is null").getFunctionManager();
-            this.groupByUsesEqualTo = featuresConfig.isGroupByUsesEqualTo();
-        }
-
-        @Override
-        public PagesIndex newPagesIndex(List<Type> types, int expectedPositions)
-        {
-            return new PagesIndex(orderingCompiler, joinCompiler, functionManager, groupByUsesEqualTo, types, expectedPositions, eagerCompact);
-        }
-    }
-
     public List<Type> getTypes()
     {
         return types;
     }
 
-    public int getPositionCount()
+	public int getPositionCount()
     {
         return positionCount;
     }
 
-    public LongArrayList getValueAddresses()
+	public LongArrayList getValueAddresses()
     {
         return valueAddresses;
     }
 
-    public ObjectArrayList<Block> getChannel(int channel)
+	public ObjectArrayList<Block> getChannel(int channel)
     {
         return channels[channel];
     }
 
-    public void clear()
+	public void clear()
     {
         for (ObjectArrayList<Block> channel : channels) {
             channel.clear();
@@ -205,7 +154,7 @@ public class PagesIndex
         estimatedSize = calculateEstimatedSize();
     }
 
-    public void addPage(Page page)
+	public void addPage(Page page)
     {
         // ignore empty pages
         if (page.getPositionCount() == 0) {
@@ -231,12 +180,12 @@ public class PagesIndex
         estimatedSize = calculateEstimatedSize();
     }
 
-    public DataSize getEstimatedSize()
+	public DataSize getEstimatedSize()
     {
         return new DataSize(estimatedSize, BYTE);
     }
 
-    public void compact()
+	public void compact()
     {
         if (eagerCompact) {
             return;
@@ -257,7 +206,7 @@ public class PagesIndex
         estimatedSize = calculateEstimatedSize();
     }
 
-    private long calculateEstimatedSize()
+	private long calculateEstimatedSize()
     {
         long elementsSize = (channels.length > 0) ? sizeOf(channels[0].elements()) : 0;
         long channelsArraySize = elementsSize * channels.length;
@@ -265,12 +214,12 @@ public class PagesIndex
         return INSTANCE_SIZE + pagesMemorySize + channelsArraySize + addressesArraySize;
     }
 
-    public Type getType(int channel)
+	public Type getType(int channel)
     {
         return types.get(channel);
     }
 
-    @Override
+	@Override
     public void swap(int a, int b)
     {
         long[] elements = valueAddresses.elements();
@@ -279,7 +228,7 @@ public class PagesIndex
         elements[b] = temp;
     }
 
-    public int buildPage(int position, int[] outputChannels, PageBuilder pageBuilder)
+	public int buildPage(int position, int[] outputChannels, PageBuilder pageBuilder)
     {
         while (!pageBuilder.isFull() && position < positionCount) {
             long pageAddress = valueAddresses.getLong(position);
@@ -301,7 +250,7 @@ public class PagesIndex
         return position;
     }
 
-    public void appendTo(int channel, int position, BlockBuilder output)
+	public void appendTo(int channel, int position, BlockBuilder output)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -311,7 +260,7 @@ public class PagesIndex
         type.appendTo(block, blockPosition, output);
     }
 
-    public boolean isNull(int channel, int position)
+	public boolean isNull(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -320,7 +269,7 @@ public class PagesIndex
         return block.isNull(blockPosition);
     }
 
-    public boolean getBoolean(int channel, int position)
+	public boolean getBoolean(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -329,7 +278,7 @@ public class PagesIndex
         return types.get(channel).getBoolean(block, blockPosition);
     }
 
-    public long getLong(int channel, int position)
+	public long getLong(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -338,7 +287,7 @@ public class PagesIndex
         return types.get(channel).getLong(block, blockPosition);
     }
 
-    public double getDouble(int channel, int position)
+	public double getDouble(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -347,7 +296,7 @@ public class PagesIndex
         return types.get(channel).getDouble(block, blockPosition);
     }
 
-    public Slice getSlice(int channel, int position)
+	public Slice getSlice(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -356,7 +305,7 @@ public class PagesIndex
         return types.get(channel).getSlice(block, blockPosition);
     }
 
-    public Object getObject(int channel, int position)
+	public Object getObject(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -365,7 +314,7 @@ public class PagesIndex
         return types.get(channel).getObject(block, blockPosition);
     }
 
-    public Block getSingleValueBlock(int channel, int position)
+	public Block getSingleValueBlock(int channel, int position)
     {
         long pageAddress = valueAddresses.getLong(position);
 
@@ -374,17 +323,17 @@ public class PagesIndex
         return block.getSingleValueBlock(blockPosition);
     }
 
-    public void sort(List<Integer> sortChannels, List<SortOrder> sortOrders)
+	public void sort(List<Integer> sortChannels, List<SortOrder> sortOrders)
     {
         sort(sortChannels, sortOrders, 0, getPositionCount());
     }
 
-    public void sort(List<Integer> sortChannels, List<SortOrder> sortOrders, int startPosition, int endPosition)
+	public void sort(List<Integer> sortChannels, List<SortOrder> sortOrders, int startPosition, int endPosition)
     {
         createPagesIndexComparator(sortChannels, sortOrders).sort(this, startPosition, endPosition);
     }
 
-    public boolean positionEqualsPosition(PagesHashStrategy partitionHashStrategy, int leftPosition, int rightPosition)
+	public boolean positionEqualsPosition(PagesHashStrategy partitionHashStrategy, int leftPosition, int rightPosition)
     {
         long leftAddress = valueAddresses.getLong(leftPosition);
         int leftPageIndex = decodeSliceIndex(leftAddress);
@@ -397,7 +346,7 @@ public class PagesIndex
         return partitionHashStrategy.positionEqualsPosition(leftPageIndex, leftPagePosition, rightPageIndex, rightPagePosition);
     }
 
-    public boolean positionEqualsRow(PagesHashStrategy pagesHashStrategy, int indexPosition, int rightPosition, Page rightPage)
+	public boolean positionEqualsRow(PagesHashStrategy pagesHashStrategy, int indexPosition, int rightPosition, Page rightPage)
     {
         long pageAddress = valueAddresses.getLong(indexPosition);
         int pageIndex = decodeSliceIndex(pageAddress);
@@ -406,7 +355,7 @@ public class PagesIndex
         return pagesHashStrategy.positionEqualsRow(pageIndex, pagePosition, rightPosition, rightPage);
     }
 
-    private PagesIndexOrdering createPagesIndexComparator(List<Integer> sortChannels, List<SortOrder> sortOrders)
+	private PagesIndexOrdering createPagesIndexComparator(List<Integer> sortChannels, List<SortOrder> sortOrders)
     {
         List<Type> sortTypes = sortChannels.stream()
                 .map(types::get)
@@ -414,17 +363,17 @@ public class PagesIndex
         return orderingCompiler.compilePagesIndexOrdering(sortTypes, sortChannels, sortOrders);
     }
 
-    public Supplier<LookupSource> createLookupSourceSupplier(Session session, List<Integer> joinChannels)
+	public Supplier<LookupSource> createLookupSourceSupplier(Session session, List<Integer> joinChannels)
     {
         return createLookupSourceSupplier(session, joinChannels, OptionalInt.empty(), Optional.empty(), Optional.empty(), ImmutableList.of());
     }
 
-    public PagesHashStrategy createPagesHashStrategy(List<Integer> joinChannels, OptionalInt hashChannel)
+	public PagesHashStrategy createPagesHashStrategy(List<Integer> joinChannels, OptionalInt hashChannel)
     {
         return createPagesHashStrategy(joinChannels, hashChannel, Optional.empty());
     }
 
-    public PagesHashStrategy createPagesHashStrategy(List<Integer> joinChannels, OptionalInt hashChannel, Optional<List<Integer>> outputChannels)
+	public PagesHashStrategy createPagesHashStrategy(List<Integer> joinChannels, OptionalInt hashChannel, Optional<List<Integer>> outputChannels)
     {
         try {
             return joinCompiler.compilePagesHashStrategyFactory(types, joinChannels, outputChannels)
@@ -446,7 +395,7 @@ public class PagesIndex
                 groupByUsesEqualTo);
     }
 
-    public LookupSourceSupplier createLookupSourceSupplier(
+	public LookupSourceSupplier createLookupSourceSupplier(
             Session session,
             List<Integer> joinChannels,
             OptionalInt hashChannel,
@@ -457,7 +406,7 @@ public class PagesIndex
         return createLookupSourceSupplier(session, joinChannels, hashChannel, filterFunctionFactory, sortChannel, searchFunctionFactories, Optional.empty());
     }
 
-    public PagesSpatialIndexSupplier createPagesSpatialIndex(
+	public PagesSpatialIndexSupplier createPagesSpatialIndex(
             Session session,
             int geometryChannel,
             Optional<Integer> radiusChannel,
@@ -473,7 +422,7 @@ public class PagesIndex
         return new PagesSpatialIndexSupplier(session, valueAddresses, types, outputChannels, channels, geometryChannel, radiusChannel, partitionChannel, spatialRelationshipTest, filterFunctionFactory, partitions, localUserMemoryContext);
     }
 
-    public LookupSourceSupplier createLookupSourceSupplier(
+	public LookupSourceSupplier createLookupSourceSupplier(
             Session session,
             List<Integer> joinChannels,
             OptionalInt hashChannel,
@@ -525,14 +474,14 @@ public class PagesIndex
                 searchFunctionFactories);
     }
 
-    private List<Integer> rangeList(int endExclusive)
+	private List<Integer> rangeList(int endExclusive)
     {
         return IntStream.range(0, endExclusive)
                 .boxed()
                 .collect(toImmutableList());
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -542,7 +491,7 @@ public class PagesIndex
                 .toString();
     }
 
-    public Iterator<Page> getPages()
+	public Iterator<Page> getPages()
     {
         return new AbstractIterator<Page>()
         {
@@ -564,7 +513,7 @@ public class PagesIndex
         };
     }
 
-    // TODO: This is similar to what OrderByOperator does, look into reusing this logic in OrderByOperator as well.
+	// TODO: This is similar to what OrderByOperator does, look into reusing this logic in OrderByOperator as well.
     public Iterator<Page> getSortedPages()
     {
         return new AbstractIterator<Page>()
@@ -589,5 +538,56 @@ public class PagesIndex
                 return page;
             }
         };
+    }
+
+	public interface Factory
+    {
+        PagesIndex newPagesIndex(List<Type> types, int expectedPositions);
+    }
+
+    public static class TestingFactory
+            implements Factory
+    {
+        private static final OrderingCompiler ORDERING_COMPILER = new OrderingCompiler();
+        private static final JoinCompiler JOIN_COMPILER = new JoinCompiler(MetadataManager.createTestMetadataManager(), new FeaturesConfig());
+        private final boolean groupByUsesEqualTo = new FeaturesConfig().isGroupByUsesEqualTo();
+        private final boolean eagerCompact;
+
+        public TestingFactory(boolean eagerCompact)
+        {
+            this.eagerCompact = eagerCompact;
+        }
+
+        @Override
+        public PagesIndex newPagesIndex(List<Type> types, int expectedPositions)
+        {
+            return new PagesIndex(ORDERING_COMPILER, JOIN_COMPILER, MetadataManager.createTestMetadataManager().getFunctionManager(), groupByUsesEqualTo, types, expectedPositions, eagerCompact);
+        }
+    }
+
+    public static class DefaultFactory
+            implements Factory
+    {
+        private final OrderingCompiler orderingCompiler;
+        private final JoinCompiler joinCompiler;
+        private final boolean eagerCompact;
+        private final FunctionManager functionManager;
+        private final boolean groupByUsesEqualTo;
+
+        @Inject
+        public DefaultFactory(OrderingCompiler orderingCompiler, JoinCompiler joinCompiler, FeaturesConfig featuresConfig, Metadata metadata)
+        {
+            this.orderingCompiler = requireNonNull(orderingCompiler, "orderingCompiler is null");
+            this.joinCompiler = requireNonNull(joinCompiler, "joinCompiler is null");
+            this.eagerCompact = requireNonNull(featuresConfig, "featuresConfig is null").isPagesIndexEagerCompactionEnabled();
+            this.functionManager = requireNonNull(metadata, "metadata is null").getFunctionManager();
+            this.groupByUsesEqualTo = featuresConfig.isGroupByUsesEqualTo();
+        }
+
+        @Override
+        public PagesIndex newPagesIndex(List<Type> types, int expectedPositions)
+        {
+            return new PagesIndex(orderingCompiler, joinCompiler, functionManager, groupByUsesEqualTo, types, expectedPositions, eagerCompact);
+        }
     }
 }

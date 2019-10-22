@@ -45,9 +45,7 @@ public class ElasticsearchRecordSetProvider
         ElasticsearchSplit elasticsearchSplit = (ElasticsearchSplit) split;
 
         ImmutableList.Builder<ElasticsearchColumnHandle> handles = ImmutableList.builder();
-        for (ColumnHandle handle : columns) {
-            handles.add((ElasticsearchColumnHandle) handle);
-        }
+        columns.forEach(handle -> handles.add((ElasticsearchColumnHandle) handle));
 
         return new ElasticsearchRecordSet(elasticsearchSplit, config, handles.build());
     }

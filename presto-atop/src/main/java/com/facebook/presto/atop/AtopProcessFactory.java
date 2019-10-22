@@ -40,6 +40,8 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AtopProcessFactory
         implements AtopFactory
@@ -56,7 +58,7 @@ public class AtopProcessFactory
         this.executablePath = config.getExecutablePath();
         this.timeZone = config.getTimeZoneId();
         this.readTimeout = config.getReadTimeout();
-        this.executor = newFixedThreadPool(config.getConcurrentReadersPerNode(), daemonThreadsNamed("atop-" + connectorId + "executable-reader-%s"));
+        this.executor = newFixedThreadPool(config.getConcurrentReadersPerNode(), daemonThreadsNamed(new StringBuilder().append("atop-").append(connectorId).append("executable-reader-%s").toString()));
     }
 
     @Override
@@ -88,7 +90,8 @@ public class AtopProcessFactory
     private static final class AtopProcess
             implements Atop
     {
-        private final Process process;
+        private final Logger logger = LoggerFactory.getLogger(AtopProcess.class);
+		private final Process process;
         private final BufferedReader underlyingReader;
         private final LineReader reader;
         private String line;
@@ -107,10 +110,12 @@ public class AtopProcessFactory
                 line = this.reader.readLine();
             }
             catch (IOException e) {
-                line = null;
+                logger.error(e.getMessage(), e);
+				line = null;
             }
             catch (UncheckedTimeoutException e) {
-                throw new PrestoException(ATOP_READ_TIMEOUT, "Timeout reading from atop process");
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(ATOP_READ_TIMEOUT, "Timeout reading from atop process");
             }
         }
 
@@ -131,10 +136,12 @@ public class AtopProcessFactory
                 line = reader.readLine();
             }
             catch (IOException e) {
-                line = null;
+                logger.error(e.getMessage(), e);
+				line = null;
             }
             catch (UncheckedTimeoutException e) {
-                throw new PrestoException(ATOP_READ_TIMEOUT, "Timeout reading from atop process");
+                logger.error(e.getMessage(), e);
+				throw new PrestoException(ATOP_READ_TIMEOUT, "Timeout reading from atop process");
             }
 
             return currentLine;
@@ -147,6 +154,7 @@ public class AtopProcessFactory
                 underlyingReader.close();
             }
             catch (IOException e) {
+				logger.error(e.getMessage(), e);
                 // Ignored
             }
             finally {
@@ -157,7 +165,8 @@ public class AtopProcessFactory
                     }
                 }
                 catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                    logger.error(e.getMessage(), e);
+					Thread.currentThread().interrupt();
                     process.destroyForcibly();
                 }
             }

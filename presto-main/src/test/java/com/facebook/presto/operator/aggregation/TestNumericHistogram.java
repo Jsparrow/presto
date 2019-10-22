@@ -122,12 +122,8 @@ public class TestNumericHistogram
         }
 
         NumericHistogram expected = new NumericHistogram(10, 1000);
-        for (Map.Entry<Double, Double> entry : histogram1.getBuckets().entrySet()) {
-            expected.add(entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<Double, Double> entry : histogram2.getBuckets().entrySet()) {
-            expected.add(entry.getKey(), entry.getValue());
-        }
+        histogram1.getBuckets().entrySet().forEach(entry -> expected.add(entry.getKey(), entry.getValue()));
+        histogram2.getBuckets().entrySet().forEach(entry -> expected.add(entry.getKey(), entry.getValue()));
         expected.compact();
 
         histogram1.mergeWith(histogram2);

@@ -100,20 +100,8 @@ public class TestJdbcQueryBuilder
                 new JdbcColumnHandle("test_id", "col_11", JDBC_CHAR, charType, true));
 
         Connection connection = database.getConnection();
-        try (PreparedStatement preparedStatement = connection.prepareStatement("create table \"test_table\" (" + "" +
-                "\"col_0\" BIGINT, " +
-                "\"col_1\" DOUBLE, " +
-                "\"col_2\" BOOLEAN, " +
-                "\"col_3\" VARCHAR(128), " +
-                "\"col_4\" DATE, " +
-                "\"col_5\" TIME, " +
-                "\"col_6\" TIMESTAMP, " +
-                "\"col_7\" TINYINT, " +
-                "\"col_8\" SMALLINT, " +
-                "\"col_9\" INTEGER, " +
-                "\"col_10\" REAL, " +
-                "\"col_11\" CHAR(128) " +
-                ")")) {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(new StringBuilder().append("create table \"test_table\" (").append("").append("\"col_0\" BIGINT, ").append("\"col_1\" DOUBLE, ").append("\"col_2\" BOOLEAN, ").append("\"col_3\" VARCHAR(128), ").append("\"col_4\" DATE, ").append("\"col_5\" TIME, ")
+				.append("\"col_6\" TIMESTAMP, ").append("\"col_7\" TINYINT, ").append("\"col_8\" SMALLINT, ").append("\"col_9\" INTEGER, ").append("\"col_10\" REAL, ").append("\"col_11\" CHAR(128) ").append(")").toString())) {
             preparedStatement.execute();
             StringBuilder stringBuilder = new StringBuilder("insert into \"test_table\" values ");
             int len = 1000;

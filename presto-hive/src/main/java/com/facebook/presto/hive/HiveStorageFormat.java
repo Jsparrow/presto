@@ -131,11 +131,7 @@ public enum HiveStorageFormat
     public void validateColumns(List<HiveColumnHandle> handles)
     {
         if (this == AVRO) {
-            for (HiveColumnHandle handle : handles) {
-                if (!handle.isPartitionKey()) {
-                    validateAvroType(handle.getHiveType().getTypeInfo(), handle.getName());
-                }
-            }
+            handles.stream().filter(handle -> !handle.isPartitionKey()).forEach(handle -> validateAvroType(handle.getHiveType().getTypeInfo(), handle.getName()));
         }
     }
 

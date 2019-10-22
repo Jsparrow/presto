@@ -31,13 +31,11 @@ import static java.util.Locale.ENGLISH;
 
 public final class MetadataUtil
 {
-    private MetadataUtil() {}
-
     public static final JsonCodec<JmxTableHandle> TABLE_CODEC;
-    public static final JsonCodec<JmxColumnHandle> COLUMN_CODEC;
-    public static final JsonCodec<JmxSplit> SPLIT_CODEC;
+	public static final JsonCodec<JmxColumnHandle> COLUMN_CODEC;
+	public static final JsonCodec<JmxSplit> SPLIT_CODEC;
 
-    static {
+	static {
         ObjectMapperProvider provider = new ObjectMapperProvider();
         provider.setJsonDeserializers(ImmutableMap.of(Type.class, new TestingTypeDeserializer()));
         JsonCodecFactory codecFactory = new JsonCodecFactory(provider);
@@ -46,7 +44,9 @@ public final class MetadataUtil
         SPLIT_CODEC = codecFactory.jsonCodec(JmxSplit.class);
     }
 
-    public static final class TestingTypeDeserializer
+	private MetadataUtil() {}
+
+	public static final class TestingTypeDeserializer
             extends FromStringDeserializer<Type>
     {
         private final Map<String, Type> types = ImmutableMap.<String, Type>builder()

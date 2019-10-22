@@ -84,11 +84,11 @@ public class ThriftTpchService
     public final List<PrestoThriftSchemaTableName> listTables(PrestoThriftNullableSchemaName schemaNameOrNull)
     {
         List<PrestoThriftSchemaTableName> tables = new ArrayList<>();
-        for (String schemaName : getSchemaNames(schemaNameOrNull.getSchemaName())) {
+        getSchemaNames(schemaNameOrNull.getSchemaName()).forEach(schemaName -> {
             for (TpchTable<?> tpchTable : TpchTable.getTables()) {
                 tables.add(new PrestoThriftSchemaTableName(schemaName, tpchTable.getTableName()));
             }
-        }
+        });
         return tables;
     }
 

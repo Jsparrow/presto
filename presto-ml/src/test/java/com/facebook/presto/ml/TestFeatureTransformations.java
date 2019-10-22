@@ -45,11 +45,7 @@ public class TestFeatureTransformations
         // Make sure there is a feature that needs to be normalized
         assertTrue(valueGreaterThanOne);
         transformation.train(dataset);
-        for (FeatureVector vector : transformation.transform(dataset).getDatapoints()) {
-            for (double value : vector.getFeatures().values()) {
-                assertTrue(value <= 1);
-            }
-        }
+        transformation.transform(dataset).getDatapoints().forEach(vector -> vector.getFeatures().values().stream().mapToDouble(Double::valueOf).forEach(value -> assertTrue(value <= 1)));
     }
 
     @Test
@@ -66,11 +62,7 @@ public class TestFeatureTransformations
         Dataset dataset = new Dataset(labels, features, ImmutableMap.of());
         transformation.train(dataset);
         Set<Double> featureValues = new HashSet<>();
-        for (FeatureVector vector : transformation.transform(dataset).getDatapoints()) {
-            for (double value : vector.getFeatures().values()) {
-                featureValues.add(value);
-            }
-        }
+        transformation.transform(dataset).getDatapoints().forEach(vector -> vector.getFeatures().values().stream().mapToDouble(Double::valueOf).forEach(featureValues::add));
         assertEquals(featureValues, ImmutableSet.of(0.0, 0.5, 1.0));
     }
 }

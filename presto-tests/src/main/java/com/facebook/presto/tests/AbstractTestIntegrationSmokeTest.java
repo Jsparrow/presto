@@ -136,12 +136,12 @@ public abstract class AbstractTestIntegrationSmokeTest
         String schema = getSession().getSchema().get();
         String schemaPattern = schema.replaceAll("^.", "_");
 
-        assertQuery("SELECT table_name FROM information_schema.tables WHERE table_schema = '" + schema + "' AND table_name = 'orders'", "VALUES 'orders'");
-        assertQuery("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '" + schema + "' AND table_name LIKE '%rders'", "VALUES 'orders'");
-        assertQuery("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '" + schemaPattern + "' AND table_name LIKE '%rders'", "VALUES 'orders'");
+        assertQuery(new StringBuilder().append("SELECT table_name FROM information_schema.tables WHERE table_schema = '").append(schema).append("' AND table_name = 'orders'").toString(), "VALUES 'orders'");
+        assertQuery(new StringBuilder().append("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '").append(schema).append("' AND table_name LIKE '%rders'").toString(), "VALUES 'orders'");
+        assertQuery(new StringBuilder().append("SELECT table_name FROM information_schema.tables WHERE table_schema LIKE '").append(schemaPattern).append("' AND table_name LIKE '%rders'").toString(), "VALUES 'orders'");
         assertQuery(
-                "SELECT table_name FROM information_schema.tables " +
-                        "WHERE table_catalog = '" + catalog + "' AND table_schema LIKE '" + schema + "' AND table_name LIKE '%orders'",
+                new StringBuilder().append("SELECT table_name FROM information_schema.tables ").append("WHERE table_catalog = '").append(catalog).append("' AND table_schema LIKE '").append(schema).append("' AND table_name LIKE '%orders'")
+						.toString(),
                 "VALUES 'orders'");
         assertQuery("SELECT table_name FROM information_schema.tables WHERE table_catalog = 'something_else'", "SELECT '' WHERE false");
     }
@@ -153,25 +153,17 @@ public abstract class AbstractTestIntegrationSmokeTest
         String schema = getSession().getSchema().get();
         String schemaPattern = schema.replaceAll(".$", "_");
 
-        @Language("SQL") String ordersTableWithColumns = "VALUES " +
-                "('orders', 'orderkey'), " +
-                "('orders', 'custkey'), " +
-                "('orders', 'orderstatus'), " +
-                "('orders', 'totalprice'), " +
-                "('orders', 'orderdate'), " +
-                "('orders', 'orderpriority'), " +
-                "('orders', 'clerk'), " +
-                "('orders', 'shippriority'), " +
-                "('orders', 'comment')";
+        @Language("SQL") String ordersTableWithColumns = new StringBuilder().append("VALUES ").append("('orders', 'orderkey'), ").append("('orders', 'custkey'), ").append("('orders', 'orderstatus'), ").append("('orders', 'totalprice'), ").append("('orders', 'orderdate'), ").append("('orders', 'orderpriority'), ").append("('orders', 'clerk'), ")
+				.append("('orders', 'shippriority'), ").append("('orders', 'comment')").toString();
 
-        assertQuery("SELECT table_schema FROM information_schema.columns WHERE table_schema = '" + schema + "' GROUP BY table_schema", "VALUES '" + schema + "'");
+        assertQuery(new StringBuilder().append("SELECT table_schema FROM information_schema.columns WHERE table_schema = '").append(schema).append("' GROUP BY table_schema").toString(), new StringBuilder().append("VALUES '").append(schema).append("'").toString());
         assertQuery("SELECT table_name FROM information_schema.columns WHERE table_name = 'orders' GROUP BY table_name", "VALUES 'orders'");
-        assertQuery("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = '" + schema + "' AND table_name = 'orders'", ordersTableWithColumns);
-        assertQuery("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = '" + schema + "' AND table_name LIKE '%rders'", ordersTableWithColumns);
-        assertQuery("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema LIKE '" + schemaPattern + "' AND table_name LIKE '_rder_'", ordersTableWithColumns);
+        assertQuery(new StringBuilder().append("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = '").append(schema).append("' AND table_name = 'orders'").toString(), ordersTableWithColumns);
+        assertQuery(new StringBuilder().append("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = '").append(schema).append("' AND table_name LIKE '%rders'").toString(), ordersTableWithColumns);
+        assertQuery(new StringBuilder().append("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema LIKE '").append(schemaPattern).append("' AND table_name LIKE '_rder_'").toString(), ordersTableWithColumns);
         assertQuery(
-                "SELECT table_name, column_name FROM information_schema.columns " +
-                        "WHERE table_catalog = '" + catalog + "' AND table_schema = '" + schema + "' AND table_name LIKE '%orders%'",
+                new StringBuilder().append("SELECT table_name, column_name FROM information_schema.columns ").append("WHERE table_catalog = '").append(catalog).append("' AND table_schema = '").append(schema).append("' AND table_name LIKE '%orders%'")
+						.toString(),
                 ordersTableWithColumns);
         assertQuery("SELECT column_name FROM information_schema.columns WHERE table_catalog = 'something_else'", "SELECT '' WHERE false");
     }

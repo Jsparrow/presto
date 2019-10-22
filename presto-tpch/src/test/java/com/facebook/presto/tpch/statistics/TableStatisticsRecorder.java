@@ -42,10 +42,10 @@ class TableStatisticsRecorder
         for (E row : rows) {
             if (constraint.test(row)) {
                 rowCount++;
-                for (TpchColumn<E> column : columns) {
+                columns.forEach(column -> {
                     Comparable<?> value = getTpchValue(row, column);
                     statisticsRecorders.get(column).record(value);
-                }
+                });
             }
         }
 

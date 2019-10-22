@@ -24,31 +24,21 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 public class SortItem
         extends Node
 {
-    public enum Ordering
-    {
-        ASCENDING, DESCENDING
-    }
-
-    public enum NullOrdering
-    {
-        FIRST, LAST, UNDEFINED
-    }
-
     private final Expression sortKey;
-    private final Ordering ordering;
-    private final NullOrdering nullOrdering;
+	private final Ordering ordering;
+	private final NullOrdering nullOrdering;
 
-    public SortItem(Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
+	public SortItem(Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
     {
         this(Optional.empty(), sortKey, ordering, nullOrdering);
     }
 
-    public SortItem(NodeLocation location, Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
+	public SortItem(NodeLocation location, Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
     {
         this(Optional.of(location), sortKey, ordering, nullOrdering);
     }
 
-    private SortItem(Optional<NodeLocation> location, Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
+	private SortItem(Optional<NodeLocation> location, Expression sortKey, Ordering ordering, NullOrdering nullOrdering)
     {
         super(location);
         this.ordering = ordering;
@@ -56,34 +46,34 @@ public class SortItem
         this.nullOrdering = nullOrdering;
     }
 
-    public Expression getSortKey()
+	public Expression getSortKey()
     {
         return sortKey;
     }
 
-    public Ordering getOrdering()
+	public Ordering getOrdering()
     {
         return ordering;
     }
 
-    public NullOrdering getNullOrdering()
+	public NullOrdering getNullOrdering()
     {
         return nullOrdering;
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitSortItem(this, context);
     }
 
-    @Override
+	@Override
     public List<Node> getChildren()
     {
         return ImmutableList.of(sortKey);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -93,7 +83,7 @@ public class SortItem
                 .toString();
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -109,9 +99,19 @@ public class SortItem
                 (nullOrdering == sortItem.nullOrdering);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(sortKey, ordering, nullOrdering);
+    }
+
+	public enum Ordering
+    {
+        ASCENDING, DESCENDING
+    }
+
+	public enum NullOrdering
+    {
+        FIRST, LAST, UNDEFINED
     }
 }

@@ -64,7 +64,7 @@ public final class Values
     @Override
     public String toString()
     {
-        return "(" + Joiner.on(", ").join(rows) + ")";
+        return new StringBuilder().append("(").append(Joiner.on(", ").join(rows)).append(")").toString();
     }
 
     @Override

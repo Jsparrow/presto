@@ -39,6 +39,8 @@ import static com.fasterxml.jackson.core.JsonToken.START_OBJECT;
 import static com.fasterxml.jackson.core.JsonToken.VALUE_NULL;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Extracts values from JSON
@@ -115,7 +117,9 @@ import static java.util.Objects.requireNonNull;
  */
 public final class JsonExtract
 {
-    private static final int ESTIMATED_JSON_OUTPUT_SIZE = 512;
+    private static final Logger logger = LoggerFactory.getLogger(JsonExtract.class);
+
+	private static final int ESTIMATED_JSON_OUTPUT_SIZE = 512;
 
     private static final JsonFactory JSON_FACTORY = new JsonFactory()
             .disable(CANONICALIZE_FIELD_NAMES);
@@ -136,7 +140,8 @@ public final class JsonExtract
             }
         }
         catch (JsonParseException e) {
-            // Return null if we failed to parse something
+            logger.error(e.getMessage(), e);
+			// Return null if we failed to parse something
             return null;
         }
         catch (IOException e) {
@@ -160,7 +165,19 @@ public final class JsonExtract
         return jsonExtractor;
     }
 
-    public interface JsonExtractor<T>
+    private static int tryParseInt(String fieldName, int defaultValue)
+    {
+        int index = defaultValue;
+        try {
+            index = Integer.parseInt(fieldName);
+        }
+        catch (NumberFormatException ignored) {
+			logger.error(ignored.getMessage(), ignored);
+        }
+        return index;
+    }
+
+	public interface JsonExtractor<T>
     {
         /**
          * Executes the extraction on the existing content of the JsonParser and outputs the match.
@@ -345,16 +362,5 @@ public final class JsonExtract
 
             return 0L;
         }
-    }
-
-    private static int tryParseInt(String fieldName, int defaultValue)
-    {
-        int index = defaultValue;
-        try {
-            index = Integer.parseInt(fieldName);
-        }
-        catch (NumberFormatException ignored) {
-        }
-        return index;
     }
 }

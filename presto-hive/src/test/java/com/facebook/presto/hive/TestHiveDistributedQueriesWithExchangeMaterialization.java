@@ -84,11 +84,9 @@ public class TestHiveDistributedQueriesWithExchangeMaterialization
     public void testExchangeMaterializationWithConstantFolding()
     {
         try {
-            assertUpdate(
-                    // bucket count has to be different from materialized bucket number
-                    "CREATE TABLE test_constant_folding_lineitem_bucketed\n" +
-                            "WITH (bucket_count = 17, bucketed_by = ARRAY['partkey_mod_9', 'partkey', 'suppkey', 'suppkey_varchar']) AS\n" +
-                            "SELECT partkey % 9 partkey_mod_9, partkey, suppkey, CAST(suppkey AS VARCHAR) suppkey_varchar, comment FROM lineitem",
+            // bucket count has to be different from materialized bucket number
+			assertUpdate(
+                    new StringBuilder().append("CREATE TABLE test_constant_folding_lineitem_bucketed\n").append("WITH (bucket_count = 17, bucketed_by = ARRAY['partkey_mod_9', 'partkey', 'suppkey', 'suppkey_varchar']) AS\n").append("SELECT partkey % 9 partkey_mod_9, partkey, suppkey, CAST(suppkey AS VARCHAR) suppkey_varchar, comment FROM lineitem").toString(),
                     "SELECT count(*) from lineitem");
             assertUpdate(
                     "CREATE TABLE test_constant_folding_partsupp_unbucketed AS\n" +
@@ -98,73 +96,33 @@ public class TestHiveDistributedQueriesWithExchangeMaterialization
             // one constant, third position (suppkey BIGINT)
             assertQuery(
                     getSession(),
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n" +
-                            "ON\n" +
-                            "  lineitem.partkey = partsupp.partkey AND\n" +
-                            "  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n" +
-                            "  lineitem.suppkey = partsupp.suppkey AND\n" +
-                            "  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n" +
-                            "WHERE lineitem.suppkey = 42",
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM lineitem JOIN partsupp\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n").append("ON\n").append("  lineitem.partkey = partsupp.partkey AND\n").append("  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n").append("  lineitem.suppkey = partsupp.suppkey AND\n").append("  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n")
+							.append("WHERE lineitem.suppkey = 42").toString(),
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM lineitem JOIN partsupp\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
 
             // one constant, fourth position (suppkey_varchar VARCHAR)
             assertQuery(
                     getSession(),
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n" +
-                            "ON\n" +
-                            "  lineitem.partkey = partsupp.partkey AND\n" +
-                            "  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n" +
-                            "  lineitem.suppkey = partsupp.suppkey AND\n" +
-                            "  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n" +
-                            "WHERE lineitem.suppkey_varchar = '42'",
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM lineitem JOIN partsupp\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n").append("ON\n").append("  lineitem.partkey = partsupp.partkey AND\n").append("  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n").append("  lineitem.suppkey = partsupp.suppkey AND\n").append("  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n")
+							.append("WHERE lineitem.suppkey_varchar = '42'").toString(),
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM lineitem JOIN partsupp\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
 
             // two constants, first and third position (partkey_mod_9 BIGINT, suppkey BIGINT)
             assertQuery(
                     getSession(),
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                    "FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n" +
-                    "ON\n" +
-                    "  lineitem.partkey = partsupp.partkey AND\n" +
-                    "  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n" +
-                    "  lineitem.suppkey = partsupp.suppkey AND\n" +
-                    "  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n" +
-                    "WHERE lineitem.partkey_mod_9 = 7 AND lineitem.suppkey = 42",
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM lineitem JOIN partsupp\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.partkey % 9 = 7 AND lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n").append("ON\n").append("  lineitem.partkey = partsupp.partkey AND\n").append("  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n").append("  lineitem.suppkey = partsupp.suppkey AND\n").append("  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n")
+							.append("WHERE lineitem.partkey_mod_9 = 7 AND lineitem.suppkey = 42").toString(),
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM lineitem JOIN partsupp\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.partkey % 9 = 7 AND lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
 
             // two constants, first and forth position (partkey_mod_9 BIGINT, suppkey_varchar VARCHAR)
             assertQuery(
                     getSession(),
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                    "FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n" +
-                    "ON\n" +
-                    "  lineitem.partkey = partsupp.partkey AND\n" +
-                    "  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n" +
-                    "  lineitem.suppkey = partsupp.suppkey AND\n" +
-                    "  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n" +
-                    "WHERE lineitem.partkey_mod_9 = 7 AND lineitem.suppkey_varchar = '42'",
-                    "SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n" +
-                            "FROM lineitem JOIN partsupp\n" +
-                            "ON lineitem.partkey = partsupp.partkey AND\n" +
-                            "lineitem.suppkey = partsupp.suppkey\n" +
-                            "WHERE lineitem.partkey % 9 = 7 AND lineitem.suppkey = 42",
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM test_constant_folding_lineitem_bucketed lineitem JOIN test_constant_folding_partsupp_unbucketed partsupp\n").append("ON\n").append("  lineitem.partkey = partsupp.partkey AND\n").append("  lineitem.partkey_mod_9 = partsupp.partkey_mod_9 AND\n").append("  lineitem.suppkey = partsupp.suppkey AND\n").append("  lineitem.suppkey_varchar = partsupp.suppkey_varchar\n")
+							.append("WHERE lineitem.partkey_mod_9 = 7 AND lineitem.suppkey_varchar = '42'").toString(),
+                    new StringBuilder().append("SELECT lineitem.partkey, lineitem.suppkey, lineitem.comment lineitem_comment, partsupp.comment partsupp_comment\n").append("FROM lineitem JOIN partsupp\n").append("ON lineitem.partkey = partsupp.partkey AND\n").append("lineitem.suppkey = partsupp.suppkey\n").append("WHERE lineitem.partkey % 9 = 7 AND lineitem.suppkey = 42").toString(),
                     assertRemoteMaterializedExchangesCount(1));
         }
         finally {

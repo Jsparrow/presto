@@ -60,6 +60,6 @@ class NotBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return "(!" + value + ")";
+        return new StringBuilder().append("(!").append(value).append(")").toString();
     }
 }

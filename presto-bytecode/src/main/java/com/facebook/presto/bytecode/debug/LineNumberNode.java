@@ -38,10 +38,11 @@ public class LineNumberNode
     @Override
     public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
     {
-        if (generationContext.updateLineNumber(lineNumber)) {
-            label.accept(visitor, generationContext);
-            visitor.visitLineNumber(lineNumber, label.getLabel());
-        }
+        if (!generationContext.updateLineNumber(lineNumber)) {
+			return;
+		}
+		label.accept(visitor, generationContext);
+		visitor.visitLineNumber(lineNumber, label.getLabel());
     }
 
     public int getLineNumber()

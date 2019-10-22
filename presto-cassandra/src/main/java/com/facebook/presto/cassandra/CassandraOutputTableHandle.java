@@ -85,6 +85,6 @@ public class CassandraOutputTableHandle
     @Override
     public String toString()
     {
-        return "cassandra:" + schemaName + "." + tableName;
+        return new StringBuilder().append("cassandra:").append(schemaName).append(".").append(tableName).toString();
     }
 }

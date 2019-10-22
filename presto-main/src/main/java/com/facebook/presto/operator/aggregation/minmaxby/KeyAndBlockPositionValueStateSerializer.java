@@ -33,24 +33,24 @@ public abstract class KeyAndBlockPositionValueStateSerializer<T extends KeyAndBl
     final Type firstType;
     protected final Type secondType;
 
-    abstract void readFirstField(Block block, int index, T state);
-
-    abstract void writeFirstField(BlockBuilder out, T state);
-
     KeyAndBlockPositionValueStateSerializer(Type firstType, Type secondType)
     {
         this.firstType = requireNonNull(firstType, "firstType is null");
         this.secondType = requireNonNull(secondType, "secondType is null");
     }
 
-    @Override
+	abstract void readFirstField(Block block, int index, T state);
+
+	abstract void writeFirstField(BlockBuilder out, T state);
+
+	@Override
     public Type getSerializedType()
     {
         // Types are: firstNull, secondNull, firstField, secondField
         return RowType.withDefaultFieldNames(ImmutableList.of(BOOLEAN, BOOLEAN, firstType, secondType));
     }
 
-    @Override
+	@Override
     public void serialize(T state, BlockBuilder out)
     {
         BlockBuilder blockBuilder = out.beginBlockEntry();
@@ -73,7 +73,7 @@ public abstract class KeyAndBlockPositionValueStateSerializer<T extends KeyAndBl
         out.closeEntry();
     }
 
-    @Override
+	@Override
     public void deserialize(Block block, int index, T state)
     {
         checkArgument(block instanceof AbstractRowBlock);
@@ -86,9 +86,10 @@ public abstract class KeyAndBlockPositionValueStateSerializer<T extends KeyAndBl
             readFirstField(columnarRow.getField(2), index, state);
         }
 
-        if (!state.isSecondNull()) {
-            state.setSecondPosition(index);
-            state.setSecondBlock(columnarRow.getField(3));
-        }
+        if (state.isSecondNull()) {
+			return;
+		}
+		state.setSecondPosition(index);
+		state.setSecondBlock(columnarRow.getField(3));
     }
 }

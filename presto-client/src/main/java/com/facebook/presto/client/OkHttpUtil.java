@@ -62,16 +62,6 @@ public final class OkHttpUtil
 {
     private OkHttpUtil() {}
 
-    public static class NullCallback
-            implements Callback
-    {
-        @Override
-        public void onFailure(Call call, IOException e) {}
-
-        @Override
-        public void onResponse(Call call, Response response) {}
-    }
-
     public static Interceptor userAgent(String userAgent)
     {
         return chain -> chain.proceed(chain.request().newBuilder()
@@ -79,7 +69,7 @@ public final class OkHttpUtil
                 .build());
     }
 
-    public static Interceptor basicAuth(String user, String password)
+	public static Interceptor basicAuth(String user, String password)
     {
         requireNonNull(user, "user is null");
         requireNonNull(password, "password is null");
@@ -93,7 +83,7 @@ public final class OkHttpUtil
                 .build());
     }
 
-    public static Interceptor tokenAuth(String accessToken)
+	public static Interceptor tokenAuth(String accessToken)
     {
         requireNonNull(accessToken, "accessToken is null");
         checkArgument(CharMatcher.inRange((char) 33, (char) 126).matchesAllOf(accessToken));
@@ -103,7 +93,7 @@ public final class OkHttpUtil
                 .build());
     }
 
-    public static void setupTimeouts(OkHttpClient.Builder clientBuilder, int timeout, TimeUnit unit)
+	public static void setupTimeouts(OkHttpClient.Builder clientBuilder, int timeout, TimeUnit unit)
     {
         clientBuilder
                 .connectTimeout(timeout, unit)
@@ -111,34 +101,34 @@ public final class OkHttpUtil
                 .writeTimeout(timeout, unit);
     }
 
-    public static void setupCookieJar(OkHttpClient.Builder clientBuilder)
+	public static void setupCookieJar(OkHttpClient.Builder clientBuilder)
     {
         clientBuilder.cookieJar(new JavaNetCookieJar(new CookieManager()));
     }
 
-    public static void setupSocksProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> socksProxy)
+	public static void setupSocksProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> socksProxy)
     {
         setupProxy(clientBuilder, socksProxy, SOCKS);
     }
 
-    public static void setupHttpProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> httpProxy)
+	public static void setupHttpProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> httpProxy)
     {
         setupProxy(clientBuilder, httpProxy, HTTP);
     }
 
-    public static void setupProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> proxy, Proxy.Type type)
+	public static void setupProxy(OkHttpClient.Builder clientBuilder, Optional<HostAndPort> proxy, Proxy.Type type)
     {
         proxy.map(OkHttpUtil::toUnresolvedAddress)
                 .map(address -> new Proxy(type, address))
                 .ifPresent(clientBuilder::proxy);
     }
 
-    private static InetSocketAddress toUnresolvedAddress(HostAndPort address)
+	private static InetSocketAddress toUnresolvedAddress(HostAndPort address)
     {
         return InetSocketAddress.createUnresolved(address.getHost(), address.getPort());
     }
 
-    public static void setupSsl(
+	public static void setupSsl(
             OkHttpClient.Builder clientBuilder,
             Optional<String> keyStorePath,
             Optional<String> keyStorePassword,
@@ -203,7 +193,7 @@ public final class OkHttpUtil
         }
     }
 
-    private static void validateCertificates(KeyStore keyStore)
+	private static void validateCertificates(KeyStore keyStore)
             throws GeneralSecurityException
     {
         for (String alias : list(keyStore.aliases())) {
@@ -227,7 +217,7 @@ public final class OkHttpUtil
         }
     }
 
-    private static KeyStore loadTrustStore(File trustStorePath, Optional<String> trustStorePassword)
+	private static KeyStore loadTrustStore(File trustStorePath, Optional<String> trustStorePassword)
             throws IOException, GeneralSecurityException
     {
         KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -252,7 +242,7 @@ public final class OkHttpUtil
         return trustStore;
     }
 
-    public static void setupKerberos(
+	public static void setupKerberos(
             OkHttpClient.Builder clientBuilder,
             String remoteServiceName,
             boolean useCanonicalHostname,
@@ -270,5 +260,15 @@ public final class OkHttpUtil
                 credentialCache);
         clientBuilder.addInterceptor(handler);
         clientBuilder.authenticator(handler);
+    }
+
+	public static class NullCallback
+            implements Callback
+    {
+        @Override
+        public void onFailure(Call call, IOException e) {}
+
+        @Override
+        public void onResponse(Call call, Response response) {}
     }
 }

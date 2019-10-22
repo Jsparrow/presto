@@ -143,7 +143,7 @@ public class TestEntropyAggregation
     {
         final ArrayList<Integer> counts = IntStream
                 .range(start, start + length)
-                .map(c -> Math.abs(c))
+                .map(Math::abs)
                 .boxed()
                 .collect(Collectors.toCollection(ArrayList::new));
         if (counts.stream().anyMatch(c -> c < 0)) {

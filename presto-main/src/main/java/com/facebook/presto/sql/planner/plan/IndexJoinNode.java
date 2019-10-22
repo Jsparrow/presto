@@ -58,7 +58,71 @@ public class IndexJoinNode
         this.indexHashVariable = requireNonNull(indexHashVariable, "indexHashVariable is null");
     }
 
-    public enum Type
+    @JsonProperty
+    public Type getType()
+    {
+        return type;
+    }
+
+	@JsonProperty
+    public PlanNode getProbeSource()
+    {
+        return probeSource;
+    }
+
+	@JsonProperty
+    public PlanNode getIndexSource()
+    {
+        return indexSource;
+    }
+
+	@JsonProperty
+    public List<EquiJoinClause> getCriteria()
+    {
+        return criteria;
+    }
+
+	@JsonProperty
+    public Optional<VariableReferenceExpression> getProbeHashVariable()
+    {
+        return probeHashVariable;
+    }
+
+	@JsonProperty
+    public Optional<VariableReferenceExpression> getIndexHashVariable()
+    {
+        return indexHashVariable;
+    }
+
+	@Override
+    public List<PlanNode> getSources()
+    {
+        return ImmutableList.of(probeSource, indexSource);
+    }
+
+	@Override
+    public List<VariableReferenceExpression> getOutputVariables()
+    {
+        return ImmutableList.<VariableReferenceExpression>builder()
+                .addAll(probeSource.getOutputVariables())
+                .addAll(indexSource.getOutputVariables())
+                .build();
+    }
+
+	@Override
+    public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
+    {
+        return visitor.visitIndexJoin(this, context);
+    }
+
+	@Override
+    public PlanNode replaceChildren(List<PlanNode> newChildren)
+    {
+        checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
+        return new IndexJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), criteria, probeHashVariable, indexHashVariable);
+    }
+
+	public enum Type
     {
         INNER("Inner"),
         SOURCE_OUTER("SourceOuter");
@@ -76,71 +140,7 @@ public class IndexJoinNode
         }
     }
 
-    @JsonProperty
-    public Type getType()
-    {
-        return type;
-    }
-
-    @JsonProperty
-    public PlanNode getProbeSource()
-    {
-        return probeSource;
-    }
-
-    @JsonProperty
-    public PlanNode getIndexSource()
-    {
-        return indexSource;
-    }
-
-    @JsonProperty
-    public List<EquiJoinClause> getCriteria()
-    {
-        return criteria;
-    }
-
-    @JsonProperty
-    public Optional<VariableReferenceExpression> getProbeHashVariable()
-    {
-        return probeHashVariable;
-    }
-
-    @JsonProperty
-    public Optional<VariableReferenceExpression> getIndexHashVariable()
-    {
-        return indexHashVariable;
-    }
-
-    @Override
-    public List<PlanNode> getSources()
-    {
-        return ImmutableList.of(probeSource, indexSource);
-    }
-
-    @Override
-    public List<VariableReferenceExpression> getOutputVariables()
-    {
-        return ImmutableList.<VariableReferenceExpression>builder()
-                .addAll(probeSource.getOutputVariables())
-                .addAll(indexSource.getOutputVariables())
-                .build();
-    }
-
-    @Override
-    public <R, C> R accept(InternalPlanVisitor<R, C> visitor, C context)
-    {
-        return visitor.visitIndexJoin(this, context);
-    }
-
-    @Override
-    public PlanNode replaceChildren(List<PlanNode> newChildren)
-    {
-        checkArgument(newChildren.size() == 2, "expected newChildren to contain 2 nodes");
-        return new IndexJoinNode(getId(), type, newChildren.get(0), newChildren.get(1), criteria, probeHashVariable, indexHashVariable);
-    }
-
-    public static class EquiJoinClause
+	public static class EquiJoinClause
     {
         private final VariableReferenceExpression probe;
         private final VariableReferenceExpression index;

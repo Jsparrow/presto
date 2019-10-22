@@ -65,7 +65,8 @@ public class TestHiveFileFormatBenchmark
             benchmark.write(new CompressionCounter());
         }
         catch (Exception e) {
-            throw new RuntimeException("Failed " + dataSet + " " + codec + " " + format, e);
+            throw new RuntimeException(new StringBuilder().append("Failed ").append(dataSet).append(" ").append(codec).append(" ").append(format)
+					.toString(), e);
         }
         finally {
             benchmark.tearDown();

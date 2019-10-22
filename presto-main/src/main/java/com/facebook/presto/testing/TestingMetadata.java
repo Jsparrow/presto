@@ -71,9 +71,7 @@ public class TestingMetadata
     {
         Set<String> schemaNames = new HashSet<>();
 
-        for (SchemaTableName schemaTableName : tables.keySet()) {
-            schemaNames.add(schemaTableName.getSchemaName());
-        }
+        tables.keySet().forEach(schemaTableName -> schemaNames.add(schemaTableName.getSchemaName()));
 
         return ImmutableList.copyOf(schemaNames);
     }
@@ -134,13 +132,11 @@ public class TestingMetadata
         requireNonNull(prefix, "prefix is null");
 
         ImmutableMap.Builder<SchemaTableName, List<ColumnMetadata>> tableColumns = ImmutableMap.builder();
-        for (SchemaTableName tableName : listTables(session, prefix.getSchemaName())) {
+        listTables(session, prefix.getSchemaName()).forEach(tableName -> {
             ImmutableList.Builder<ColumnMetadata> columns = ImmutableList.builder();
-            for (ColumnMetadata column : tables.get(tableName).getColumns()) {
-                columns.add(new ColumnMetadata(column.getName(), column.getType()));
-            }
+            tables.get(tableName).getColumns().forEach(column -> columns.add(new ColumnMetadata(column.getName(), column.getType())));
             tableColumns.put(tableName, columns.build());
-        }
+        });
         return tableColumns.build();
     }
 
@@ -156,11 +152,7 @@ public class TestingMetadata
     public List<SchemaTableName> listTables(ConnectorSession session, Optional<String> schemaName)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (SchemaTableName tableName : tables.keySet()) {
-            if (schemaName.map(tableName.getSchemaName()::equals).orElse(true)) {
-                builder.add(tableName);
-            }
-        }
+        tables.keySet().stream().filter(tableName -> schemaName.map(tableName.getSchemaName()::equals).orElse(true)).forEach(builder::add);
         return builder.build();
     }
 
@@ -213,11 +205,7 @@ public class TestingMetadata
     public List<SchemaTableName> listViews(ConnectorSession session, Optional<String> schemaName)
     {
         ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
-        for (SchemaTableName viewName : views.keySet()) {
-            if (schemaName.map(viewName.getSchemaName()::equals).orElse(true)) {
-                builder.add(viewName);
-            }
-        }
+        views.keySet().stream().filter(viewName -> schemaName.map(viewName.getSchemaName()::equals).orElse(true)).forEach(builder::add);
         return builder.build();
     }
 
@@ -225,11 +213,7 @@ public class TestingMetadata
     public Map<SchemaTableName, ConnectorViewDefinition> getViews(ConnectorSession session, SchemaTablePrefix prefix)
     {
         ImmutableMap.Builder<SchemaTableName, ConnectorViewDefinition> map = ImmutableMap.builder();
-        for (Map.Entry<SchemaTableName, String> entry : views.entrySet()) {
-            if (prefix.matches(entry.getKey())) {
-                map.put(entry.getKey(), new ConnectorViewDefinition(entry.getKey(), Optional.empty(), entry.getValue()));
-            }
-        }
+        views.entrySet().stream().filter(entry -> prefix.matches(entry.getKey())).forEach(entry -> map.put(entry.getKey(), new ConnectorViewDefinition(entry.getKey(), Optional.empty(), entry.getValue())));
         return map.build();
     }
 

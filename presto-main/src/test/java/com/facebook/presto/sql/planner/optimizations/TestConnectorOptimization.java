@@ -310,9 +310,7 @@ public class TestConnectorOptimization
         public PlanNode visitPlan(PlanNode node, Void context)
         {
             ImmutableList.Builder<PlanNode> children = ImmutableList.builder();
-            for (PlanNode child : node.getSources()) {
-                children.add(child.accept(this, null));
-            }
+            node.getSources().forEach(child -> children.add(child.accept(this, null)));
             return node.replaceChildren(children.build());
         }
     }
@@ -323,22 +321,22 @@ public class TestConnectorOptimization
         @Override
         public PlanNode visitFilter(FilterNode node, Void context)
         {
-            if (node.getSource() instanceof TableScanNode) {
-                TableScanNode tableScanNode = (TableScanNode) node.getSource();
-                TableHandle handle = tableScanNode.getTable();
-                return new TableScanNode(
-                        tableScanNode.getId(),
-                        new TableHandle(
-                                handle.getConnectorId(),
-                                handle.getConnectorHandle(),
-                                handle.getTransaction(),
-                                Optional.of(new TestConnectorTableLayoutHandle(node.getPredicate()))),
-                        tableScanNode.getOutputVariables(),
-                        tableScanNode.getAssignments(),
-                        TupleDomain.all(),
-                        TupleDomain.all());
-            }
-            return node;
+            if (!(node.getSource() instanceof TableScanNode)) {
+				return node;
+			}
+			TableScanNode tableScanNode = (TableScanNode) node.getSource();
+			TableHandle handle = tableScanNode.getTable();
+			return new TableScanNode(
+			        tableScanNode.getId(),
+			        new TableHandle(
+			                handle.getConnectorId(),
+			                handle.getConnectorHandle(),
+			                handle.getTransaction(),
+			                Optional.of(new TestConnectorTableLayoutHandle(node.getPredicate()))),
+			        tableScanNode.getOutputVariables(),
+			        tableScanNode.getAssignments(),
+			        TupleDomain.all(),
+			        TupleDomain.all());
         }
 
         static class TestConnectorTableLayoutHandle
@@ -418,20 +416,6 @@ public class TestConnectorOptimization
         private final Optional<ConnectorTableLayoutHandle> connectorTableLayoutHandle;
         private final String[] columns;
 
-        public static PlanMatchPattern tableScan(String connectorName, RowExpression predicate, String... columnNames)
-        {
-            return node(TableScanNode.class)
-                    .with(new SimpleTableScanMatcher(
-                            new ConnectorId(connectorName),
-                            Optional.ofNullable(predicate).map(TestFilterPushdownVisitor.TestConnectorTableLayoutHandle::new),
-                            columnNames));
-        }
-
-        public static PlanMatchPattern tableScan(String connectorName, String... columnNames)
-        {
-            return tableScan(connectorName, null, columnNames);
-        }
-
         private SimpleTableScanMatcher(
                 ConnectorId connectorId,
                 Optional<ConnectorTableLayoutHandle> connectorTableLayoutHandle,
@@ -442,13 +426,27 @@ public class TestConnectorOptimization
             this.columns = columns;
         }
 
-        @Override
+		public static PlanMatchPattern tableScan(String connectorName, RowExpression predicate, String... columnNames)
+        {
+            return node(TableScanNode.class)
+                    .with(new SimpleTableScanMatcher(
+                            new ConnectorId(connectorName),
+                            Optional.ofNullable(predicate).map(TestFilterPushdownVisitor.TestConnectorTableLayoutHandle::new),
+                            columnNames));
+        }
+
+		public static PlanMatchPattern tableScan(String connectorName, String... columnNames)
+        {
+            return tableScan(connectorName, null, columnNames);
+        }
+
+		@Override
         public boolean shapeMatches(PlanNode node)
         {
             return node instanceof TableScanNode;
         }
 
-        @Override
+		@Override
         public MatchResult detailMatches(PlanNode node, StatsProvider stats, Session session, Metadata metadata, SymbolAliases symbolAliases)
         {
             checkState(shapeMatches(node), "Plan testing framework error: shapeMatches returned false in detailMatches in %s", this.getClass().getName());
@@ -462,7 +460,7 @@ public class TestConnectorOptimization
             return MatchResult.NO_MATCH;
         }
 
-        @Override
+		@Override
         public String toString()
         {
             return toStringHelper(this)

@@ -41,10 +41,13 @@ import static com.google.common.base.Throwables.propagateIfPossible;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class QueryPreprocessor
 {
-    public static final String ENV_PREPROCESSOR = "PRESTO_PREPROCESSOR";
+    private static final Logger logger = LoggerFactory.getLogger(QueryPreprocessor.class);
+	public static final String ENV_PREPROCESSOR = "PRESTO_PREPROCESSOR";
     public static final String ENV_PREPROCESSOR_TIMEOUT = "PRESTO_PREPROCESSOR_TIMEOUT";
     public static final String ENV_PRESTO_CATALOG = "PRESTO_CATALOG";
     public static final String ENV_PRESTO_SCHEMA = "PRESTO_SCHEMA";
@@ -78,14 +81,14 @@ public final class QueryPreprocessor
         SignalHandler oldHandler = Signal.handle(SIGINT, signal -> clientThread.interrupt());
         try {
             if (REAL_TERMINAL) {
-                System.out.print(PREPROCESSING_QUERY_MESSAGE);
+                logger.info(PREPROCESSING_QUERY_MESSAGE);
                 System.out.flush();
             }
             return preprocessQueryInternal(catalog, schema, query, preprocessorCommand, timeout);
         }
         finally {
             if (REAL_TERMINAL) {
-                System.out.print("\r" + Strings.repeat(" ", PREPROCESSING_QUERY_MESSAGE.length()) + "\r");
+                logger.info(new StringBuilder().append("\r").append(Strings.repeat(" ", PREPROCESSING_QUERY_MESSAGE.length())).append("\r").toString());
                 System.out.flush();
             }
             Signal.handle(SIGINT, oldHandler);
@@ -128,6 +131,7 @@ public final class QueryPreprocessor
                             CharStreams.copy(new InputStreamReader(inputStream, UTF_8), builder);
                         }
                         catch (IOException | RuntimeException ignored) {
+							logger.error(ignored.getMessage(), ignored);
                         }
                         return builder.toString();
                     });
@@ -159,7 +163,8 @@ public final class QueryPreprocessor
                 throw e;
             }
             catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                logger.error(e.getMessage(), e);
+				Thread.currentThread().interrupt();
                 throw new QueryPreprocessorException("Interrupted while preprocessing query");
             }
             catch (Throwable e) {
@@ -171,8 +176,7 @@ public final class QueryPreprocessor
                 Optional<String> errorMessage = tryGetFutureValue(readStderr, 100, MILLISECONDS)
                         .flatMap(value -> Optional.ofNullable(emptyToNull(value.trim())));
 
-                throw new QueryPreprocessorException("Query preprocessor exited " + exitCode +
-                        errorMessage.map(message1 -> "\n===\n" + message1 + "\n===").orElse(""));
+                throw new QueryPreprocessorException(new StringBuilder().append("Query preprocessor exited ").append(exitCode).append(errorMessage.map(message1 -> "\n===\n" + message1 + "\n===").orElse("")).toString());
             }
             return result;
         });
@@ -181,7 +185,8 @@ public final class QueryPreprocessor
             return task.get(timeout.toMillis(), MILLISECONDS);
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            logger.error(e.getMessage(), e);
+			Thread.currentThread().interrupt();
             throw new QueryPreprocessorException("Interrupted while preprocessing query");
         }
         catch (ExecutionException e) {
@@ -190,7 +195,8 @@ public final class QueryPreprocessor
             throw new QueryPreprocessorException("Error preprocessing query: " + cause.getMessage(), cause);
         }
         catch (TimeoutException e) {
-            throw new QueryPreprocessorException("Timed out waiting for query preprocessor after " + timeout);
+            logger.error(e.getMessage(), e);
+			throw new QueryPreprocessorException("Timed out waiting for query preprocessor after " + timeout);
         }
         finally {
             Process process = processReference.get();

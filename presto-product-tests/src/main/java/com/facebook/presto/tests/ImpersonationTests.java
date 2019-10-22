@@ -77,7 +77,7 @@ public class ImpersonationTests
 
     private String getTableLocation(String tableName)
     {
-        return warehouseDirectoryPath + '/' + tableName;
+        return new StringBuilder().append(warehouseDirectoryPath).append('/').append(tableName).toString();
     }
 
     private void checkTableOwner(String tableName, String expectedOwner, QueryExecutor executor)

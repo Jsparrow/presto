@@ -93,10 +93,8 @@ public class IndexBuildDriverFactoryProvider
         ImmutableList.Builder<OperatorFactory> operatorFactories = ImmutableList.<OperatorFactory>builder()
                 .addAll(coreOperatorFactories);
 
-        if (dynamicTupleFilterFactory.isPresent()) {
-            // Bind in a dynamic tuple filter if necessary
-            operatorFactories.add(dynamicTupleFilterFactory.get().filterWithTuple(indexKeyTuple));
-        }
+        // Bind in a dynamic tuple filter if necessary
+		dynamicTupleFilterFactory.ifPresent(value -> operatorFactories.add(value.filterWithTuple(indexKeyTuple)));
 
         operatorFactories.add(new PageBufferOperatorFactory(outputOperatorId, planNodeId, pageBuffer));
 

@@ -105,7 +105,7 @@ public class TaskSystemTable
     public RecordCursor cursor(ConnectorTransactionHandle transactionHandle, ConnectorSession session, TupleDomain<Integer> constraint)
     {
         Builder table = InMemoryRecordSet.builder(TASK_TABLE);
-        for (TaskInfo taskInfo : taskManager.getAllTaskInfo()) {
+        taskManager.getAllTaskInfo().forEach(taskInfo -> {
             TaskStats stats = taskInfo.getStats();
             TaskStatus taskStatus = taskInfo.getTaskStatus();
             table.addRow(
@@ -141,7 +141,7 @@ public class TaskSystemTable
                     toTimeStamp(stats.getFirstStartTime()),
                     toTimeStamp(taskInfo.getLastHeartbeat()),
                     toTimeStamp(stats.getEndTime()));
-        }
+        });
         return table.build().cursor();
     }
 

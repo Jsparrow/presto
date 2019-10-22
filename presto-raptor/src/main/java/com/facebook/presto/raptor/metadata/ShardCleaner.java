@@ -332,9 +332,7 @@ public class ShardCleaner
     @Managed
     public void startLocalCleanupImmediately()
     {
-        scheduler.submit(() -> {
-            runLocalCleanupImmediately(getLocalShards());
-        });
+        scheduler.submit(() -> runLocalCleanupImmediately(getLocalShards()));
     }
 
     @VisibleForTesting
@@ -407,16 +405,10 @@ public class ShardCleaner
                 .collect(toSet());
 
         // un-mark previously marked files that are now assigned
-        for (UUID uuid : assigned) {
-            shardsToClean.remove(uuid);
-        }
+		assigned.forEach(shardsToClean::remove);
 
         // mark all files that are not assigned
-        for (UUID uuid : local) {
-            if (!assigned.contains(uuid)) {
-                shardsToClean.putIfAbsent(uuid, ticker.read());
-            }
-        }
+		local.stream().filter(uuid -> !assigned.contains(uuid)).forEach(uuid -> shardsToClean.putIfAbsent(uuid, ticker.read()));
 
         // delete files marked earlier than the clean interval
         long threshold = ticker.read() - localCleanTime.roundTo(NANOSECONDS);
@@ -460,17 +452,14 @@ public class ShardCleaner
             processing.addAll(uuids);
 
             // execute deletes
-            for (UUID uuid : uuids) {
-                runAsync(() -> backupStore.get().deleteShard(uuid), backupExecutor)
-                        .thenAccept(v -> completed.add(uuid))
-                        .whenComplete((v, e) -> {
-                            if (e != null) {
-                                log.error(e, "Error cleaning backup shard: %s", uuid);
-                                backupJobErrors.update(1);
-                                processing.remove(uuid);
-                            }
-                        });
-            }
+			uuids.forEach(uuid -> runAsync(() -> backupStore.get().deleteShard(uuid), backupExecutor).thenAccept(v -> completed.add(uuid))
+					.whenComplete((v, e) -> {
+						if (e != null) {
+							log.error(e, "Error cleaning backup shard: %s", uuid);
+							backupJobErrors.update(1);
+							processing.remove(uuid);
+						}
+					}));
 
             // get the next batch of completed deletes
             int desired = min(100, processing.size());

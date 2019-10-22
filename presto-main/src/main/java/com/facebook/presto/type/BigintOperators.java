@@ -283,7 +283,21 @@ public final class BigintOperators
         return AbstractLongType.hash(value);
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(XX_HASH_64)
+    @SqlType(StandardTypes.BIGINT)
+    public static long xxHash64(@SqlType(StandardTypes.BIGINT) long value)
+    {
+        return XxHash64.hash(value);
+    }
+
+	@ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(StandardTypes.BIGINT) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class BigintDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -317,19 +331,5 @@ public final class BigintOperators
             }
             return notEqual(BIGINT.getLong(left, leftPosition), BIGINT.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(XX_HASH_64)
-    @SqlType(StandardTypes.BIGINT)
-    public static long xxHash64(@SqlType(StandardTypes.BIGINT) long value)
-    {
-        return XxHash64.hash(value);
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(StandardTypes.BIGINT) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

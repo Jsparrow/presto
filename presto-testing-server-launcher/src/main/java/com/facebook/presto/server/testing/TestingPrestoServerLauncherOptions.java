@@ -28,6 +28,33 @@ class TestingPrestoServerLauncherOptions
 {
     private static final Splitter CATALOG_OPTION_SPLITTER = Splitter.on(':').trimResults();
 
+	@Option(name = "--catalog", title = "catalog", description = "Catalog:Connector mapping (can be repeated)")
+    private List<String> catalogOptions = new ArrayList<>();
+
+	@Option(name = "--plugin", title = "plugin", description = "Fully qualified class name of plugin to be registered (can be repeated)")
+    private List<String> pluginClassNames = new ArrayList<>();
+
+	public List<Catalog> getCatalogs()
+    {
+        return catalogOptions.stream().map(catalogOption -> {
+            List<String> parts = ImmutableList.copyOf(CATALOG_OPTION_SPLITTER.split(catalogOption));
+            checkState(parts.size() == 2, "bad format of catalog definition '%s'; should be catalog_name:connector_name", catalogOption);
+            return new Catalog(parts.get(0), parts.get(1));
+        }).collect(toList());
+    }
+
+	public List<String> getPluginClassNames()
+    {
+        return pluginClassNames;
+    }
+
+	public void validate()
+    {
+        checkState(!pluginClassNames.isEmpty(), "some plugins must be defined");
+        checkState(!catalogOptions.isEmpty(), "some catalogs must be defined");
+        getCatalogs();
+    }
+
     public static class Catalog
     {
         private final String catalogName;
@@ -48,32 +75,5 @@ class TestingPrestoServerLauncherOptions
         {
             return connectorName;
         }
-    }
-
-    @Option(name = "--catalog", title = "catalog", description = "Catalog:Connector mapping (can be repeated)")
-    private List<String> catalogOptions = new ArrayList<>();
-
-    @Option(name = "--plugin", title = "plugin", description = "Fully qualified class name of plugin to be registered (can be repeated)")
-    private List<String> pluginClassNames = new ArrayList<>();
-
-    public List<Catalog> getCatalogs()
-    {
-        return catalogOptions.stream().map(catalogOption -> {
-            List<String> parts = ImmutableList.copyOf(CATALOG_OPTION_SPLITTER.split(catalogOption));
-            checkState(parts.size() == 2, "bad format of catalog definition '%s'; should be catalog_name:connector_name", catalogOption);
-            return new Catalog(parts.get(0), parts.get(1));
-        }).collect(toList());
-    }
-
-    public List<String> getPluginClassNames()
-    {
-        return pluginClassNames;
-    }
-
-    public void validate()
-    {
-        checkState(!pluginClassNames.isEmpty(), "some plugins must be defined");
-        checkState(!catalogOptions.isEmpty(), "some catalogs must be defined");
-        getCatalogs();
     }
 }

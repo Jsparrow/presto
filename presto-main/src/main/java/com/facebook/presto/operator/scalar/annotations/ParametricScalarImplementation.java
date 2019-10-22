@@ -336,7 +336,7 @@ public class ParametricScalarImplementation
 
             int numberOfBlockPositionArguments = 0;
             for (ArgumentProperty argumentProperty : argumentProperties) {
-                if (argumentProperty.getArgumentType() == VALUE_TYPE && argumentProperty.getNullConvention().equals(BLOCK_AND_POSITION)) {
+                if (argumentProperty.getArgumentType() == VALUE_TYPE && argumentProperty.getNullConvention() == BLOCK_AND_POSITION) {
                     numberOfBlockPositionArguments++;
                 }
             }
@@ -412,7 +412,19 @@ public class ParametricScalarImplementation
         private final Map<String, Class<?>> specializedTypeParameters;
         private final Class<?> returnNativeContainerType;
 
-        @Override
+        private SpecializedSignature(
+                Signature signature,
+                List<Optional<Class<?>>> argumentNativeContainerTypes,
+                Map<String, Class<?>> specializedTypeParameters,
+                Class<?> returnNativeContainerType)
+        {
+            this.signature = signature;
+            this.argumentNativeContainerTypes = argumentNativeContainerTypes;
+            this.specializedTypeParameters = specializedTypeParameters;
+            this.returnNativeContainerType = returnNativeContainerType;
+        }
+
+		@Override
         public boolean equals(Object o)
         {
             if (this == o) {
@@ -428,22 +440,10 @@ public class ParametricScalarImplementation
                     Objects.equals(returnNativeContainerType, that.returnNativeContainerType);
         }
 
-        @Override
+		@Override
         public int hashCode()
         {
             return Objects.hash(signature, argumentNativeContainerTypes, specializedTypeParameters, returnNativeContainerType);
-        }
-
-        private SpecializedSignature(
-                Signature signature,
-                List<Optional<Class<?>>> argumentNativeContainerTypes,
-                Map<String, Class<?>> specializedTypeParameters,
-                Class<?> returnNativeContainerType)
-        {
-            this.signature = signature;
-            this.argumentNativeContainerTypes = argumentNativeContainerTypes;
-            this.specializedTypeParameters = specializedTypeParameters;
-            this.returnNativeContainerType = returnNativeContainerType;
         }
     }
 
@@ -500,11 +500,9 @@ public class ParametricScalarImplementation
 
             this.specializedTypeParameters = getDeclaredSpecializedTypeParameters(method, typeParameters);
 
-            for (TypeParameter typeParameter : typeParameters) {
-                checkArgument(
-                        typeParameter.value().matches("[A-Z][A-Z0-9]*"),
-                        "Expected type parameter to only contain A-Z and 0-9 (starting with A-Z), but got %s on method [%s]", typeParameter.value(), method);
-            }
+            typeParameters.forEach(typeParameter -> checkArgument(typeParameter.value().matches("[A-Z][A-Z0-9]*"),
+					"Expected type parameter to only contain A-Z and 0-9 (starting with A-Z), but got %s on method [%s]",
+					typeParameter.value(), method));
 
             inferSpecialization(method, actualReturnType, returnType.value());
             parseArguments(method);
@@ -644,14 +642,15 @@ public class ParametricScalarImplementation
 
         private void inferSpecialization(Method method, Class<?> parameterType, String typeParameterName)
         {
-            if (typeParameterNames.contains(typeParameterName) && parameterType != Object.class) {
-                // Infer specialization on this type parameter.
-                // We don't do this for Object because it could match any type.
-                Class<?> specialization = specializedTypeParameters.get(typeParameterName);
-                Class<?> nativeParameterType = Primitives.unwrap(parameterType);
-                checkArgument(specialization == null || specialization.equals(nativeParameterType), "Method [%s] type %s has conflicting specializations %s and %s", method, typeParameterName, specialization, nativeParameterType);
-                specializedTypeParameters.put(typeParameterName, nativeParameterType);
-            }
+            if (!(typeParameterNames.contains(typeParameterName) && parameterType != Object.class)) {
+				return;
+			}
+			// Infer specialization on this type parameter.
+			// We don't do this for Object because it could match any type.
+			Class<?> specialization = specializedTypeParameters.get(typeParameterName);
+			Class<?> nativeParameterType = Primitives.unwrap(parameterType);
+			checkArgument(specialization == null || specialization.equals(nativeParameterType), "Method [%s] type %s has conflicting specializations %s and %s", method, typeParameterName, specialization, nativeParameterType);
+			specializedTypeParameters.put(typeParameterName, nativeParameterType);
         }
 
         // Find matching constructor, if this is an instance method, and populate constructorDependencies

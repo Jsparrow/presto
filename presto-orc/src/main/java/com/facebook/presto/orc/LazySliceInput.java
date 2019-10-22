@@ -76,7 +76,7 @@ final class LazySliceInput
     {
         if (delegate == null) {
             if (position < 0 || position > globalLength) {
-                throw new IndexOutOfBoundsException("Invalid position " + position + " for slice with length " + globalLength);
+                throw new IndexOutOfBoundsException(new StringBuilder().append("Invalid position ").append(position).append(" for slice with length ").append(globalLength).toString());
             }
             initialPosition = toIntExact(position);
             return;

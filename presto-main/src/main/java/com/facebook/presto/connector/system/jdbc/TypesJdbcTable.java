@@ -84,9 +84,7 @@ public class TypesJdbcTable
     public RecordCursor cursor(ConnectorTransactionHandle transactionHandle, ConnectorSession connectorSession, TupleDomain<Integer> constraint)
     {
         Builder table = InMemoryRecordSet.builder(METADATA);
-        for (Type type : typeManager.getTypes()) {
-            addTypeRow(table, type);
-        }
+        typeManager.getTypes().forEach(type -> addTypeRow(table, type));
         addParametricTypeRows(table, typeManager.getParametricTypes());
         return table.build().cursor();
     }
@@ -116,27 +114,24 @@ public class TypesJdbcTable
 
     private static void addParametricTypeRows(Builder builder, Collection<ParametricType> types)
     {
-        for (ParametricType type : types) {
-            String typeName = type.getName();
-            builder.addRow(
-                    typeName,
-                    typeName.equalsIgnoreCase("array") ? Types.ARRAY : Types.JAVA_OBJECT,
-                    null,
-                    null,
-                    null,
-                    null,
-                    DatabaseMetaData.typeNullable,
-                    false,
-                    DatabaseMetaData.typePredNone,
-                    null,
-                    false,
-                    null,
-                    null,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null);
-        }
+        types.stream().map(ParametricType::getName).forEach(typeName -> builder.addRow(
+		        typeName,
+		        "array".equalsIgnoreCase(typeName) ? Types.ARRAY : Types.JAVA_OBJECT,
+		        null,
+		        null,
+		        null,
+		        null,
+		        DatabaseMetaData.typeNullable,
+		        false,
+		        DatabaseMetaData.typePredNone,
+		        null,
+		        false,
+		        null,
+		        null,
+		        0,
+		        0,
+		        null,
+		        null,
+		        null));
     }
 }

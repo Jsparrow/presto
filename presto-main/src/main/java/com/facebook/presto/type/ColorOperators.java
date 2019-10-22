@@ -58,7 +58,14 @@ public final class ColorOperators
         return (int) value;
     }
 
-    @ScalarOperator(IS_DISTINCT_FROM)
+    @ScalarOperator(INDETERMINATE)
+    @SqlType(StandardTypes.BOOLEAN)
+    public static boolean indeterminate(@SqlType(ColorType.NAME) long value, @IsNull boolean isNull)
+    {
+        return isNull;
+    }
+
+	@ScalarOperator(IS_DISTINCT_FROM)
     public static class ColorDistinctFromOperator
     {
         @SqlType(StandardTypes.BOOLEAN)
@@ -92,12 +99,5 @@ public final class ColorOperators
             }
             return notEqual(COLOR.getLong(left, leftPosition), COLOR.getLong(right, rightPosition));
         }
-    }
-
-    @ScalarOperator(INDETERMINATE)
-    @SqlType(StandardTypes.BOOLEAN)
-    public static boolean indeterminate(@SqlType(ColorType.NAME) long value, @IsNull boolean isNull)
-    {
-        return isNull;
     }
 }

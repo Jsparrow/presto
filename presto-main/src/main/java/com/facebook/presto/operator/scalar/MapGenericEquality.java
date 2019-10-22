@@ -24,12 +24,6 @@ public final class MapGenericEquality
 {
     private MapGenericEquality() {}
 
-    public interface EqualityPredicate
-    {
-        Boolean equals(int leftMapIndex, int rightMapIndex)
-                throws Throwable;
-    }
-
     public static Boolean genericEqual(
             Type keyType,
             Block leftBlock,
@@ -70,5 +64,11 @@ public final class MapGenericEquality
             return null;
         }
         return true;
+    }
+
+	public interface EqualityPredicate
+    {
+        Boolean equals(int leftMapIndex, int rightMapIndex)
+                throws Throwable;
     }
 }

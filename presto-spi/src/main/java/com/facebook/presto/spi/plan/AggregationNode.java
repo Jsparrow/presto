@@ -115,7 +115,7 @@ public final class AggregationNode
      */
     public boolean hasDefaultOutput()
     {
-        return hasEmptyGroupingSet() && (step.isOutputPartial() || step.equals(SINGLE));
+        return hasEmptyGroupingSet() && (step.isOutputPartial() || step == SINGLE);
     }
 
     public boolean hasEmptyGroupingSet()
@@ -234,50 +234,14 @@ public final class AggregationNode
         return new GroupingSetDescriptor(groupingKeys, groupingSetCount, globalGroupingSets);
     }
 
-    public static class GroupingSetDescriptor
+    private static void checkArgument(boolean condition, String message)
     {
-        private final List<VariableReferenceExpression> groupingKeys;
-        private final int groupingSetCount;
-        private final Set<Integer> globalGroupingSets;
-
-        @JsonCreator
-        public GroupingSetDescriptor(
-                @JsonProperty("groupingKeys") List<VariableReferenceExpression> groupingKeys,
-                @JsonProperty("groupingSetCount") int groupingSetCount,
-                @JsonProperty("globalGroupingSets") Set<Integer> globalGroupingSets)
-        {
-            requireNonNull(globalGroupingSets, "globalGroupingSets is null");
-            checkArgument(globalGroupingSets.size() <= groupingSetCount, "list of empty global grouping sets must be no larger than grouping set count");
-            requireNonNull(groupingKeys, "groupingKeys is null");
-            if (groupingKeys.isEmpty()) {
-                checkArgument(!globalGroupingSets.isEmpty(), "no grouping keys implies at least one global grouping set, but none provided");
-            }
-
-            this.groupingKeys = unmodifiableList(new ArrayList<>(groupingKeys));
-            this.groupingSetCount = groupingSetCount;
-            this.globalGroupingSets = unmodifiableSet(new LinkedHashSet<>(globalGroupingSets));
-        }
-
-        @JsonProperty
-        public List<VariableReferenceExpression> getGroupingKeys()
-        {
-            return groupingKeys;
-        }
-
-        @JsonProperty
-        public int getGroupingSetCount()
-        {
-            return groupingSetCount;
-        }
-
-        @JsonProperty
-        public Set<Integer> getGlobalGroupingSets()
-        {
-            return globalGroupingSets;
+        if (!condition) {
+            throw new IllegalArgumentException(message);
         }
     }
 
-    public enum Step
+	public enum Step
     {
         PARTIAL(true, true),
         FINAL(false, false),
@@ -321,6 +285,49 @@ public final class AggregationNode
             else {
                 return Step.FINAL;
             }
+        }
+    }
+
+	public static class GroupingSetDescriptor
+    {
+        private final List<VariableReferenceExpression> groupingKeys;
+        private final int groupingSetCount;
+        private final Set<Integer> globalGroupingSets;
+
+        @JsonCreator
+        public GroupingSetDescriptor(
+                @JsonProperty("groupingKeys") List<VariableReferenceExpression> groupingKeys,
+                @JsonProperty("groupingSetCount") int groupingSetCount,
+                @JsonProperty("globalGroupingSets") Set<Integer> globalGroupingSets)
+        {
+            requireNonNull(globalGroupingSets, "globalGroupingSets is null");
+            checkArgument(globalGroupingSets.size() <= groupingSetCount, "list of empty global grouping sets must be no larger than grouping set count");
+            requireNonNull(groupingKeys, "groupingKeys is null");
+            if (groupingKeys.isEmpty()) {
+                checkArgument(!globalGroupingSets.isEmpty(), "no grouping keys implies at least one global grouping set, but none provided");
+            }
+
+            this.groupingKeys = unmodifiableList(new ArrayList<>(groupingKeys));
+            this.groupingSetCount = groupingSetCount;
+            this.globalGroupingSets = unmodifiableSet(new LinkedHashSet<>(globalGroupingSets));
+        }
+
+        @JsonProperty
+        public List<VariableReferenceExpression> getGroupingKeys()
+        {
+            return groupingKeys;
+        }
+
+        @JsonProperty
+        public int getGroupingSetCount()
+        {
+            return groupingSetCount;
+        }
+
+        @JsonProperty
+        public Set<Integer> getGlobalGroupingSets()
+        {
+            return globalGroupingSets;
         }
     }
 
@@ -409,26 +416,14 @@ public final class AggregationNode
         @Override
         public String toString()
         {
-            return "Aggregation{" +
-                    "call=" + call +
-                    ", filter=" + filter +
-                    ", orderingScheme=" + orderingScheme +
-                    ", isDistinct=" + isDistinct +
-                    ", mask=" + mask +
-                    '}';
+            return new StringBuilder().append("Aggregation{").append("call=").append(call).append(", filter=").append(filter).append(", orderingScheme=")
+					.append(orderingScheme).append(", isDistinct=").append(isDistinct).append(", mask=").append(mask).append('}').toString();
         }
 
         @Override
         public int hashCode()
         {
             return Objects.hash(call, filter, orderingScheme, isDistinct, mask);
-        }
-    }
-
-    private static void checkArgument(boolean condition, String message)
-    {
-        if (!condition) {
-            throw new IllegalArgumentException(message);
         }
     }
 }

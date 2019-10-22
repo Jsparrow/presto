@@ -93,7 +93,8 @@ public class VerifierModule
         this.tablePropertyOverrides = requireNonNull(tablePropertyOverrides, "tablePropertyOverrides is null");
     }
 
-    protected final void setup(Binder binder)
+    @Override
+	protected final void setup(Binder binder)
     {
         configBinder(binder).bindConfig(VerifierConfig.class);
         configBinder(binder).bindConfig(QueryConfigurationOverridesConfig.class, ForControl.class, "control");
@@ -147,7 +148,34 @@ public class VerifierModule
         binder.bind(new TypeLiteral<List<Property>>() {}).toInstance(tablePropertyOverrides);
     }
 
-    private static class CustomQueryFilterProvider
+    @Provides
+    @Singleton
+    @ForTransactionManager
+    public static ScheduledExecutorService createTransactionIdleCheckExecutor()
+    {
+        return newSingleThreadScheduledExecutor(daemonThreadsNamed("transaction-idle-check"));
+    }
+
+	@Provides
+    @Singleton
+    @ForTransactionManager
+    public static ExecutorService createTransactionFinishingExecutor()
+    {
+        return newCachedThreadPool(daemonThreadsNamed("transaction-finishing-%s"));
+    }
+
+	@Provides
+    @Singleton
+    public static TransactionManager createTransactionManager(
+            TransactionManagerConfig config,
+            CatalogManager catalogManager,
+            @ForTransactionManager ScheduledExecutorService idleCheckExecutor,
+            @ForTransactionManager ExecutorService finishingExecutor)
+    {
+        return InMemoryTransactionManager.create(config, idleCheckExecutor, catalogManager, finishingExecutor);
+    }
+
+	private static class CustomQueryFilterProvider
             implements Provider<List<Predicate<SourceQuery>>>
     {
         private final List<Class<? extends Predicate<SourceQuery>>> customQueryFilterClasses;
@@ -173,32 +201,5 @@ public class VerifierModule
             }
             return customVerificationFilters.build();
         }
-    }
-
-    @Provides
-    @Singleton
-    @ForTransactionManager
-    public static ScheduledExecutorService createTransactionIdleCheckExecutor()
-    {
-        return newSingleThreadScheduledExecutor(daemonThreadsNamed("transaction-idle-check"));
-    }
-
-    @Provides
-    @Singleton
-    @ForTransactionManager
-    public static ExecutorService createTransactionFinishingExecutor()
-    {
-        return newCachedThreadPool(daemonThreadsNamed("transaction-finishing-%s"));
-    }
-
-    @Provides
-    @Singleton
-    public static TransactionManager createTransactionManager(
-            TransactionManagerConfig config,
-            CatalogManager catalogManager,
-            @ForTransactionManager ScheduledExecutorService idleCheckExecutor,
-            @ForTransactionManager ExecutorService finishingExecutor)
-    {
-        return InMemoryTransactionManager.create(config, idleCheckExecutor, catalogManager, finishingExecutor);
     }
 }

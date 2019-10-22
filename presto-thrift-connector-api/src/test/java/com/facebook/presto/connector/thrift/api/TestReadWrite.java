@@ -64,23 +64,6 @@ public class TestReadWrite
     private static final int HYPER_LOG_LOG_BUCKETS = 128;
     private static final int MAX_HYPER_LOG_LOG_ELEMENTS = 32;
     private static final int MAX_ARRAY_GENERATED_LENGTH = 64;
-    private final AtomicLong singleRowPageSeedGenerator = new AtomicLong(762103512L);
-    private final AtomicLong singleRowRecordSetSeedGenerator = new AtomicLong(762103512L);
-    private final AtomicLong multiRowPageSeedGenerator = new AtomicLong(762103512L);
-    private final AtomicLong multiRowRecordSetSeedGenerator = new AtomicLong(762103512L);
-    private final List<ColumnDefinition> columns = ImmutableList.of(
-            new IntegerColumn(),
-            new BigintColumn(),
-            new DoubleColumn(),
-            new VarcharColumn(createUnboundedVarcharType()),
-            new VarcharColumn(createVarcharType(MAX_VARCHAR_GENERATED_LENGTH / 2)),
-            new BooleanColumn(),
-            new DateColumn(),
-            new TimestampColumn(),
-            new JsonColumn(),
-            new HyperLogLogColumn(),
-            new BigintArrayColumn());
-
     static {
         char[] symbols = new char[2 * 26 + 10];
         int next = 0;
@@ -106,33 +89,50 @@ public class TestReadWrite
         MAX_GENERATED_DATE = toIntExact(MILLISECONDS.toDays(MAX_GENERATED_TIMESTAMP));
     }
 
-    @Test(invocationCount = 20)
+	private final AtomicLong singleRowPageSeedGenerator = new AtomicLong(762103512L);
+	private final AtomicLong singleRowRecordSetSeedGenerator = new AtomicLong(762103512L);
+	private final AtomicLong multiRowPageSeedGenerator = new AtomicLong(762103512L);
+	private final AtomicLong multiRowRecordSetSeedGenerator = new AtomicLong(762103512L);
+	private final List<ColumnDefinition> columns = ImmutableList.of(
+            new IntegerColumn(),
+            new BigintColumn(),
+            new DoubleColumn(),
+            new VarcharColumn(createUnboundedVarcharType()),
+            new VarcharColumn(createVarcharType(MAX_VARCHAR_GENERATED_LENGTH / 2)),
+            new BooleanColumn(),
+            new DateColumn(),
+            new TimestampColumn(),
+            new JsonColumn(),
+            new HyperLogLogColumn(),
+            new BigintArrayColumn());
+
+	@Test(invocationCount = 20)
     public void testSingleRowPageReadWrite()
     {
         testPageReadWrite(new Random(singleRowPageSeedGenerator.incrementAndGet()), 1);
     }
 
-    @Test(invocationCount = 20)
+	@Test(invocationCount = 20)
     public void testSingleRowRecordSetReadWrite()
     {
         testRecordSetReadWrite(new Random(singleRowRecordSetSeedGenerator.incrementAndGet()), 1);
     }
 
-    @Test(invocationCount = 20)
+	@Test(invocationCount = 20)
     public void testMultiRowPageReadWrite()
     {
         Random random = new Random(multiRowPageSeedGenerator.incrementAndGet());
         testPageReadWrite(random, random.nextInt(10000) + 10000);
     }
 
-    @Test(invocationCount = 20)
+	@Test(invocationCount = 20)
     public void testMultiRowRecordSetReadWrite()
     {
         Random random = new Random(multiRowRecordSetSeedGenerator.incrementAndGet());
         testRecordSetReadWrite(random, random.nextInt(10000) + 10000);
     }
 
-    private void testPageReadWrite(Random random, int records)
+	private void testPageReadWrite(Random random, int records)
     {
         testReadWrite(random, records, blocks -> {
             List<PrestoThriftBlock> columnBlocks = new ArrayList<>(columns.size());
@@ -143,7 +143,7 @@ public class TestReadWrite
         });
     }
 
-    private void testRecordSetReadWrite(Random random, int records)
+	private void testRecordSetReadWrite(Random random, int records)
     {
         testReadWrite(random, records, blocks -> {
             List<Type> types = columns.stream().map(ColumnDefinition::getType).collect(toImmutableList());
@@ -152,13 +152,11 @@ public class TestReadWrite
         });
     }
 
-    private void testReadWrite(Random random, int records, Function<List<Block>, PrestoThriftPageResult> convert)
+	private void testReadWrite(Random random, int records, Function<List<Block>, PrestoThriftPageResult> convert)
     {
         // generate columns data
         List<Block> inputBlocks = new ArrayList<>(columns.size());
-        for (ColumnDefinition column : columns) {
-            inputBlocks.add(generateColumn(column, random, records));
-        }
+        columns.forEach(column -> inputBlocks.add(generateColumn(column, random, records)));
 
         // convert column data to thrift ("write step")
         PrestoThriftPageResult batch = convert.apply(inputBlocks);
@@ -176,7 +174,7 @@ public class TestReadWrite
         }
     }
 
-    private static Block generateColumn(ColumnDefinition column, Random random, int records)
+	private static Block generateColumn(ColumnDefinition column, Random random, int records)
     {
         BlockBuilder builder = column.getType().createBlockBuilder(null, records);
         for (int i = 0; i < records; i++) {
@@ -190,7 +188,7 @@ public class TestReadWrite
         return builder.build();
     }
 
-    private static void assertBlock(Block actual, Block expected, ColumnDefinition columnDefinition)
+	private static void assertBlock(Block actual, Block expected, ColumnDefinition columnDefinition)
     {
         assertEquals(actual.getPositionCount(), expected.getPositionCount());
         int positions = actual.getPositionCount();
@@ -201,12 +199,12 @@ public class TestReadWrite
         }
     }
 
-    private static String nextString(Random random)
+	private static String nextString(Random random)
     {
         return nextString(random, MAX_VARCHAR_GENERATED_LENGTH);
     }
 
-    private static String nextString(Random random, int maxLength)
+	private static String nextString(Random random, int maxLength)
     {
         int size = random.nextInt(maxLength);
         char[] result = new char[size];
@@ -216,17 +214,17 @@ public class TestReadWrite
         return new String(result);
     }
 
-    private static long nextTimestamp(Random random)
+	private static long nextTimestamp(Random random)
     {
         return MIN_GENERATED_TIMESTAMP + (long) (random.nextDouble() * (MAX_GENERATED_TIMESTAMP - MIN_GENERATED_TIMESTAMP));
     }
 
-    private static int nextDate(Random random)
+	private static int nextDate(Random random)
     {
         return MIN_GENERATED_DATE + random.nextInt(MAX_GENERATED_DATE - MIN_GENERATED_DATE);
     }
 
-    private static Slice nextHyperLogLog(Random random)
+	private static Slice nextHyperLogLog(Random random)
     {
         HyperLogLog hll = HyperLogLog.newInstance(HYPER_LOG_LOG_BUCKETS);
         int size = random.nextInt(MAX_HYPER_LOG_LOG_ELEMENTS);
@@ -236,7 +234,7 @@ public class TestReadWrite
         return hll.serialize();
     }
 
-    private static void generateBigintArray(Random random, BlockBuilder parentBuilder)
+	private static void generateBigintArray(Random random, BlockBuilder parentBuilder)
     {
         int numberOfElements = random.nextInt(MAX_ARRAY_GENERATED_LENGTH);
         BlockBuilder builder = parentBuilder.beginBlockEntry();
@@ -251,7 +249,7 @@ public class TestReadWrite
         parentBuilder.closeEntry();
     }
 
-    private abstract static class ColumnDefinition
+	private abstract static class ColumnDefinition
     {
         private final Type type;
 

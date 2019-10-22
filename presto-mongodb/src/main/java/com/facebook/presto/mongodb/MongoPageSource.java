@@ -52,11 +52,14 @@ import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.airlift.slice.Slices.wrappedBuffer;
 import static java.util.stream.Collectors.toList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MongoPageSource
         implements ConnectorPageSource
 {
-    private static final ISOChronology UTC_CHRONOLOGY = ISOChronology.getInstanceUTC();
+    private static final Logger logger = LoggerFactory.getLogger(MongoPageSource.class);
+	private static final ISOChronology UTC_CHRONOLOGY = ISOChronology.getInstanceUTC();
     private static final int ROWS_PER_REQUEST = 1024;
 
     private final MongoCursor<Document> cursor;
@@ -170,7 +173,7 @@ public class MongoPageSource
                     type.writeLong(output, ((Date) value).getTime());
                 }
                 else {
-                    throw new PrestoException(GENERIC_INTERNAL_ERROR, "Unhandled type for " + javaType.getSimpleName() + ":" + type.getTypeSignature());
+                    throw new PrestoException(GENERIC_INTERNAL_ERROR, new StringBuilder().append("Unhandled type for ").append(javaType.getSimpleName()).append(":").append(type.getTypeSignature()).toString());
                 }
             }
             else if (javaType == double.class) {
@@ -183,11 +186,12 @@ public class MongoPageSource
                 writeBlock(output, type, value);
             }
             else {
-                throw new PrestoException(GENERIC_INTERNAL_ERROR, "Unhandled type for " + javaType.getSimpleName() + ":" + type.getTypeSignature());
+                throw new PrestoException(GENERIC_INTERNAL_ERROR, new StringBuilder().append("Unhandled type for ").append(javaType.getSimpleName()).append(":").append(type.getTypeSignature()).toString());
             }
         }
         catch (ClassCastException ignore) {
-            // returns null instead of raising exception
+            logger.error(ignore.getMessage(), ignore);
+			// returns null instead of raising exception
             output.appendNull();
         }
     }
@@ -195,7 +199,7 @@ public class MongoPageSource
     private String toVarcharValue(Object value)
     {
         if (value instanceof Collection<?>) {
-            return "[" + String.join(", ", ((Collection<?>) value).stream().map(this::toVarcharValue).collect(toList())) + "]";
+            return new StringBuilder().append("[").append(String.join(", ", ((Collection<?>) value).stream().map(this::toVarcharValue).collect(toList()))).append("]").toString();
         }
         if (value instanceof Document) {
             return ((Document) value).toJson();

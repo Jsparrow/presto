@@ -66,6 +66,7 @@ class InlineIfBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return "(" + condition + " ? " + ifTrue + " : " + ifFalse + ")";
+        return new StringBuilder().append("(").append(condition).append(" ? ").append(ifTrue).append(" : ").append(ifFalse).append(")")
+				.toString();
     }
 }

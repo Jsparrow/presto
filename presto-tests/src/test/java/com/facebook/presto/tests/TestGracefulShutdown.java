@@ -95,9 +95,7 @@ public class TestGracefulShutdown
             Futures.allAsList(queryFutures).get();
 
             List<BasicQueryInfo> queryInfos = queryRunner.getCoordinator().getQueryManager().getQueries();
-            for (BasicQueryInfo info : queryInfos) {
-                assertEquals(info.getState(), FINISHED);
-            }
+            queryInfos.forEach(info -> assertEquals(info.getState(), FINISHED));
 
             TestShutdownAction shutdownAction = (TestShutdownAction) worker.getShutdownAction();
             shutdownAction.waitForShutdownComplete(SHUTDOWN_TIMEOUT_MILLIS);

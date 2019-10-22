@@ -114,10 +114,11 @@ public class MockSplitSource
             }
         }
         int splits = Math.min(Math.min(batchSize, nextBatchMaxSize), totalSplits - splitsProduced);
-        if (splits != 0) {
-            splitsProduced += splits;
-            nextBatchFuture.set(Collections.nCopies(splits, SPLIT));
-        }
+        if (splits == 0) {
+			return;
+		}
+		splitsProduced += splits;
+		nextBatchFuture.set(Collections.nCopies(splits, SPLIT));
     }
 
     @Override
@@ -159,7 +160,14 @@ public class MockSplitSource
         return nextBatchInvocationCount;
     }
 
-    public static class MockConnectorSplit
+    public enum Action
+    {
+        DO_NOTHING,
+        FAIL,
+        FINISH,
+    }
+
+	public static class MockConnectorSplit
             implements ConnectorSplit
     {
         @Override
@@ -179,12 +187,5 @@ public class MockSplitSource
         {
             return "A mock split";
         }
-    }
-
-    public enum Action
-    {
-        DO_NOTHING,
-        FAIL,
-        FINISH,
     }
 }

@@ -249,9 +249,7 @@ public class MultilevelSplitQueue
         checkArgument(split != null, "split is null");
         lock.lock();
         try {
-            for (PriorityQueue<PrioritizedSplitRunner> level : levelWaitingSplits) {
-                level.remove(split);
-            }
+            levelWaitingSplits.forEach(level -> level.remove(split));
         }
         finally {
             lock.unlock();
@@ -262,9 +260,7 @@ public class MultilevelSplitQueue
     {
         lock.lock();
         try {
-            for (PriorityQueue<PrioritizedSplitRunner> level : levelWaitingSplits) {
-                level.removeAll(splits);
-            }
+            levelWaitingSplits.forEach(level -> level.removeAll(splits));
         }
         finally {
             lock.unlock();

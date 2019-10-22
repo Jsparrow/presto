@@ -140,13 +140,13 @@ public class TestInformationSchemaMetadata
                     NullableValue table = bindings.get(new InformationSchemaColumnHandle("table_name"));
                     boolean isValid = true;
                     if (catalog != null) {
-                        isValid = ((Slice) catalog.getValue()).toStringUtf8().equals("test_catalog");
+                        isValid = "test_catalog".equals(((Slice) catalog.getValue()).toStringUtf8());
                     }
                     if (schema != null) {
-                        isValid &= ((Slice) schema.getValue()).toStringUtf8().equals("test_schema");
+                        isValid &= "test_schema".equals(((Slice) schema.getValue()).toStringUtf8());
                     }
                     if (table != null) {
-                        isValid &= ((Slice) table.getValue()).toStringUtf8().equals("test_view");
+                        isValid &= "test_view".equals(((Slice) table.getValue()).toStringUtf8());
                     }
                     return isValid;
                 });

@@ -65,13 +65,10 @@ public final class Checkpoints
             List<ColumnEncoding> columnEncodings,
             Map<StreamId, Stream> streams,
             Map<StreamId, List<RowGroupIndex>> columnIndexes)
-            throws InvalidCheckpointException
     {
         // map from (column, sequence) to available StreamKind
         ImmutableSetMultimap.Builder<ColumnAndSequence, StreamKind> streamKindsBuilder = ImmutableSetMultimap.builder();
-        for (Stream stream : streams.values()) {
-            streamKindsBuilder.put(new ColumnAndSequence(stream.getColumn(), stream.getSequence()), stream.getStreamKind());
-        }
+        streams.values().forEach(stream -> streamKindsBuilder.put(new ColumnAndSequence(stream.getColumn(), stream.getSequence()), stream.getStreamKind()));
         SetMultimap<ColumnAndSequence, StreamKind> streamKinds = streamKindsBuilder.build();
 
         ImmutableMap.Builder<StreamId, StreamCheckpoint> checkpoints = ImmutableMap.builder();
@@ -172,7 +169,7 @@ public final class Checkpoints
                 return new LongStreamV1Checkpoint(0, createInputStreamCheckpoint(0, 0));
             }
         }
-        throw new IllegalArgumentException("Unsupported column type " + columnType + " for dictionary stream " + streamId);
+        throw new IllegalArgumentException(new StringBuilder().append("Unsupported column type ").append(columnType).append(" for dictionary stream ").append(streamId).toString());
     }
 
     private static Map<StreamId, StreamCheckpoint> getBooleanColumnCheckpoints(

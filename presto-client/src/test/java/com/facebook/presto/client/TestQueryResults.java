@@ -26,38 +26,10 @@ public class TestQueryResults
     @Test
     public void testCompatibility()
     {
-        String goldenValue = "{\n" +
-                "  \"id\" : \"20160128_214710_00012_rk68b\",\n" +
-                "  \"infoUri\" : \"http://localhost:54855/query.html?20160128_214710_00012_rk68b\",\n" +
-                "  \"columns\" : [ {\n" +
-                "    \"name\" : \"_col0\",\n" +
-                "    \"type\" : \"bigint\",\n" +
-                "    \"typeSignature\" : {\n" +
-                "      \"rawType\" : \"bigint\",\n" +
-                "      \"typeArguments\" : [ ],\n" +
-                "      \"literalArguments\" : [ ],\n" +
-                "      \"arguments\" : [ ]\n" +
-                "    }\n" +
-                "  } ],\n" +
-                "  \"data\" : [ [ 123 ] ],\n" +
-                "  \"stats\" : {\n" +
-                "    \"state\" : \"FINISHED\",\n" +
-                "    \"queued\" : false,\n" +
-                "    \"scheduled\" : false,\n" +
-                "    \"nodes\" : 0,\n" +
-                "    \"totalSplits\" : 0,\n" +
-                "    \"queuedSplits\" : 0,\n" +
-                "    \"runningSplits\" : 0,\n" +
-                "    \"completedSplits\" : 0,\n" +
-                "    \"cpuTimeMillis\" : 0,\n" +
-                "    \"wallTimeMillis\" : 0,\n" +
-                "    \"queuedTimeMillis\" : 0,\n" +
-                "    \"elapsedTimeMillis\" : 0,\n" +
-                "    \"processedRows\" : 0,\n" +
-                "    \"processedBytes\" : 0,\n" +
-                "    \"peakMemoryBytes\" : 0\n" +
-                "  }\n" +
-                "}";
+        String goldenValue = new StringBuilder().append("{\n").append("  \"id\" : \"20160128_214710_00012_rk68b\",\n").append("  \"infoUri\" : \"http://localhost:54855/query.html?20160128_214710_00012_rk68b\",\n").append("  \"columns\" : [ {\n").append("    \"name\" : \"_col0\",\n").append("    \"type\" : \"bigint\",\n").append("    \"typeSignature\" : {\n").append("      \"rawType\" : \"bigint\",\n")
+				.append("      \"typeArguments\" : [ ],\n").append("      \"literalArguments\" : [ ],\n").append("      \"arguments\" : [ ]\n").append("    }\n").append("  } ],\n").append("  \"data\" : [ [ 123 ] ],\n").append("  \"stats\" : {\n").append("    \"state\" : \"FINISHED\",\n").append("    \"queued\" : false,\n")
+				.append("    \"scheduled\" : false,\n").append("    \"nodes\" : 0,\n").append("    \"totalSplits\" : 0,\n").append("    \"queuedSplits\" : 0,\n").append("    \"runningSplits\" : 0,\n").append("    \"completedSplits\" : 0,\n").append("    \"cpuTimeMillis\" : 0,\n").append("    \"wallTimeMillis\" : 0,\n").append("    \"queuedTimeMillis\" : 0,\n")
+				.append("    \"elapsedTimeMillis\" : 0,\n").append("    \"processedRows\" : 0,\n").append("    \"processedBytes\" : 0,\n").append("    \"peakMemoryBytes\" : 0\n").append("  }\n").append("}").toString();
 
         QueryResults results = QUERY_RESULTS_CODEC.fromJson(goldenValue);
         assertEquals(results.getId(), "20160128_214710_00012_rk68b");

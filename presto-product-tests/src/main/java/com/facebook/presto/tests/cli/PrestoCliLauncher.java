@@ -33,50 +33,49 @@ public class PrestoCliLauncher
 {
     protected static final long TIMEOUT = 300 * 1000; // 30 secs per test
     protected static final String EXIT_COMMAND = "exit";
-    protected final List<String> nationTableInteractiveLines;
-    protected final List<String> nationTableBatchLines;
-    private static final String CLASSPATH = System.getProperty("java.class.path");
-    private static final String JAVA_BIN = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
-
-    @Inject
+	private static final String CLASSPATH = System.getProperty("java.class.path");
+	private static final String JAVA_BIN = new StringBuilder().append(System.getProperty("java.home")).append(File.separator).append("bin").append(File.separator).append("java")
+			.toString();
+	protected final List<String> nationTableInteractiveLines;
+	protected final List<String> nationTableBatchLines;
+	@Inject
     @Named("databases.presto.host")
     protected String serverHost;
-
-    @Inject
+	@Inject
     @Named("databases.presto.server_address")
     protected String serverAddress;
+	protected PrestoCliProcess presto;
 
-    protected PrestoCliProcess presto;
-
-    protected PrestoCliLauncher()
+	protected PrestoCliLauncher()
             throws IOException
     {
         nationTableInteractiveLines = readLines(getResource("com/facebook/presto/tests/cli/interactive_query.results"), UTF_8);
         nationTableBatchLines = readLines(getResource("com/facebook/presto/tests/cli/batch_query.results"), UTF_8);
     }
 
-    protected void stopPresto()
+	protected void stopPresto()
             throws InterruptedException
     {
-        if (presto != null) {
-            presto.getProcessInput().println(EXIT_COMMAND);
-            presto.waitForWithTimeoutAndKill();
-        }
+        if (presto == null) {
+			return;
+		}
+		presto.getProcessInput().println(EXIT_COMMAND);
+		presto.waitForWithTimeoutAndKill();
     }
 
-    protected void launchPrestoCli(String... arguments)
+	protected void launchPrestoCli(String... arguments)
             throws IOException
     {
         launchPrestoCli(asList(arguments));
     }
 
-    protected void launchPrestoCli(List<String> arguments)
+	protected void launchPrestoCli(List<String> arguments)
             throws IOException
     {
         presto = new PrestoCliProcess(getProcessBuilder(arguments).start());
     }
 
-    protected ProcessBuilder getProcessBuilder(List<String> arguments)
+	protected ProcessBuilder getProcessBuilder(List<String> arguments)
     {
         return new ProcessBuilder(ImmutableList.<String>builder()
                 .add(JAVA_BIN, "-cp", CLASSPATH, Presto.class.getCanonicalName())

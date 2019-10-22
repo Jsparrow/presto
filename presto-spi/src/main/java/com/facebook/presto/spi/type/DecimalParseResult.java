@@ -59,9 +59,6 @@ public class DecimalParseResult
     @Override
     public String toString()
     {
-        return "ParseResult{" +
-                "object=" + object +
-                ", type=" + type +
-                '}';
+        return new StringBuilder().append("ParseResult{").append("object=").append(object).append(", type=").append(type).append('}').toString();
     }
 }

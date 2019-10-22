@@ -76,14 +76,8 @@ public class TestKuduIntegrationSmoke
     @Test
     public void testShowCreateTable()
     {
-        queryRunner.execute("CREATE TABLE IF NOT EXISTS test_show_create_table (\n" +
-                "id INT WITH (primary_key=true),\n" +
-                "user_name VARCHAR\n" +
-                ") WITH (\n" +
-                " partition_by_hash_columns = ARRAY['id'],\n" +
-                " partition_by_hash_buckets = 2," +
-                " number_of_replicas = 1\n" +
-                ")");
+        queryRunner.execute(new StringBuilder().append("CREATE TABLE IF NOT EXISTS test_show_create_table (\n").append("id INT WITH (primary_key=true),\n").append("user_name VARCHAR\n").append(") WITH (\n").append(" partition_by_hash_columns = ARRAY['id'],\n").append(" partition_by_hash_buckets = 2,").append(" number_of_replicas = 1\n").append(")")
+				.toString());
 
         MaterializedResult result = queryRunner.execute("SHOW CREATE TABLE test_show_create_table");
         String sqlStatement = (String) result.getOnlyValue();
@@ -95,8 +89,9 @@ public class TestKuduIntegrationSmoke
 
     private void assertTableProperty(String tableProperties, String key, String regexValue)
     {
-        assertTrue(Pattern.compile(key + "\\s*=\\s*" + regexValue + ",?\\s+").matcher(tableProperties).find(),
-                "Not found: " + key + " = " + regexValue + " in " + tableProperties);
+        assertTrue(Pattern.compile(new StringBuilder().append(key).append("\\s*=\\s*").append(regexValue).append(",?\\s+").toString()).matcher(tableProperties).find(),
+                new StringBuilder().append("Not found: ").append(key).append(" = ").append(regexValue).append(" in ").append(tableProperties)
+						.toString());
     }
 
     @AfterClass(alwaysRun = true)

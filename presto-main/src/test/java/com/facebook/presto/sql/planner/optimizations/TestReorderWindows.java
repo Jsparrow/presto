@@ -128,11 +128,7 @@ public class TestReorderWindows
     @Test
     public void testNonMergeableABAReordersToAABAllOptimizers()
     {
-        @Language("SQL") String sql = "select " +
-                "sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, " +
-                "avg(discount) over(PARTITION BY partkey ORDER BY receiptdate ASC NULLS LAST) avg_discount_B, " +
-                "min(tax) over(PARTITION BY suppkey ORDER BY shipdate ASC NULLS LAST) min_tax_A " +
-                "from lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("select ").append("sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, ").append("avg(discount) over(PARTITION BY partkey ORDER BY receiptdate ASC NULLS LAST) avg_discount_B, ").append("min(tax) over(PARTITION BY suppkey ORDER BY shipdate ASC NULLS LAST) min_tax_A ").append("from lineitem").toString();
 
         PlanMatchPattern pattern =
                 anyTree(
@@ -155,11 +151,7 @@ public class TestReorderWindows
     @Test
     public void testNonMergeableABAReordersToAAB()
     {
-        @Language("SQL") String sql = "select " +
-                "sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, " +
-                "avg(discount) over(PARTITION BY partkey ORDER BY receiptdate ASC NULLS LAST) avg_discount_B, " +
-                "min(tax) over(PARTITION BY suppkey ORDER BY shipdate ASC NULLS LAST) min_tax_A " +
-                "from lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("select ").append("sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, ").append("avg(discount) over(PARTITION BY partkey ORDER BY receiptdate ASC NULLS LAST) avg_discount_B, ").append("min(tax) over(PARTITION BY suppkey ORDER BY shipdate ASC NULLS LAST) min_tax_A ").append("from lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -179,10 +171,7 @@ public class TestReorderWindows
     public void testPrefixOfPartitionComesFirstRegardlessOfTheirOrderInSQL()
     {
         assertUnitPlan(
-                "select " +
-                        "avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A, " +
-                        "sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A " +
-                        "from lineitem",
+                new StringBuilder().append("select ").append("avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A, ").append("sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A ").append("from lineitem").toString(),
                 anyTree(
                         window(windowMatcherBuilder -> windowMatcherBuilder
                                         .specification(windowApp)
@@ -193,10 +182,7 @@ public class TestReorderWindows
                                         LINEITEM_TABLESCAN_DOQRST)))); // should be anyTree(LINEITEM_TABLESCAN_DOQRST) but anyTree does not handle zero nodes case correctly
 
         assertUnitPlan(
-                "select " +
-                        "sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, " +
-                        "avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A " +
-                        "from lineitem",
+                new StringBuilder().append("select ").append("sum(quantity) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) sum_quantity_A, ").append("avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A ").append("from lineitem").toString(),
                 anyTree(
                         window(windowMatcherBuilder -> windowMatcherBuilder
                                         .specification(windowApp)
@@ -210,10 +196,8 @@ public class TestReorderWindows
     @Test
     public void testReorderAcrossProjectNodes()
     {
-        @Language("SQL") String sql = "select " +
-                "avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A, " +
-                "lag(quantity, 1) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) lag_quantity_A " + // produces ProjectNode because of constant 1
-                "from lineitem";
+        // produces ProjectNode because of constant 1
+		@Language("SQL") String sql = new StringBuilder().append("select ").append("avg(discount) over(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_A, ").append("lag(quantity, 1) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) lag_quantity_A ").append("from lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -230,16 +214,8 @@ public class TestReorderWindows
     @Test
     public void testNotReorderAcrossNonPartitionFilter()
     {
-        @Language("SQL") String sql = "" +
-                "SELECT " +
-                "  avg_discount_APP, " +
-                "  AVG(quantity) OVER(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_quantity_A " +
-                "FROM ( " +
-                "   SELECT " +
-                "     *, " +
-                "     AVG(discount) OVER(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_APP " +
-                "   FROM lineitem) " +
-                "WHERE receiptdate IS NOT NULL";
+        @Language("SQL") String sql = new StringBuilder().append("").append("SELECT ").append("  avg_discount_APP, ").append("  AVG(quantity) OVER(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_quantity_A ").append("FROM ( ").append("   SELECT ").append("     *, ").append("     AVG(discount) OVER(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_APP ")
+				.append("   FROM lineitem) ").append("WHERE receiptdate IS NOT NULL").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -257,16 +233,8 @@ public class TestReorderWindows
     @Test
     public void testReorderAcrossPartitionFilter()
     {
-        @Language("SQL") String sql = "" +
-                "SELECT " +
-                "  avg_discount_APP, " +
-                "  AVG(quantity) OVER(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_quantity_A " +
-                "FROM ( " +
-                "   SELECT " +
-                "     *, " +
-                "     AVG(discount) OVER(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_APP " +
-                "   FROM lineitem) " +
-                "WHERE suppkey > 0";
+        @Language("SQL") String sql = new StringBuilder().append("").append("SELECT ").append("  avg_discount_APP, ").append("  AVG(quantity) OVER(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_quantity_A ").append("FROM ( ").append("   SELECT ").append("     *, ").append("     AVG(discount) OVER(PARTITION BY suppkey, tax ORDER BY receiptdate ASC NULLS LAST) avg_discount_APP ")
+				.append("   FROM lineitem) ").append("WHERE suppkey > 0").toString();
 
         assertUnitPlan(sql,
                 anyTree(
@@ -294,12 +262,7 @@ public class TestReorderWindows
         // 3rd - windowA
         // 4th - windowD
 
-        @Language("SQL") String sql = "select " +
-                "avg(discount) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_discount_A, " +
-                "sum(tax) over(PARTITION BY quantity ORDER BY receiptdate ASC NULLS LAST) sum_tax_E, " +
-                "avg(quantity) over(PARTITION BY tax ORDER BY receiptdate ASC NULLS LAST) avg_quantity_D, " +
-                "sum(discount) over(PARTITION BY receiptdate ORDER BY suppkey ASC NULLS LAST) sum_discount_C " +
-                "from lineitem";
+        @Language("SQL") String sql = new StringBuilder().append("select ").append("avg(discount) over(PARTITION BY suppkey ORDER BY orderkey ASC NULLS LAST) avg_discount_A, ").append("sum(tax) over(PARTITION BY quantity ORDER BY receiptdate ASC NULLS LAST) sum_tax_E, ").append("avg(quantity) over(PARTITION BY tax ORDER BY receiptdate ASC NULLS LAST) avg_quantity_D, ").append("sum(discount) over(PARTITION BY receiptdate ORDER BY suppkey ASC NULLS LAST) sum_discount_C ").append("from lineitem").toString();
 
         assertUnitPlan(sql,
                 anyTree(

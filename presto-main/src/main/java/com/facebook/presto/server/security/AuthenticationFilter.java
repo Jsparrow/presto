@@ -95,9 +95,7 @@ public class AuthenticationFilter
         // authentication failed
         skipRequestBody(request);
 
-        for (String value : authenticateHeaders) {
-            response.addHeader(WWW_AUTHENTICATE, value);
-        }
+        authenticateHeaders.forEach(value -> response.addHeader(WWW_AUTHENTICATE, value));
 
         if (messages.isEmpty()) {
             messages.add("Unauthorized");

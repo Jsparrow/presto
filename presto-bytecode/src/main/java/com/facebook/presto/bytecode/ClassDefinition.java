@@ -148,14 +148,10 @@ public class ClassDefinition
         }
 
         // visit annotations
-        for (AnnotationDefinition annotation : annotations) {
-            annotation.visitClassAnnotation(visitor);
-        }
+		annotations.forEach(annotation -> annotation.visitClassAnnotation(visitor));
 
         // visit fields
-        for (FieldDefinition field : fields) {
-            field.visit(visitor);
-        }
+		fields.forEach(field -> field.visit(visitor));
 
         // visit clinit method
         if (!isInterface()) {
@@ -163,9 +159,7 @@ public class ClassDefinition
         }
 
         // visit methods
-        for (MethodDefinition method : methods) {
-            method.visit(visitor);
-        }
+		methods.forEach(method -> method.visit(visitor));
 
         // done
         visitor.visitEnd();

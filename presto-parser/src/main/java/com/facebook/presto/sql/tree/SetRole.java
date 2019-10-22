@@ -25,54 +25,49 @@ import static java.util.Objects.requireNonNull;
 public class SetRole
         extends Statement
 {
-    public enum Type
-    {
-        ROLE, ALL, NONE
-    }
-
     private final Type type;
-    private final Optional<Identifier> role;
+	private final Optional<Identifier> role;
 
-    public SetRole(Type type, Optional<Identifier> role)
+	public SetRole(Type type, Optional<Identifier> role)
     {
         this(Optional.empty(), type, role);
     }
 
-    public SetRole(NodeLocation location, Type type, Optional<Identifier> role)
+	public SetRole(NodeLocation location, Type type, Optional<Identifier> role)
     {
         this(Optional.of(location), type, role);
     }
 
-    private SetRole(Optional<NodeLocation> location, Type type, Optional<Identifier> role)
+	private SetRole(Optional<NodeLocation> location, Type type, Optional<Identifier> role)
     {
         super(location);
         this.type = requireNonNull(type, "type is null");
         this.role = requireNonNull(role, "role is null");
     }
 
-    public Type getType()
+	public Type getType()
     {
         return type;
     }
 
-    public Optional<Identifier> getRole()
+	public Optional<Identifier> getRole()
     {
         return role;
     }
 
-    @Override
+	@Override
     public List<? extends Node> getChildren()
     {
         return ImmutableList.of();
     }
 
-    @Override
+	@Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
         return visitor.visitSetRole(this, context);
     }
 
-    @Override
+	@Override
     public boolean equals(Object o)
     {
         if (this == o) {
@@ -86,18 +81,23 @@ public class SetRole
                 Objects.equals(role, setRole.role);
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(type, role);
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
                 .add("type", type)
                 .add("role", role)
                 .toString();
+    }
+
+	public enum Type
+    {
+        ROLE, ALL, NONE
     }
 }

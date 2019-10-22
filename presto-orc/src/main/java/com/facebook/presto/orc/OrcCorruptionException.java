@@ -37,6 +37,6 @@ public class OrcCorruptionException
 
     private static String formatMessage(OrcDataSourceId orcDataSourceId, String messageFormat, Object[] args)
     {
-        return "Malformed ORC file. " + format(messageFormat, args) + " [" + orcDataSourceId + "]";
+        return new StringBuilder().append("Malformed ORC file. ").append(format(messageFormat, args)).append(" [").append(orcDataSourceId).append("]").toString();
     }
 }

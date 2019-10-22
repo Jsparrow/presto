@@ -62,7 +62,7 @@ public final class FastutilSetHelper
             return new ObjectOpenCustomHashSet(set, 0.25f, new ObjectStrategy(functionManager, type));
         }
         else {
-            throw new UnsupportedOperationException("Unsupported native type in set: " + type.getJavaType() + " with type " + type.getTypeSignature());
+            throw new UnsupportedOperationException(new StringBuilder().append("Unsupported native type in set: ").append(type.getJavaType()).append(" with type ").append(type.getTypeSignature()).toString());
         }
     }
 

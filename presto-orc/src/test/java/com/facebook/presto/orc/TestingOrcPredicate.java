@@ -263,12 +263,11 @@ public final class TestingOrcPredicate
                 return false;
             }
 
-            // statistics can be missing for any reason
-            if (columnStatistics.getBooleanStatistics() != null) {
-                if (columnStatistics.getBooleanStatistics().getTrueValueCount() != Iterables.size(filter(chunk, equalTo(Boolean.TRUE)))) {
-                    return false;
-                }
-            }
+            boolean condition = columnStatistics.getBooleanStatistics() != null && columnStatistics.getBooleanStatistics().getTrueValueCount() != Iterables.size(filter(chunk, equalTo(Boolean.TRUE)));
+			// statistics can be missing for any reason
+            if (condition) {
+			    return false;
+			}
             return true;
         }
     }

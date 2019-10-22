@@ -27,39 +27,40 @@ import static java.util.Objects.requireNonNull;
 
 public final class QueryId
 {
-    @JsonCreator
+    private static final Pattern ID_PATTERN = Pattern.compile("[_a-z0-9]+");
+	private final String id;
+
+	public QueryId(String id)
+    {
+        this.id = validateId(id);
+    }
+
+	@JsonCreator
     public static QueryId valueOf(String queryId)
     {
         List<String> ids = parseDottedId(queryId, 1, "queryId");
         return new QueryId(ids.get(0));
     }
 
-    private final String id;
-
-    public QueryId(String id)
-    {
-        this.id = validateId(id);
-    }
-
-    public String getId()
+	public String getId()
     {
         return id;
     }
 
-    @Override
+	@Override
     @JsonValue
     public String toString()
     {
         return id;
     }
 
-    @Override
+	@Override
     public int hashCode()
     {
         return Objects.hash(id);
     }
 
-    @Override
+	@Override
     public boolean equals(Object obj)
     {
         if (this == obj) {
@@ -72,13 +73,7 @@ public final class QueryId
         return Objects.equals(this.id, other.id);
     }
 
-    //
-    // Id helper methods
-    //
-
-    private static final Pattern ID_PATTERN = Pattern.compile("[_a-z0-9]+");
-
-    public static String validateId(String id)
+	public static String validateId(String id)
     {
         requireNonNull(id, "id is null");
         checkArgument(!id.isEmpty(), "id is empty");
@@ -86,7 +81,7 @@ public final class QueryId
         return id;
     }
 
-    public static List<String> parseDottedId(String id, int expectedParts, String name)
+	public static List<String> parseDottedId(String id, int expectedParts, String name)
     {
         requireNonNull(id, "id is null");
         checkArgument(expectedParts > 0, "expectedParts must be at least 1");
@@ -95,17 +90,23 @@ public final class QueryId
         List<String> ids = unmodifiableList(Arrays.asList(id.split("\\.")));
         checkArgument(ids.size() == expectedParts, "Invalid %s %s", name, id);
 
-        for (String part : ids) {
+        ids.forEach(part -> {
             checkArgument(!part.isEmpty(), "Invalid id %s", id);
             checkArgument(ID_PATTERN.matcher(part).matches(), "Invalid id %s", id);
-        }
+        });
         return ids;
     }
 
-    private static void checkArgument(boolean condition, String message, Object... messageArgs)
+	private static void checkArgument(boolean condition, String message, Object... messageArgs)
     {
         if (!condition) {
             throw new IllegalArgumentException(format(message, messageArgs));
         }
     }
+
+    //
+    // Id helper methods
+    //
+
+    
 }

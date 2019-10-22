@@ -40,20 +40,21 @@ import static com.facebook.presto.sql.relational.OriginalExpressionUtils.castToR
 public class TestExpressionRewriteRuleSet
         extends BaseRuleTest
 {
-    private ExpressionRewriteRuleSet zeroRewriter = new ExpressionRewriteRuleSet(
+    private static final FunctionCall nowCall = new FunctionCall(QualifiedName.of("now"), ImmutableList.of());
+
+	private ExpressionRewriteRuleSet zeroRewriter = new ExpressionRewriteRuleSet(
             (expression, context) -> new LongLiteral("0"));
 
-    private static final FunctionCall nowCall = new FunctionCall(QualifiedName.of("now"), ImmutableList.of());
-    private ExpressionRewriteRuleSet functionCallRewriter = new ExpressionRewriteRuleSet((expression, context) -> nowCall);
+	private ExpressionRewriteRuleSet functionCallRewriter = new ExpressionRewriteRuleSet((expression, context) -> nowCall);
 
-    private ExpressionRewriteRuleSet applyRewriter = new ExpressionRewriteRuleSet(
+	private ExpressionRewriteRuleSet applyRewriter = new ExpressionRewriteRuleSet(
             (expression, context) -> new InPredicate(
                     new LongLiteral("0"),
                     new InListExpression(ImmutableList.of(
                             new LongLiteral("1"),
                             new LongLiteral("2")))));
 
-    @Test
+	@Test
     public void testProjectionExpressionRewrite()
     {
         tester().assertThat(zeroRewriter.projectExpressionRewrite())
@@ -64,7 +65,7 @@ public class TestExpressionRewriteRuleSet
                         project(ImmutableMap.of("y", expression("0")), values("x")));
     }
 
-    @Test
+	@Test
     public void testProjectionExpressionNotRewritten()
     {
         tester().assertThat(zeroRewriter.projectExpressionRewrite())
@@ -74,7 +75,7 @@ public class TestExpressionRewriteRuleSet
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testAggregationExpressionRewrite()
     {
         tester().assertThat(new ExpressionRewriteRuleSet((expression, context) -> new SymbolReference("x")).aggregationExpressionRewrite())
@@ -92,7 +93,7 @@ public class TestExpressionRewriteRuleSet
                                 values("x")));
     }
 
-    @Test
+	@Test
     public void testAggregationExpressionNotRewritten()
     {
         // Aggregation expression will only rewrite argument/filter
@@ -119,7 +120,7 @@ public class TestExpressionRewriteRuleSet
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testFilterExpressionRewrite()
     {
         tester().assertThat(zeroRewriter.filterExpressionRewrite())
@@ -128,7 +129,7 @@ public class TestExpressionRewriteRuleSet
                         filter("0", values()));
     }
 
-    @Test
+	@Test
     public void testFilterExpressionNotRewritten()
     {
         tester().assertThat(zeroRewriter.filterExpressionRewrite())
@@ -136,7 +137,7 @@ public class TestExpressionRewriteRuleSet
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testValueExpressionRewrite()
     {
         tester().assertThat(zeroRewriter.valuesExpressionRewrite())
@@ -147,7 +148,7 @@ public class TestExpressionRewriteRuleSet
                         values(ImmutableList.of("a"), ImmutableList.of(ImmutableList.of(new LongLiteral("0")))));
     }
 
-    @Test
+	@Test
     public void testValueExpressionNotRewritten()
     {
         tester().assertThat(zeroRewriter.valuesExpressionRewrite())
@@ -157,7 +158,7 @@ public class TestExpressionRewriteRuleSet
                 .doesNotFire();
     }
 
-    @Test
+	@Test
     public void testApplyExpressionRewrite()
     {
         tester().assertThat(applyRewriter.applyExpressionRewrite())
@@ -180,7 +181,7 @@ public class TestExpressionRewriteRuleSet
                                 values()));
     }
 
-    @Test
+	@Test
     public void testApplyExpressionNotRewritten()
     {
         tester().assertThat(applyRewriter.applyExpressionRewrite())

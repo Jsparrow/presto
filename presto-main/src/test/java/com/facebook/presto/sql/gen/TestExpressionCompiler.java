@@ -101,6 +101,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.IntStream.range;
 import static org.joda.time.DateTimeZone.UTC;
 import static org.testng.Assert.assertTrue;
+import java.util.Collections;
 
 @Test(singleThreaded = true)
 public class TestExpressionCompiler
@@ -312,8 +313,8 @@ public class TestExpressionCompiler
         assertExecute("nullif(cast(null as boolean), true)", BOOLEAN, null);
         for (Boolean left : booleanValues) {
             for (Boolean right : booleanValues) {
-                assertExecute(generateExpression("%s = %s", left, right), BOOLEAN, left == null || right == null ? null : left == right);
-                assertExecute(generateExpression("%s <> %s", left, right), BOOLEAN, left == null || right == null ? null : left != right);
+                assertExecute(generateExpression("%s = %s", left, right), BOOLEAN, left == null || right == null ? null : left.equals(right));
+                assertExecute(generateExpression("%s <> %s", left, right), BOOLEAN, left == null || right == null ? null : !left.equals(right));
 
                 assertExecute(generateExpression("nullif(%s, %s)", left, right), BOOLEAN, nullIf(left, right));
                 assertExecute(generateExpression("%s is distinct from %s", left, right), BOOLEAN, !Objects.equals(left, right));
@@ -371,9 +372,7 @@ public class TestExpressionCompiler
                 assertExecute(generateExpression("%s <= %s", left, right), BOOLEAN, left == null || right == null ? null : (double) left <= right);
 
                 Object expectedNullIf = nullIf(left, right);
-                for (String expression : generateExpression("nullif(%s, CAST(%s as DOUBLE))", left, right)) {
-                    functionAssertions.assertFunction(expression, INTEGER, expectedNullIf);
-                }
+                generateExpression("nullif(%s, CAST(%s as DOUBLE))", left, right).forEach(expression -> functionAssertions.assertFunction(expression, INTEGER, expectedNullIf));
 
                 assertExecute(generateExpression("%s is distinct from %s", left, right), BOOLEAN, !Objects.equals(left == null ? null : left.doubleValue(), right));
 
@@ -1114,11 +1113,11 @@ public class TestExpressionCompiler
             throws Exception
     {
         for (Boolean value : booleanValues) {
-            assertExecute(generateExpression("%s in (true)", value), BOOLEAN, value == null ? null : value == Boolean.TRUE);
-            assertExecute(generateExpression("%s in (null, true)", value), BOOLEAN, value == null ? null : value == Boolean.TRUE ? true : null);
-            assertExecute(generateExpression("%s in (true, null)", value), BOOLEAN, value == null ? null : value == Boolean.TRUE ? true : null);
-            assertExecute(generateExpression("%s in (false)", value), BOOLEAN, value == null ? null : value == Boolean.FALSE);
-            assertExecute(generateExpression("%s in (null, false)", value), BOOLEAN, value == null ? null : value == Boolean.FALSE ? true : null);
+            assertExecute(generateExpression("%s in (true)", value), BOOLEAN, value == null ? null : value.equals(Boolean.TRUE));
+            assertExecute(generateExpression("%s in (null, true)", value), BOOLEAN, value == null ? null : value.equals(Boolean.TRUE) ? true : null);
+            assertExecute(generateExpression("%s in (true, null)", value), BOOLEAN, value == null ? null : value.equals(Boolean.TRUE) ? true : null);
+            assertExecute(generateExpression("%s in (false)", value), BOOLEAN, value == null ? null : value.equals(Boolean.FALSE));
+            assertExecute(generateExpression("%s in (null, false)", value), BOOLEAN, value == null ? null : value.equals(Boolean.FALSE) ? true : null);
             assertExecute(generateExpression("%s in (null)", value), BOOLEAN, null);
         }
 
@@ -1247,25 +1246,25 @@ public class TestExpressionCompiler
         String intValues = range(2000, 7000)
                 .mapToObj(Integer::toString)
                 .collect(joining(", "));
-        assertExecute("bound_integer in (1234, " + intValues + ")", BOOLEAN, true);
-        assertExecute("bound_integer in (" + intValues + ")", BOOLEAN, false);
+        assertExecute(new StringBuilder().append("bound_integer in (1234, ").append(intValues).append(")").toString(), BOOLEAN, true);
+        assertExecute(new StringBuilder().append("bound_integer in (").append(intValues).append(")").toString(), BOOLEAN, false);
 
         String longValues = LongStream.range(Integer.MAX_VALUE + 1L, Integer.MAX_VALUE + 5000L)
                 .mapToObj(Long::toString)
                 .collect(joining(", "));
-        assertExecute("bound_long in (1234, " + longValues + ")", BOOLEAN, true);
-        assertExecute("bound_long in (" + longValues + ")", BOOLEAN, false);
+        assertExecute(new StringBuilder().append("bound_long in (1234, ").append(longValues).append(")").toString(), BOOLEAN, true);
+        assertExecute(new StringBuilder().append("bound_long in (").append(longValues).append(")").toString(), BOOLEAN, false);
 
         String doubleValues = range(2000, 7000).asDoubleStream()
                 .mapToObj(this::formatDoubleToScientificNotation)
                 .collect(joining(", "));
-        assertExecute("bound_double in (12.34E0, " + doubleValues + ")", BOOLEAN, true);
-        assertExecute("bound_double in (" + doubleValues + ")", BOOLEAN, false);
+        assertExecute(new StringBuilder().append("bound_double in (12.34E0, ").append(doubleValues).append(")").toString(), BOOLEAN, true);
+        assertExecute(new StringBuilder().append("bound_double in (").append(doubleValues).append(")").toString(), BOOLEAN, false);
 
         String timestampValues = range(0, 2_000)
                 .mapToObj(i -> format("TIMESTAMP '1970-01-01 01:01:0%s.%s+01:00'", i / 1000, i % 1000))
                 .collect(joining(", "));
-        assertExecute("bound_timestamp_with_timezone in (" + timestampValues + ")", BOOLEAN, true);
+        assertExecute(new StringBuilder().append("bound_timestamp_with_timezone in (").append(timestampValues).append(")").toString(), BOOLEAN, true);
         assertExecute("bound_timestamp_with_timezone in (TIMESTAMP '1970-01-01 01:01:00.0+02:00')", BOOLEAN, false);
 
         Futures.allAsList(futures).get();
@@ -1585,9 +1584,7 @@ public class TestExpressionCompiler
         assertExecute("nullif(ARRAY[CAST(NULL AS BIGINT)], ARRAY[CAST(NULL AS BIGINT)])", new ArrayType(BIGINT), singletonList(null));
 
         // Test coercion in which the CAST function takes ConnectorSession (e.g. MapToMapCast)
-        assertExecute("nullif(" +
-                        "map(array[1], array[smallint '1']), " +
-                        "map(array[1], array[integer '1']))",
+        assertExecute(new StringBuilder().append("nullif(").append("map(array[1], array[smallint '1']), ").append("map(array[1], array[integer '1']))").toString(),
                 mapType(INTEGER, SMALLINT),
                 null);
 
@@ -1782,7 +1779,7 @@ public class TestExpressionCompiler
     private static List<String> formatExpression(String expressionPattern, Object value, String type)
     {
         return formatExpression(expressionPattern,
-                Arrays.asList(value),
+                Collections.singletonList(value),
                 ImmutableList.of(type));
     }
 
@@ -1812,29 +1809,27 @@ public class TestExpressionCompiler
             Object value = values.get(i);
             String type = types.get(i);
             if (value != null) {
-                if (type.equals("varchar")) {
-                    value = "'" + value + "'";
+                if ("varchar".equals(type)) {
+                    value = new StringBuilder().append("'").append(value).append("'").toString();
                 }
-                else if (type.equals("bigint")) {
-                    value = "CAST( " + value + " AS BIGINT)";
+                else if ("bigint".equals(type)) {
+                    value = new StringBuilder().append("CAST( ").append(value).append(" AS BIGINT)").toString();
                 }
-                else if (type.equals("double")) {
-                    value = "CAST( " + value + " AS DOUBLE)";
+                else if ("double".equals(type)) {
+                    value = new StringBuilder().append("CAST( ").append(value).append(" AS DOUBLE)").toString();
                 }
                 unrolledValues.add(ImmutableSet.of(String.valueOf(value)));
             }
             else {
                 // todo enable when null output type is supported
                 // unrolledValues.add(ImmutableSet.of("null", "cast(null as " + type + ")"));
-                unrolledValues.add(ImmutableSet.of("cast(null as " + type + ")"));
+                unrolledValues.add(ImmutableSet.of(new StringBuilder().append("cast(null as ").append(type).append(")").toString()));
             }
         }
 
         ImmutableList.Builder<String> expressions = ImmutableList.builder();
         Set<List<String>> valueLists = Sets.cartesianProduct(unrolledValues);
-        for (List<String> valueList : valueLists) {
-            expressions.add(format(expressionPattern, valueList.toArray(new Object[valueList.size()])));
-        }
+        valueLists.forEach(valueList -> expressions.add(format(expressionPattern, valueList.toArray(new Object[valueList.size()]))));
         return expressions.build();
     }
 
@@ -1874,9 +1869,7 @@ public class TestExpressionCompiler
     {
         Type type = getDecimalType(decimal);
         SqlDecimal value = decimal == null ? null : new SqlDecimal(decimal.unscaledValue(), decimal.precision(), decimal.scale());
-        for (String expression : expressions) {
-            assertExecute(expression, type, value);
-        }
+        expressions.forEach(expression -> assertExecute(expression, type, value));
     }
 
     private static Type getDecimalType(BigDecimal decimal)
@@ -1887,7 +1880,17 @@ public class TestExpressionCompiler
         return createDecimalType(decimal.precision(), decimal.scale());
     }
 
-    private static class AssertExecuteTask
+    private void assertFilterWithNoInputColumns(String filter, boolean expected)
+    {
+        addCallable(new AssertFilterTask(functionAssertions, filter, expected, true));
+    }
+
+	private void assertFilter(String filter, boolean expected)
+    {
+        addCallable(new AssertFilterTask(functionAssertions, filter, expected, false));
+    }
+
+	private static class AssertExecuteTask
             implements Runnable
     {
         private final FunctionAssertions functionAssertions;
@@ -1913,16 +1916,6 @@ public class TestExpressionCompiler
                 throw new RuntimeException("Error processing " + expression, e);
             }
         }
-    }
-
-    private void assertFilterWithNoInputColumns(String filter, boolean expected)
-    {
-        addCallable(new AssertFilterTask(functionAssertions, filter, expected, true));
-    }
-
-    private void assertFilter(String filter, boolean expected)
-    {
-        addCallable(new AssertFilterTask(functionAssertions, filter, expected, false));
     }
 
     private static class AssertFilterTask

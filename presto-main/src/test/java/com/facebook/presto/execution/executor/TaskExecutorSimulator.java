@@ -55,11 +55,28 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TaskExecutorSimulator
         implements Closeable
 {
-    public static void main(String[] args)
+    private static final Logger logger = LoggerFactory.getLogger(TaskExecutorSimulator.class);
+	private final ListeningExecutorService submissionExecutor = listeningDecorator(newCachedThreadPool(threadsNamed(getClass().getSimpleName() + "-%s")));
+	private final ScheduledExecutorService overallStatusPrintExecutor = newSingleThreadScheduledExecutor();
+	private final ScheduledExecutorService runningSplitsPrintExecutor = newSingleThreadScheduledExecutor();
+	private final ScheduledExecutorService wakeupExecutor = newScheduledThreadPool(32);
+	private final TaskExecutor taskExecutor;
+	private final MultilevelSplitQueue splitQueue;
+
+	private TaskExecutorSimulator()
+    {
+        splitQueue = new MultilevelSplitQueue(2);
+        taskExecutor = new TaskExecutor(36, 72, 3, 8, splitQueue, Ticker.systemTicker());
+        taskExecutor.start();
+    }
+
+	public static void main(String[] args)
             throws Exception
     {
         try (TaskExecutorSimulator simulator = new TaskExecutorSimulator()) {
@@ -67,22 +84,7 @@ public class TaskExecutorSimulator
         }
     }
 
-    private final ListeningExecutorService submissionExecutor = listeningDecorator(newCachedThreadPool(threadsNamed(getClass().getSimpleName() + "-%s")));
-    private final ScheduledExecutorService overallStatusPrintExecutor = newSingleThreadScheduledExecutor();
-    private final ScheduledExecutorService runningSplitsPrintExecutor = newSingleThreadScheduledExecutor();
-    private final ScheduledExecutorService wakeupExecutor = newScheduledThreadPool(32);
-
-    private final TaskExecutor taskExecutor;
-    private final MultilevelSplitQueue splitQueue;
-
-    private TaskExecutorSimulator()
-    {
-        splitQueue = new MultilevelSplitQueue(2);
-        taskExecutor = new TaskExecutor(36, 72, 3, 8, splitQueue, Ticker.systemTicker());
-        taskExecutor.start();
-    }
-
-    @Override
+	@Override
     public void close()
     {
         submissionExecutor.shutdownNow();
@@ -92,7 +94,7 @@ public class TaskExecutorSimulator
         taskExecutor.stop();
     }
 
-    public void run()
+	public void run()
             throws Exception
     {
         long start = System.nanoTime();
@@ -106,20 +108,20 @@ public class TaskExecutorSimulator
         // runExperimentStarveSlowSplits(controller);
         runExperimentWithinLevelFairness(controller);
 
-        System.out.println("Stopped scheduling new tasks. Ending simulation..");
+        logger.info("Stopped scheduling new tasks. Ending simulation..");
         controller.stop();
         close();
 
         SECONDS.sleep(5);
 
         System.out.println();
-        System.out.println("Simulation finished at " + DateTime.now() + ". Runtime: " + nanosSince(start));
+        logger.info(new StringBuilder().append("Simulation finished at ").append(DateTime.now()).append(". Runtime: ").append(nanosSince(start)).toString());
         System.out.println();
 
         printSummaryStats(controller, taskExecutor);
     }
 
-    private void runExperimentOverloadedCluster(SimulationController controller)
+	private void runExperimentOverloadedCluster(SimulationController controller)
             throws InterruptedException
     {
         /*
@@ -136,7 +138,7 @@ public class TaskExecutorSimulator
         scheduled time, and not spend disproportionately long waiting.
         */
 
-        System.out.println("Overload experiment started.");
+        logger.info("Overload experiment started.");
         TaskSpecification leafSpec = new TaskSpecification(LEAF, "leaf", OptionalInt.empty(), 16, 30, new AggregatedLeafSplitGenerator());
         controller.addTaskSpecification(leafSpec);
 
@@ -159,10 +161,10 @@ public class TaskExecutorSimulator
             MINUTES.sleep(1);
         }
 
-        System.out.println("Overload experiment completed.");
+        logger.info("Overload experiment completed.");
     }
 
-    private void runExperimentStarveSlowSplits(SimulationController controller)
+	private void runExperimentStarveSlowSplits(SimulationController controller)
             throws InterruptedException
     {
         /*
@@ -176,7 +178,7 @@ public class TaskExecutorSimulator
         for more than a couple of minutes at a time.
         */
 
-        System.out.println("Starvation experiment started.");
+        logger.info("Starvation experiment started.");
         TaskSpecification slowLeafSpec = new TaskSpecification(LEAF, "slow_leaf", OptionalInt.of(600), 40, 4, new SlowLeafSplitGenerator());
         controller.addTaskSpecification(slowLeafSpec);
 
@@ -197,10 +199,10 @@ public class TaskExecutorSimulator
             controller.clearPendingQueue();
         }
 
-        System.out.println("Starvation experiment completed.");
+        logger.info("Starvation experiment completed.");
     }
 
-    private void runExperimentMisbehavingQuanta(SimulationController controller)
+	private void runExperimentMisbehavingQuanta(SimulationController controller)
             throws InterruptedException
     {
         /*
@@ -213,7 +215,7 @@ public class TaskExecutorSimulator
         incurs scheduling overhead.
         */
 
-        System.out.println("Misbehaving quanta experiment started.");
+        logger.info("Misbehaving quanta experiment started.");
 
         TaskSpecification slowLeafSpec = new TaskSpecification(LEAF, "good_leaf", OptionalInt.empty(), 16, 4, new L4LeafSplitGenerator());
         controller.addTaskSpecification(slowLeafSpec);
@@ -231,10 +233,10 @@ public class TaskExecutorSimulator
             SECONDS.sleep(20);
         }
 
-        System.out.println("Misbehaving quanta experiment completed.");
+        logger.info("Misbehaving quanta experiment completed.");
     }
 
-    private void runExperimentWithinLevelFairness(SimulationController controller)
+	private void runExperimentWithinLevelFairness(SimulationController controller)
             throws InterruptedException
     {
         /*
@@ -246,7 +248,7 @@ public class TaskExecutorSimulator
         fraction of resources tasks are allocated as long as they are in the same level.
         */
 
-        System.out.println("Level fairness experiment started.");
+        logger.info("Level fairness experiment started.");
 
         TaskSpecification longLeafSpec = new TaskSpecification(INTERMEDIATE, "l4_long", OptionalInt.empty(), 2, 16, new SimpleLeafSplitGenerator(MINUTES.toNanos(4), SECONDS.toNanos(1)));
         controller.addTaskSpecification(longLeafSpec);
@@ -271,41 +273,25 @@ public class TaskExecutorSimulator
         // now watch for L4 fairness at this point
         MINUTES.sleep(2);
 
-        System.out.println("Level fairness experiment completed.");
+        logger.info("Level fairness experiment completed.");
     }
 
-    private void scheduleStatusPrinter(long start)
+	private void scheduleStatusPrinter(long start)
     {
         overallStatusPrintExecutor.scheduleAtFixedRate(() -> {
             try {
-                System.out.printf(
-                        "%6s -- %4s splits (R: %2s  L: %3s  I: %3s  B: %3s  W: %3s  C: %5s)  |  %3s tasks (%3s %3s %3s %3s %3s)  |  Selections: %4s %4s %4s %4s %3s\n",
-                        nanosSince(start),
-                        taskExecutor.getTotalSplits(),
-                        taskExecutor.getRunningSplits(),
-                        taskExecutor.getTotalSplits() - taskExecutor.getIntermediateSplits(),
-                        taskExecutor.getIntermediateSplits(),
-                        taskExecutor.getBlockedSplits(),
-                        taskExecutor.getWaitingSplits(),
-                        taskExecutor.getCompletedSplitsLevel0() + taskExecutor.getCompletedSplitsLevel1() + taskExecutor.getCompletedSplitsLevel2() + taskExecutor.getCompletedSplitsLevel3() + taskExecutor.getCompletedSplitsLevel4(),
-                        taskExecutor.getTasks(),
-                        taskExecutor.getRunningTasksLevel0(),
-                        taskExecutor.getRunningTasksLevel1(),
-                        taskExecutor.getRunningTasksLevel2(),
-                        taskExecutor.getRunningTasksLevel3(),
-                        taskExecutor.getRunningTasksLevel4(),
-                        (int) splitQueue.getSelectedCountLevel0().getOneMinute().getRate(),
-                        (int) splitQueue.getSelectedCountLevel1().getOneMinute().getRate(),
-                        (int) splitQueue.getSelectedCountLevel2().getOneMinute().getRate(),
-                        (int) splitQueue.getSelectedCountLevel3().getOneMinute().getRate(),
-                        (int) splitQueue.getSelectedCountLevel4().getOneMinute().getRate());
+                logger.info(
+                        "%6s -- %4s splits (R: %2s  L: %3s  I: %3s  B: %3s  W: %3s  C: %5s)  |  %3s tasks (%3s %3s %3s %3s %3s)  |  Selections: %4s %4s %4s %4s %3s\n", nanosSince(start), taskExecutor.getTotalSplits(), taskExecutor.getRunningSplits(), taskExecutor.getTotalSplits() - taskExecutor.getIntermediateSplits(), taskExecutor.getIntermediateSplits(), taskExecutor.getBlockedSplits(), taskExecutor.getWaitingSplits(), taskExecutor.getCompletedSplitsLevel0() + taskExecutor.getCompletedSplitsLevel1()
+								+ taskExecutor.getCompletedSplitsLevel2() + taskExecutor.getCompletedSplitsLevel3()
+								+ taskExecutor.getCompletedSplitsLevel4(), taskExecutor.getTasks(), taskExecutor.getRunningTasksLevel0(), taskExecutor.getRunningTasksLevel1(), taskExecutor.getRunningTasksLevel2(), taskExecutor.getRunningTasksLevel3(), taskExecutor.getRunningTasksLevel4(), (int) splitQueue.getSelectedCountLevel0().getOneMinute().getRate(), (int) splitQueue.getSelectedCountLevel1().getOneMinute().getRate(), (int) splitQueue.getSelectedCountLevel2().getOneMinute().getRate(), (int) splitQueue.getSelectedCountLevel3().getOneMinute().getRate(), (int) splitQueue.getSelectedCountLevel4().getOneMinute().getRate());
             }
             catch (Exception ignored) {
+				logger.error(ignored.getMessage(), ignored);
             }
         }, 1, 1, SECONDS);
     }
 
-    private static void printSummaryStats(SimulationController controller, TaskExecutor taskExecutor)
+	private static void printSummaryStats(SimulationController controller, TaskExecutor taskExecutor)
     {
         Map<TaskSpecification, Boolean> specEnabled = controller.getSpecificationEnabled();
 
@@ -316,22 +302,22 @@ public class TaskExecutorSimulator
         long completedSplits = completedTasks.values().stream().mapToInt(t -> t.getCompletedSplits().size()).sum();
         long runningSplits = runningTasks.values().stream().mapToInt(t -> t.getCompletedSplits().size()).sum();
 
-        System.out.println("Completed tasks : " + completedTasks.size());
-        System.out.println("Remaining tasks : " + runningTasks.size());
-        System.out.println("Completed splits: " + completedSplits);
-        System.out.println("Remaining splits: " + runningSplits);
+        logger.info("Completed tasks : " + completedTasks.size());
+        logger.info("Remaining tasks : " + runningTasks.size());
+        logger.info("Completed splits: " + completedSplits);
+        logger.info("Remaining splits: " + runningSplits);
         System.out.println();
-        System.out.println("Completed tasks  L0: " + taskExecutor.getCompletedTasksLevel0());
-        System.out.println("Completed tasks  L1: " + taskExecutor.getCompletedTasksLevel1());
-        System.out.println("Completed tasks  L2: " + taskExecutor.getCompletedTasksLevel2());
-        System.out.println("Completed tasks  L3: " + taskExecutor.getCompletedTasksLevel3());
-        System.out.println("Completed tasks  L4: " + taskExecutor.getCompletedTasksLevel4());
+        logger.info("Completed tasks  L0: " + taskExecutor.getCompletedTasksLevel0());
+        logger.info("Completed tasks  L1: " + taskExecutor.getCompletedTasksLevel1());
+        logger.info("Completed tasks  L2: " + taskExecutor.getCompletedTasksLevel2());
+        logger.info("Completed tasks  L3: " + taskExecutor.getCompletedTasksLevel3());
+        logger.info("Completed tasks  L4: " + taskExecutor.getCompletedTasksLevel4());
         System.out.println();
-        System.out.println("Completed splits L0: " + taskExecutor.getCompletedSplitsLevel0());
-        System.out.println("Completed splits L1: " + taskExecutor.getCompletedSplitsLevel1());
-        System.out.println("Completed splits L2: " + taskExecutor.getCompletedSplitsLevel2());
-        System.out.println("Completed splits L3: " + taskExecutor.getCompletedSplitsLevel3());
-        System.out.println("Completed splits L4: " + taskExecutor.getCompletedSplitsLevel4());
+        logger.info("Completed splits L0: " + taskExecutor.getCompletedSplitsLevel0());
+        logger.info("Completed splits L1: " + taskExecutor.getCompletedSplitsLevel1());
+        logger.info("Completed splits L2: " + taskExecutor.getCompletedSplitsLevel2());
+        logger.info("Completed splits L3: " + taskExecutor.getCompletedSplitsLevel3());
+        logger.info("Completed splits L4: " + taskExecutor.getCompletedSplitsLevel4());
 
         Histogram<Long> levelsHistogram = fromContinuous(ImmutableList.of(
                 MILLISECONDS.toNanos(0L),
@@ -343,7 +329,7 @@ public class TaskExecutorSimulator
                 DAYS.toNanos(1)));
 
         System.out.println();
-        System.out.println("Levels - Completed Task Processed Time");
+        logger.info("Levels - Completed Task Processed Time");
         levelsHistogram.printDistribution(
                 completedTasks.values().stream().filter(t -> t.getSpecification().getType() == LEAF).collect(Collectors.toList()),
                 SimulationTask::getScheduledTimeNanos,
@@ -352,7 +338,7 @@ public class TaskExecutorSimulator
                 TaskExecutorSimulator::formatNanos);
 
         System.out.println();
-        System.out.println("Levels - Running Task Processed Time");
+        logger.info("Levels - Running Task Processed Time");
         levelsHistogram.printDistribution(
                 runningTasks.values().stream().filter(t -> t.getSpecification().getType() == LEAF).collect(Collectors.toList()),
                 SimulationTask::getScheduledTimeNanos,
@@ -361,7 +347,7 @@ public class TaskExecutorSimulator
                 TaskExecutorSimulator::formatNanos);
 
         System.out.println();
-        System.out.println("Levels - All Task Wait Time");
+        logger.info("Levels - All Task Wait Time");
         levelsHistogram.printDistribution(
                 runningTasks.values().stream().filter(t -> t.getSpecification().getType() == LEAF).collect(Collectors.toList()),
                 SimulationTask::getScheduledTimeNanos,
@@ -370,7 +356,7 @@ public class TaskExecutorSimulator
                 TaskExecutorSimulator::formatNanos);
 
         System.out.println();
-        System.out.println("Specification - Processed time");
+        logger.info("Specification - Processed time");
         Set<String> specifications = runningTasks.values().stream().map(t -> t.getSpecification().getName()).collect(Collectors.toSet());
         fromDiscrete(specifications).printDistribution(
                 allTasks,
@@ -380,7 +366,7 @@ public class TaskExecutorSimulator
                 TaskExecutorSimulator::formatNanos);
 
         System.out.println();
-        System.out.println("Specification - Wait time");
+        logger.info("Specification - Wait time");
         fromDiscrete(specifications).printDistribution(
                 allTasks,
                 t -> t.getSpecification().getName(),
@@ -389,26 +375,26 @@ public class TaskExecutorSimulator
                 TaskExecutorSimulator::formatNanos);
 
         System.out.println();
-        System.out.println("Breakdown by specification");
-        System.out.println("##########################");
-        for (TaskSpecification specification : specEnabled.keySet()) {
+        logger.info("Breakdown by specification");
+        logger.info("##########################");
+        specEnabled.keySet().forEach(specification -> {
             List<SimulationTask> allSpecificationTasks = ImmutableList.<SimulationTask>builder()
                     .addAll(completedTasks.get(specification))
                     .addAll(runningTasks.get(specification))
                     .build();
 
-            System.out.println(specification.getName());
-            System.out.println("=============================");
-            System.out.println("Completed tasks           : " + completedTasks.get(specification).size());
-            System.out.println("In-progress tasks         : " + runningTasks.get(specification).size());
-            System.out.println("Total tasks               : " + specification.getTotalTasks());
-            System.out.println("Splits/task               : " + specification.getNumSplitsPerTask());
-            System.out.println("Current required time     : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getScheduledTimeNanos).sum()));
-            System.out.println("Completed scheduled time  : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getProcessedTimeNanos).sum()));
-            System.out.println("Total wait time           : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getTotalWaitTimeNanos).sum()));
+            logger.info(specification.getName());
+            logger.info("=============================");
+            logger.info("Completed tasks           : " + completedTasks.get(specification).size());
+            logger.info("In-progress tasks         : " + runningTasks.get(specification).size());
+            logger.info("Total tasks               : " + specification.getTotalTasks());
+            logger.info("Splits/task               : " + specification.getNumSplitsPerTask());
+            logger.info("Current required time     : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getScheduledTimeNanos).sum()));
+            logger.info("Completed scheduled time  : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getProcessedTimeNanos).sum()));
+            logger.info("Total wait time           : " + succinctNanos(allSpecificationTasks.stream().mapToLong(SimulationTask::getTotalWaitTimeNanos).sum()));
 
             System.out.println();
-            System.out.println("All Tasks by Scheduled time - Processed Time");
+            logger.info("All Tasks by Scheduled time - Processed Time");
             levelsHistogram.printDistribution(
                     allSpecificationTasks,
                     SimulationTask::getScheduledTimeNanos,
@@ -417,7 +403,7 @@ public class TaskExecutorSimulator
                     TaskExecutorSimulator::formatNanos);
 
             System.out.println();
-            System.out.println("All Tasks by Scheduled time - Wait Time");
+            logger.info("All Tasks by Scheduled time - Wait Time");
             levelsHistogram.printDistribution(
                     allSpecificationTasks,
                     SimulationTask::getScheduledTimeNanos,
@@ -426,17 +412,17 @@ public class TaskExecutorSimulator
                     TaskExecutorSimulator::formatNanos);
 
             System.out.println();
-            System.out.println("Complete Tasks by Scheduled time - Wait Time");
+            logger.info("Complete Tasks by Scheduled time - Wait Time");
             levelsHistogram.printDistribution(
                     completedTasks.get(specification),
                     SimulationTask::getScheduledTimeNanos,
                     SimulationTask::getTotalWaitTimeNanos,
                     Duration::succinctNanos,
                     TaskExecutorSimulator::formatNanos);
-        }
+        });
     }
 
-    private static String formatNanos(List<Long> list)
+	private static String formatNanos(List<Long> list)
     {
         LongSummaryStatistics stats = list.stream().mapToLong(Long::new).summaryStatistics();
         return String.format("Min: %8s  Max: %8s  Avg: %8s  Sum: %8s",

@@ -62,7 +62,7 @@ public class TableNameCompleter
     }
 
     @SuppressWarnings("unused")
-    private List<String> listFunctions(String schemaName)
+    private List<String> listFunctions()
     {
         return queryMetadata("SHOW FUNCTIONS");
     }
@@ -136,11 +136,7 @@ public class TableNameCompleter
     private static List<String> filterResults(List<String> values, String prefix)
     {
         ImmutableList.Builder<String> builder = ImmutableList.builder();
-        for (String value : values) {
-            if (value.startsWith(prefix)) {
-                builder.add(value);
-            }
-        }
+        values.stream().filter(value -> value.startsWith(prefix)).forEach(builder::add);
         return builder.build();
     }
 

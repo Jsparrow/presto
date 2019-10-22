@@ -75,9 +75,7 @@ public final class QueryAssertions
             log.info("FINISHED in presto: %s", queryTime);
         }
 
-        if (planAssertion.isPresent()) {
-            planAssertion.get().accept(queryPlan);
-        }
+        planAssertion.ifPresent(value -> value.accept(queryPlan));
 
         if (!results.getUpdateType().isPresent()) {
             fail("update type is not set");
@@ -187,16 +185,16 @@ public final class QueryAssertions
             if (!actualResults.getUpdateCount().isPresent()) {
                 fail("update count not present for query: \n" + actual);
             }
-            assertEquals(actualRows.size(), 1, "For query: \n " + actual + "\n:");
-            assertEquals(expectedRows.size(), 1, "For query: \n " + actual + "\n:");
+            assertEquals(actualRows.size(), 1, new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
+            assertEquals(expectedRows.size(), 1, new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
             MaterializedRow row = expectedRows.get(0);
-            assertEquals(row.getFieldCount(), 1, "For query: \n " + actual + "\n:");
-            assertEquals(row.getField(0), actualResults.getUpdateCount().getAsLong(), "For query: \n " + actual + "\n:");
+            assertEquals(row.getFieldCount(), 1, new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
+            assertEquals(row.getField(0), actualResults.getUpdateCount().getAsLong(), new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
         }
 
         if (ensureOrdering) {
             if (!actualRows.equals(expectedRows)) {
-                assertEquals(actualRows, expectedRows, "For query: \n " + actual + "\n:");
+                assertEquals(actualRows, expectedRows, new StringBuilder().append("For query: \n ").append(actual).append("\n:").toString());
             }
         }
         else {
@@ -216,24 +214,23 @@ public final class QueryAssertions
 
         ImmutableMultiset<?> actualSet = ImmutableMultiset.copyOf(actual);
         ImmutableMultiset<?> expectedSet = ImmutableMultiset.copyOf(expected);
-        if (!actualSet.equals(expectedSet)) {
-            Multiset<?> unexpectedRows = Multisets.difference(actualSet, expectedSet);
-            Multiset<?> missingRows = Multisets.difference(expectedSet, actualSet);
-            int limit = 100;
-            fail(format(
-                    "%snot equal\n" +
-                            "Actual rows (up to %s of %s extra rows shown, %s rows in total):\n    %s\n" +
-                            "Expected rows (up to %s of %s missing rows shown, %s rows in total):\n    %s\n",
-                    message == null ? "" : (message + "\n"),
-                    limit,
-                    unexpectedRows.size(),
-                    actualSet.size(),
-                    Joiner.on("\n    ").join(Iterables.limit(unexpectedRows, limit)),
-                    limit,
-                    missingRows.size(),
-                    expectedSet.size(),
-                    Joiner.on("\n    ").join(Iterables.limit(missingRows, limit))));
-        }
+        if (actualSet.equals(expectedSet)) {
+			return;
+		}
+		Multiset<?> unexpectedRows = Multisets.difference(actualSet, expectedSet);
+		Multiset<?> missingRows = Multisets.difference(expectedSet, actualSet);
+		int limit = 100;
+		fail(format(
+		        new StringBuilder().append("%snot equal\n").append("Actual rows (up to %s of %s extra rows shown, %s rows in total):\n    %s\n").append("Expected rows (up to %s of %s missing rows shown, %s rows in total):\n    %s\n").toString(),
+		        message == null ? "" : (message + "\n"),
+		        limit,
+		        unexpectedRows.size(),
+		        actualSet.size(),
+		        Joiner.on("\n    ").join(Iterables.limit(unexpectedRows, limit)),
+		        limit,
+		        missingRows.size(),
+		        expectedSet.size(),
+		        Joiner.on("\n    ").join(Iterables.limit(missingRows, limit))));
     }
 
     public static void assertContainsEventually(Supplier<MaterializedResult> all, MaterializedResult expectedSubset, Duration timeout)
@@ -255,16 +252,10 @@ public final class QueryAssertions
 
     public static void assertContains(MaterializedResult all, MaterializedResult expectedSubset)
     {
-        for (MaterializedRow row : expectedSubset.getMaterializedRows()) {
-            if (!all.getMaterializedRows().contains(row)) {
-                fail(format("expected row missing: %s\nAll %s rows:\n    %s\nExpected subset %s rows:\n    %s\n",
-                        row,
-                        all.getMaterializedRows().size(),
-                        Joiner.on("\n    ").join(Iterables.limit(all, 100)),
-                        expectedSubset.getMaterializedRows().size(),
-                        Joiner.on("\n    ").join(Iterables.limit(expectedSubset, 100))));
-            }
-        }
+        expectedSubset.getMaterializedRows().stream().filter(row -> !all.getMaterializedRows().contains(row)).forEach(row -> fail(format("expected row missing: %s\nAll %s rows:\n    %s\nExpected subset %s rows:\n    %s\n", row,
+				all.getMaterializedRows().size(), Joiner.on("\n    ").join(Iterables.limit(all, 100)),
+				expectedSubset.getMaterializedRows().size(),
+				Joiner.on("\n    ").join(Iterables.limit(expectedSubset, 100)))));
     }
 
     protected static void assertQuerySucceeds(QueryRunner queryRunner, Session session, @Language("SQL") String sql)

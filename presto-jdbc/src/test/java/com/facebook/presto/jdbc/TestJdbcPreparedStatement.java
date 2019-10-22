@@ -108,7 +108,7 @@ public class TestJdbcPreparedStatement
         try (Connection connection = createConnection()) {
             for (int i = 0; i < 200; i++) {
                 try {
-                    connection.prepareStatement("SELECT '" + repeat("a", 300) + "'").close();
+                    connection.prepareStatement(new StringBuilder().append("SELECT '").append(repeat("a", 300)).append("'").toString()).close();
                 }
                 catch (Exception e) {
                     throw new RuntimeException("Failed at " + i, e);
@@ -123,14 +123,8 @@ public class TestJdbcPreparedStatement
     {
         try (Connection connection = createConnection("blackhole", "blackhole")) {
             try (Statement statement = connection.createStatement()) {
-                statement.execute("CREATE TABLE test_execute_update (" +
-                        "c_boolean boolean, " +
-                        "c_bigint bigint, " +
-                        "c_double double, " +
-                        "c_decimal decimal, " +
-                        "c_varchar varchar, " +
-                        "c_varbinary varbinary, " +
-                        "c_null bigint)");
+                statement.execute(new StringBuilder().append("CREATE TABLE test_execute_update (").append("c_boolean boolean, ").append("c_bigint bigint, ").append("c_double double, ").append("c_decimal decimal, ").append("c_varchar varchar, ").append("c_varbinary varbinary, ")
+						.append("c_null bigint)").toString());
             }
 
             try (PreparedStatement statement = connection.prepareStatement(
@@ -534,12 +528,6 @@ public class TestJdbcPreparedStatement
         }
     }
 
-    private interface Binder
-    {
-        void bind(PreparedStatement ps, int i)
-                throws SQLException;
-    }
-
     private Connection createConnection()
             throws SQLException
     {
@@ -547,10 +535,16 @@ public class TestJdbcPreparedStatement
         return DriverManager.getConnection(url, "test", null);
     }
 
-    private Connection createConnection(String catalog, String schema)
+	private Connection createConnection(String catalog, String schema)
             throws SQLException
     {
         String url = format("jdbc:presto://%s/%s/%s", server.getAddress(), catalog, schema);
         return DriverManager.getConnection(url, "test", null);
+    }
+
+	private interface Binder
+    {
+        void bind(PreparedStatement ps, int i)
+                throws SQLException;
     }
 }

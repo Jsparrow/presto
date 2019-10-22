@@ -126,9 +126,7 @@ public class IndexSnapshotBuilder
     {
         checkArgument(indexKeysRecordSet.getColumnTypes().equals(missingKeysTypes), "indexKeysRecordSet must have same schema as missingKeys");
         checkState(!isMemoryExceeded(), "Max memory exceeded");
-        for (Page page : pages) {
-            outputPagesIndex.addPage(page);
-        }
+        pages.forEach(outputPagesIndex::addPage);
         pages.clear();
 
         LookupSource lookupSource = outputPagesIndex.createLookupSourceSupplier(session, keyOutputChannels, keyOutputHashChannel, Optional.empty(), Optional.empty(), ImmutableList.of()).get();

@@ -51,7 +51,7 @@ public class TpchTableHandle
     @Override
     public String toString()
     {
-        return tableName + ":sf" + scaleFactor;
+        return new StringBuilder().append(tableName).append(":sf").append(scaleFactor).toString();
     }
 
     @Override

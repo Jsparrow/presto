@@ -127,11 +127,10 @@ public class TestJmxSplitManager
 
         Set<String> actualNodes = nodes.stream().map(Node::getNodeIdentifier).collect(toSet());
         Set<String> expectedNodes = new HashSet<>();
-        for (ConnectorSplit split : allSplits) {
-            List<HostAddress> addresses = split.getAddresses();
-            assertEquals(addresses.size(), 1);
-            expectedNodes.add(addresses.get(0).getHostText());
-        }
+        allSplits.stream().map(ConnectorSplit::getAddresses).forEach(addresses -> {
+			assertEquals(addresses.size(), 1);
+			expectedNodes.add(addresses.get(0).getHostText());
+		});
         assertEquals(actualNodes, expectedNodes);
     }
 

@@ -521,13 +521,13 @@ public class IOPlanPrinter
         {
             checkArgument(!constraint.isNone());
             ImmutableSet.Builder<ColumnConstraint> columnConstraints = ImmutableSet.builder();
-            for (Map.Entry<ColumnHandle, Domain> entry : constraint.getDomains().get().entrySet()) {
+            constraint.getDomains().get().entrySet().forEach(entry -> {
                 ColumnMetadata columnMetadata = metadata.getColumnMetadata(session, tableHandle, entry.getKey());
                 columnConstraints.add(new ColumnConstraint(
                         columnMetadata.getName(),
                         columnMetadata.getType().getTypeSignature(),
                         parseDomain(entry.getValue().simplify())));
-            }
+            });
             return columnConstraints.build();
         }
 
@@ -578,9 +578,7 @@ public class IOPlanPrinter
 
         private Void processChildren(PlanNode node, IOPlanBuilder context)
         {
-            for (PlanNode child : node.getSources()) {
-                child.accept(this, context);
-            }
+            node.getSources().forEach(child -> child.accept(this, context));
 
             return null;
         }

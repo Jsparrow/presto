@@ -212,11 +212,14 @@ import static com.google.common.base.Verify.verify;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.newCachedThreadPool;
 import static java.util.concurrent.Executors.newScheduledThreadPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LocalQueryRunner
         implements QueryRunner
 {
-    private final Session defaultSession;
+    private static final Logger logger = LoggerFactory.getLogger(LocalQueryRunner.class);
+	private final Session defaultSession;
     private final ExecutorService notificationExecutor;
     private final ScheduledExecutorService yieldExecutor;
     private final FinalizerService finalizerService;
@@ -494,12 +497,14 @@ public class LocalQueryRunner
         return planOptimizerManager;
     }
 
-    public PageSourceManager getPageSourceManager()
+    @Override
+	public PageSourceManager getPageSourceManager()
     {
         return pageSourceManager;
     }
 
-    public SplitManager getSplitManager()
+    @Override
+	public SplitManager getSplitManager()
     {
         return splitManager;
     }
@@ -579,9 +584,7 @@ public class LocalQueryRunner
         try {
             return transaction(transactionManager, accessControl)
                     .readOnly()
-                    .execute(session, transactionSession -> {
-                        return getMetadata().listTables(transactionSession, new QualifiedTablePrefix(catalog, schema));
-                    });
+                    .execute(session, transactionSession -> getMetadata().listTables(transactionSession, new QualifiedTablePrefix(catalog, schema)));
         }
         finally {
             lock.readLock().unlock();
@@ -595,9 +598,7 @@ public class LocalQueryRunner
         try {
             return transaction(transactionManager, accessControl)
                     .readOnly()
-                    .execute(session, transactionSession -> {
-                        return MetadataUtil.tableExists(getMetadata(), transactionSession, table);
-                    });
+                    .execute(session, transactionSession -> MetadataUtil.tableExists(getMetadata(), transactionSession, table));
         }
         finally {
             lock.readLock().unlock();
@@ -702,7 +703,7 @@ public class LocalQueryRunner
     private List<Driver> createDrivers(Session session, Plan plan, OutputFactory outputFactory, TaskContext taskContext)
     {
         if (printPlan) {
-            System.out.println(PlanPrinter.textLogicalPlan(plan.getRoot(), plan.getTypes(), metadata.getFunctionManager(), plan.getStatsAndCosts(), session, 0, false));
+            logger.info(PlanPrinter.textLogicalPlan(plan.getRoot(), plan.getTypes(), metadata.getFunctionManager(), plan.getStatsAndCosts(), session, 0, false));
         }
 
         SubPlan subplan = planFragmenter.createSubPlans(
@@ -782,7 +783,7 @@ public class LocalQueryRunner
         // create drivers
         List<Driver> drivers = new ArrayList<>();
         Map<PlanNodeId, DriverFactory> driverFactoriesBySource = new HashMap<>();
-        for (DriverFactory driverFactory : localExecutionPlan.getDriverFactories()) {
+        localExecutionPlan.getDriverFactories().forEach(driverFactory -> {
             for (int i = 0; i < driverFactory.getDriverInstances().orElse(1); i++) {
                 if (driverFactory.getSourceId().isPresent()) {
                     checkState(driverFactoriesBySource.put(driverFactory.getSourceId().get(), driverFactory) == null);
@@ -793,25 +794,23 @@ public class LocalQueryRunner
                     drivers.add(driver);
                 }
             }
-        }
+        });
 
         // add sources to the drivers
         Set<PlanNodeId> tableScanPlanNodeIds = ImmutableSet.copyOf(subplan.getFragment().getTableScanSchedulingOrder());
-        for (TaskSource source : sources) {
+        sources.forEach(source -> {
             DriverFactory driverFactory = driverFactoriesBySource.get(source.getPlanNodeId());
             checkState(driverFactory != null);
             boolean partitioned = tableScanPlanNodeIds.contains(driverFactory.getSourceId().get());
-            for (ScheduledSplit split : source.getSplits()) {
+            source.getSplits().forEach(split -> {
                 DriverContext driverContext = taskContext.addPipelineContext(driverFactory.getPipelineId(), driverFactory.isInputDriver(), driverFactory.isOutputDriver(), partitioned).addDriverContext();
                 Driver driver = driverFactory.createDriver(driverContext);
                 driver.updateSource(new TaskSource(split.getPlanNodeId(), ImmutableSet.of(split), true));
                 drivers.add(driver);
-            }
-        }
+            });
+        });
 
-        for (DriverFactory driverFactory : localExecutionPlan.getDriverFactories()) {
-            driverFactory.noMoreDrivers();
-        }
+        localExecutionPlan.getDriverFactories().forEach(DriverFactory::noMoreDrivers);
 
         return ImmutableList.copyOf(drivers);
     }

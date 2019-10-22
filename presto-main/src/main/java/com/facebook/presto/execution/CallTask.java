@@ -121,7 +121,7 @@ public class CallTask
 
         // get argument values
         Object[] values = new Object[procedure.getArguments().size()];
-        for (Entry<String, CallArgument> entry : names.entrySet()) {
+        names.entrySet().forEach(entry -> {
             CallArgument callArgument = entry.getValue();
             int index = positions.get(entry.getKey());
             Argument argument = procedure.getArguments().get(index);
@@ -133,7 +133,7 @@ public class CallTask
             Object value = evaluateConstantExpression(expression, type, metadata, session, parameters);
 
             values[index] = toTypeObjectValue(session, type, value);
-        }
+        });
 
         // validate arguments
         MethodType methodType = procedure.getMethodHandle().type();

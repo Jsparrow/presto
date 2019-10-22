@@ -42,11 +42,14 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JmxRecordSetProvider
         implements ConnectorRecordSetProvider
 {
-    private final MBeanServer mbeanServer;
+    private static final Logger logger = LoggerFactory.getLogger(JmxRecordSetProvider.class);
+	private final MBeanServer mbeanServer;
     private final String nodeId;
     private final JmxHistoricalData jmxHistoricalData;
 
@@ -64,9 +67,8 @@ public class JmxRecordSetProvider
         ImmutableMap<String, Optional<Object>> attributes = getAttributes(getColumnNames(columns), objectName);
         List<Object> row = new ArrayList<>();
 
-        for (ColumnHandle column : columns) {
-            JmxColumnHandle jmxColumn = (JmxColumnHandle) column;
-            if (jmxColumn.getColumnName().equals(JmxMetadata.NODE_COLUMN_NAME)) {
+        columns.stream().map(column -> (JmxColumnHandle) column).forEach(jmxColumn -> {
+			if (jmxColumn.getColumnName().equals(JmxMetadata.NODE_COLUMN_NAME)) {
                 row.add(nodeId);
             }
             else if (jmxColumn.getColumnName().equals(JmxMetadata.OBJECT_NAME_NAME)) {
@@ -147,7 +149,7 @@ public class JmxRecordSetProvider
                     }
                 }
             }
-        }
+		});
         return row;
     }
 
@@ -172,7 +174,8 @@ public class JmxRecordSetProvider
             }
         }
         catch (JMException e) {
-            rows = ImmutableList.of();
+            logger.error(e.getMessage(), e);
+			rows = ImmutableList.of();
         }
 
         return new InMemoryRecordSet(getColumnTypes(columns), rows);
@@ -214,9 +217,7 @@ public class JmxRecordSetProvider
         String[] columnNamesArray = uniqueColumnNames.toArray(new String[uniqueColumnNames.size()]);
 
         ImmutableMap.Builder<String, Optional<Object>> attributes = ImmutableMap.builder();
-        for (Attribute attribute : mbeanServer.getAttributes(objectName, columnNamesArray).asList()) {
-            attributes.put(attribute.getName(), Optional.ofNullable(attribute.getValue()));
-        }
+        mbeanServer.getAttributes(objectName, columnNamesArray).asList().forEach(attribute -> attributes.put(attribute.getName(), Optional.ofNullable(attribute.getValue())));
         return attributes.build();
     }
 

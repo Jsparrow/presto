@@ -61,10 +61,10 @@ public class TableScanStatsRule
         TableStatistics tableStatistics = metadata.getTableStatistics(session, node.getTable(), ImmutableList.copyOf(node.getAssignments().values()), constraint);
         Map<VariableReferenceExpression, VariableStatsEstimate> outputVariableStats = new HashMap<>();
 
-        for (Map.Entry<VariableReferenceExpression, ColumnHandle> entry : node.getAssignments().entrySet()) {
+        node.getAssignments().entrySet().forEach(entry -> {
             Optional<ColumnStatistics> columnStatistics = Optional.ofNullable(tableStatistics.getColumnStatistics().get(entry.getValue()));
             outputVariableStats.put(entry.getKey(), columnStatistics.map(statistics -> toSymbolStatistics(tableStatistics, statistics)).orElse(VariableStatsEstimate.unknown()));
-        }
+        });
 
         return Optional.of(PlanNodeStatsEstimate.builder()
                 .setOutputRowCount(tableStatistics.getRowCount().getValue())

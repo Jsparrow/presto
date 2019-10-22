@@ -60,11 +60,11 @@ public class TextRenderer
                 .append(node.getIdentifier())
                 .append(" => [")
                 .append(node.getOutputs().stream()
-                        .map(s -> s.getName() + ":" + s.getType().getDisplayName())
+                        .map(s -> new StringBuilder().append(s.getName()).append(":").append(s.getType().getDisplayName()).toString())
                         .collect(joining(", ")))
                 .append("]\n");
 
-        String estimates = printEstimates(plan, node);
+        String estimates = printEstimates(node);
         if (!estimates.isEmpty()) {
             output.append(indentMultilineString(estimates, level + 2));
         }
@@ -88,9 +88,7 @@ public class TextRenderer
                 .map(Optional::get)
                 .collect(toList());
 
-        for (NodeRepresentation child : children) {
-            writeTextOutput(output, plan, level + 1, child);
-        }
+        children.forEach(child -> writeTextOutput(output, plan, level + 1, child));
 
         return output.toString();
     }
@@ -203,7 +201,7 @@ public class TextRenderer
         return ImmutableMap.of();
     }
 
-    private String printEstimates(PlanRepresentation plan, NodeRepresentation node)
+    private String printEstimates(NodeRepresentation node)
     {
         if (node.getEstimatedStats().stream().allMatch(PlanNodeStatsEstimate::isOutputRowCountUnknown) &&
                 node.getEstimatedCost().stream().allMatch(c -> c.equals(PlanCostEstimate.unknown()))) {
@@ -260,7 +258,7 @@ public class TextRenderer
     static String formatPositions(long positions)
     {
         String noun = (positions == 1) ? "row" : "rows";
-        return positions + " " + noun;
+        return new StringBuilder().append(positions).append(" ").append(noun).toString();
     }
 
     static String indentString(int indent)

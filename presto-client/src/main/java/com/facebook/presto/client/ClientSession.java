@@ -52,18 +52,6 @@ public class ClientSession
     private final String transactionId;
     private final Duration clientRequestTimeout;
 
-    public static Builder builder(ClientSession clientSession)
-    {
-        return new Builder(clientSession);
-    }
-
-    public static ClientSession stripTransactionId(ClientSession session)
-    {
-        return ClientSession.builder(session)
-                .withoutTransactionId()
-                .build();
-    }
-
     public ClientSession(
             URI server,
             String user,
@@ -101,101 +89,111 @@ public class ClientSession
         this.extraCredentials = ImmutableMap.copyOf(requireNonNull(extraCredentials, "extraCredentials is null"));
         this.clientRequestTimeout = clientRequestTimeout;
 
-        for (String clientTag : clientTags) {
-            checkArgument(!clientTag.contains(","), "client tag cannot contain ','");
-        }
+        clientTags.forEach(clientTag -> checkArgument(!clientTag.contains(","), "client tag cannot contain ','"));
 
         // verify that resource estimates are valid
         CharsetEncoder charsetEncoder = US_ASCII.newEncoder();
-        for (Entry<String, String> entry : resourceEstimates.entrySet()) {
+        resourceEstimates.entrySet().forEach(entry -> {
             checkArgument(!entry.getKey().isEmpty(), "Resource name is empty");
             checkArgument(entry.getKey().indexOf('=') < 0, "Resource name must not contain '=': %s", entry.getKey());
             checkArgument(charsetEncoder.canEncode(entry.getKey()), "Resource name is not US_ASCII: %s", entry.getKey());
-        }
+        });
 
         // verify the properties are valid
-        for (Entry<String, String> entry : properties.entrySet()) {
+		properties.entrySet().forEach(entry -> {
             checkArgument(!entry.getKey().isEmpty(), "Session property name is empty");
             checkArgument(entry.getKey().indexOf('=') < 0, "Session property name must not contain '=': %s", entry.getKey());
             checkArgument(charsetEncoder.canEncode(entry.getKey()), "Session property name is not US_ASCII: %s", entry.getKey());
             checkArgument(charsetEncoder.canEncode(entry.getValue()), "Session property value is not US_ASCII: %s", entry.getValue());
-        }
+        });
 
         // verify the extra credentials are valid
-        for (Entry<String, String> entry : extraCredentials.entrySet()) {
+		extraCredentials.entrySet().forEach(entry -> {
             checkArgument(!entry.getKey().isEmpty(), "Credential name is empty");
             checkArgument(entry.getKey().indexOf('=') < 0, "Credential name must not contain '=': %s", entry.getKey());
             checkArgument(charsetEncoder.canEncode(entry.getKey()), "Credential name is not US_ASCII: %s", entry.getKey());
             checkArgument(charsetEncoder.canEncode(entry.getValue()), "Credential value is not US_ASCII: %s", entry.getValue());
-        }
+        });
     }
 
-    public URI getServer()
+	public static Builder builder(ClientSession clientSession)
+    {
+        return new Builder(clientSession);
+    }
+
+	public static ClientSession stripTransactionId(ClientSession session)
+    {
+        return ClientSession.builder(session)
+                .withoutTransactionId()
+                .build();
+    }
+
+	public URI getServer()
     {
         return server;
     }
 
-    public String getUser()
+	public String getUser()
     {
         return user;
     }
 
-    public String getSource()
+	public String getSource()
     {
         return source;
     }
 
-    public Optional<String> getTraceToken()
+	public Optional<String> getTraceToken()
     {
         return traceToken;
     }
 
-    public Set<String> getClientTags()
+	public Set<String> getClientTags()
     {
         return clientTags;
     }
 
-    public String getClientInfo()
+	public String getClientInfo()
     {
         return clientInfo;
     }
 
-    public String getCatalog()
+	public String getCatalog()
     {
         return catalog;
     }
 
-    public String getSchema()
+	public String getSchema()
     {
         return schema;
     }
 
-    public TimeZoneKey getTimeZone()
+	public TimeZoneKey getTimeZone()
     {
         return timeZone;
     }
 
-    public Locale getLocale()
+	public Locale getLocale()
     {
         return locale;
     }
 
-    public Map<String, String> getResourceEstimates()
+	public Map<String, String> getResourceEstimates()
     {
         return resourceEstimates;
     }
 
-    public Map<String, String> getProperties()
+	public Map<String, String> getProperties()
     {
         return properties;
     }
 
-    public Map<String, String> getPreparedStatements()
+	public Map<String, String> getPreparedStatements()
     {
         return preparedStatements;
     }
 
-    /**
+	/**
      * Returns the map of catalog name -> selected role
      */
     public Map<String, SelectedRole> getRoles()
@@ -203,27 +201,27 @@ public class ClientSession
         return roles;
     }
 
-    public Map<String, String> getExtraCredentials()
+	public Map<String, String> getExtraCredentials()
     {
         return extraCredentials;
     }
 
-    public String getTransactionId()
+	public String getTransactionId()
     {
         return transactionId;
     }
 
-    public boolean isDebug()
+	public boolean isDebug()
     {
         return false;
     }
 
-    public Duration getClientRequestTimeout()
+	public Duration getClientRequestTimeout()
     {
         return clientRequestTimeout;
     }
 
-    @Override
+	@Override
     public String toString()
     {
         return toStringHelper(this)
@@ -242,7 +240,7 @@ public class ClientSession
                 .toString();
     }
 
-    public static final class Builder
+	public static final class Builder
     {
         private URI server;
         private String user;

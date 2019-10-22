@@ -29,7 +29,18 @@ import static com.facebook.presto.bytecode.expression.BytecodeExpressions.invoke
 
 public class TestInvokeDynamicBytecodeExpression
 {
-    @Test
+    public static final Method TEST_BOOTSTRAP_METHOD;
+
+	static {
+        try {
+            TEST_BOOTSTRAP_METHOD = TestInvokeDynamicBytecodeExpression.class.getMethod("bootstrap", MethodHandles.Lookup.class, String.class, MethodType.class, String.class);
+        }
+        catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	@Test
     public void testInvokeStaticMethod()
             throws Exception
     {
@@ -39,22 +50,11 @@ public class TestInvokeDynamicBytecodeExpression
                 "[bootstrap(\"bar\")]=>foo(\"baz\")");
     }
 
-    public static final Method TEST_BOOTSTRAP_METHOD;
-
-    static {
-        try {
-            TEST_BOOTSTRAP_METHOD = TestInvokeDynamicBytecodeExpression.class.getMethod("bootstrap", MethodHandles.Lookup.class, String.class, MethodType.class, String.class);
-        }
-        catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static CallSite bootstrap(MethodHandles.Lookup callerLookup, String name, MethodType type, String prefix)
+	public static CallSite bootstrap(MethodHandles.Lookup callerLookup, String name, MethodType type, String prefix)
             throws Exception
     {
         MethodHandle methodHandle = callerLookup.findVirtual(String.class, "concat", MethodType.methodType(String.class, String.class));
-        methodHandle = methodHandle.bindTo(name + "-" + prefix + "-");
+        methodHandle = methodHandle.bindTo(new StringBuilder().append(name).append("-").append(prefix).append("-").toString());
         return new ConstantCallSite(methodHandle);
     }
 }

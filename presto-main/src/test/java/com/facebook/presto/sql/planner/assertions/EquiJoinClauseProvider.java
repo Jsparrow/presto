@@ -31,7 +31,8 @@ class EquiJoinClauseProvider
         this.right = requireNonNull(right, "right is null");
     }
 
-    public JoinNode.EquiJoinClause getExpectedValue(SymbolAliases aliases)
+    @Override
+	public JoinNode.EquiJoinClause getExpectedValue(SymbolAliases aliases)
     {
         return new JoinNode.EquiJoinClause(
                 new VariableReferenceExpression(left.toSymbol(aliases).getName(), BIGINT),
@@ -41,6 +42,6 @@ class EquiJoinClauseProvider
     @Override
     public String toString()
     {
-        return left + " = " + right;
+        return new StringBuilder().append(left).append(" = ").append(right).toString();
     }
 }
